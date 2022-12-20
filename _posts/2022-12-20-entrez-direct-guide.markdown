@@ -23,7 +23,7 @@ Chúng ta sẽ tiến hành cài đặt entrez-direct và sra-tools bằng mamba
 
 ```mamba install -c bioconda sra-tools```
 
-Sau khi cài đặt entrez-direct, chúng ta sẽ sử dụng command esearch để tìm kiếm thông tin từ NCBI (tham khảo về các field phù hợp cho query ở [1]. Để biết thêm về các parameters khác của esearch và efetch, các bạn vui lòng đọc manual của esearch và efetch ở [2]. Ở ví dụ sau, mình sẽ sử dụng cả thông tin từ NCBI Taxonomy Browser để tìm chủ đề thích hợp.
+Sau khi cài đặt entrez-direct, chúng ta sẽ sử dụng command esearch để tìm kiếm thông tin từ NCBI (tham khảo về các field phù hợp cho query trong manual tìm kiếm của NCBI [1]). Để biết thêm về các parameters khác của esearch và efetch, các bạn vui lòng đọc manual của esearch và efetch [2]. Ở ví dụ sau, mình sẽ sử dụng cả thông tin từ NCBI Taxonomy Browser để tìm chủ đề thích hợp.
 
 ```esearch -db bioproject -query "txid408169[Organism] AND Vietnam[Title]" | efetch -format native | awk 'BEGIN {RS="\n"; ORS="\t"} {print}' | sed -E '1 s/^\t//;s/\t{3}/\n/g' | sed -E 's/^[0-9]*\. //' | awk 'BEGIN {FS=OFS="\t"} {match($0, /BioProject Accession: (.*)\tID: (.*)/, array); print $1, array[1], array[2]}'```
 
