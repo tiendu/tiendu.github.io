@@ -11,8 +11,6 @@ linkedin_username: tienhdu
 github_username:  tiendu
 
 # Configure the plugin here
-# category_path: "jekyll/category" # <- default value
-# category_layout: "category_index.html" # <- default value
 paginate: 3 # <- turn on pagination with two posts per page
 
 # Build settings
@@ -21,3 +19,4 @@ plugins:
   - jekyll-feed
   - jekyll-category-pages
 permalink: /:year/:month/:day/:title:output_ext
+permalink: /:categories/:title/
