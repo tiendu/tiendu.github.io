@@ -37,7 +37,7 @@ categories: guide
 
 `awk '/^>/ {getline seq} {gsub(/>/, "", $0); print $0 "\t" length(seq)}' file.fa`
 
-* Kích thước tổng (Gb) và số lượng sequence
+* Kích thước tổng (Mb) và số lượng sequence
 
 `awk '/^>/ {getline seq; sum+=length(seq); counter++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1000000, counter}' file.fa`
 
