@@ -45,6 +45,15 @@ Ngoài ra, các bạn còn có thể tải dữ liệu khác như trình tự pr
 
 Ví dụ: với command ```esearch -db nuccore -query "RdRp[Gene] AND txid10239[Organism]"| efetch -format fasta``` thì mình sẽ tìm được các trình tự của gen RNA-dependent RNA-polymerase (RdRp) thuộc về virus (txid10239 là mã taxonomy của virus trong NCBI); hoặc với ```esearch -db nuccore -query "cpb[Gene] AND txid1502[Organism]"| efetch -format fasta``` thì mình sẽ tìm được các trình tự của gen beta toxin (cpb) thuộc về _C. perfringens_.
 
+Ngoài ra, mình có viết 1 script để lọc các trình tự sử dụng regular expression trên header của trình tự. Tải về sử dụng ở [4]. Khi sử dụng script, sẽ có 3 parameter mình cần nhập: 
+- `-i`: input
+- `-m`: chế độ lọc vào hay lọc ra, ví dụ các bạn muốn giữ lại các trình tự thì dùng `-m in`, muốn loại bỏ các trình tự thì `-m out`
+- `-k`: các từ khóa, ví dụ `-k etx plc "whole genome shotgun"`
+
 [1] <https://www.ncbi.nlm.nih.gov/books/NBK49540/>
+
 [2] <https://www.ncbi.nlm.nih.gov/books/NBK25501/>
+
 [3] <https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=408169>
+
+[4] <https://github.com/tiendu/utility/blob/main/filtersequence.pl>
