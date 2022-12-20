@@ -62,4 +62,4 @@ categories: guide
 `awk '/^>/ {getline seq} {print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR == 1 {max = min = $2; next} {max = (max < $2) ? $2 : max; min = (min > $2) ? $2 : min} END {print "Min: "min, "Max: "max}'`
 
 
-**_Còn tiếp_**
+**_(Còn tiếp)_**
