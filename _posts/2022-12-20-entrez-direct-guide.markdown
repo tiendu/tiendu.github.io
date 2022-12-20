@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Hướng dẫn tải dataset từ NCBI!"
+title:  "Hướng dẫn tải dataset từ NCBI"
 date:   2022-12-20 11:31:36 +0900
 categories: guide
 ---
