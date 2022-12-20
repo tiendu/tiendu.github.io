@@ -6,4 +6,13 @@ permalink: /about/
 
 A biotechnologist-turned programmer. Now doing his PhD candidacy at Kyung Hee University in Korea with main focus on metagenomics, microbiomics and viromics.
 
-Find him at [LinkedIn](https://www.linkedin.com/in/tienhdu/) and [Facebook](facebook.com/tiendu107)
+Outside of research, he's also an avid cook that has a keen interest in lacto fermentation.
+
+**Interest**
+* Cooking
+* Perl
+* Bioinformatics software development and statistical analysis
+
+**Education**
+* MSc in Bioinformatics and Computational Biology, University College Cork - 2019
+* BSc in Biotechnology, Northumbria University - 2017
