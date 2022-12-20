@@ -19,5 +19,4 @@ theme: minima
 plugins:
   - jekyll-feed
   - jekyll-category-pages
-permalink: /:year/:month/:day/:title:output_ext
 permalink: /:categories/:title/
