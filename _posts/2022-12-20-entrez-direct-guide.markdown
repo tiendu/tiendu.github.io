@@ -2,7 +2,7 @@
 layout: post
 title:  "Hướng dẫn tải dataset từ NCBI"
 date:   2022-12-20 11:31:36 +0900
-categories: guide vietnamese bioinformatics
+categories: [guide vietnamese bioinformatics]
 ---
 **LÀM THẾ NÀO CÓ DATASET ĐỂ THỰC TẬP?**
 
