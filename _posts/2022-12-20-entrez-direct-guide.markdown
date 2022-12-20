@@ -35,9 +35,9 @@ Sau khi cài đặt entrez-direct, chúng ta sẽ sử dụng command esearch đ
 
 Chúng ta có vài thông tin cơ bản như dữ liệu sequencing được giải bằng 454 GS Junior, giải AMPLICON, nguồn từ VIRAL RNA,... Sau đó chúng ta tiến hành tải dữ liệu thông qua command gần giống như trên được nối qua sra-tools.
 
-```esearch -db sra -query "PRJDB5922" | efetch -format runinfo | awk 'BEGIN {RS=","; ORS="\t"} {print}' | awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}' | head -n 3 | xargs -n 1 -P 4 fastq-dump --gzip --split-files --skip-technical```
+```esearch -db sra -query "PRJDB5922" | efetch -format runinfo | awk 'BEGIN {RS=","; ORS="\t"} {print}' | awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}' | head -n 3 | xargs -n 1 -P 4 fastq-dump --gzip --split-files --skip-technical --split-spot```
 
-Ở đây mình lấy cột đầu tiên cũng với `awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}'`. Sau đó mình dùng `head -n 3` vì mình chỉ muốn lấy 3 dữ liệu đầu tiên. Ở command cuối là xargs mình có cài số argument là 1 và số CPU cores được sử dụng là 4. Sau đó, từ xargs, argument được chuyển đến cho command `fastq-dump` để tải file ở định dạng gzip nhằm tiết kiệm bộ nhớ, đồng thời bỏ qua technical reads, chỉ tải biological reads và tách các file ra bằng `--split-files`. Và thế là mình đã có 3 files ở định dạng .fastq.gz để thực tập.
+Ở đây mình lấy cột đầu tiên cũng với `awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}'`. Sau đó mình dùng `head -n 3` vì mình chỉ muốn lấy 3 dữ liệu đầu tiên. Ở command cuối là xargs mình có cài số argument là 1 và số CPU cores được sử dụng là 4. Sau đó, từ xargs, argument được chuyển đến cho command `fastq-dump` để tải file ở định dạng gzip nhằm tiết kiệm bộ nhớ, đồng thời bỏ qua technical reads, chỉ tải biological reads và tách các file ra bằng `--split-files`, đồng thời tách forward và reverse reads bằng `--split-spot`. Và thế là mình đã có 3 files ở định dạng .fastq.gz để thực tập.
 
 Dành cho các bạn đã có kinh nghiệm trong bioinformatics, bộ công cụ entrez-direct và sra-toolkit rất mạnh mẽ, có thể hỗ trợ các bạn trong các nghiên cứu sau này khi mà việc tải một lượng lớn dữ liệu từ NCBI thủ công rất dễ gây nhầm lẫn và khó tự động hóa. Bằng cách kết nối các công cụ này lại và dùng các tool sẵn có trong Linux/Unix, các bạn có thể tải một lượng lớn dữ liệu mà không quá khó khăn.
 
