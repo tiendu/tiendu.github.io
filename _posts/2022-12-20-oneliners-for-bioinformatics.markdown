@@ -64,3 +64,6 @@ categories: guide
 * Tìm chiều dài dài nhất của toàn bộ
 
 `awk '/^>/ {getline seq} {print length(seq)}' file.fa | awk 'NR==1 {max = $1; next} {if ($1 > min) max = $1} END {print max}'`
+
+
+**_Còn tiếp_**
