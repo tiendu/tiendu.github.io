@@ -45,11 +45,11 @@ categories: guide
 
 `awk '/^>/ {getline seq} length(seq) > 1000 {print $0 "\n" seq }' file.fa`
 
-* Tính N50, L50 
+* Tìm N50, L50 (thay 0.5 bằng số tương ứng để tìm Nx, ví dụ 0.9 để tìm N90) hoặc tải [script](https://github.com/tiendu/utility/blob/main/auN.pl) để sử dụng
 
-`awk '/^>/ {getline seq; print length(seq)}' file.fa | sort -n | awk '{len[i++]=$1; sum+=$1} END {for (j=0; j<i+1; j++) {csum+=len[j]; if (csum>sum*0.5) {print len[j] j "\t" sum; break}}}'`
+`awk '/^>/ {getline seq; print length(seq)}' file.fa | sort -n | awk '{len[i++]=$1; sum+=$1} END {for (j=0; j<i+1; j++) {csum+=len[j]; if (csum>sum*(1-0.5)) {print len[j] j "\t" sum; break}}}'`
 
-* Tính GC content của toàn bộ
+* Tính GC content của toàn bộ sequence trong file
 
 `awk '/^>/ {getline seq; total_len+=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len+=length(seq)} END {printf "%s\t%.3f\n", FILENAME, gc_len*100/total_len}' file.fa`
 
@@ -57,13 +57,9 @@ categories: guide
 
 `awk '/^>/ {getline seq; total_len=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len=length(seq); gc_content=gc_len*100/total_len} {gsub(/>/, "", $0); printf "%s\t%.3f\n", $0, gc_content}' file.fa`
 
-* Tìm chiều dài ngắn nhất của toàn bộ
+* Tìm chiều dài ngắn nhất và dài nhất của toàn bộ sequence trong file
 
-`awk '/^>/ {getline seq} {print length(seq)}' file.fa | awk 'NR==1 {min = $1; next} {if ($1 < min) min = $1} END {print min}'`
-
-* Tìm chiều dài dài nhất của toàn bộ
-
-`awk '/^>/ {getline seq} {print length(seq)}' file.fa | awk 'NR==1 {max = $1; next} {if ($1 > min) max = $1} END {print max}'`
+`awk '/^>/ {getline seq} {print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR == 1 {max = min = $2; next} {max = (max < $2) ? $2 : max; min = (min > $2) ? $2 : min} END {print "Min: "min, "Max: "max}'`
 
 
 **_Còn tiếp_**
