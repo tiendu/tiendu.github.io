@@ -25,7 +25,7 @@ Chúng ta sẽ tiến hành cài đặt entrez-direct và sra-tools bằng mamba
 
 Sau khi cài đặt entrez-direct, chúng ta sẽ sử dụng command esearch để tìm kiếm thông tin từ NCBI (tham khảo về các field phù hợp cho query ở <https://www.ncbi.nlm.nih.gov/books/NBK49540/>. Để biết thêm về các parameters khác của esearch và efetch, các bạn vui lòng đọc manual của esearch và efetch ở <https://www.ncbi.nlm.nih.gov/books/NBK25501/>. Ở đây mình sẽ sử dụng cả thông tin từ NCBI Taxonomy Browser để tìm chủ đề thích hợp.
 
-```code(esearch -db bioproject -query "txid408169[Organism] AND Vietnam[Title]" | efetch -format native | awk 'BEGIN {RS="\n"; ORS="\t"} {print}' | sed -E '1 s/^\t//;s/\t{3}/\n/g' | sed -E 's/^[0-9]*\. //' | awk 'BEGIN {FS=OFS="\t"} {match($0, /BioProject Accession: (.*)\tID: (.*)/, array); print $1, array[1], array[2]}'```
+```esearch -db bioproject -query "txid408169[Organism] AND Vietnam[Title]" | efetch -format native | awk 'BEGIN {RS="\n"; ORS="\t"} {print}' | sed -E '1 s/^\t//;s/\t{3}/\n/g' | sed -E 's/^[0-9]*\. //' | awk 'BEGIN {FS=OFS="\t"} {match($0, /BioProject Accession: (.*)\tID: (.*)/, array); print $1, array[1], array[2]}'```
 
 Ở ví dụ trên, mình đã tìm trong kho dữ liệu `bioproject` với từ khóa là `txid408169` (dành cho metagenomes ở field Organism) và Vietnam (ở field Title). Sau đó, mình cho xuất dữ liệu bằng efetch với định dạng `native`. Dữ liệu thô sẽ được xử lý ở những bước sau với awk và sed. Cuối cùng mình sẽ có một file dữ liệu với 3 cột: cột 1 BioProject Title (tên của nghiên cứu), cột 2 đại diện cho BioProject Accession (mình sẽ sử dụng mã số này để tải về dữ liệu sequencing) và cột 3 đại diện cho ID (mình cũng có thể sử dụng mã số này để tải dữ liệu sequencing).
 
