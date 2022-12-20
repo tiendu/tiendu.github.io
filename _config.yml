@@ -29,7 +29,7 @@ linkedin_username: tienhdu
 github_username:  tiendu
 
 # Build settings
-theme: minima
+theme: modernist
 plugins:
   - jekyll-feed
 
