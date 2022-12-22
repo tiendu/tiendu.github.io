@@ -69,5 +69,9 @@ categories: [guide, vietnamese, bioinformatics]
 
 `awk '/header/ {getline seq} {split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) j=j sep s[i]; print $0"\n"j}' file.fa`
 
+* Tìm reverse complement của từng sequence trong file
+
+`awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| rev | tr \"ATGC\" \"TACG\""; while ((cmd | getline o) > 0) {}; close(cmd); return o} /^>/ {getline seq} {print $0"\n"revcomp(seq)}' file.fa`
+
 
 **_(Còn tiếp)_**
