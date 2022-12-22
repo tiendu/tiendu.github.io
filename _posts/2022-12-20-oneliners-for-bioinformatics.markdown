@@ -74,4 +74,5 @@ categories: [guide, vietnamese, bioinformatics]
 `awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| rev | tr \"ATGC\" \"TACG\""; while ((cmd | getline o) > 0) {}; close(cmd); return o} /^>/ {getline seq} {print $0"\n"revcomp(seq)}' file.fa`
 
 
+
 **_(Còn tiếp)_**
