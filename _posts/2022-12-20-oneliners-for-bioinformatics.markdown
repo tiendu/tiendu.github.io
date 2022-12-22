@@ -49,14 +49,21 @@ categories: [guide, vietnamese, bioinformatics]
 
 `awk '/^>/ {getline seq; print length(seq)}' file.fa | sort -n | awk '{len[i++]=$1; sum+=$1} END {for (j=0; j<i+1; j++) {csum+=len[j]; if (csum>sum*(1-0.5)) {print len[j] j "\t" sum; break}}}'`
 
-|Tính GC content của toàn bộ sequence trong file|`awk '/^>/ {getline seq; total_len+=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len+=length(seq)} END {printf "%s\t%.3f\n", FILENAME, gc_len*100/total_len}' file.fa`|
+* Tính GC content của toàn bộ sequence trong file
 
-|Tính GC content của từng sequence|`awk '/^>/ {getline seq; total_len=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len=length(seq); gc_content=gc_len*100/total_len} {gsub(/>/, "", $0); printf "%s\t%.3f\n", $0, gc_content}' file.fa`|
+`awk '/^>/ {getline seq; total_len+=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len+=length(seq)} END {printf "%s\t%.3f\n", FILENAME, gc_len*100/total_len}' file.fa`
 
-|Tìm chiều dài ngắn nhất và dài nhất của toàn bộ sequence trong file|`awk '/^>/ {getline seq} {print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR == 1 {max = min = $2; next} {max = (max < $2) ? $2 : max; min = (min > $2) ? $2 : min} END {print "Min: "min, "Max: "max}'`|
+* Tính GC content của từng sequence
 
-|Tìm một đoạn sequence bằng vị trí (thay thế header, start, end tương ứng) | `awk '/header/ {getline seq} {split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) j=j sep s[i]; print $0"\n"j}' file.fa`|
+`awk '/^>/ {getline seq; total_len=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len=length(seq); gc_content=gc_len*100/total_len} {gsub(/>/, "", $0); printf "%s\t%.3f\n", $0, gc_content}' file.fa`
 
+* Tìm chiều dài ngắn nhất và dài nhất của toàn bộ sequence trong file
+
+`awk '/^>/ {getline seq} {print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR == 1 {max = min = $2; next} {max = (max < $2) ? $2 : max; min = (min > $2) ? $2 : min} END {print "Min: "min, "Max: "max}'`
+
+* Tìm một đoạn sequence bằng vị trí (thay thế header, start, end tương ứng)
+
+`awk '/header/ {getline seq} {split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) j=j sep s[i]; print $0"\n"j}' file.fa`
 
 
 **_(Còn tiếp)_**
