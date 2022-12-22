@@ -47,7 +47,11 @@ categories: [guide, vietnamese, bioinformatics]
 
 * Tìm N50, L50 (thay 0.5 bằng số tương ứng để tìm Nx, ví dụ 0.9 để tìm N90)
 
-`awk '/^>/ {getline seq; print length(seq)}' file.fa | sort -n | awk '{len[i++]=$1; sum+=$1} END {for (j=0; j<i+1; j++) {csum+=len[j]; if (csum>sum*(1-0.5)) {print len[j] j "\t" sum; break}}}'`
+`awk '/^>/ {getline seq; print length(seq)}' file.fa | sort -n | awk '{len[i++]=$1; sum+=$1} END {for (j=0; j<i+1; j++) {csum+=len[j]; if (csum>sum*(1-0.5)) {print len[j] j "\t" sum; break}}}' file.fa`
+
+* Tìm N50, L50 và auN (area under the Nx curve - một metric mới được giới thiệu gần đây để đánh giá assembly)
+
+`awk '/^>/ {x=0.5; getline seq; a[$0]=length(seq)} END {asort(a); for (i in a) {sum+=a[i]; sum_sq+=(a[i]**2); len[i]=a[i]}; auN=sum_sq/sum; for (j in len) {csum+=len[j]; if (csum>sum*(1-x)) {printf "N%d: %d\tL%d: %d\tauN: %.2f\n", x*100, len[j], x*100, j, auN; break}}}' file.fa`
 
 * Tính GC content của toàn bộ sequence trong file
 
