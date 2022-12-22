@@ -12,7 +12,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 * Kích thước (Gb) và số lượng read
 
-`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf "size:\t%.3f\nnumber of reads:\t%d\n", sum/1000000000, counter}'`
+`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf "size:\t%.3f\nnumber of reads:\t%d\n", sum/1e9, counter}'`
 
 * Interleave read
 
@@ -39,7 +39,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 * Kích thước tổng (Mb) và số lượng sequence
 
-`awk '/^>/ {getline seq; sum+=length(seq); counter++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1000000, counter}' file.fa`
+`awk '/^>/ {getline seq; sum+=length(seq); counter++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, counter}' file.fa`
 
 * Lọc sequence có kích thước lớn hơn n, ở đây là 1000
 
@@ -59,7 +59,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 * Tìm chiều dài ngắn nhất và dài nhất của toàn bộ sequence trong file
 
-`awk '/^>/ {getline seq} {print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR == 1 {max = min = $2; next} {max = (max < $2) ? $2 : max; min = (min > $2) ? $2 : min} END {print "Min: "min, "Max: "max}'`
+`awk '/^>/ {getline seq} {print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR == 1 {max = min = $2; next} {max = (max < $2) ? $2 : max; min = (min > $2) ? $2 : min} END {printf "Min: %s\tMax: %s\n", min, max}'`
 
 * Tìm một đoạn sequence bằng vị trí (thay thế header, start, end tương ứng)
 
