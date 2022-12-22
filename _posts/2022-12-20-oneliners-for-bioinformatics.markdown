@@ -45,7 +45,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 `awk '/^>/ {getline seq} length(seq) > 1000 {print $0 "\n" seq }' file.fa`
 
-* Tìm N50, L50 (thay 0.5 bằng số tương ứng để tìm Nx, ví dụ 0.9 để tìm N90) hoặc tải [script](https://github.com/tiendu/utility/blob/main/auN.pl) để sử dụng
+* Tìm N50, L50 (thay 0.5 bằng số tương ứng để tìm Nx, ví dụ 0.9 để tìm N90)
 
 `awk '/^>/ {getline seq; print length(seq)}' file.fa | sort -n | awk '{len[i++]=$1; sum+=$1} END {for (j=0; j<i+1; j++) {csum+=len[j]; if (csum>sum*(1-0.5)) {print len[j] j "\t" sum; break}}}'`
 
