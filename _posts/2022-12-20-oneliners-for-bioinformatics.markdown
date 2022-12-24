@@ -59,7 +59,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 * Tính GC content của từng sequence
 
-`awk '/^>/ {getline seq; total_len=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len=length(seq); gc_content=gc_len*100/total_len} {gsub(/>/, "", $0); printf "%s\t%.3f\n", $0, gc_content}' file.fa`
+`awk '/^>/ {getline seq; len=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len=length(seq); gc_cont=gc_len*100/len} {gsub(/>/, "", $0); printf "%s\t%.3f\n", $0, gc_cont}' file.fa`
 
 * Tìm chiều dài ngắn nhất và dài nhất của toàn bộ sequence trong file
 
