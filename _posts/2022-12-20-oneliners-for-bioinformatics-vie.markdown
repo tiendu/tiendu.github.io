@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Các oneliner thông dụng cho bioinformatics"
-date:   2022-12-20 14:29:00 +0900
+date:   2022-12-20
 categories: [guide, vietnamese, bioinformatics]
 ---
 # Raw reads
