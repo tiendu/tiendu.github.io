@@ -2,7 +2,7 @@
 layout: post
 title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
-categories: [guide, vietnamese, bioinformatics]
+categories: [guide, english, bioinformatics]
 ---
 # Raw reads
 
