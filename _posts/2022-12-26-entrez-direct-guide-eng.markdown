@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Guide to download datasets from NCBI"
-date:   2022-12-26 11:31:36 +0900
+date:   2022-12-26
 categories: [guide, english, bioinformatics]
 ---
 **HOW TO GET DATASET FOR PRACTICE?**
