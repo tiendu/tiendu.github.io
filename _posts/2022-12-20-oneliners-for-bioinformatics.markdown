@@ -6,7 +6,7 @@ categories: [guide, vietnamese, bioinformatics]
 ---
 # Raw reads
 
-* Bảng tính độ dài của read
+* Bảng thống kê độ dài của read
 
 `zcat file.fq.gz | awk 'NR%4==2 {lengths[length($0)]++; counter++} END {printf "size\tcount\n"; for (l in lengths) print l "\t" lengths[l]}'`
 
