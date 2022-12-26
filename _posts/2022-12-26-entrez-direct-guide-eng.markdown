@@ -13,9 +13,9 @@ In this guide, we're gonna use `entrez-direct` and `sra-tools` provided by NCBI.
 1. Ubuntu
 2. (Mini)conda
 - Mamba (You can use conda if you want to with the command `conda install` but I suggest you to use Mamba since it's much more convenient and efficient - install Mamba via the command ```conda install mamba -n base -c conda-forge```)
-3. Sufficient knowledge of Linux/Unix command-line tools
-4. Sufficient knowledge of regular expression
-5. Sufficient knowledge of how to use NCBI search
+3. Basic usage of Linux/Unix command-line tools
+4. Basic usage of regular expression
+5. Basic usage of NCBI search
 
 We'll begin with installing entrez-direct and sra-tools by using Mamba:
 
