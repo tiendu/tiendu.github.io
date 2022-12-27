@@ -76,6 +76,10 @@ categories: [guide, english, bioinformatics]
 
 * Remove duplicate sequences based on header
 
-`awk '/>/ {f=!a[$0]++} f' file.fa`
+`awk '/^>/ {f=!a[$0]++} f' file.fa`
+
+* Find sequences based on header between a sequence with patternA to a sequence with patternB
+
+`awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
 
 **_(To be cont')_**
