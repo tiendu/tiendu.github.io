@@ -74,6 +74,8 @@ categories: [guide, english, bioinformatics]
 
 `awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| rev | tr \"ATGC\" \"TACG\""; while ((cmd | getline o) > 0) {}; close(cmd); return o} /^>/ {getline seq} {print $0"\n"revcomp(seq)}' file.fa`
 
+* Remove duplicate sequences based on header
 
+`awk '/>/ {f=!a[$0]++} f' file.fa`
 
 **_(To be cont')_**
