@@ -68,7 +68,7 @@ categories: [guide, english, bioinformatics]
 
 * Extract a sequence from a sequence e.g., a gene from a contig (replace header, start and end accordingly)
 
-`awk '/header/ {getline seq} {split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j sep s[i]}; print $0"\n"j}' file.fa`
+`awk '/^>header/ {getline seq} {split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j sep s[i]}; print $0"\n"j}' file.fa`
 
 * Get the reverse complement of each sequence
 
@@ -77,6 +77,10 @@ categories: [guide, english, bioinformatics]
 * Remove duplicate sequences based on header
 
 `awk '/^>/ {f=!a[$0]++} f' file.fa`
+
+* Remove duplicate sequences based on the sequences themselves
+
+`awk '/^>/ {getline seq; f=!a[seq]++} f {print $0"\n"seq}' file.fa`
 
 * Find sequences based on header between a sequence with patternA to a sequence with patternB
 
