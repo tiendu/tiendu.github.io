@@ -42,17 +42,13 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {getline seq; sum+=length(seq); counter++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, counter}' file.fa`
 
-* Filter sequence based on sequence length, here I use 1000
+* Filter sequence based on sequence length (replace n with desired length, here I use 1000)
 
-`awk '/^>/ {getline seq} length(seq) > 1000 {print $0 "\n" seq }' file.fa`
+`awk -v n=1000 '/^>/ {getline seq} length(seq)>n {print $0 "\n" seq }' file.fa`
 
-* Get N50, L50 (replace 0.5 with the desired x in Nx, for example 0.9 for N90)
+* Get N50, L50 (replace n with the desired x in Nx, for example 0.9 for N90 or 0.5 for N50) and auN (area under the Nx curve - a new metric to evaluate assembly quality)
 
-`awk '/^>/ {getline seq; print length(seq)}' file.fa | sort -n | awk '{len[i++]=$1; sum+=$1} END {for (j=0; j<i+1; j++) {csum+=len[j]; if (csum>sum*(1-0.5)) {print len[j] j "\t" sum; break}}}' file.fa`
-
-* Get N50, L50 and auN (area under the Nx curve - a new metric to evaluate assembly quality)
-
-`awk '/^>/ {x=0.5; getline seq; a[$0]=length(seq)} END {asort(a); for (i in a) {sum+=a[i]; sum_sq+=(a[i]**2); len[i]=a[i]}; auN=sum_sq/sum; for (j in len) {csum+=len[j]; if (csum>sum*(1-x)) {printf "N%d: %d\tL%d: %d\tauN: %.2f\n", x*100, len[j], x*100, j, auN; break}}}' file.fa`
+`awk -v n=0.5 '/^>/ {getline seq; a[$0]=length(seq)} END {asort(a); for (i in a) {sum+=a[i]; sum_sq+=(a[i]**2); len[i]=a[i]}; auN=sum_sq/sum; for (j in len) {csum+=len[j]; if (csum>sum*(1-n)) {printf "N%d: %d\tL%d: %d\tauN: %.2f\n", n*100, len[j], x*100, j, auN; break}}}' file.fa`
 
 * Get the GC content of all the sequences 
 
