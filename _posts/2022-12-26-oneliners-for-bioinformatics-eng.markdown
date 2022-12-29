@@ -52,11 +52,11 @@ categories: [guide, english, bioinformatics]
 
 * Get the GC content of all the sequences 
 
-`awk '/^>/ {getline seq; total_len+=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len+=length(seq)} END {printf "%s\t%.3f\n", FILENAME, gc_len*100/total_len}' file.fa`
+`awk '/^>/ {getline seq; total_len+=length(seq); gsub(/[AaTt]/, "", seq); gc_len+=length(seq)} END {printf "%s\t%.3f\n", FILENAME, gc_len*100/total_len}' file.fa`
 
 * Get the GC content of each sequence
 
-`awk '/^>/ {getline seq; len=length(seq); gc=gsub(/[AaTt]/, "", seq); gc_len=length(seq); gc_cont=gc_len*100/len} {gsub(/>/, "", $0); printf "%s\t%.3f\n", $0, gc_cont}' file.fa`
+`awk '/^>/ {getline seq; len=length(seq); at_len=gsub(/[AaTt]/, "", seq); printf "%s\t%.3f\n", $0, (len-at_len)*100/len}' file.fa`
 
 * Find the length of the shortest and the longest sequence
 
