@@ -72,7 +72,7 @@ categories: [guide, english, bioinformatics]
 
 * Get the reverse complement of each sequence
 
-`awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| rev | tr \"ATGC\" \"TACG\""; while ((cmd | getline o) > 0) {}; close(cmd); return o} /^>/ {getline seq} {print $0"\n"revcomp(seq)}' file.fa`
+`awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o) > 0) {}; close(cmd); return o} /^>/ {getline seq} {print $0"\n"revcomp(seq)}' file.fa`
 
 * Remove duplicate sequences based on header
 
