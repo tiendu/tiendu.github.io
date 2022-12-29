@@ -8,7 +8,7 @@ categories: [guide, english, bioinformatics]
 
 * Summary of the read length and its count
 
-`zcat file.fq.gz | awk 'NR%4==2 {len[length($0)]++} END {for (i in len) print i"\t"len[i]}'`
+`zcat file.fq.gz | awk 'NR%4==2 {len[length($0)]++} END {for (i in len) {print i"\t"len[i]}}'`
 
 * Size (Gb) and number of reads
 
