@@ -62,7 +62,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {getline seq; print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2; next} {max=(max<$2) ? $2 : max; min=(min>$2) ? $2 : min} END {printf "Min: %d\tMax: %d\n", min, max}'`
 
-* Extract a region of a sequence e.g., a gene from a contig (replace id, start and end accordingly)
+* Extract a region of a sequence e.g., a gene from a contig (replace "" for id, n for start and m for end accordingly)
 
 `awk -v id="" -v start=n -v end=m '$0~id {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j sep s[i]}; print $0"\n"j}' file.fa`
 
