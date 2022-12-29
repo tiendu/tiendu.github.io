@@ -66,7 +66,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {getline seq} {print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR == 1 {max = min = $2; next} {max = (max < $2) ? $2 : max; min = (min > $2) ? $2 : min} END {printf "Min: %s\tMax: %s\n", min, max}'`
 
-* Extract a sequence from a sequence e.g., a gene from a contig (replace header, start and end accordingly)
+* Extract a region of a sequence e.g., a gene from a contig (replace header, start and end accordingly)
 
 `awk '/^>header/ {getline seq} {split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j sep s[i]}; print $0"\n"j}' file.fa`
 
@@ -74,7 +74,7 @@ categories: [guide, english, bioinformatics]
 
 `awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o) > 0) {}; close(cmd); return o} /^>/ {getline seq} {print $0"\n"revcomp(seq)}' file.fa`
 
-* Remove duplicate sequences based on header
+* Remove duplicate sequences based on their header
 
 `awk '/^>/ {f=!a[$0]++} f' file.fa`
 
