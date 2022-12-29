@@ -8,7 +8,7 @@ categories: [guide, english, bioinformatics]
 
 * Summary of the read length and its count
 
-`zcat file.fq.gz | awk 'NR%4==2 {lengths[length($0)]++; counter++} END {for (l in lengths) print l"\t"lengths[l]}'`
+`zcat file.fq.gz | awk 'NR%4==2 {len[length($0)]++; counter++} END {for (i in len) print i"\t"len[i]}'`
 
 * Size (Gb) and number of reads
 
@@ -32,7 +32,7 @@ categories: [guide, english, bioinformatics]
 
 `sed ':loop;/>/!N;s/\n//;t loop;s/>/\n>/;s/^\s*//' file.fa`
 
-`awk '/^>/ {if (NR > 1) {print ""}; printf("%s\n", $0); next} {printf("%s", $0)} END {printf("\n")}' file.fa | sed -i '/^$/d'`
+`awk '/^>/ {if (NR>1) {print ""}; printf("%s\n", $0); next} {printf("%s", $0)} END {printf("\n")}' file.fa | sed -i '/^$/d'`
 
 * Get the length of each sequence
 
@@ -64,7 +64,7 @@ categories: [guide, english, bioinformatics]
 
 * Find the length of the shortest and the longest sequence
 
-`awk '/^>/ {getline seq} {print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR == 1 {max = min = $2; next} {max = (max < $2) ? $2 : max; min = (min > $2) ? $2 : min} END {printf "Min: %s\tMax: %s\n", min, max}'`
+`awk '/^>/ {getline seq} {print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2; next} {max=(max<$2) ? $2 : max; min=(min>$2) ? $2 : min} END {printf "Min: %s\tMax: %s\n", min, max}'`
 
 * Extract a region of a sequence e.g., a gene from a contig (replace header, start and end accordingly)
 
@@ -72,7 +72,7 @@ categories: [guide, english, bioinformatics]
 
 * Get the reverse complement of each sequence
 
-`awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o) > 0) {}; close(cmd); return o} /^>/ {getline seq} {print $0"\n"revcomp(seq)}' file.fa`
+`awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq} {print $0"\n"revcomp(seq)}' file.fa`
 
 * Remove duplicate sequences based on their header
 
