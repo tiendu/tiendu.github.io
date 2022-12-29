@@ -8,11 +8,11 @@ categories: [guide, english, bioinformatics]
 
 * Summary of the read length and its count
 
-`zcat file.fq.gz | awk 'NR%4==2 {lengths[length($0)]++; counter++} END {printf "size\tcount\n"; for (l in lengths) print l "\t" lengths[l]}'`
+`zcat file.fq.gz | awk 'NR%4==2 {lengths[length($0)]++; counter++} END {for (l in lengths) print l"\t"lengths[l]}'`
 
 * Size (Gb) and number of reads
 
-`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf "size:\t%.3f\nnumber of reads:\t%d\n", sum/1e9, counter}'`
+`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf("size:\t%.3f\nnumber of reads:\t%d\n", sum/1e9, counter)}'`
 
 * Interleave read
 
@@ -85,5 +85,9 @@ categories: [guide, english, bioinformatics]
 * Find sequences based on header between a sequence with patternA to a sequence with patternB
 
 `awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
+
+* Get the k-nucleotide frequency (replace n with 3 for trinucleotide, 4 for tetranucleotide and 5 for pentanucleotide, etc)
+
+`awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf("%s\t%s\t%.3f\n", $0, i, a[i]/length(a))}}' file.fa`
 
 **_(To be cont')_**
