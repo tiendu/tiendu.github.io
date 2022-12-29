@@ -32,7 +32,7 @@ categories: [guide, english, bioinformatics]
 
 `sed ':loop;/>/!N;s/\n//;t loop;s/>/\n>/;s/^\s*//' file.fa`
 
-`awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {printf "\n"}' file.fa | sed -i '/^$/d'`
+`awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {printf "\n"}' file.fa | sed '/^$/d'`
 
 * Get the length of each sequence
 
