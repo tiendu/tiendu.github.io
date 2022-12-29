@@ -12,7 +12,7 @@ categories: [guide, english, bioinformatics]
 
 * Size (Gb) and number of reads
 
-`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf("size:\t%.3f\nnumber of reads:\t%d\n", sum/1e9, counter)}'`
+`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf("size: %.3f\nnumber of reads: %d\n", sum/1e9, counter)}'`
 
 * Interleave read
 
@@ -36,7 +36,7 @@ categories: [guide, english, bioinformatics]
 
 * Get the length of each sequence
 
-`awk '/^>/ {getline seq} {gsub(/>/, "", $0); print $0 "\t" length(seq)}' file.fa`
+`awk '/^>/ {getline seq} {gsub(/>/, "", $0); print $0"\t"length(seq)}' file.fa`
 
 * Total size (Mb) and number of sequences
 
