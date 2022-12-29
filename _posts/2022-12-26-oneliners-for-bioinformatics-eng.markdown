@@ -12,11 +12,11 @@ categories: [guide, english, bioinformatics]
 
 * Size (Gb) and number of reads
 
-`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf("size: %.3f\nnumber of reads: %d\n", sum/1e9, counter)}'`
+`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf "size: %.3f\nnumber of reads: %d\n", sum/1e9, counter}'`
 
 * Interleave read
 
-`paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS="\t"; OFS="\n"} {print($1, $3, $5, $7, $2, $4, $6, $8)}'`
+`paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}'`
 
 * Deinterleave read
 
@@ -32,7 +32,7 @@ categories: [guide, english, bioinformatics]
 
 `sed ':loop;/>/!N;s/\n//;t loop;s/>/\n>/;s/^\s*//' file.fa`
 
-`awk '/^>/ {if (NR>1) {print ""}; printf("%s\n", $0); next} {printf("%s", $0)} END {printf("\n")}' file.fa | sed -i '/^$/d'`
+`awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {printf "\n"}' file.fa | sed -i '/^$/d'`
 
 * Get the length of each sequence
 
@@ -44,7 +44,7 @@ categories: [guide, english, bioinformatics]
 
 * Filter sequence based on sequence length (replace n with desired length, here I use 1000)
 
-`awk -v n=1000 '/^>/ {getline seq} length(seq)>n {print $0 "\n" seq }' file.fa`
+`awk -v n=1000 '/^>/ {getline seq} length(seq)>n {print $0"\n"seq}' file.fa`
 
 * Get N50, L50 (replace n with the desired x in Nx, for example 0.9 for N90 or 0.5 for N50) and auN (area under the Nx curve - a new metric to evaluate assembly quality)
 
@@ -84,6 +84,6 @@ categories: [guide, english, bioinformatics]
 
 * Get the k-nucleotide frequency (replace n with 3 for trinucleotide, 4 for tetranucleotide and 5 for pentanucleotide, etc)
 
-`awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf("%s\t%s\t%.3f\n", $0, i, a[i]/length(a))}}' file.fa`
+`awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
 
 **_(To be cont')_**
