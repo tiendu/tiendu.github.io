@@ -26,6 +26,10 @@ categories: [guide, english, bioinformatics]
 
 `sed -n '1~4s/^@/>/p;2~4p' input.fastq > output.fasta`
 
+`sed -e '/^@/!d;s//>/;N' input.fastq > output.fasta`
+
+`awk '/^@/ {gsub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
+
 
 # Fasta
 * Format multiline fasta to singleline fasta
