@@ -64,7 +64,7 @@ categories: [guide, english, bioinformatics]
 
 * Extract a region of a sequence e.g., a gene from a contig (replace "" for id, n for start and m for end accordingly)
 
-`awk -v id="" -v start=n -v end=m '($0~/^>/ && $0~id) {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j sep s[i]}; print $0"\n"j}' file.fa`
+`awk -v id="" -v start=n -v end=m '($0~">"id) {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j sep s[i]}; print $0"\n"j}' file.fa`
 
 * Get the reverse complement of each sequence
 
