@@ -64,7 +64,7 @@ categories: [guide, english, bioinformatics]
 
 * Find the length of the shortest and the longest sequence
 
-`awk '/^>/ {getline seq; print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2; next} {max=(max<$2) ? $2 : max; min=(min>$2) ? $2 : min} END {printf "Min: %d\tMax: %d\n", min, max}'`
+`awk '/^>/ {getline seq; print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2} {max=(max<$2) ? $2 : max; min=(min>$2) ? $2 : min} END {printf "Min: %d\tMax: %d\n", min, max}'`
 
 * Extract a region of a sequence e.g., a gene from a contig (replace "" for id, n for start and m for end accordingly)
 
