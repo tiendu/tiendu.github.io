@@ -6,7 +6,7 @@ categories: [guide, english, bioinformatics]
 ---
 **HOW TO GET DATASET FOR PRACTICE?**
 
-This is a question for many (including me) when beginning to learn bioinformatics. We need dataset to practice skills that we learn in the tutorials that the dataset has to be as realistic as possible and close to what we will face in reality and future. So what will we do?
+This was a question for many (including me) when first started to learn bioinformatics. We need datasets to practice skills that we learn in the tutorials that the dataset has to be as realistic as possible and close to what we will face in reality and future. So what will we do?
 
 In this guide, we're gonna use `entrez-direct` and `sra-tools` provided by NCBI. The minimum requirements include:
 
