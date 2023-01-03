@@ -90,7 +90,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 `awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
 
-* Tìm tần số k-nucleotide (thay n=3 cho trinucleotide, 4 cho tetranucleotide và 5 cho pentanucleotide, etc)
+* Tìm tần số k-nucleotide (thay n bằng 3 cho trinucleotide, 4 cho tetranucleotide và 5 cho pentanucleotide, etc)
 
 `awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
 
