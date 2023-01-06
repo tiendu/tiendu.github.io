@@ -22,6 +22,8 @@ categories: [guide, vietnamese, bioinformatics]
 
 `paste - - - - - - - -  < interleaved.fq | tee >(cut -f 1-4 | tr "\t" "\n" > forward.fq) | cut -f 5-8 | tr "\t" "\n" > reverse.fq`
 
+Thay thế zcat bằng cat nếu không phải là file nén
+
 * Chuyển đổi fastq sang fasta
 
 `sed -n '1~4s/^@/>/p;2~4p' input.fastq > output.fasta`
@@ -32,13 +34,14 @@ categories: [guide, vietnamese, bioinformatics]
 
 
 # Fasta
-* Format lại fasta nhiều dòng thành đơn dòng
+
+* Chuyển file fasta nhiều dòng thành đơn dòng
 
 `sed ':loop;/>/!N;s/\n//;t loop;s/>/\n>/;s/^\s*//' file.fa`
 
-`awk '/^>/ {if (NR>1) {printf "\n"}; printf "%s\n", $0; next} {printf "%s", $0} END {printf "\n"}' file.fa`
+`awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {print ""}' file.fa`
 
-* Tính chiều dài của từng sequence
+* Tìm chiều dài của từng sequence
 
 `awk '/^>/ {getline seq} {gsub(/>/, "", $0); print $0"\t"length(seq)}' file.fa`
 
@@ -52,7 +55,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 * Tìm N50, L50 (thay 0.5 bằng số tương ứng để tìm Nx, ví dụ 0.9 để tìm N90)
 
-`awk '/^>/ {getline seq; print length(seq)}' file.fa | sort -n | awk '{len[i++]=$1; sum+=$1} END {for (j=0; j<i+1; j++) {csum+=len[j]; if (csum>sum*(1-0.5)) {print len[j] j "\t" sum; break}}}' file.fa`
+`awk -v x=0.5 '/^>/ {getline seq; print length(seq)}' file.fa | sort -n | awk '{len[i++]=$1; sum+=$1} END {for (j=0; j<=i; j++) {csum+=len[j]; if (csum>sum*(1-x)) {print len[j] j "\t" sum; break}}}' file.fa`
 
 * Tìm N50, L50 và auN (area under the Nx curve - một metric mới được giới thiệu gần đây để đánh giá assembly)
 
@@ -90,13 +93,17 @@ categories: [guide, vietnamese, bioinformatics]
 
 `awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
 
+* Tìm vị trí của một đoạn sequence (thay thế "" ở s bằng đoạn/pattern của đoạn sequence thích hợp)
+
+`awk -v s="" 'function recwrap(str1) {pos = ""; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {pos = pos "["RSTART","RSTART + RLENGTH"] "; recfunc(substr(str2, RSTART + RLENGTH, length(str2)))}; return pos} />/ {getline seq} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
+
 * Tìm tần số k-nucleotide (thay n bằng 3 cho trinucleotide, 4 cho tetranucleotide và 5 cho pentanucleotide, etc)
 
 `awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
 
-* Tìm tần số palindromic k-nucleotide (thay n với số chẵn)
+* Tìm tần số palindromic k-nucleotide (thay n với số chẵn) 
 
-`awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}'`
+`awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
 
 # Tiện ích
 
