@@ -72,7 +72,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 * Tìm một đoạn sequence bằng vị trí (thay thế header, start, end tương ứng)
 
-`awk -v id="" -v start=n -v end=m '($0~">"id) {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j sep s[i]}; print $0"\n"j}' file.fa`
+`awk -v id="" -v start=n -v end=m '($0~">"id) {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j s[i]}; print $0"\n"j}' file.fa`
 
 * Tìm reverse complement của từng sequence trong file
 
