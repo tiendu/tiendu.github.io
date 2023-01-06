@@ -8,12 +8,12 @@ categories: [guide, english, bioinformatics]
 
 This was a question for many (including me) when first started to learn bioinformatics. We need datasets to practice skills that we learn in the tutorials that the dataset has to be as realistic as possible and close to what we will face in reality and future. So what will we do?
 
-In this guide, we're gonna use `entrez-direct` and `sra-tools` provided by NCBI (FYI, NCBI also released a tool called [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) which is good for downloading large genome datasets). For the time being, to be able to utilise this guide, One should be able to know / have these:
+In this guide, we're gonna use `entrez-direct` and `sra-tools` provided by NCBI (FYI, NCBI also released a tool called [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) which is good for downloading large genome datasets). For the time being, to be able to utilise this guide, one should know or have these:
 
-1. Ubuntu
+1. Ubuntu (WSL is also fine)
 2. (Mini)conda
 - Mamba (You can use conda if you want to with the command `conda install` but I suggest you to use Mamba since it's much more convenient and efficient - install Mamba via the command ```conda install mamba -n base -c conda-forge```)
-3. Basic usage of Linux/Unix command-line tools
+3. Basic usage of Linux/Unix command-line tools e.g., awk, sed, grep, cat, etc
 4. Basic usage of regular expression
 5. Basic usage of NCBI search
 
