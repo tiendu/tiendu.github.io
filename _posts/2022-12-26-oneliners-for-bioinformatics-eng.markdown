@@ -39,6 +39,12 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {print ""}' file.fa`
 
+* Format singleline fasta to multiline fasta, below I used the limit of 60 characters per line
+
+`awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) printf "%s", $(i*l +j); print ""}}' file.fa`
+
+`fold -w 60 file.fa`
+
 * Get the length of each sequence
 
 `awk '/^>/ {getline seq} {gsub(/>/, "", $0); print $0"\t"length(seq)}' file.fa`
