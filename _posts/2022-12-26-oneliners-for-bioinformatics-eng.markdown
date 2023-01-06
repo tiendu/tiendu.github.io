@@ -121,4 +121,12 @@ categories: [guide, english, bioinformatics]
 
 `awk 'BEGIN {FS="\t"; OFS=","} {rebuilt=0; for(i=1; i<=NF; i++) {if ($i~/,/ && $i!~/^".*"$/) {gsub("\"", "\"\"", $i); $i="\""$i"\""; rebuilt=1}}; if (!rebuilt) {$1=$1} print}' file.tsv`
 
+* Outer join
+
+`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : "0"; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table1.tsv table2.tsv table3.tsv, ..., tablen.tsv`
+
+* Inner join
+
+`awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1]=$2; next} {print ($1 in a) ? $0 OFS a[$1] : $0 OFS 0}' table1.tsv table2.tsv`
+
 **_(to be cont')_**
