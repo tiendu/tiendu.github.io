@@ -86,6 +86,10 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
 
+* Find location of a region of a sequence (replace "" for s with a desired pattern/region)
+
+`awk -v s="" 'function recwrap(str1) {pos = ""; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {pos = pos "["RSTART","RSTART + RLENGTH"] "; recfunc(substr(str2, RSTART + RLENGTH, length(str2)))}; return pos} />/ {getline seq} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
+
 * Get the k-nucleotide frequency (replace n with 3 for trinucleotide, 4 for tetranucleotide and 5 for pentanucleotide, etc)
 
 `awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
