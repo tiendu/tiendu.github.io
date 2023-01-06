@@ -8,7 +8,7 @@ categories: [guide, english, bioinformatics]
 
 This was a question for many (including me) when first started to learn bioinformatics. We need datasets to practice skills that we learn in the tutorials that the dataset has to be as realistic as possible and close to what we will face in reality and future. So what will we do?
 
-In this guide, we're gonna use `entrez-direct` and `sra-tools` provided by NCBI. The minimum requirements include:
+In this guide, we're gonna use `entrez-direct` and `sra-tools` provided by NCBI (FYI, NCBI also released a tool called [`datasets`] (https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) which is good for downloading large genome datasets). For the time being, to be able to utilise this guide, One should be able to know / have these:
 
 1. Ubuntu
 2. (Mini)conda
@@ -43,7 +43,7 @@ For those with experience in bioinformatics, entrez-direct and sra-toolkit are g
 
 Also, you can download other datasets e.g., protein, nucleotide by changing the database `-db` for esearch.
 
-For example, with ```esearch -db nuccore -query "RdRp[Gene] AND txid10239[Organism]"| efetch -format fasta``` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with ```esearch -db nuccore -query "cpb[Gene] AND txid1502[Organism]"| efetch -format fasta``` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
+For example, with ```esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN]"| efetch -format fasta``` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with ```esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]"| efetch -format fasta``` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
 
 Besides, I have written a script to filter the sequences using regular expression on the sequence header. Find it at [4]. To use, we have 3 parameters to key in: 
 - `-i`: input
