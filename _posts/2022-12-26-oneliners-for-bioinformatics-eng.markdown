@@ -41,7 +41,7 @@ categories: [guide, english, bioinformatics]
 
 * Format singleline fasta to multiline fasta, below I used the limit of 60 characters per line
 
-`awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) printf "%s", $(i*l +j); print ""}}' file.fa`
+`awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) {printf "%s", $(i*l+j)}; print ""}}' file.fa`
 
 `fold -w 60 file.fa`
 
