@@ -12,7 +12,7 @@ categories: [guide, english, bioinformatics]
 
 * Size (Gb) and number of reads
 
-`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf "size: %.3f\nnumber of reads: %d\n", sum/1e9, counter}'`
+`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); count++} END {printf "size: %.3f\nnumber of reads: %d\n", sum/1e9, count}'`
 
 * Interleave read
 
