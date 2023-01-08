@@ -28,7 +28,7 @@ categories: [guide, english, bioinformatics]
 
 `sed -e '/^@/!d;s//>/;N' input.fastq > output.fasta`
 
-`awk '/^@/ {gsub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
+`awk '/^@/ {sub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
 
 
 # Fasta
