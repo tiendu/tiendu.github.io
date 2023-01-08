@@ -51,7 +51,7 @@ categories: [guide, english, bioinformatics]
 
 * Get the length of each sequence
 
-`awk '/^>/ {getline seq} {gsub(/>/, "", $0); print $0"\t"length(seq)}' file.fa`
+`awk '/^>/ {getline seq; sub(/>/, "", $0); print $0"\t"length(seq)}' file.fa`
 
 * Total size (Mb) and number of sequences
 
@@ -81,7 +81,7 @@ categories: [guide, english, bioinformatics]
 
 * Find the sequence(s) with the shortest and longest length
 
-`awk '/^>/ {getline seq; gsub(">", ""); a[$0]=length(seq)} END {asort(a, b); min=b[1]; max=b[length(b)]; min_lst=max_lst=""; for (i in a) {if (a[i]==min) {min_lst=min_lst i " "}; if (a[i]==max) {max_lst=max_lst i " "}}; printf "Min: %d\t%s\nMax: %d\t%s\n", min, min_lst, max, max_lst}' file.fa`
+`awk '/^>/ {getline seq; sub(/^>/, "", $0); a[$0]=length(seq)} END {asort(a, b); min=b[1]; max=b[length(b)]; min_lst=max_lst=""; for (i in a) {if (a[i]==min) {min_lst=min_lst i " "}; if (a[i]==max) {max_lst=max_lst i " "}}; printf "Min: %d\t%s\nMax: %d\t%s\n", min, min_lst, max, max_lst}' file.fa`
 
 * Extract a region of a sequence e.g., a gene from a contig (replace "" for id, n for start and m for end accordingly)
 
@@ -105,15 +105,15 @@ categories: [guide, english, bioinformatics]
 
 * Find location of a region of a sequence (replace "" for s with a desired pattern/region)
 
-`awk -v s="" 'function recwrap(str1) {pos=""; end=0; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos = pos "["start","end"] "; recfunc(substr(str2, RSTART+RLENGTH, length(str2)))}; return pos} />/ {getline seq} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
+`awk -v s="" 'function recwrap(str1) {pos=""; end=0; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos = pos "["start","end"] "; recfunc(substr(str2, RSTART+RLENGTH, length(str2)))}; return pos} /^>/ {getline seq; gsub(/^>/, "", $0)} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
 
 * Get the k-nucleotide frequency (replace n with 3 for trinucleotide, 4 for tetranucleotide and 5 for pentanucleotide, etc)
 
-`awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a) | "sort -n -r -k3,3"}}' file.fa`
+`awk -v k=n '/^>/ {getline seq; sub(/^>/, "", $0)} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a) | "sort -n -r -k3,3"}}' file.fa`
 
 * Get the palindromic k-nucleotide frequency (replace n with even number only for example, 4 for palindromic tetranucleotide, etc)
 
-`awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a) | "sort -n -r -k3,3"}}' file.fa`
+`awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq; sub(/^>/, "", $0)} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a) | "sort -n -r -k3,3"}}' file.fa`
 
 # Utility
 
