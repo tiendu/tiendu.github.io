@@ -41,7 +41,7 @@ categories: [guide, english, bioinformatics]
 
 * Relabel header of interleaved fastq-converted-to-fasta (this helps when one uses BLAST or any classifier to classify reads)
 
-`awk -v count=1 '/>/ {getline seq; match($0, />(.+)* /, name); label=(a[name[1]]++) ? ">"count++"|R" : ">"count"|F"; print label"\n"seq}' file.fa`
+`awk -v count=1 '/^>/ {getline seq; match($0, />(.+)* /, name); label=(a[name[1]]++) ? ">"count++"|R" : ">"count"|F"; print label"\n"seq}' file.fa`
 
 * Format singleline fasta to multiline fasta, below I used the limit of 60 characters per line
 
