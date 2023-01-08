@@ -71,7 +71,7 @@ categories: [guide, english, bioinformatics]
 
 * Get the GC content of each sequence
 
-`awk '/^>/ {getline seq; len=length(seq); at_len=gsub(/[AaTt]/, "", seq); printf "%s\t%.3f\n", $0, (len-at_len)*100/len}' file.fa`
+`awk '/^>/ {getline seq; sub(/^>/, "", $0); len=length(seq); at_len=gsub(/[AaTt]/, "", seq); printf "%s\t%.3f\n", $0, (len-at_len)*100/len}' file.fa`
 
 * Find the length of the shortest and the longest sequence
 
