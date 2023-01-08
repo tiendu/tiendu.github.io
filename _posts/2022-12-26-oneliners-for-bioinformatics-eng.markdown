@@ -109,7 +109,7 @@ categories: [guide, english, bioinformatics]
 
 * Get the k-nucleotide frequency (replace n with 3 for trinucleotide, 4 for tetranucleotide and 5 for pentanucleotide, etc)
 
-`awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
+`awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a) | "sort -n -r -k3,3"}}' file.fa`
 
 * Get the palindromic k-nucleotide frequency (replace n with even number only for example, 4 for palindromic tetranucleotide, etc)
 
