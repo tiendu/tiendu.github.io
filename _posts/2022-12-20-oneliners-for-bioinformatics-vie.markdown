@@ -183,9 +183,9 @@ Mình có thay đổi một số cải tiến ở đây. Đặt k cho số seque
 
 * Lấy mẫu từ single-end reads ở định dạng fasta 
 
-**LƯU Ý: Có thể sử dụng để lấy mẫu không lặp lại sequence**
+**Lưu ý: Có thể sử dụng để lấy mẫu không lặp lại sequence**
 
-`awk '/^>/ {getline seq; print $0"\n"seq}' single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
+`awk '/^>/ {getline seq; print $0"\n"seq}' singlelined_single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
 
 
 **_(còn tiếp)_**
