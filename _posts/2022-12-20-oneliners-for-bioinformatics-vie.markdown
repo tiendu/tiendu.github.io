@@ -41,15 +41,15 @@ categories: [guide, vietnamese, bioinformatics]
 
 `awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {print ""}' file.fa`
 
-* Đổi tên sequence của file fasta từ file interleave fastq (giúp ích khi sử dụng BLAST hoặc bất kỳ chương trình nào để phân loại read)
-
-`awk -v count=1 '/^>/ {getline seq; match($0, />(.+)* /, name); label=(a[name[1]]++) ? ">"count++"|R" : ">"count"|F"; print label"\n"seq}' file.fa`
-
 * Chuyển file fasta đơn dòng thành nhiều dòng (ở đây là 60 ký tự/dòng)
 
 `awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) {printf "%s", $(i*l+j)}; print ""}}' file.fa`
 
 `fold -w 60 file.fa`
+
+* Đổi tên sequence của file fasta từ file interleave fastq (giúp ích khi sử dụng BLAST hoặc bất kỳ chương trình nào để phân loại read)
+
+`awk -v count=1 '/^>/ {getline seq; match($0, />(.+)* /, name); label=(a[name[1]]++) ? ">"count++"|R" : ">"count"|F"; print label"\n"seq}' file.fa`
 
 * Tìm chiều dài của từng sequence
 
