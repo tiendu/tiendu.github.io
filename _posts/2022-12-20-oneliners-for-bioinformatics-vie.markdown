@@ -30,7 +30,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 `sed -e '/^@/!d;s//>/;N' input.fastq > output.fasta`
 
-`awk '/^@/ {gsub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
+`awk '/^@/ {sub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
 
 
 # Fasta
@@ -111,15 +111,15 @@ categories: [guide, vietnamese, bioinformatics]
 
 * Tìm vị trí của một đoạn sequence (thay thế "" ở s bằng đoạn/pattern của đoạn sequence thích hợp)
 
-`awk -v s="" 'function recwrap(str1) {pos = ""; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {pos = pos "["RSTART","RSTART + RLENGTH"] "; recfunc(substr(str2, RSTART + RLENGTH, length(str2)))}; return pos} />/ {getline seq} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
+`awk -v s="" 'function recwrap(str1) {pos = ""; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {pos = pos "["RSTART","RSTART + RLENGTH"] "; recfunc(substr(str2, RSTART + RLENGTH, length(str2)))}; return pos} />/ {getline seq; sub(/^>/, "", $0)} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
 
 * Tìm tần số k-nucleotide (thay n bằng 3 cho trinucleotide, 4 cho tetranucleotide và 5 cho pentanucleotide, etc)
 
-`awk -v k=n '/^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
+`awk -v k=n '/^>/ {getline seq; sub(/^>/, "", $0)} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
 
 * Tìm tần số palindromic k-nucleotide (thay n với số chẵn) 
 
-`awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
+`awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq; sub(/^>/, "", $0)} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
 
 # Tiện ích
 
