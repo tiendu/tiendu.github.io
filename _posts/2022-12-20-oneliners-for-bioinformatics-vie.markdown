@@ -10,7 +10,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 `zcat file.fq.gz | awk 'NR%4==2 {len[length($0)]++} END {for (i in len) {print i"\t"len[i]}}'`
 
-* Kích thước (Gb)  và số lượng read
+* Kích thước (Gb) và số lượng read
 
 `zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf "size: %.3f\nnumber of reads: %d\n", sum/1e9, counter}'`
 
@@ -22,7 +22,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 `paste - - - - - - - -  < interleaved.fq | tee >(cut -f 1-4 | tr "\t" "\n" > forward.fq) | cut -f 5-8 | tr "\t" "\n" > reverse.fq`
 
-Thay thế zcat bằng cat nếu không phải là file nén
+**Thay thế `zcat` bằng `cat` nếu không phải là file nén**
 
 * Chuyển đổi fastq sang fasta
 
@@ -41,9 +41,19 @@ Thay thế zcat bằng cat nếu không phải là file nén
 
 `awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {print ""}' file.fa`
 
+* Đổi tên sequence của file fasta từ file interleave fastq (giúp ích khi sử dụng BLAST hoặc bất kỳ chương trình nào để phân loại read)
+
+`awk -v count=1 '/^>/ {getline seq; match($0, />(.+)* /, name); label=(a[name[1]]++) ? ">"count++"|R" : ">"count"|F"; print label"\n"seq}' file.fa`
+
+* Chuyển file fasta đơn dòng thành nhiều dòng (ở đây là 60 ký tự/dòng)
+
+`awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) {printf "%s", $(i*l+j)}; print ""}}' file.fa`
+
+`fold -w 60 file.fa`
+
 * Tìm chiều dài của từng sequence
 
-`awk '/^>/ {getline seq} {gsub(/>/, "", $0); print $0"\t"length(seq)}' file.fa`
+`awk '/^>/ {getline seq; sub(/^>/, "", $0); print $0"\t"length(seq)}' file.fa`
 
 * Kích thước tổng (Mb) và số lượng sequence
 
@@ -67,13 +77,19 @@ Thay thế zcat bằng cat nếu không phải là file nén
 
 * Tính GC content của từng sequence
 
-`awk '/^>/ {getline seq; len=length(seq); at_len=gsub(/[AaTt]/, "", seq); printf "%s\t%.3f\n", $0, (len-at_len)*100/len}' file.fa`
+`awk '/^>/ {getline seq; sub(/^>/, "", $0); len=length(seq); at_len=gsub(/[AaTt]/, "", seq); printf "%s\t%.3f\n", $0, (len-at_len)*100/len}' file.fa`
 
-* Tìm chiều dài ngắn nhất và dài nhất của toàn bộ sequence trong file
+* Tìm độ dài ngắn nhất và dài nhất của toàn bộ sequence trong file
 
 `awk '/^>/ {getline seq; print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2} {max=(max<$2) ? $2 : max; min=(min>$2) ? $2 : min} END {printf "Min: %d\tMax: %d\n", min, max}'`
 
-* Tìm một đoạn sequence bằng vị trí (thay thế header, start, end tương ứng)
+`awk '/^>/ {getline seq; a[$0]=length(seq)} END {asort(a); printf "Min: %d\tMax: %d\n", a[1], a[length(a)]}' file.fa`
+
+* Tìm các sequence có độ dài ngắn nhất và dài nhất
+
+`awk '/^>/ {getline seq; sub(/^>/, "", $0); a[$0]=length(seq)} END {asort(a, b); min=b[1]; max=b[length(b)]; min_lst=max_lst=""; for (i in a) {if (a[i]==min) {min_lst=min_lst i " "}; if (a[i]==max) {max_lst=max_lst i " "}}; printf "Min: %d\t%s\nMax: %d\t%s\n", min, min_lst, max, max_lst}' file.fa`
+
+* Tìm một đoạn sequence bằng vị trí của nó (thay thế header, start, end tương ứng)
 
 `awk -v id="" -v start=n -v end=m '($0~">"id) {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j s[i]}; print $0"\n"j}' file.fa`
 
@@ -114,5 +130,38 @@ Thay thế zcat bằng cat nếu không phải là file nén
 * Chuyển đổi tsv thành csv
 
 `awk 'BEGIN {FS="\t"; OFS=","} {rebuilt=0; for(i=1; i<=NF; i++) {if ($i~/,/ && $i!~/^".*"$/) {gsub("\"", "\"\"", $i); $i="\""$i"\""; rebuilt=1}}; if (!rebuilt) {$1=$1} print}' file.tsv`
+
+* Chuyển dòng thành cột (transpose)
+
+`awk 'BEGIN {FS=OFS="\t"} {if (max_cols<NF) {max_cols=NF}; max_rows=NR; for (i=1; i<=NF; i++) {a[i][NR]=$i}} END {for (i=1; i<=max_cols; i++) {printf "%s%s", a[i][1], OFS; for (j=max_rows; j>=2; j--) {printf "%s%s", a[i][j], OFS}; print ""}}' table.tsv`
+
+* Outer join
+
+`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv`
+
+* Inner join
+
+`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv | awk 'BEGIN {FS=OFS="\t"} NR==1 {print} NR>1 {if (!match($0, "0")) print}'`
+
+* Exclusive join
+
+`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv | awk 'BEGIN {FS=OFS="\t"} NR==1 {print} NR>1 {if (match($0, "0")) print}'`
+
+* Right join
+
+`awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1]=$2; next} {print ($1 in a) ? $0 OFS a[$1] : $0 OFS 0}' table1.tsv table2.tsv`
+
+* Loại bỏ index bị lặp và tính tổng các giá trị của index lặp
+
+`awk 'BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[$1]++; for (i=1; i<=NF; i++) {dup[$1][i]+=$i}} END {for (i in label) {printf "%s%s", i, OFS; for (j=2; j<=NF; j++) {$j=dup[i][j]; printf "%s%s", $j, (j<NF) ? OFS : ORS}}}' table.tsv`
+
+* Tính phần trăm theo cột
+
+`awk 'function percent(value, total) {return (total!=0) ? sprintf("%.2f", 100*value/total) : "NA"} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[i]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[j])}; print}}' table.tsv`
+
+* Tính phần trăm theo dòng
+
+`awk 'function percent(value, total) {return (total!=0) ? sprintf("%.2f", 100*value/total) : "NA"} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[NR]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[i])}; print}}' table.tsv`
+
 
 **_(còn tiếp)_**
