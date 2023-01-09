@@ -165,7 +165,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 # Lấy mẫu ngẫu nhiên với reservoir sampling 
 
-Hầu hết từ [Umer Zeeshan Ijaz](https://userweb.eng.gla.ac.uk/umer.ijaz/bioinformatics/subsampling_reads.pdf)
+Nguồn từ [Umer Zeeshan Ijaz](https://userweb.eng.gla.ac.uk/umer.ijaz/bioinformatics/subsampling_reads.pdf)
 
 Mình có thay đổi một số cải tiến ở đây. Đặt k cho số sequence phù hợp.
 
