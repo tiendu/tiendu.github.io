@@ -179,7 +179,9 @@ I made some improvements here. Set k for the desired number of sequences.
 
 `zcat single.fastq.gz | awk '{printf "%s", $0; if (NR%4==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2"\n"$3"\n"$4 > "subsampled_single.fastq"}'`
 
-* Subsample single-end reads in fasta format **NOTE: This can also be used for subsampling without replacement of sequences**
+* Subsample single-end reads in fasta format 
+
+**NOTE: This can also be used for subsampling without replacement of sequences**
 
 `awk '/^>/ {getline seq; print $0"\n"seq}' single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
 
