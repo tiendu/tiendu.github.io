@@ -18,6 +18,14 @@ categories: [guide, english, bioinformatics]
 
 `paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}'`
 
+* Deduplicate single-end reads
+
+`zcat file.fq.gz | awk '/^@/ {NR%4==3; getline seq; f=!a[seq]++} f'`
+
+* Deduplicate paired-end reads
+
+`paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}' | awk '/^@(.+) 1:/ {NR%4==3; getline seq1} /^@(.+) 2:/ {NR%4==3; getline seq2} {f=!a[seq1, seq2]++} f {if ($0 ~ /^@(.+) 1:/) {print $0"\n"seq1; getline; print; getline; print}; if ($0 ~ /^@(.+) 2:/) {print $0"\n"seq2; getline; print; getline; print}}' | paste - - - - - - - - | tee >(cut -f 1-4 | tr "\t" "\n" > dedup_forward.fq) | cut -f 5-8 | tr "\t" "\n" > dedup_reverse.fq`
+
 **Use `cat` instead of `zcat` if files are not compressed**
 
 * Deinterleave read
