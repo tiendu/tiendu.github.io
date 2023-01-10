@@ -55,7 +55,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {print ""}' file.fa`
 
-* Format singleline fasta to multiline fasta, below I used the limit of 60 characters per line
+* Format singleline fasta to multiline fasta (here I used the limit of 60 characters per line)
 
 `awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) {printf "%s", $(i*l+j)}; print ""}}' file.fa`
 
@@ -73,11 +73,11 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {getline seq; sum+=length(seq); counter++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, counter}' file.fa`
 
-* Filter sequence based on sequence length (replace n with desired length, here I use 1000)
+* Filter sequence based on sequence length (here I use 1,000, replace n with desired length)
 
 `awk -v n=1000 '/^>/ {getline seq} length(seq)>n {print $0"\n"seq}' file.fa`
 
-* Get N50, L50 (replace n with the desired x in Nx, for example 0.9 for N90 or 0.5 for N50) and auN (area under the Nx curve - a new metric to evaluate assembly quality)
+* Get N50, L50 (replace n with the desired x in Nx e.g., 0.9 (N90) or 0.5 (N50)) and auN (area under the Nx curve, this is a new metric to evaluate assembly quality)
 
 `awk -v n=0.5 '/^>/ {getline seq; a[$0]=length(seq)} END {asort(a); for (i in a) {sum+=a[i]; sum_sq+=(a[i]**2); len[i]=a[i]}; auN=sum_sq/sum; for (j in len) {csum+=len[j]; if (csum>sum*(1-n)) {printf "N%d: %d\tL%d: %d\tauN: %.2f\n", n*100, len[j], n*100, j, auN; break}}}' file.fa`
 
@@ -147,7 +147,7 @@ categories: [guide, english, bioinformatics]
 
 `awk -v k=2 'BEGIN {FS=OFS="\t"} {$k=""; for (i=1; i<=NF; i++) {if ($i!="") printf "%s%s", $i, (i<NF) ? OFS : ORS}}' table.tsv`
 
-* Swap columns (here I swap the 1st column and the 2nd column)
+* Swap a column with another (here I swap the 1st column and the 2nd column)
 
 `awk -v m=1 -v n=2 'BEGIN {FS=OFS="\t"} {t=$m; $m=$n; $n=t; print}' table.tsv`
 
@@ -197,7 +197,7 @@ categories: [guide, english, bioinformatics]
 
 Credit to [Umer Zeeshan Ijaz](https://userweb.eng.gla.ac.uk/umer.ijaz/bioinformatics/subsampling_reads.pdf)
 
-I made some improvements here. Set k for the desired number of subsampled reads/sequences.
+I've made some improvements to make it more readable and easy to understand. Here I select 10,000 sequences for subsampling, set k for the desired number of subsampled reads/sequences.
 
 * Subsample paired-end reads in fastq format
 
