@@ -204,7 +204,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Subsample paired-end reads in fasta format
 
-`paste <(awk '/^>/ {getline seq; print $0"\n"seq}' singlelined_forward.fasta) <(awk '/^>/ {getline seq; print $0"\n"seq}' singlelined_reverse.fasta) | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3 > "subsampled_forward.fasta"; print $2"\n"$4 > "subsampled_reverse.fasta"}'`
+`paste <(awk '/^>/ {getline seq; print $0"\n"seq}' forward.fasta) <(awk '/^>/ {getline seq; print $0"\n"seq}' reverse.fasta) | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3 > "subsampled_forward.fasta"; print $2"\n"$4 > "subsampled_reverse.fasta"}'`
 
 * Subsample single-end reads in fastq format
 
@@ -212,6 +212,6 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Subsample single-end reads in fasta format (this can also be used for subsampling without replacement of sequences)
 
-`awk '/^>/ {getline seq; print $0"\n"seq}' singlelined_single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
+`awk '/^>/ {getline seq; print $0"\n"seq}' single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
 
 **_(to be cont')_**
