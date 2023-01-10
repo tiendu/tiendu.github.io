@@ -70,7 +70,7 @@ categories: [guide, english, bioinformatics]
 
 * Get the total size (Mb) and number of sequences
 
-`awk '/^>/ {getline seq; sum+=length(seq); counter++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, counter}' file.fa`
+`awk '/^>/ {getline seq; sum+=length(seq); count++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, count}' file.fa`
 
 * Filter sequence based on sequence length (here I use 1,000, set n to the desired length)
 
