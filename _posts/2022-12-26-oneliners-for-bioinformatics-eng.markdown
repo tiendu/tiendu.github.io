@@ -101,11 +101,11 @@ categories: [guide, english, bioinformatics]
 
 `awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq} {print $0"\n"revcomp(seq)}' file.fa`
 
-* Remove duplicate sequences based on their header
+* Deduplicate sequences based on their header
 
 `awk '/^>/ {f=!a[$0]++} f' file.fa`
 
-* Remove duplicate sequences based on the sequences themselves
+* Deduplicate sequences based on the sequences themselves
 
 `awk '/^>/ {getline seq; f=!a[seq]++} f {print $0"\n"seq}' file.fa`
 
