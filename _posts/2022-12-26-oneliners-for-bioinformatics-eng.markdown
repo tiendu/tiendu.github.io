@@ -76,7 +76,7 @@ categories: [guide, english, bioinformatics]
 
 `awk -v n=1000 '/^>/ {getline seq} length(seq)>n {print $0"\n"seq}' file.fa`
 
-* Get N50, L50 (here I used 0.5 for N50, n=0.9 for N90) and auN (area under the Nx curve, a new metric to evaluate assembly quality)
+* Get N50, L50 (here I used 0.5 for N50, set n=0.9 for N90) and auN (area under the Nx curve, a new metric to evaluate assembly quality)
 
 `awk -v n=0.5 '/^>/ {getline seq; a[$0]=length(seq)} END {asort(a); for (i in a) {sum+=a[i]; sum_sq+=(a[i]**2); len[i]=a[i]}; auN=sum_sq/sum; for (j in len) {csum+=len[j]; if (csum>sum*(1-n)) {printf "N%d: %d\tL%d: %d\tauN: %.2f\n", n*100, len[j], n*100, j, auN; break}}}' file.fa`
 
