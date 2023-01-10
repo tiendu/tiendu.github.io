@@ -66,7 +66,7 @@ categories: [guide, english, bioinformatics]
 
 * Get the length of each sequence
 
-`awk '/^>/ {getline seq; sub(/>/, "", $0); print $0"\t"length(seq)}' file.fa`
+`awk '/^>/ {getline seq; sub(/^>/, "", $0); print $0"\t"length(seq)}' file.fa`
 
 * Get the total size (Mb) and number of sequences
 
