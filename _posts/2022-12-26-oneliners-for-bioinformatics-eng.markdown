@@ -8,6 +8,8 @@ categories: [guide, english, bioinformatics]
 
 # Fastq
 
+**Use `cat` instead of `zcat` if files are not compressed**
+
 * Get read length and the count number for each length
 
 `zcat file.fq.gz | awk 'NR%4==2 {len[length($0)]++} END {for (i in len) {print i"\t"len[i]}}'`
@@ -22,21 +24,19 @@ categories: [guide, english, bioinformatics]
 
 `awk '{print}; NR%4==0 {i=4; while (i>0) {"zcat reverse.fq.gz" | getline; print; i--}}' <(zcat forward.fq.gz)`
 
+* Deinterleave read
+
+`paste - - - - - - - -  < interleaved.fq | tee >(cut -f 1-4 | tr "\t" "\n" > forward.fq) | cut -f 5-8 | tr "\t" "\n" > reverse.fq`
+
+`cat interleaved.fq | awk '/^@(.+)* 1:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "forward.fq"} /^@(.+)* 2:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "reverse.fq"}'`
+
 * Deduplicate single-end reads
 
 `zcat file.fq.gz | awk '/^@/ {NR%4==3; getline seq; f=!a[seq]++} f'`
 
 * Deduplicate paired-end reads
 
-`awk '{print}; NR%4==0 {i=4; while (i>0) {"zcat reverse.fq.gz" | getline; print; i--}}' <(zcat forward.fq.gz) | awk '/^@(.+) 1:/ {getline seq1} /^@(.+) 2:/ {getline seq2} {f=!a[seq1, seq2]++} f {if ($0 ~ /^@(.+) 1:/) {print $0"\n"seq1; getline; print; getline; print}; if ($0 ~ /^@(.+) 2:/) {print $0"\n"seq2; getline; print; getline; print}}' | paste - - - - - - - - | tee >(cut -f 1-4 | tr "\t" "\n" > dedup_forward.fq) | cut -f 5-8 | tr "\t" "\n" > dedup_reverse.fq`
-
-**Use `cat` instead of `zcat` if files are not compressed**
-
-* Deinterleave read
-
-`paste - - - - - - - -  < interleaved.fq | tee >(cut -f 1-4 | tr "\t" "\n" > forward.fq) | cut -f 5-8 | tr "\t" "\n" > reverse.fq`
-
-`cat interleaved.q | awk '/^@(.+) 1:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "forward.fq"} /^@(.+) 2:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "reverse.fq"}'`
+`awk '{print}; NR%4==0 {i=4; while (i>0) {"zcat reverse.fq.gz" | getline; print; i--}}' <(zcat forward.fq.gz) | awk '/^@(.+) 1:/ {getline seq1} /^@(.+) 2:/ {getline seq2} {f=!a[seq1, seq2]++} f {if ($0 ~ /^@(.+) 1:/) {print $0"\n"seq1; getline; print; getline; print}; if ($0 ~ /^@(.+) 2:/) {print $0"\n"seq2; getline; print; getline; print}}' | awk '/^@(.+)* 1:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "dedup_forward.fq"} /^@(.+)* 2:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "dedup_reverse.fq"}'`
 
 * Convert fastq to fasta
 
@@ -45,7 +45,6 @@ categories: [guide, english, bioinformatics]
 `sed -e '/^@/!d;s//>/;N' input.fastq > output.fasta`
 
 `awk '/^@/ {sub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
-
 
 # Fasta
 
@@ -171,7 +170,7 @@ categories: [guide, english, bioinformatics]
 
 `awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1]=$2; next} {print ($1 in a) ? $0 OFS a[$1] : $0 OFS 0}' table1.tsv table2.tsv`
 
-* Remove duplicate indices and sum their values in a table
+* Deduplicate indices and sum values associated with those indices
 
 `awk 'BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[$1]++; for (i=1; i<=NF; i++) {dup[$1][i]+=$i}} END {for (i in label) {printf "%s%s", i, OFS; for (j=2; j<=NF; j++) {$j=dup[i][j]; printf "%s%s", $j, (j<NF) ? OFS : ORS}}}' table.tsv`
 
@@ -214,6 +213,5 @@ I've made some improvements to make it more readable and easy to understand. Her
 * Subsample single-end reads in fasta format (this can also be used for subsampling without replacement of sequences)
 
 `awk '/^>/ {getline seq; print $0"\n"seq}' singlelined_single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
-
 
 **_(to be cont')_**
