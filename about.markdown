@@ -10,8 +10,8 @@ Outside of research, he's also an avid cook that has a keen interest in lacto-fe
 
 **Interest**
 * Cooking
-* Perl
 * Nature sightseeing
+* Perl
 * awk
 * Bioinformatics software development and statistical analysis
 
