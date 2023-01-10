@@ -77,7 +77,7 @@ categories: [guide, english, bioinformatics]
 
 `awk -v n=1000 '/^>/ {getline seq} length(seq)>n {print $0"\n"seq}' file.fa`
 
-* Get N50, L50 (replace n with the desired x in Nx e.g., 0.9 (N90) or 0.5 (N50)) and auN (area under the Nx curve, this is a new metric to evaluate assembly quality)
+* Get N50, L50 (here I used 0.5 for N50, n=0.9 for N90) and auN (area under the Nx curve, a new metric to evaluate assembly quality)
 
 `awk -v n=0.5 '/^>/ {getline seq; a[$0]=length(seq)} END {asort(a); for (i in a) {sum+=a[i]; sum_sq+=(a[i]**2); len[i]=a[i]}; auN=sum_sq/sum; for (j in len) {csum+=len[j]; if (csum>sum*(1-n)) {printf "N%d: %d\tL%d: %d\tauN: %.2f\n", n*100, len[j], n*100, j, auN; break}}}' file.fa`
 
@@ -123,11 +123,11 @@ categories: [guide, english, bioinformatics]
 
 `awk -v s="" 'function recwrap(str1) {pos=""; end=0; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos = pos "["start","end"] "; recfunc(substr(str2, RSTART+RLENGTH, length(str2)))}; return pos} /^>/ {getline seq; sub(/^>/, "", $0)} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
 
-* Get the k-nucleotide frequency (replace n with 3 for trinucleotide, 4 for tetranucleotide and 5 for pentanucleotide, etc)
+* Get the k-nucleotide frequency (replace k=n with k=3 for trinucleotide, k=4 for tetranucleotide and so on)
 
 `awk -v k=n '/^>/ {getline seq; sub(/^>/, "", $0)} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a) | "sort -n -r -k3,3"}}' file.fa`
 
-* Get the palindromic k-nucleotide frequency (replace n with even number only for example, 4 for palindromic tetranucleotide, etc)
+* Get the palindromic k-nucleotide frequency (replace k=n with even number only e.g., k=4 for palindromic tetranucleotide, etc)
 
 `awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq; sub(/^>/, "", $0)} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a) | "sort -n -r -k3,3"}}' file.fa`
 
@@ -197,7 +197,7 @@ categories: [guide, english, bioinformatics]
 
 Credit to [Umer Zeeshan Ijaz](https://userweb.eng.gla.ac.uk/umer.ijaz/bioinformatics/subsampling_reads.pdf)
 
-I've made some improvements to make it more readable and easy to understand. Here I select 10,000 sequences for subsampling, set k for the desired number of subsampled reads/sequences.
+I've made some improvements to make it more readable and easy to understand. Here I select k=10000, set k to the desired number of reads/sequences.
 
 * Subsample paired-end reads in fastq format
 
