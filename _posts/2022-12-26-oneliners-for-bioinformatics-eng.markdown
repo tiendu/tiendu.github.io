@@ -131,7 +131,9 @@ categories: [guide, english, bioinformatics]
 
 # Utility
 
+
 ## Tables
+
 
 * Convert csv to tsv
 
@@ -173,7 +175,9 @@ categories: [guide, english, bioinformatics]
 
 `awk 'function percent(value, total) {return (total!=0) ? sprintf("%.2f", 100*value/total) : "NA"} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[NR]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[i])}; print}}' table.tsv`
 
+
 ## Text
+
 
 * Interleave line by line (for multiple text files)
 
