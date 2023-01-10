@@ -26,7 +26,7 @@ categories: [guide, english, bioinformatics]
 
 * Deduplicate paired-end reads
 
-`awk '{print}; NR%4 == 0 {c=4; while (c>0) {"zcat reverse.fq.gz" | getline; print; c--}}' <(zcat forward.fq.gz)' | awk '/^@(.+) 1:/ {NR%4==3; getline seq1} /^@(.+) 2:/ {NR%4==3; getline seq2} {f=!a[seq1, seq2]++} f {if ($0 ~ /^@(.+) 1:/) {print $0"\n"seq1; getline; print; getline; print}; if ($0 ~ /^@(.+) 2:/) {print $0"\n"seq2; getline; print; getline; print}}' | paste - - - - - - - - | tee >(cut -f 1-4 | tr "\t" "\n" > dedup_forward.fq) | cut -f 5-8 | tr "\t" "\n" > dedup_reverse.fq`
+`awk '{print}; NR%4 == 0 {i=4; while (i>0) {"zcat reverse.fq.gz" | getline; print; i--}}' <(zcat forward.fq.gz)' | awk '/^@(.+) 1:/ {NR%4==3; getline seq1} /^@(.+) 2:/ {NR%4==3; getline seq2} {f=!a[seq1, seq2]++} f {if ($0 ~ /^@(.+) 1:/) {print $0"\n"seq1; getline; print; getline; print}; if ($0 ~ /^@(.+) 2:/) {print $0"\n"seq2; getline; print; getline; print}}' | paste - - - - - - - - | tee >(cut -f 1-4 | tr "\t" "\n" > dedup_forward.fq) | cut -f 5-8 | tr "\t" "\n" > dedup_reverse.fq`
 
 **Use `cat` instead of `zcat` if files are not compressed**
 
@@ -170,6 +170,10 @@ categories: [guide, english, bioinformatics]
 * Calculate percentage by row
 
 `awk 'function percent(value, total) {return (total!=0) ? sprintf("%.2f", 100*value/total) : "NA"} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[NR]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[i])}; print}}' table.tsv`
+
+* Interleave line by line
+
+`awk 'BEGIN {do {i=j=0; while (++j<ARGC) {if (getline<ARGV[j]) {printf (j<(ARGC-1)) ? $0 OFS : $0 ORS; i=1}}} while (i)}' text*.txt`
 
 # Random sampling with reservoir sampling
 
