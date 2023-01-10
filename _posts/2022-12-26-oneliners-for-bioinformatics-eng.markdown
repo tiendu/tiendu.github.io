@@ -4,13 +4,15 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
+**Updated on 2023-01-10**
+
 # Fastq
 
-* Summary of the read length and its count
+* Get read length and the count number for each length
 
 `zcat file.fq.gz | awk 'NR%4==2 {len[length($0)]++} END {for (i in len) {print i"\t"len[i]}}'`
 
-* Size (Gb) and number of reads
+* Get the total size (Gb) and number of reads
 
 `zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); count++} END {printf "size: %.3f\nnumber of reads: %d\n", sum/1e9, count}'`
 
@@ -67,7 +69,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {getline seq; sub(/>/, "", $0); print $0"\t"length(seq)}' file.fa`
 
-* Total size (Mb) and number of sequences
+* Get the total size (Mb) and number of sequences
 
 `awk '/^>/ {getline seq; sum+=length(seq); counter++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, counter}' file.fa`
 
@@ -117,7 +119,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
 
-* Find location of a region of a sequence (replace "" for s with a desired pattern/region)
+* Locate a region of a sequence (replace "" for s with a desired pattern)
 
 `awk -v s="" 'function recwrap(str1) {pos=""; end=0; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos = pos "["start","end"] "; recfunc(substr(str2, RSTART+RLENGTH, length(str2)))}; return pos} /^>/ {getline seq; sub(/^>/, "", $0)} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
 
@@ -131,9 +133,7 @@ categories: [guide, english, bioinformatics]
 
 # Utility
 
-
 ## Tables
-
 
 * Convert csv to tsv
 
@@ -175,9 +175,7 @@ categories: [guide, english, bioinformatics]
 
 `awk 'function percent(value, total) {return (total!=0) ? sprintf("%.2f", 100*value/total) : "NA"} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[NR]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[i])}; print}}' table.tsv`
 
-
 ## Text
-
 
 * Interleave line by line (for multiple text files)
 
@@ -187,12 +185,11 @@ categories: [guide, english, bioinformatics]
 
 `awk -v step=4 '{for (i=1; i<ARGC; i++) {j=step; while (j>0) {getline < ARGV[i]; printf "%s\n", $0; j--}}}' text*.txt`
 
-
 # Random sampling reads/sequences with reservoir sampling
 
 Credit to [Umer Zeeshan Ijaz](https://userweb.eng.gla.ac.uk/umer.ijaz/bioinformatics/subsampling_reads.pdf)
 
-I made some improvements here. Set k for the desired number of sequences.
+I made some improvements here. Set k for the desired number of subsampled reads/sequences.
 
 * Subsample paired-end reads in fastq format
 
@@ -206,9 +203,7 @@ I made some improvements here. Set k for the desired number of sequences.
 
 `zcat single.fastq.gz | awk '{printf "%s", $0; if (NR%4==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2"\n"$3"\n"$4 > "subsampled_single.fastq"}'`
 
-* Subsample single-end reads in fasta format 
-
-**Note: This can also be used for subsampling without replacement of sequences**
+* Subsample single-end reads in fasta format (this can also be used for subsampling without replacement of sequences)
 
 `awk '/^>/ {getline seq; print $0"\n"seq}' singlelined_single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
 
