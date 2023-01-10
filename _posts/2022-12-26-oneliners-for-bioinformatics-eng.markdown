@@ -55,7 +55,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {print ""}' file.fa`
 
-* Format singleline fasta to multiline fasta (here I used the limit of 60 characters per line)
+* Format singleline fasta to multiline fasta (here I used the limit of 60 characters per line, set l to the desired number of characters per line)
 
 `awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) {printf "%s", $(i*l+j)}; print ""}}' file.fa`
 
@@ -73,7 +73,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {getline seq; sum+=length(seq); counter++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, counter}' file.fa`
 
-* Filter sequence based on sequence length (here I use 1,000, replace n with desired length)
+* Filter sequence based on sequence length (here I use 1,000, set n to the desired length)
 
 `awk -v n=1000 '/^>/ {getline seq} length(seq)>n {print $0"\n"seq}' file.fa`
 
@@ -99,7 +99,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>/ {getline seq; sub(/^>/, "", $0); a[$0]=length(seq)} END {asort(a, b); min=b[1]; max=b[length(b)]; min_lst=max_lst=""; for (i in a) {if (a[i]==min) {min_lst=min_lst i " "}; if (a[i]==max) {max_lst=max_lst i " "}}; printf "Min: %d\t%s\nMax: %d\t%s\n", min, min_lst, max, max_lst}' file.fa`
 
-* Extract a region of a sequence e.g., a gene from a contig (replace "" for id, n for start and m for end accordingly)
+* Extract a region of a sequence e.g., a gene from a contig (replace "" for id, n for the starting position and m for the end position accordingly, following 1-based indexing)
 
 `awk -v id="" -v start=n -v end=m '($0~">"id) {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j s[i]}; print $0"\n"j}' file.fa`
 
@@ -119,15 +119,15 @@ categories: [guide, english, bioinformatics]
 
 `awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
 
-* Locate a region of a sequence (replace "" for s with a desired pattern)
+* Locate a region of a sequence (set s with a desired pattern)
 
 `awk -v s="" 'function recwrap(str1) {pos=""; end=0; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos = pos "["start","end"] "; recfunc(substr(str2, RSTART+RLENGTH, length(str2)))}; return pos} /^>/ {getline seq; sub(/^>/, "", $0)} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
 
-* Get the k-nucleotide frequency (replace k=n with k=3 for trinucleotide, k=4 for tetranucleotide and so on)
+* Get the k-nucleotide frequency (set k=n with k=3 for trinucleotide, k=4 for tetranucleotide and so on)
 
 `awk -v k=n '/^>/ {getline seq; sub(/^>/, "", $0)} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a) | "sort -n -r -k3,3"}}' file.fa`
 
-* Get the palindromic k-nucleotide frequency (replace k=n with even number only e.g., k=4 for palindromic tetranucleotide, etc)
+* Get the palindromic k-nucleotide frequency (set k=n with even number only e.g., k=4 for palindromic tetranucleotide, etc)
 
 `awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq; sub(/^>/, "", $0)} {for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a) | "sort -n -r -k3,3"}}' file.fa`
 
