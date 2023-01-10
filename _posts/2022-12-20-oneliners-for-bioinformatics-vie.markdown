@@ -6,23 +6,35 @@ categories: [guide, vietnamese, bioinformatics]
 ---
 # Raw reads
 
+**Thay thế `zcat` bằng `cat` nếu không phải là file nén**
+
 * Thống kê độ dài read
 
 `zcat file.fq.gz | awk 'NR%4==2 {len[length($0)]++} END {for (i in len) {print i"\t"len[i]}}'`
 
 * Kích thước (Gb) và số lượng read
 
-`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); counter++} END {printf "size: %.3f\nnumber of reads: %d\n", sum/1e9, counter}'`
+`zcat file.fq.gz | awk 'NR%4==2 {sum+=length($0); count++} END {printf "size: %.3f\nnumber of reads: %d\n", sum/1e9, count}'`
 
 * Interleave read
 
 `paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}'`
 
+`awk '{print}; NR%4==0 {i=4; while (i>0) {"zcat reverse.fq.gz" | getline; print; i--}}' <(zcat forward.fq.gz)`
+
 * Deinterleave read
 
 `paste - - - - - - - -  < interleaved.fq | tee >(cut -f 1-4 | tr "\t" "\n" > forward.fq) | cut -f 5-8 | tr "\t" "\n" > reverse.fq`
 
-**Thay thế `zcat` bằng `cat` nếu không phải là file nén**
+`cat interleaved.fq | awk '/^@(.+)* 1:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "forward.fq"} /^@(.+)* 2:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "reverse.fq"}'`
+
+* Loại bỏ trùng lặp ở single-end reads
+
+`zcat file.fq.gz | awk '/^@/ {NR%4==3; getline seq; f=!a[seq]++} f'`
+
+* Loại bỏ trùng lặp ở paired-end reads
+
+`awk '{print}; NR%4==0 {i=4; while (i>0) {"zcat reverse.fq.gz" | getline; print; i--}}' <(zcat forward.fq.gz) | awk '/^@(.+) 1:/ {getline seq1} /^@(.+) 2:/ {getline seq2} {f=!a[seq1, seq2]++} f {if ($0 ~ /^@(.+) 1:/) {print $0"\n"seq1; getline; print; getline; print}; if ($0 ~ /^@(.+) 2:/) {print $0"\n"seq2; getline; print; getline; print}}' | awk '/^@(.+)* 1:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "dedup_forward.fq"} /^@(.+)* 2:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "dedup_reverse.fq"}'`
 
 * Chuyển đổi fastq sang fasta
 
@@ -57,7 +69,7 @@ categories: [guide, vietnamese, bioinformatics]
 
 * Kích thước tổng (Mb) và số lượng sequence
 
-`awk '/^>/ {getline seq; sum+=length(seq); counter++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, counter}' file.fa`
+`awk '/^>/ {getline seq; sum+=length(seq); count++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, count}' file.fa`
 
 * Lọc sequence có kích thước lớn hơn n, ở đây là 1000
 
@@ -123,6 +135,8 @@ categories: [guide, vietnamese, bioinformatics]
 
 # Tiện ích
 
+## Bảng
+
 * Chuyển đổi csv thành tsv
 
 `awk 'BEGIN {FPAT="([^,]*)|(\"[^\"]+\")"; OFS="\t"} {for (i=1; i<=NF; i++) {if (substr($i, 1, 1)=="\"") {$i=substr($i, 2, length($i)-2)}}; for (i=1; i<=NF-1; i++) printf $i OFS; printf "\n"}' file.csv`
@@ -130,6 +144,14 @@ categories: [guide, vietnamese, bioinformatics]
 * Chuyển đổi tsv thành csv
 
 `awk 'BEGIN {FS="\t"; OFS=","} {rebuilt=0; for(i=1; i<=NF; i++) {if ($i~/,/ && $i!~/^".*"$/) {gsub("\"", "\"\"", $i); $i="\""$i"\""; rebuilt=1}}; if (!rebuilt) {$1=$1} print}' file.tsv`
+
+* Remove a column (here I remove the 2nd column)
+
+`awk -v k=2 'BEGIN {FS=OFS="\t"} {$k=""; for (i=1; i<=NF; i++) {if ($i!="") printf "%s%s", $i, (i<NF) ? OFS : ORS}}' table.tsv`
+
+* Swap a column with another (here I swap the 1st column and the 2nd column)
+
+`awk -v m=1 -v n=2 'BEGIN {FS=OFS="\t"} {t=$m; $m=$n; $n=t; print}' table.tsv`
 
 * Chuyển dòng thành cột (transpose)
 
@@ -163,6 +185,16 @@ categories: [guide, vietnamese, bioinformatics]
 
 `awk 'function percent(value, total) {return (total!=0) ? sprintf("%.2f", 100*value/total) : "NA"} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[NR]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[i])}; print}}' table.tsv`
 
+## (for multiple text files)Text
+
+* Interleave dòng với dòng 
+
+`awk '{for (i=1; i<ARGC; i++) {getline < ARGV[i]; printf "%s%s", $0, (i<(ARGC-1)) ? OFS : ORS}}' text*.txt`
+
+* Interleave dòng bởi n dòng (ở đây là mỗi 4 dòng)
+
+`awk -v step=4 '{for (i=1; i<ARGC; i++) {j=step; while (j>0) {getline < ARGV[i]; printf "%s\n", $0; j--}}}' text*.txt`
+
 # Lấy mẫu ngẫu nhiên với reservoir sampling 
 
 Nguồn từ [Umer Zeeshan Ijaz](https://userweb.eng.gla.ac.uk/umer.ijaz/bioinformatics/subsampling_reads.pdf)
@@ -181,9 +213,7 @@ Mình có thay đổi một số cải tiến ở đây. Đặt k cho số seque
 
 `zcat single.fastq.gz | awk '{printf "%s", $0; if (NR%4==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2"\n"$3"\n"$4 > "subsampled_single.fastq"}'`
 
-* Lấy mẫu từ single-end reads ở định dạng fasta 
-
-**Lưu ý: Có thể sử dụng để lấy mẫu không lặp lại sequence**
+* Lấy mẫu từ single-end reads ở định dạng fasta (có thể sử dụng để lấy mẫu không lặp lại sequence)
 
 `awk '/^>/ {getline seq; print $0"\n"seq}' singlelined_single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
 
