@@ -60,7 +60,7 @@ categories: [guide, english, bioinformatics]
 
 `fold -w 60 file.fa`
 
-* Relabel sequence header of interleaved fastq-converted-to-fasta (this helps when one uses BLAST or any classifier to classify reads)
+* Rename sequence header of interleaved fastq-converted-to-fasta (this helps when one uses BLAST or any classifier to classify reads)
 
 `awk -v count=1 '/^>/ {getline seq; match($0, />(.+)* /, name); label=(a[name[1]]++) ? ">"count++"|R" : ">"count"|F"; print label"\n"seq}' file.fa`
 
