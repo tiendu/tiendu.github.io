@@ -4,13 +4,15 @@ title: About
 permalink: /about/
 ---
 
-A biotechnologist-turned programmer. Now doing his PhD candidacy at Kyung Hee University in Korea with main focus on metagenomics, microbiomics and viromics.
+A biotechnologist-turned programmer, now pursuing his PhD candidacy at Kyung Hee University in Korea with main focus on metagenomics, microbiomics and viromics.
 
 Outside of research, he's also an avid cook that has a keen interest in lacto-fermentation.
 
 **Interest**
 * Cooking
 * Perl
+* Nature sightseeing
+* awk
 * Bioinformatics software development and statistical analysis
 
 **Education**
