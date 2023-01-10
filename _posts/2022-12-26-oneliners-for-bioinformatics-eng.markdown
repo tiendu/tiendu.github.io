@@ -18,19 +18,23 @@ categories: [guide, english, bioinformatics]
 
 `paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}'`
 
+`awk '{print}; NR%4==0 {i=4; while (i>0) {"zcat reverse.fq.gz" | getline; print; i--}}' <(zcat forward.fq.gz)`
+
 * Deduplicate single-end reads
 
 `zcat file.fq.gz | awk '/^@/ {NR%4==3; getline seq; f=!a[seq]++} f'`
 
 * Deduplicate paired-end reads
 
-`paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}' | awk '/^@(.+) 1:/ {NR%4==3; getline seq1} /^@(.+) 2:/ {NR%4==3; getline seq2} {f=!a[seq1, seq2]++} f {if ($0 ~ /^@(.+) 1:/) {print $0"\n"seq1; getline; print; getline; print}; if ($0 ~ /^@(.+) 2:/) {print $0"\n"seq2; getline; print; getline; print}}' | paste - - - - - - - - | tee >(cut -f 1-4 | tr "\t" "\n" > dedup_forward.fq) | cut -f 5-8 | tr "\t" "\n" > dedup_reverse.fq`
+`awk '{print}; NR%4 == 0 {c=4; while (c>0) {"zcat reverse.fq.gz" | getline; print; c--}}' <(zcat forward.fq.gz)' | awk '/^@(.+) 1:/ {NR%4==3; getline seq1} /^@(.+) 2:/ {NR%4==3; getline seq2} {f=!a[seq1, seq2]++} f {if ($0 ~ /^@(.+) 1:/) {print $0"\n"seq1; getline; print; getline; print}; if ($0 ~ /^@(.+) 2:/) {print $0"\n"seq2; getline; print; getline; print}}' | paste - - - - - - - - | tee >(cut -f 1-4 | tr "\t" "\n" > dedup_forward.fq) | cut -f 5-8 | tr "\t" "\n" > dedup_reverse.fq`
 
 **Use `cat` instead of `zcat` if files are not compressed**
 
 * Deinterleave read
 
 `paste - - - - - - - -  < interleaved.fq | tee >(cut -f 1-4 | tr "\t" "\n" > forward.fq) | cut -f 5-8 | tr "\t" "\n" > reverse.fq`
+
+`cat interleaved.q | awk '/^@(.+) 1:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "forward.fq"} /^@(.+) 2:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "reverse.fq"}'`
 
 * Convert fastq to fasta
 
