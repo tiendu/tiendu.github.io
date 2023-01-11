@@ -4,7 +4,7 @@ title:  "Các oneliner thông dụng cho bioinformatics"
 date:   2022-12-20
 categories: [guide, vietnamese, bioinformatics]
 ---
-**Cập nhật ngày 2023-01-
+**Cập nhật ngày 2023-01-12**
 
 # Raw reads
 
