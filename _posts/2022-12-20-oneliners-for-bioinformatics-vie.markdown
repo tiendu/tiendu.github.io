@@ -4,6 +4,8 @@ title:  "Các oneliner thông dụng cho bioinformatics"
 date:   2022-12-20
 categories: [guide, vietnamese, bioinformatics]
 ---
+**Cập nhật ngày 2023-01-
+
 # Raw reads
 
 **Thay thế `zcat` bằng `cat` nếu không phải là file nén**
@@ -44,6 +46,9 @@ categories: [guide, vietnamese, bioinformatics]
 
 `awk '/^@/ {sub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
 
+**Sử dụng `xargs` để xử lý dữ liệu song song, một ví dụ**
+
+`find . -name "*_1.fastq.gz" -print0 | sed 's/_1.fastq.gz//g' | xargs -0 -P 4 -I {} sh -c 'name=$(echo {} | cut -d'/' -f2); zcat ${name}_1.fastq.gz | awk -v file=$name '\''{print} NR%4==0 {i=4; while (i>0) {"zcat "file"_2.fastq.gz" | getline; print; i--}}'\'' | awk '\''/^@(.+) 1:/ {getline seq1} /^@(.+) 2:/ {getline seq2} {f=!a[seq1, seq2]++} f {if ($0 ~ /^@(.+) 1:/) {print $0"\n"seq1}; if ($0 ~ /^@(.+) 2:/) {print $0"\n"seq2}}'\'' | sed '\''s/^@/>/g'\'' > interleaved_${name}.fasta'`
 
 # Fasta
 
