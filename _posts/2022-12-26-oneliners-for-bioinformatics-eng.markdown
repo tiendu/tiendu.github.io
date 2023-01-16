@@ -223,7 +223,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 >
 >**Output:**
 >
-| |C1|C2|C3|
+>| |C1|C2|C3|
 >|:---|---:|---:|---:|
 >|R1|7|4|14|
 >|R2|0|4|5|
