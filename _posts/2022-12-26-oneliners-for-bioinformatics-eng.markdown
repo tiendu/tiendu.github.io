@@ -164,6 +164,27 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 `awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv`
 
+>Table1.tsv:
+>
+>| |C1|
+>|:---|:---|
+>|R2|4|
+>|R3|3|
+>
+>Table2.tsv:
+>| |C2|
+>|:---|:---|
+>|R1|6|
+>|R3|7|
+>|R4|9|
+>
+>Table3.tsv:
+>| |C3|
+>|:---|:---|
+>|R1|1|
+>|R5|8|
+
+
 * Inner join (for multiple tables)
 
 `awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv | awk 'BEGIN {FS=OFS="\t"} NR==1 {print} NR>1 {if (!match($0, "0")) print}'`
@@ -208,7 +229,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 >
 >FFF,FFFFFFFFFF,FFFFFFFFFFF:FFFFFFF,FFFFFFFFFFFF:F,:FF::F,F::FFF,:FFFFFFF,FFFFFFFFFF,,FFF,FFFFFF,,:FFF,,FF:,,:FFF:FF,FFFFFF,:FFFFFFFF,F,FFFFFF,FFFF,,F,F
 >
->Text2:txt
+>Text2.txt:
 >
 >@A00155:416:HV75HDSXY:2:1101:1271:1000 2:N:0:TGCGGCGT+TACCGAGG
 >
