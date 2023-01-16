@@ -164,26 +164,36 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 `awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv`
 
+>**Input:**
 >Table1.tsv:
 >
 >| |C1|
->|:---|:---|
+>|:---|---:|
 >|R2|4|
 >|R3|3|
 >
 >Table2.tsv:
 >| |C2|
->|:---|:---|
+>|:---|---:|
 >|R1|6|
 >|R3|7|
 >|R4|9|
 >
 >Table3.tsv:
 >| |C3|
->|:---|:---|
+>|:---|---:|
 >|R1|1|
 >|R5|8|
-
+>
+>**Output:**
+>
+>| |C1|C2|C3|
+>|:---|---:|---:|---:|
+>|R1|0|6|1|
+>|R2|4|0|0|
+>|R3|3|7|0|
+>|R4|0|9|0|
+>|R5|0|0|8|
 
 * Inner join (for multiple tables)
 
