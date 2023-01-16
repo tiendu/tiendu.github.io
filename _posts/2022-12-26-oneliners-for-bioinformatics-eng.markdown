@@ -165,6 +165,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 `awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv`
 
 >**Input:**
+>
 >Table1.tsv:
 >
 >| |C1|
@@ -210,6 +211,23 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 * Deduplicate indices and sum values associated with those indices
 
 `awk 'BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[$1]++; for (i=1; i<=NF; i++) {dup[$1][i]+=$i}} END {for (i in label) {printf "%s%s", i, OFS; for (j=2; j<=NF; j++) {$j=dup[i][j]; printf "%s%s", $j, (j<NF) ? OFS : ORS}}}' table.tsv`
+
+>**Input:**
+>
+>| |C1|C2|C3|
+>|:---|---:|---:|---:|
+>|R1|2|3|8|
+>|R1|5|1|6|
+>|R2|0|4|5|
+>|R3|1|7|9|
+>
+>**Output:**
+>
+| |C1|C2|C3|
+>|:---|---:|---:|---:|
+>|R1|7|4|14|
+>|R2|0|4|5|
+>|R3|1|7|9|
 
 * Calculate percentage by column
 
