@@ -192,7 +192,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '{for (i=1; i<ARGC; i++) {getline < ARGV[i]; printf "%s%s", $0, (i<(ARGC-1)) ? OFS : ORS}}' text*.txt`
 
-`awk 'BEGIN {do {flag=channel=0; while (++channel<ARGC) {if (getline < ARGV[channel]) {printf "%s", (ch<ARGC-1) ? $0 FS : $0 RS;  break= 1}}} while (break)} text*.txt`
+`awk 'BEGIN {do {flag=channel=0; while (++channel<ARGC) {if (getline < ARGV[channel]) {printf "%s", (ch<ARGC-1) ? $0 "\t" : $0 "\n"; flag=1}}} while (flag)}' text*.txt`
 
 * Interleave line by nth line (here is 4 lines for multiple text files)
 
