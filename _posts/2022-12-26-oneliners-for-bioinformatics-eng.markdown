@@ -174,6 +174,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 >|R3|3|
 >
 >Table2.tsv:
+>
 >| |C2|
 >|:---|---:|
 >|R1|6|
@@ -181,6 +182,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 >|R4|9|
 >
 >Table3.tsv:
+>
 >| |C3|
 >|:---|---:|
 >|R1|1|
