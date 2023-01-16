@@ -194,7 +194,38 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 `awk '{for (i=1; i<ARGC; i++) {getline < ARGV[i]; printf "%s%s", $0, (i<(ARGC-1)) ? OFS : ORS}}' text*.txt`
 
-`awk 'BEGIN {do {flag=channel=0; while (++channel<ARGC) {if (getline < ARGV[channel]) {printf "%s", (channel<ARGC-1) ? $0 "\t" : $0 "\n"; flag=1}}}' text*.txt`
+`awk 'BEGIN {do {flag=channel=0; while (++channel<ARGC) {if (getline < ARGV[channel]) {printf "%s", (channel<ARGC-1) ? $0 "\t" : $0 "\n"}; flag=1}} while (flag)}' text*.txt`
+
+>**Input:**
+>
+>Text1.txt:
+>
+>@A00155:416:HV75HDSXY:2:1101:1271:1000 1:N:0:TGCGGCGT+TACCGAGG
+>
+>GCAAAAATGCGGGAATCGATTTCAATTTTGATGAAGTGAAAGTTTCCAATTCTTTCCAAAGTCAAATCTTGGTTCAACTCGCCAAGGAAAAAGGCACAGCCAACGAAATGGAAGAACTTCTGTTTGAAGCTTATTTCATCCTTGGAAAAAA
+>
+>+
+>
+>FFF,FFFFFFFFFF,FFFFFFFFFFF:FFFFFFF,FFFFFFFFFFFF:F,:FF::F,F::FFF,:FFFFFFF,FFFFFFFFFF,,FFF,FFFFFF,,:FFF,,FF:,,:FFF:FF,FFFFFF,:FFFFFFFF,F,FFFFFF,FFFF,,F,F
+>Text2:txt
+>
+>@A00155:416:HV75HDSXY:2:1101:1271:1000 2:N:0:TGCGGCGT+TACCGAGG
+>
+>GGGGGGGGGGAACATAAAAGTTTGAAAAAAAAAAAAAAACCAAACAAAAAAAAAAAAAAAAACAAAGAAAAAAAAAAAAAAAATAAAAAAAAATTAAAAATATAAATAAAATCACAATAGAATTAATAAATATAGTAAAACAAAAAAAATA
+>
+>+
+>
+>FFFF,,,,,,,,,,,,,,,,:,:,,FFFF:FFF,,::,:,,,,,,F:,,F,FFFFFF:F::,,,,,,F:FFF,F:,:,F,,,:,FF:,F,:,,,,F::,:,F,::,,,,F,,,:,::,,,,:,,:,,,,:,:F,,:,,,:,F,::F,F:,F
+>
+>**Output:**
+>
+>@A00155:416:HV75HDSXY:2:1101:1271:1000 1:N:0:TGCGGCGT+TACCGAGG	@A00155:416:HV75HDSXY:2:1101:1271:1000 2:N:0:TGCGGCGT+TACCGAGG
+>
+>GCAAAAATGCGGGAATCGATTTCAATTTTGATGAAGTGAAAGTTTCCAATTCTTTCCAAAGTCAAATCTTGGTTCAACTCGCCAAGGAAAAAGGCACAGCCAACGAAATGGAAGAACTTCTGTTTGAAGCTTATTTCATCCTTGGAAAAAA	GGGGGGGGGGAACATAAAAGTTTGAAAAAAAAAAAAAAACCAAACAAAAAAAAAAAAAAAAACAAAGAAAAAAAAAAAAAAAATAAAAAAAAATTAAAAATATAAATAAAATCACAATAGAATTAATAAATATAGTAAAACAAAAAAAATA
+>
+>+	+
+>
+>FFF,FFFFFFFFFF,FFFFFFFFFFF:FFFFFFF,FFFFFFFFFFFF:F,:FF::F,F::FFF,:FFFFFFF,FFFFFFFFFF,,FFF,FFFFFF,,:FFF,,FF:,,:FFF:FF,FFFFFF,:FFFFFFFF,F,FFFFFF,FFFF,,F,F	FFFF,,,,,,,,,,,,,,,,:,:,,FFFF:FFF,,::,:,,,,,,F:,,F,FFFFFF:F::,,,,,,F:FFF,F:,:,F,,,:,FF:,F,:,,,,F::,:,F,::,,,,F,,,:,::,,,,:,,:,,,,:,:F,,:,,,:,F,::F,F:,F
 
 * Interleave line by nth line (here is 4 lines for multiple text files)
 
@@ -203,8 +234,6 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 * Merge strings with common substring
 
 `awk 'function concat(str1, str2) {split(str1, a1, ""); split(str2, a2, ""); while (1) {for (i in a1) {s1=substr(str1, i); if (str2~s1 && length(s1)>=3 && index(str2, s1)==1) {print s1; pos1=i; break}}; for (i in a2) {s2=substr(str2, i); if (str1~s2 && length(s2)>=3 && index(str1, s2)==1) {print s2; pos2=i; break}}; break}; c=""; if (pos1!="") {for (i=1; i<pos1+0; i++) {c=c a1[i]}; c=c str2} else if (pos2!="") {for (i=1; i<pos2+0; i++) {c=c a2[i]}; c=c str1}; return c} {split($0, a, " "); print concat(a[1], a[2])}' file.txt`
-
-Example:
 
 >**Input:**
 >
