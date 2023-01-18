@@ -247,7 +247,10 @@ In this example, I take the result from BLAST outfmt 6 to select the row based o
 
 **Input:**
 
+|qseqid|sseqid|pident|length|qlen|slen|evalue|bitscore|mismatch|gapopen|qstart|qend|sstart|send|
 |:---|:---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+
+
 |sif8011_100121348_f_151|sodA_153|87.931|58|151|554|1.10e-13|69.4|7|0|73|130|489|546|
 |sif8011_100121348_f_151|sodA_108|87.931|58|151|554|1.10e-13|69.4|7|0|73|130|489|546|
 |sif8011_100121348_f_151|sodA_96|87.931|58|151|554|1.10e-13|69.4|7|0|73|130|489|546|
