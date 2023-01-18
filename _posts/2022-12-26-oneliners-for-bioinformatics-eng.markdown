@@ -271,7 +271,7 @@ Example: I take the result from BLAST outfmt 6 to select the row based on the hi
 
 Example: I count the occurences with the value in the second column with grouping based on the first column.
 
-`awk 'BEGIN {FS=OFS="\t"} {count[$1][$2]++; max[$1]=(max[$1]>count[$1][$2]) ? max[$1] : count[$1][$2]} END {for (i in count) {for (j in count[i]) {print i, j, count[i][j]}}}' table.tsv`
+`awk 'BEGIN {FS=OFS="\t"} {count[$1][$2]++} END {for (i in count) {for (j in count[i]) {print i, j, count[i][j]}}}' table.tsv`
 
 >**Input:**
 >
@@ -290,6 +290,20 @@ Example: I count the occurences with the value in the second column with groupin
 >|:---|:---|---:|
 >|Seq1|Gene1|2|
 >|Seq1|Gene2|1|
+>|Seq2|Gene1|1|
+>|Seq2|Gene2|1|
+>|Seq3|Gene3|3|
+
+* Display the most occuring value with grouping
+
+`awk 'BEGIN {FS=OFS="\t"} {count[$1][$2]++; max[$1]=(max[$1]>count[$1][$2]) ? max[$1] : count[$1][$2]} END {for (i in count) {for (j in count[i]) {if (count[i][j]==max[i]) print i, j, count[i][j]}}}' table.tsv`
+
+Same input in the example above.
+
+>**Output:
+>
+>|:---|:---|---:|
+>|Seq1|Gene1|2|
 >|Seq2|Gene1|1|
 >|Seq2|Gene2|1|
 >|Seq3|Gene3|3|
