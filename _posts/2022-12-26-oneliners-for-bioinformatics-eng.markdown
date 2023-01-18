@@ -259,7 +259,7 @@ In this example, I take the result from BLAST outfmt 6 to select the row based o
 >|sif8011_100121348_r_151|sodA_96|87.931|58|151|554|1.10e-13|69.4|7|0|84|141|546|489|
 >|sif8011_100121348_r_151|sodA_88|87.931|58|151|554|1.10e-13|69.4|7|0|84|141|546|489|
 >|sif8011_100121348_r_151|sodA_71|87.931|58|151|554|1.10e-13|69.4|7|0|84|141|546|489|
-
+>
 >**Output:**
 >
 >|qseqid|sseqid|pident|length|qlen|slen|evalue|bitscore|mismatch|gapopen|qstart|qend|sstart|send|
