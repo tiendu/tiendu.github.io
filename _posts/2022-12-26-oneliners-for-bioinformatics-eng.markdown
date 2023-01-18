@@ -275,6 +275,7 @@ Example: I count the occurences with the value in the second column with groupin
 
 >**Input:**
 >
+>|Sequence|Gene|
 >|:---|:---|
 >|Seq1|Gene1|
 >|Seq1|Gene1|
@@ -285,8 +286,9 @@ Example: I count the occurences with the value in the second column with groupin
 >|Seq3|Gene3|
 >|Seq3|Gene3|
 >
->**Output:
+>**Output:**
 >
+>|Sequence|Gene|
 >|:---|:---|---:|
 >|Seq1|Gene1|2|
 >|Seq1|Gene2|1|
@@ -300,8 +302,9 @@ Example: I count the occurences with the value in the second column with groupin
 
 Same input in the example above.
 
->**Output:
+>**Output:**
 >
+>|Sequence|Gene|Count|
 >|:---|:---|---:|
 >|Seq1|Gene1|2|
 >|Seq2|Gene1|1|
