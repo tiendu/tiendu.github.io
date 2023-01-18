@@ -239,6 +239,27 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 `awk 'function percent(value, total) {return (total!=0) ? sprintf("%.2f", 100*value/total) : "NA"} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[NR]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[i])}; print}}' table.tsv`
 
+* Select row based on max or min value of a column
+
+In this example, I select the row based on the third column value.
+
+`awk 'BEGIN {FS=OFS="\t"} $3 > max[$1, $2] {max[$1, $2]=$3; a[$1, $2]=$0} END {for (i in a) print a[i]}' table.tsv`
+
+>**Input:**
+>
+>|:---|:---|---:|
+>|Seq1|Gene1|80|
+>|Seq1|Gene1|70|
+>|Seq1|Gene2|85|
+>|Seq2|Gene1|90|
+>
+>**Output:**
+>
+>|:---|:---|---:|
+>|Seq1|Gene2|85|
+>|Seq2|Gene1|90|
+>|Seq1|Gene1|80|
+
 ## Text
 
 * Interleave line by line (for multiple text files)
