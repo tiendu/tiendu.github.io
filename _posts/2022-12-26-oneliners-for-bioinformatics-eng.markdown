@@ -241,7 +241,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 * Select row based on max or min value of a column
 
-In this example, I take the result from BLAST outfmt 6 to select the row based on the highest percent identity and the highest query coverage.
+Example: I take the result from BLAST outfmt 6 to select the row based on the highest percent identity and the highest query coverage.
 
 `awk 'BEGIN {FS=OFS="\t"} ($3 > max_perc_ident[$1] && ($4/$5) > max_qcov[$1]) {max_perc_ident[$1]=$3; max_qcov[$1]=$4/$5; a[$1]=$0} END {for (i in a) print a[i]}' result.out`
 
@@ -266,6 +266,33 @@ In this example, I take the result from BLAST outfmt 6 to select the row based o
 >|:---|:---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 >|sif8011_100121348_r_151|sodA_153|87.931|58|151|554|1.10e-13|69.4|7|0|84|141|546|489|
 >|sif8011_100121348_f_151|sodA_153|87.931|58|151|554|1.10e-13|69.4|7|0|73|130|489|546|
+
+* Count with grouping
+
+Example: I count the occurences with the value in the second column with grouping based on the first column.
+
+`awk 'BEGIN {FS=OFS="\t"} {count[$1][$2]++; max[$1]=(max[$1]>count[$1][$2]) ? max[$1] : count[$1][$2]} END {for (i in count) {for (j in count[i]) {print i, j, count[i][j]}}}' table.tsv`
+
+>**Input:**
+>
+>|:---|:---|
+>|Seq1|Gene1|
+>|Seq1|Gene1|
+>|Seq1|Gene2|
+>|Seq2|Gene1|
+>|Seq2|Gene2|
+>|Seq3|Gene3|
+>|Seq3|Gene3|
+>|Seq3|Gene3|
+>
+>**Output:
+>
+>|:---|:---|---:|
+>|Seq1|Gene1|2|
+>|Seq1|Gene2|1|
+>|Seq2|Gene1|1|
+>|Seq2|Gene2|1|
+>|Seq3|Gene3|3|
 
 ## Text
 
