@@ -315,7 +315,7 @@ Same input in the example above.
 
 * Insert 1st line from a file to another
 
-sed -i "1i $(sed -n '1p' line_from.txt)" line_to.txt
+`sed -i "1i $(sed -n '1p' line_from.txt)" line_to.txt`
 
 * Interleave line by line (for multiple text files)
 
