@@ -313,9 +313,9 @@ Same input in the example above.
 
 ## Text
 
-* Insert 1st line from a file to another (set 1 to the desired number of line to be inserted)
+* Insert 1st line from a file to another
 
-sed -i "1i $(sed -n '1p' first_line_from.txt)" first_line_to.txt
+sed -i "1i $(sed -n '1p' line_from.txt)" line_to.txt
 
 * Interleave line by line (for multiple text files)
 
