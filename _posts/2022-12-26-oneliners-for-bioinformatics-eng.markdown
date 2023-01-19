@@ -313,6 +313,10 @@ Same input in the example above.
 
 ## Text
 
+* Insert 1st line from a file to another (set 1 to the desired number of line to be inserted)
+
+sed -i "1i $(sed -n '1p' first_line_from.txt)" first_line_to.txt
+
 * Interleave line by line (for multiple text files)
 
 `awk '{for (i=1; i<ARGC; i++) {getline < ARGV[i]; printf "%s%s", $0, (i<(ARGC-1)) ? OFS : ORS}}' text*.txt`
