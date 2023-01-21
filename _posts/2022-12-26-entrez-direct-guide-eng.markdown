@@ -43,7 +43,7 @@ For those experienced bioinformaticians, entrez-direct and sra-toolkit are great
 
 Also, you can download other datasets e.g., protein, nucleotide by changing the database `-db` for esearch.
 
-For example, with ```esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN]"| efetch -format fasta``` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with ```esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]"| efetch -format fasta``` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
+For example, with ```esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]"| efetch -format fasta``` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) in RefSeq database that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with ```esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]"| efetch -format fasta``` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
 
 Besides, I have written a script to filter the sequences using regular expression on the sequence header. Find it at [4]. To use, we have 3 parameters to key in: 
 - `-i`: input
