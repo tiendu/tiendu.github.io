@@ -4,7 +4,7 @@ title:  "Guide to download datasets from NCBI"
 date:   2022-12-26
 categories: [guide, english, bioinformatics]
 ---
-**HOW TO GET DATASET FOR PRACTICE?**
+**HOW TO GET DATASETS FOR PRACTICE?**
 
 This was a question for many (including me) when first started to learn bioinformatics. We need datasets to practice skills that we learn in the tutorials that the dataset has to be as realistic as possible and close to what we will face in reality and future. So what will we do?
 
