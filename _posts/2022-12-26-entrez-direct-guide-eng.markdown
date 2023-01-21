@@ -39,7 +39,7 @@ I now have some basic information e.g., the sequencing technology used was 454, 
 
 I select the first column with `awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}'`. Then, I use `head -n 3` to get only the first three datasets. In the last command, xargs, I set the number of argument `-n` being 1 and the number of CPUs `-P` being 4. Next, `fastq-dump` will be used to download the datasets. I download the file in `--gzip`, `--skip-technical`, `--split-files` and `--split-spot`. After the download is finished, I'll have three datasets for practice.
 
-For those with experience in bioinformatics, entrez-direct and sra-toolkit are great tools. They'll surely help you in research when it's inefficient and can cause confusion to download a large number of datasets manually. When chained together with other Linux/Unix commandline-tools, it's easy to be automated and make our life easier.
+For those experienced bioinformaticians, entrez-direct and sra-toolkit are great tools. They'll surely help you in research when it's inefficient and can cause confusion to download a large number of datasets manually. When chained together with other Linux/Unix commandline-tools, it's easy to be automated and make our life easier.
 
 Also, you can download other datasets e.g., protein, nucleotide by changing the database `-db` for esearch.
 
