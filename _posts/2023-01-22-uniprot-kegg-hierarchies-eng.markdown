@@ -24,7 +24,7 @@ First, we need to download the Swiss-Prot database from Uniprot and the KEGG BRI
 
 - [KEGG BRITE](https://rest.kegg.jp/get/br:ko00001/json)
 
-Unzipping the Swiss-Prot file will give us a fasta file (with approx. 568,000 records) from which we can extract the UniProt ID, and by using the KEGG API, we can convert the UniProt ID into the Gene ID in KEGG’s classification system. After that, we can find their KO IDs represented in the hierarchy from these Gene IDs. Using the below command, we will have a table with three columns, one for the UniProt ID and the other two for the Gene ID and the KO ID.
+Unzipping the downloaded Swiss-Prot file will give us a fasta file (with approx. 568,000 records) from which we can extract the UniProt ID, and by using the KEGG API, we can convert the UniProt ID into the Gene ID in KEGG’s classification system. After that, we can find their KO IDs represented in the hierarchy from these Gene IDs. Using the below command, we will have a table with three columns, one for the UniProt ID and the other two for the Gene ID and the KO ID.
 
 `for i in $(awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}'; done > uniprot_genes_ko.tsv`
 
