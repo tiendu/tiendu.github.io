@@ -4,6 +4,9 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
+**HOW DO WE KNOW WHICH FUNCTIONAL GROUP(S) OUR GENE IN INTEREST BELONGS TO?**
+
+While doing many metagenomics project, I have this question in mind and I found out, there's a easy way to figure out which groups the function assigned to the gene belong to using KEGG.
 
 KEGG is a well-known database for pathway studies. More than that, it also offers an inside look into the gene functions in a hierarchical classification approach. There was a hierarchical classification database called SEED, but it was no longer maintained as far as I know. KEGG BRITE is a part of KEGG and it provides functional hierarchies of several biological objects including 
 
