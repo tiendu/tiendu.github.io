@@ -68,4 +68,4 @@ Some first few rows.
 |P81928|K23505|Brite Hierarchies|Protein families: genetic information processing|Mitochondrial biogenesis [BR:ko03029]|TIMMDC1; complex I assembly factor TIMMDC1|
 |P48347|K06630|Environmental Information Processing|Signal transduction|MAPK signaling pathway - yeast [PATH:ko04011]|YWHAE; 14-3-3 protein epsilon|
 
-With the above _uniprot_brite.tsv_, everytime we use BLASTp or DIAMOND BLASTp to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to.
+With the above _uniprot_brite.tsv_, everytime we use `BLASTp` or `DIAMOND BLASTp` with UniProt Swiss-Prot database to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to.
