@@ -18,11 +18,11 @@ KEGG is a well-known database for pathway studies. More than that, it also offer
 
 In this guide, I’ll show you how we can utilise the UniProt database and the KEGG database to understand better the function of the classified genes and which functional groups they belong to.
 
-First, we need to download the Swiss-Prot database from Uniprot and the KEGG’s BRITE hierarchy
+First, we need to download the Swiss-Prot database from Uniprot and the KEGG BRITE hierarchies
 
 - [UniProt Swiss-Prot](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz)
 
-- [KEGG's BRITE](https://rest.kegg.jp/get/br:ko00001/json)
+- [KEGG BRITE](https://rest.kegg.jp/get/br:ko00001/json)
 
 After unzipping the Swiss-Prot fasta, we can extract the UniProt ID from it, and by using the KEGG API, we can convert the UniProt ID into the Gene ID in KEGG’s classification system. We can find their KO IDs represented in the hierarchy from these Gene IDs. Using the below command, we will have a table with three columns, one for the UniProt ID and the other two for the Gene ID and the KO ID.
 
@@ -68,4 +68,4 @@ Some first few rows.
 |P81928|K23505|Brite Hierarchies|Protein families: genetic information processing|Mitochondrial biogenesis [BR:ko03029]|TIMMDC1; complex I assembly factor TIMMDC1|
 |P48347|K06630|Environmental Information Processing|Signal transduction|MAPK signaling pathway - yeast [PATH:ko04011]|YWHAE; 14-3-3 protein epsilon|
 
-With the above _uniprot_brite.tsv_, everytime we use `BLASTp` or `DIAMOND BLASTp` with UniProt Swiss-Prot database to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to.
+With the above _uniprot_brite.tsv_, everytime we use `BLASTp` or `DIAMOND BLASTp` with UniProt Swiss-Prot database to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to. Probably, when one uses a database besides from UniProt Swiss-Prot, one needs to look for a way to convert the ID in that database into UniProt ID to use this hierarchical classification system efficiently and indeed, the [UniProt API](https://www.uniprot.org/help/api_queries) does provide a way to convert NCBI ID to UniProt ID.
