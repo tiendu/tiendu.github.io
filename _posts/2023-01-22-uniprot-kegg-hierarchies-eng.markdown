@@ -10,11 +10,11 @@ While doing many metagenomics project, I have this question in mind and I found 
 
 KEGG is a well-known database for pathway studies. More than that, it also offers an inside look into the gene functions in a hierarchical classification approach. There was a hierarchical classification database called SEED, but it was no longer maintained as far as I know. KEGG BRITE is a part of KEGG and it provides functional hierarchies of several biological objects including 
 
-- genes and proteins; 
-- compounds and reactions; 
-- drugs; 
-- diseases; 
-- organisms and viruses.
+- genes and proteins
+- compounds and reactions
+- drugs
+- diseases
+- organisms and viruses
 
 In this guide, I’ll show you how we can utilise the UniProt database and the KEGG database to understand better the function of the classified genes and which functional groups they belong to.
 
