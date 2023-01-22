@@ -317,6 +317,10 @@ Sử dụng dữ liệu đầu vào (input) hệt như ví dụ trên.
 
 `sed -i "1i $(sed -n '1p' line_from.txt)" line_to.txt`
 
+* Nhập dòng lại với nhau, sử dụng dấu phẩy là delimiter
+
+`sed -E ':a; N; $!ba; s/\n/,/g' text.txt`
+
 * Interleave dòng với dòng (với nhiều file)
 
 `awk '{for (i=1; i<ARGC; i++) {getline < ARGV[i]; printf "%s%s", $0, (i<(ARGC-1)) ? OFS : ORS}}' text*.txt`
