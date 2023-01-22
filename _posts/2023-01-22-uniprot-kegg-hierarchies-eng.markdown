@@ -49,9 +49,11 @@ A brief check of the table shows that there are 8 groups at the first level, 56 
 - Level 3: Glycolysis \/ Gluconeogenesis [PATH:ko00010], Citrate cycle (TCA cycle) [PATH:ko00020], Pentose phosphate pathway [PATH:ko00030], Pentose and glucuronate interconversions [PATH:ko00040], Fructose and mannose metabolism [PATH:ko00051], Galactose metabolism [PATH:ko00052], Ascorbate and aldarate metabolism [PATH:ko00053], Starch and sucrose metabolism [PATH:ko00500], Amino sugar and nucleotide sugar metabolism [PATH:ko00520], Pyruvate metabolism [PATH:ko00620], Glyoxylate and dicarboxylate metabolism [PATH:ko00630], Propanoate metabolism [PATH:ko00640], etc.
 
 
-By using the below command, we'll have something like...
+By using this command...
 
 `awk -i inplace 'BEGIN {FS=OFS="\t"} {for (i=1; i<=3; i++) {sub(/[0-9]* /, "", $i)}; j=""; n=patsplit($4, a, /[^ ]*/); for (i=3; i<=n; i++) {j=j" "a[i]}; gsub(/^ /, "", j); print a[1], $1, $2, $3, j}' brite.tsv`
+
+We'll have something like this...
 
 |KO ID|Level 1|Level 2|Level 3|Level 4|
 |:---|:---|:---|:---|:---|
@@ -65,7 +67,7 @@ It looks much cleaner and has KO IDs in a separate column. Now, we can merge it 
 
 `awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1][i++]=$2 FS $3 FS $4 FS $5; next} {split($3, b, ":"); split($1, c, ":"); for (i in a[b[2]]) print c[2], b[2], a[b[2]][i]}' brite.tsv uniprot_genes_ko.tsv > uniprot_brite.tsv`
 
-Some first few rows.
+Let's see some of the first few rows.
 
 |UniProt ID|KO ID|Level 1|Level 2|Level 3|Level 4|
 |:---|:---|:---|:---|:---|:---|
@@ -75,4 +77,4 @@ Some first few rows.
 |P81928|K23505|Brite Hierarchies|Protein families: genetic information processing|Mitochondrial biogenesis [BR:ko03029]|TIMMDC1; complex I assembly factor TIMMDC1|
 |P48347|K06630|Environmental Information Processing|Signal transduction|MAPK signaling pathway - yeast [PATH:ko04011]|YWHAE; 14-3-3 protein epsilon|
 
-With the above _uniprot_brite.tsv_, every time we use `BLASTp` or `DIAMOND BLASTp` with UniProt Swiss-Prot database to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to. Probably, when one uses a database besides UniProt Swiss-Prot, one needs to look for a way to convert the ID in that database into UniProt ID to use this hierarchical classification system efficiently, and indeed, the [UniProt API](https://www.uniprot.org/help/api_queries) does provide a way to convert NCBI ID to UniProt ID.
+With this _uniprot_brite.tsv_, every time we use `BLASTp` or `DIAMOND BLASTp` with UniProt Swiss-Prot database to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to. Probably, when one uses a database besides UniProt Swiss-Prot, one needs to look for a way to convert the ID in that database into UniProt ID to use this hierarchical classification system efficiently, and indeed, the [UniProt API](https://www.uniprot.org/help/api_queries) does provide a way to convert NCBI ID to UniProt ID.
