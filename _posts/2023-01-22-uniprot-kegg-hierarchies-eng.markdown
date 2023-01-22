@@ -6,7 +6,7 @@ categories: [guide, english, bioinformatics]
 ---
 **HOW DO WE KNOW WHICH FUNCTIONAL GROUP(S) OUR GENE IN INTEREST BELONGS TO?**
 
-While doing many metagenomics project, I have this question in mind and I found out, there's a easy way to figure out which groups the function assigned to the gene belong to using KEGG.
+While doing many metagenomics projects, I have this question in mind and I found out, there's an easy way to figure out which groups the function assigned to the gene belong to using KEGG.
 
 KEGG is a well-known database for pathway studies. More than that, it also offers an inside look into the gene functions in a hierarchical classification approach. There was a hierarchical classification database called SEED, but it was no longer maintained as far as I know. KEGG BRITE is a part of KEGG and it provides functional hierarchies of several biological objects including 
 
@@ -68,4 +68,4 @@ Some first few rows.
 |P81928|K23505|Brite Hierarchies|Protein families: genetic information processing|Mitochondrial biogenesis [BR:ko03029]|TIMMDC1; complex I assembly factor TIMMDC1|
 |P48347|K06630|Environmental Information Processing|Signal transduction|MAPK signaling pathway - yeast [PATH:ko04011]|YWHAE; 14-3-3 protein epsilon|
 
-With the above _uniprot_brite.tsv_, everytime we use `BLASTp` or `DIAMOND BLASTp` with UniProt Swiss-Prot database to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to. Probably, when one uses a database besides from UniProt Swiss-Prot, one needs to look for a way to convert the ID in that database into UniProt ID to use this hierarchical classification system efficiently and indeed, the [UniProt API](https://www.uniprot.org/help/api_queries) does provide a way to convert NCBI ID to UniProt ID.
+With the above _uniprot_brite.tsv_, every time we use `BLASTp` or `DIAMOND BLASTp` with UniProt Swiss-Prot database to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to. Probably, when one uses a database besides UniProt Swiss-Prot, one needs to look for a way to convert the ID in that database into UniProt ID to use this hierarchical classification system efficiently, and indeed, the [UniProt API](https://www.uniprot.org/help/api_queries) does provide a way to convert NCBI ID to UniProt ID.
