@@ -42,6 +42,13 @@ We'll have a table like this after conversion from json to tsv. These are some f
 |09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K25026  glk; glucokinase [EC:2.7.1.2]|
 |09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K01810  GPI, pgi; glucose-6-phosphate isomerase [EC:5.3.1.9]|
 
+A brief check of the table shows that there are 8 groups at the first level, 56 groups at the second level and 547 groups at the third level.
+
+- Level 1: Metabolism, Genetic Information Processing, Environmental Information Processing, Cellular Processes, Organismal Systems, Human Diseases, Brite Hierarchies, Not Included in Pathway or Brite
+- Level 2: Carbohydrate metabolism, Energy metabolism, Lipid metabolism, Nucleotide metabolism, Amino acid metabolism, Metabolism of other amino acids, Glycan biosynthesis and metabolism, Metabolism of cofactors and vitamins, Metabolism of terpenoids and polyketides, Biosynthesis of other secondary metabolites, Xenobiotics biodegradation and metabolism, Not included in regular maps, Transcription, Translation, Folding, sorting and degradation, Replication and repair, Information processing in viruses, Membrane transport, Signal transduction, Signaling molecules and interaction, etc.
+- Level 3: Glycolysis \/ Gluconeogenesis [PATH:ko00010], Citrate cycle (TCA cycle) [PATH:ko00020], Pentose phosphate pathway [PATH:ko00030], Pentose and glucuronate interconversions [PATH:ko00040], Fructose and mannose metabolism [PATH:ko00051], Galactose metabolism [PATH:ko00052], Ascorbate and aldarate metabolism [PATH:ko00053], Starch and sucrose metabolism [PATH:ko00500], Amino sugar and nucleotide sugar metabolism [PATH:ko00520], Pyruvate metabolism [PATH:ko00620], Glyoxylate and dicarboxylate metabolism [PATH:ko00630], Propanoate metabolism [PATH:ko00640], etc.
+
+
 By using the below command, we'll have something like...
 
 `awk -i inplace 'BEGIN {FS=OFS="\t"} {for (i=1; i<=3; i++) {sub(/[0-9]* /, "", $i)}; j=""; n=patsplit($4, a, /[^ ]*/); for (i=3; i<=n; i++) {j=j" "a[i]}; gsub(/^ /, "", j); print a[1], $1, $2, $3, j}' brite.tsv`
