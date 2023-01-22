@@ -317,6 +317,10 @@ Same input in the example above.
 
 `sed -i "1i $(sed -n '1p' line_from.txt)" line_to.txt`
 
+* Join lines together with comma as delimiter
+
+`sed -E ':a; N; $!ba; s/\n/,/g' text.txt`
+
 * Interleave line by line (for multiple text files)
 
 `awk '{for (i=1; i<ARGC; i++) {getline < ARGV[i]; printf "%s%s", $0, (i<(ARGC-1)) ? OFS : ORS}}' text*.txt`
