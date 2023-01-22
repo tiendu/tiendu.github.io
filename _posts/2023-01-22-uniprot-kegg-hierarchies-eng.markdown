@@ -34,6 +34,7 @@ The above step will take some time to finish since we have to use KEGG API to re
 
 We'll have a table like this after conversion from json to tsv. These are some first few rows. Still, we need to reorganise and fix some content before we can merge it with the UniProtID.
 
+
 |:---|:---|:---|:---|
 |09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K00844  HK; hexokinase [EC:2.7.1.1]|
 |09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K12407  GCK; glucokinase [EC:2.7.1.2]|
@@ -41,9 +42,11 @@ We'll have a table like this after conversion from json to tsv. These are some f
 |09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K25026  glk; glucokinase [EC:2.7.1.2]|
 |09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K01810  GPI, pgi; glucose-6-phosphate isomerase [EC:5.3.1.9]|
 
+
 By using the below command, we'll have something like...
 
 `awk -i inplace 'BEGIN {FS=OFS="\t"} {for (i=1; i<=3; i++) {sub(/[0-9]* /, "", $i)}; j=""; n=patsplit($4, a, /[^ ]*/); for (i=3; i<=n; i++) {j=j" "a[i]}; gsub(/^ /, "", j); print a[1], $1, $2, $3, j}' brite.tsv`
+
 
 |:---|:---|:---|:---|:---|
 |K00844|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|HK; hexokinase [EC:2.7.1.1]|
@@ -52,11 +55,13 @@ By using the below command, we'll have something like...
 |K25026|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|glk; glucokinase [EC:2.7.1.2]|
 |K01810|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|GPI, pgi; glucose-6-phosphate isomerase [EC:5.3.1.9]|
 
+
 It looks much cleaner and has KO IDs in a separate column. Now, we can merge it with the _uniprot_genes_ko.tsv_ with the command below.
 
 `awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1][i++]=$2 FS $3 FS $4 FS $5; next} {split($3, b, ":"); split($1, c, ":"); for (i in a[b[2]]) print c[2], b[2], a[b[2]][i]}' brite.tsv uniprot_genes_ko.tsv > uniprot_brite.tsv`
 
-Here are the first few rows.
+Some first few rows.
+
 
 |:---|:---|:---|:---|:---|:---|
 |Q6GZS4|K12408|Metabolism|Lipid metabolism|Primary bile acid biosynthesis [PATH:ko00120]|HSD3B7; cholest-5-ene-3beta,7alpha-diol 3beta-dehydrogenase [EC:1.1.1.181]|
@@ -64,5 +69,6 @@ Here are the first few rows.
 |Q92AT0|K21298|Not Included in Pathway or Brite|Unclassified: metabolism|Enzymes with EC numbers|E2.4.1.333; 1,2-beta-oligoglucan phosphorylase [EC:2.4.1.333]|
 |P81928|K23505|Brite Hierarchies|Protein families: genetic information processing|Mitochondrial biogenesis [BR:ko03029]|TIMMDC1; complex I assembly factor TIMMDC1|
 |P48347|K06630|Environmental Information Processing|Signal transduction|MAPK signaling pathway - yeast [PATH:ko04011]|YWHAE; 14-3-3 protein epsilon|
+
 
 With the above _uniprot_brite.tsv_, everytime we use BLASTp or DIAMOND BLASTp to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to.
