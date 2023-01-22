@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "Useful oneliners for bioinformatics"
-date:   2022-12-20
+title:  "Hierarchical functional assignment using UniProt and KEGG"
+date:   2023-01-22
 categories: [guide, english, bioinformatics]
 ---
 **HOW DO WE KNOW WHICH FUNCTIONAL GROUP(S) OUR GENE IN INTEREST BELONGS TO?**
