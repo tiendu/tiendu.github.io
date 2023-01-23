@@ -130,7 +130,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 * Locate a region of a sequence (set s with a desired pattern)
 
-`awk -v s="" 'function recwrap(str1) {pos=""; end=0; return recfunc(str1)} function recfunc(str2) {if (match(str2, s) != 0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos = pos "["start","end"] "; recfunc(substr(str2, RSTART+RLENGTH, length(str2)))}; return pos} /^>/ {getline seq; sub(/^>/, "", $0)} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
+`awk -v s="" 'function recwrap(str1) {pos=""; end=0; return recfunc(str1)} function recfunc(str2) {if (match(str2, s)!=0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos=pos "["start","end"] "; recfunc(substr(str2, RSTART+RLENGTH, length(str2)))}; return pos} /^>/ {getline seq; sub(/^>/, "", $0)} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
 
 * Get the k-nucleotide frequency (set k=n with k=3 for trinucleotide, k=4 for tetranucleotide and so on)
 
