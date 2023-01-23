@@ -56,7 +56,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 * Format multiline fasta to singleline fasta
 
-`sed ':loop;/>/!N;s/\n//;t loop;s/>/\n>/;s/^\s*//' file.fa`
+`sed ':a; />/ !N; s/\n//; t a; s/>/\n>/; s/^\s*//' file.fa`
 
 `awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {print ""}' file.fa`
 
@@ -319,7 +319,7 @@ Same input in the example above.
 
 * Join lines together with comma as delimiter
 
-`sed -E ':a; N; $!ba; s/\n/,/g' text.txt`
+`sed -E ':a; N; $! b a; s/\n/,/g' text.txt`
 
 * Interleave line by line (for multiple text files)
 
