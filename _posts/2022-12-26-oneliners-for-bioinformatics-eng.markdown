@@ -22,7 +22,7 @@ categories: [guide, english, bioinformatics]
 
 `paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}'`
 
-`sed 'R reverse.fq' forward.fq | sed 'N; N; N; N; N; N; N; s/\n/\t/g' | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}'`
+`zcat reverse.fq.gz | sed 'R /dev/stdin' <(zcat forward.fq.gz) | sed 'N; N; N; N; N; N; N; s/\n/\t/g' | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}'`
 
 `awk '{print} NR%4==0 {i=4; while (i>0) {"zcat reverse.fq.gz" | getline; print; i--}}' <(zcat forward.fq.gz)`
 
