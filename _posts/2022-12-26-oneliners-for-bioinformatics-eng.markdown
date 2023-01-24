@@ -216,11 +216,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 * Find inclusive and exclusive elements based on one column
 
-`awk 'BEGIN {FS=OFS="\t"} {a[$1][FILENAME]=b[$1]+=1} END {for (i in b) {if (b[i]==1) {for (j in a[i]) {print "exclusive", j, i}} else if (b[i]>1) {for (j in a[i]) {print "inclusive", j, i}}}}' table*.tsv`
-
-A more readable approach but harder to work with later...
-
-`awk 'BEGIN {FS=OFS="\t"} {a[$1][FILENAME]=b[$1]+=1} END {for (i in b) {if (b[i]==1) {for (j in a[i]) {print i, j}} else if (b[i]>1) {j=""; for (k in a[i]) {j=j k " "}; print i, j}}}'`
+`awk 'BEGIN {FS=OFS="\t"} {a[$1][FILENAME]=b[$1]+=1} END {for (i in b) {if (b[i]==1) {for (j in a[i]) {print i, j}} else if (b[i]>1) {j=""; for (k in a[i]) {j=j k " "}; print i, j}}}' table*.tsv`
 
 * Deduplicate indices and sum values associated with those indices
 
