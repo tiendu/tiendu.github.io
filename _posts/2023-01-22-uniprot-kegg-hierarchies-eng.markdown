@@ -85,4 +85,6 @@ In addition, since it takes a few day to retrieve the entries from KEGG, when on
 
 We will get the _temp.tsv_ which contains the IDs not present in the _uniprot_genes_ko.tsv_ from which we can retrieve the new entries and append it to the current database and a similar manner.
 
-`for i in $(cat temp.tsv); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; print $1, l}'; done >> uniprot_genes_ko.tsv`
+`for i in $(awk -v FS='\t' '{print $1}' temp.tsv); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; print $1, l}'; done >> uniprot_genes_ko.tsv`
+
+Nonetheless, it's recommended to create a fresh database once in a while since there might be some changes for the genes with function unknown. 
