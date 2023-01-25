@@ -26,7 +26,7 @@ First, we need to download the Swiss-Prot database from Uniprot and the KEGG BRI
 
 Unzipping the downloaded Swiss-Prot file will give us a fasta file (with approx. 568,000 records) from which we can extract the UniProt ID, and by using the KEGG API, we can convert the UniProt ID into the Gene ID in KEGG’s classification system. After that, we can find their KO IDs represented in the hierarchy from these Gene IDs. Using the below command, we will have a table with three columns, one for the UniProt ID and the other two for the Gene ID and the KO ID.
 
-`for i in $(awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; print $1, l}'; done > uniprot_genes_ko.tsv`
+`for i in $(awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}'; done > uniprot_genes_ko.tsv`
 
 The above step will take some time to finish since we have to use KEGG API to retrieve the information from the website. While waiting, we can convert the json file for KEGG BRITE into tsv format using this command.
 
@@ -85,6 +85,6 @@ In addition, since it takes a few day to retrieve the entries from KEGG, when on
 
 We will get the _temp.tsv_ containing the IDs not present in the _uniprot_genes_ko.tsv_ from which we can retrieve the new entries and append it to the current database and a similar manner.
 
-`for i in $(awk -v FS='\t' '{print $1}' temp.tsv); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; print $1, l}'; done >> uniprot_genes_ko.tsv`
+`for i in $(awk -v FS='\t' '{print $1}' temp.tsv); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}'; done >> uniprot_genes_ko.tsv`
 
 Nonetheless, it's recommended to create a fresh database once in a while since there might be some changes for the genes with function unknown. 
