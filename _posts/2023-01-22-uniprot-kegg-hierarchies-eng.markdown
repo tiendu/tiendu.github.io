@@ -26,7 +26,7 @@ First, we need to download the Swiss-Prot database from Uniprot and the KEGG BRI
 
 Unzipping the downloaded Swiss-Prot file will give us a fasta file (with approx. 568,000 records) from which we can extract the UniProt ID, and by using the KEGG API, we can convert the UniProt ID into the Gene ID in KEGG’s classification system. After that, we can find their KO IDs represented in the hierarchy from these Gene IDs. Using the below command, we will have a table with three columns, one for the UniProt ID and the other two for the Gene ID and the KO ID.
 
-`for i in $(awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}'; done > uniprot_genes_ko.tsv`
+`for i in $(awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; print $1, l}'; done > uniprot_genes_ko.tsv`
 
 The above step will take some time to finish since we have to use KEGG API to retrieve the information from the website. While waiting, we can convert the json file for KEGG BRITE into tsv format using this command.
 
@@ -78,3 +78,11 @@ Let's see some of the first few rows.
 |P48347|K06630|Environmental Information Processing|Signal transduction|MAPK signaling pathway - yeast [PATH:ko04011]|YWHAE; 14-3-3 protein epsilon|
 
 With this _uniprot_brite.tsv_, every time we use `BLASTp` or `DIAMOND BLASTp` with UniProt Swiss-Prot database to predict the function of a gene/partial gene in a sequence, we can get to know which functional groups that it is assigned to. Probably, when one uses a database besides UniProt Swiss-Prot, one needs to look for a way to convert the ID in that database into UniProt ID to use this hierarchical classification system efficiently, and indeed, the [UniProt API](https://www.uniprot.org/help/api_queries) does provide a way to convert NCBI ID to UniProt ID.
+
+In addition, since it takes a few day to retrieve the entries from KEGG, when one needs to update this database, it doesn't have to be started from scratch. First, we need to get the newest version of UniProt Swiss-Prot (download from the link above then unzip it). Using the below command... 
+
+`awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {if ($0~/^>/) {match($0, /\|(.+)*\|/, id1); a[id1[1]][FILENAME]=b[id1[1]]+=1}} idx==2 {match($0, /:(.+)* /, id2); a[id2[1]][FILENAME]=b[id2[1]]+=1} END {for (i in b) {if (b[i]==1) {for (j in a[i]) {print i, j}} else if (b[i]>1) {j=""; for (k in a[i]) {j=j k " "}; print i, j}}}' uniprot_sprot.fasta uniprot_genes_ko.tsv > temp.tsv`
+
+We will get the _temp.tsv_ which contains the IDs not present in the _uniprot_genes_ko.tsv_ from which we can retrieve the new entries and append it to the current database and a similar manner.
+
+`for i in $(cat temp.tsv); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; print $1, l}'; done >> uniprot_genes_ko.tsv`
