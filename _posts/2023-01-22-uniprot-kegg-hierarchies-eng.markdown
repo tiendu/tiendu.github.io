@@ -83,7 +83,7 @@ In addition, since it takes a few day to retrieve the entries from KEGG, when on
 
 `awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {if ($0~/^>/) {match($0, /\|(.+)*\|/, id1); a[id1[1]][FILENAME]=b[id1[1]]+=1}} idx==2 {match($0, /:(.+)* /, id2); a[id2[1]][FILENAME]=b[id2[1]]+=1} END {for (i in b) {if (b[i]==1) {for (j in a[i]) {print i, j}} else if (b[i]>1) {j=""; for (k in a[i]) {j=j k " "}; print i, j}}}' uniprot_sprot.fasta uniprot_genes_ko.tsv > temp.tsv`
 
-We will get the _temp.tsv_ which contains the IDs not present in the _uniprot_genes_ko.tsv_ from which we can retrieve the new entries and append it to the current database and a similar manner.
+We will get the _temp.tsv_ containing the IDs not present in the _uniprot_genes_ko.tsv_ from which we can retrieve the new entries and append it to the current database and a similar manner.
 
 `for i in $(awk -v FS='\t' '{print $1}' temp.tsv); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; print $1, l}'; done >> uniprot_genes_ko.tsv`
 
