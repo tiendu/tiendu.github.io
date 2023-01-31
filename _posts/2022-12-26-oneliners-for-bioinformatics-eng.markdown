@@ -383,4 +383,8 @@ Here is an example when working with three files.
 
 `awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {} idx==2 {} idx==3 {}' file1.txt file2.txt file3.txt` 
 
+* Print in reversed order (like `tac`)
+
+`awk '{a[i++]=$0} END {while (i--) print a[i]}' file`
+
 **_(to be cont')_**
