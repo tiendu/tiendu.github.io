@@ -89,6 +89,6 @@ We will get the _temp.tsv_ containing the IDs not present in the _uniprot_genes_
 
 Nonetheless, it's recommended to create a fresh database once in a while since there might be some changes for the genes with function unknown. For those who want to use the database right away, I have prepared the _uniprot_genes_ko.tsv_ and the _brite.tsv_, you only need to merge it together to produce the _uniprot_brite.tsv_.
 
-[1] https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/uniprot_genes_ko.tsv
+[1] [https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/uniprot_genes_ko.tsv](https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/uniprot_genes_ko.tsv)
 
-[2] https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/brite.tsv
+[2] [https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/brite.tsv](https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/brite.tsv)
