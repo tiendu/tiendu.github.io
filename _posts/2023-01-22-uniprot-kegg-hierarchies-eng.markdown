@@ -28,7 +28,11 @@ Unzipping the downloaded Swiss-Prot file will give us a fasta file (with approx.
 
 `for i in $(awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}'; done > uniprot_genes_ko.tsv`
 
-The above step will take some time to finish since we have to use KEGG API to retrieve the information from the website. While waiting, we can convert the json file for KEGG BRITE into tsv format using this command.
+The above step will take some time to finish since we have to use KEGG API to retrieve the information from the website. Although there's a way to use `xargs` to have multiple connections to the site by setting the number of processes through the parameter `-P`, the firewall may detect that we are having way too many connections so please use it with cautions.
+
+`awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta | xargs -P 3 -I {} bash -c 'awk -v uniprot_id={} '\''BEGIN {FS=OFS="\t"; "curl -s -L https://rest.kegg.jp/conv/genes/uniprot:" uniprot_id | getline conv; split(conv, arr, "\t"); "curl -s -L https://rest.kegg.jp/link/ko/" arr[2] | getline link; if (link!="") print arr[1], link}'\'''`
+
+While waiting, we can convert the json file for KEGG BRITE into tsv format using this command.
 
 `sed -E 's/^\t{2}"name"/\t\t"level 1"/g;s/^\t{3}"name"/\t\t\t"level 2"/g;s/^\t{4}"name"/\t\t\t\t"level 3"/g;s/^\t{5}"name"/\t\t\t\t\t"level 4"/g' json.json | awk 'BEGIN {OFS="\t"} NR > 4 {match($0, /"([^"]+)": *("[^"]*")/, a)} {tag = a[1]; val = gensub(/^"|"$/, "", "g", a[2]); f[tag] = val; if (tag == "level 4") {print f["level 1"], f["level 2"], f["level 3"], f["level 4"]}}' > brite.tsv`
 
