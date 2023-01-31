@@ -30,7 +30,7 @@ Unzipping the downloaded Swiss-Prot file will give us a fasta file (with approx.
 
 The above step will take some time to finish since we have to use KEGG API to retrieve the information from the website. Although there's a way to use `xargs` to have multiple connections to the site by setting the number of processes through the parameter `-P`, the firewall may detect that we are having way too many connections so please use it with cautions.
 
-`awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta | xargs -P 3 -I {} bash -c 'awk -v uniprot_id={} '\''BEGIN {FS=OFS="\t"; "curl -s -L https://rest.kegg.jp/conv/genes/uniprot:" uniprot_id | getline conv; split(conv, arr, "\t"); "curl -s -L https://rest.kegg.jp/link/ko/" arr[2] | getline link; if (link!="") print arr[1], link}'\'''`
+`awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta | xargs -P 3 -I {} bash -c 'awk -v uniprot_id={} '\''BEGIN {FS=OFS="\t"; "curl -s -L https://rest.kegg.jp/conv/genes/uniprot:" uniprot_id | getline conv; split(conv, arr, "\t"); "curl -s -L https://rest.kegg.jp/link/ko/" arr[2] | getline link; if (link!="") print arr[1], link}'\'' > uniprot_genes_ko.tsv'`
 
 While waiting, we can convert the json file for KEGG BRITE into tsv format using this command.
 
