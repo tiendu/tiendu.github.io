@@ -122,6 +122,10 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 `awk '/^>/ {getline seq; f=!a[seq]++} f {print $0"\n"seq}' file.fa`
 
+* Remove sequences that match other longer sequences
+ 
+`awk -v l=1000 'function merge(arr, len) {for (i in arr) {tmp=arr[i]; delete arr[i]; for (j in arr) {if (arr[j]~tmp && length(arr[j])>length(tmp) && length(tmp)>len) {res[i]=tmp} else if (tmp~arr[j] && length(tmp)>length(arr[j]) && length(arr[j]>len)) {res[j]=arr[j]}}}}                               /^>/ {getline seq; a[$0]=seq; b[$0]=seq} END {merge(a, l); for (i in b) {if ((i in res)==0) {print i"\n"b[i]}}}' file.fa` 
+
 * Find sequences based on header between a sequence with patternA to a sequence with patternB
 
 `awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
@@ -384,5 +388,9 @@ Here is an example when working with three files.
 * Print in reversed order (like `tac`)
 
 `awk '{a[i++]=$0} END {while (i--) print a[i]}' file`
+
+* Clone array
+
+`awk 'function clone(original, copy) {for (i in original) {if (isarray(original[i])) {copy[i][1]=""; delete copy[i][1]; clone(original[i], copy[i])} else {copy[i]=original[i]}}}'`
 
 **_(to be cont')_**
