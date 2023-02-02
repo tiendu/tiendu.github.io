@@ -108,6 +108,10 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 `awk -v id="" -v start=n -v end=m '($0~">"id) {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j s[i]}; print $0"\n"j}' file.fa`
 
+* Locate a region of a sequence (set s with a desired pattern)
+
+`awk -v s="" 'function recwrap(str1) {pos=""; end=0; return recfunc(str1)} function recfunc(str2) {if (match(str2, s)!=0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos=pos "["start","end"] "; recfunc(substr(str2, RSTART+RLENGTH, length(str2)))}; return pos} /^>/ {getline seq; sub(/^>/, "", $0)} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
+
 * Get the reverse complement of each sequence
 
 `awk 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} /^>/ {getline seq; print $0"\n"revcomp(seq)}' file.fa`
@@ -124,15 +128,11 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 * Deduplicate and remove sequences that match other longer sequences (set n with desired length to retain sequences shorter than it)
  
-`awk -v l=n 'function merge(arr, len) {for (i in arr) {tmp=arr[i]; delete arr[i]; for (j in arr) {if (arr[j]~tmp && length(arr[j])>=length(tmp) && length(tmp)>=len) {res[i]=tmp} else if (tmp~arr[j] && length(tmp)>=length(arr[j]) && length(arr[j]>=len)) {res[j]=arr[j]}}}} /^>/ {getline seq; a[$0]=seq; b[$0]=seq} END {merge(a, l); for (i in b) {if ((i in res)==0) {print i"\n"b[i]}}}' file.fa` 
+`awk -v l=n 'function findsubs(arr, len) {for (i in arr) {tmp=arr[i]; delete arr[i]; for (j in arr) {if (arr[j]~tmp && length(arr[j])>=length(tmp) && length(tmp)>=len) {res[i]=tmp} else if (tmp~arr[j] && length(tmp)>=length(arr[j]) && length(arr[j]>=len)) {res[j]=arr[j]}}}} /^>/ {getline seq; a[$0]=seq; b[$0]=seq} END {findsubs(a, l); for (i in b) {if ((i in res)==0) {print i"\n"b[i]}}}' file.fa` 
 
 * Find sequences based on header between a sequence with patternA to a sequence with patternB
 
 `awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
-
-* Locate a region of a sequence (set s with a desired pattern)
-
-`awk -v s="" 'function recwrap(str1) {pos=""; end=0; return recfunc(str1)} function recfunc(str2) {if (match(str2, s)!=0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos=pos "["start","end"] "; recfunc(substr(str2, RSTART+RLENGTH, length(str2)))}; return pos} /^>/ {getline seq; sub(/^>/, "", $0)} {if (recwrap(seq) != "") print $0"\t"recwrap(seq)}' file.fa`
 
 * Get the k-nucleotide frequency (set k=n with k=3 for trinucleotide, k=4 for tetranucleotide and so on)
 
