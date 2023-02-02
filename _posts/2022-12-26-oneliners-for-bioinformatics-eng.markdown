@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Updated on 2023-01-23**
+**Updated on 2023-02-02**
 
 # Fastq
 
@@ -65,8 +65,6 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 * Format singleline fasta to multiline fasta (here I used the limit of 60 characters per line, set l to the desired number of characters per line)
 
 `awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) {printf "%s", $(i*l+j)}; print ""}}' file.fa`
-
-`fold -w 60 file.fa`
 
 * Rename sequence header of interleaved fastq-converted-to-fasta (this helps when one uses BLAST or any classifier to classify reads)
 
