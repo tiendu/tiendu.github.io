@@ -128,7 +128,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 * Deduplicate and remove sequences that match other longer sequences (set n with desired length to retain sequences shorter than it)
  
-`awk -v l=n 'function findsubs(arr, len) {for (i in arr) {tmp=arr[i]; delete arr[i]; for (j in arr) {if (arr[j]~tmp && length(arr[j])>=length(tmp) && length(tmp)>=len) {res[i]=tmp} else if (tmp~arr[j] && length(tmp)>=length(arr[j]) && length(arr[j]>=len)) {res[j]=arr[j]}}}} /^>/ {getline seq; a[$0]=seq; b[$0]=seq} END {findsubs(a, l); for (i in b) {if ((i in res)==0) {print i"\n"b[i]}}}' file.fa` 
+`awk -v l=n 'function findsubs(arr, len) {for (i in arr) {tmp=arr[i]; delete arr[i]; for (j in arr) {if (arr[j]~tmp && length(arr[j])>=length(tmp) && length(tmp)>=len) {res[i]=tmp} else if (tmp~arr[j] && length(tmp)>=length(arr[j]) && length(arr[j]>=len)) {res[j]=arr[j]}}}} /^>/ {getline seq; a[$0]=b[$0]=seq} END {findsubs(a, l); for (i in b) {if ((i in res)==0) {print i"\n"b[i]}}}' file.fa` 
 
 * Find sequences based on header between a sequence with patternA to a sequence with patternB
 
