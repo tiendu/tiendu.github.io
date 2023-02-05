@@ -40,6 +40,10 @@ categories: [guide, english, bioinformatics]
 
 `paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS=OFS="\t"} {print $1, $2"\n"$3, $4"\n"$5, $6"\n"$7, $8}' | awk '/^@/ {getline l1; f=!a[l1]++; getline l2; getline l3} f {print $0"\n"l1"\n"l2"\n"l3}' | paste - - - - | awk 'BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $5, $7, $2, $4, $6, $8}' | awk '/^@(.+)* 1:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "dedup_forward.fq"} /^@(.+)* 2:/ {j=$0; i=4; while (i>1) {i--; getline l; j=j ORS l}; print j > "dedup_reverse.fq"}'`
 
+* Deduplicate interleaved reads.
+
+`awk 'BEGIN {OFS="\n"} /^@(.+) 1(.+)/ {f1=$0; getline f2; getline f3; getline f4; next} /^@(.+) 2(.+)/ {r1=$0; getline r2; getline r3; getline r4} {f=!a[f2, r2]++} f {print f1, f2, f3, f4, r1, r2, r3, r4}' interleaved.fq`
+
 * Trim single-end reads and print out summary of reads. Here I set the score threshold at 20 and minimum length at 30.
 
 `zcat file.fq.gz | awk -v score=20 -v len=30 'BEGIN {OFS="\n"; for (i=33; i<=73; i++) {if (score==j++) {score=sprintf("%c", i); break}}} /^@/ {getline seq; getline extra; getline qual; total_bp+=length(seq); total_reads++; if (match(qual, score)) {seq=substr(seq, 1, RSTART-1); qual=substr(qual, 1, RSTART-1)}; if (length(seq)>=len) {print $0, seq, extra, qual > "trimmed.fq"; trimmed_bp+=length(seq); trimmed_reads++}} END {printf "total reads:\t%s\ntotal basepairs:\t%s\ntrimmed reads:\t%s\ntrimmed basepairs:\t%s\n", total_reads, total_bp, trimmed_reads, trimmed_bp}'`
