@@ -1,8 +1,9 @@
 ---
 ---
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
-$base-font-family: 'IBM Plex Mono', monospace;
-$code-font-family: 'IBM Plex Mono', monospace;
+$base-font-family: 'IBM Plex Mono';
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+$code-font-family: 'IBM Plex Mono';
 $base-font-weight: 500;
 
 @import "minima";
