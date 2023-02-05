@@ -26,7 +26,7 @@ categories: [guide, english, bioinformatics]
 
 `awk '{print} NR%4==0 {i=4; while (i>0) {"zcat reverse.fq.gz" | getline; print; i--}}' <(zcat forward.fq.gz)`
 
-* Deinterleave read.
+* Deinterleave reads.
 
 `paste - - - - - - - -  < interleaved.fq | tee >(cut -f 1-4 | tr "\t" "\n" > forward.fq) | cut -f 5-8 | tr "\t" "\n" > reverse.fq`
 
@@ -54,7 +54,7 @@ categories: [guide, english, bioinformatics]
 
 * Trim interleaved reads.
 
-`awk -v score=20 -v len=30 'BEGIN {OFS="\n"; for (i=33; i<=73; i++) {if (score==j++) {score=sprintf("%c", i); break}}} /^@(.+) 1(.+)/ {f1=$0; getline f2; getline f3; getline f4; next} /^@(.+) 2(.+)/ {r1=$0; getline r2; getline r3; getline r4} {total_reads++; total_bp+=(length(f2)+length(r2)); if (match(f4, score)) {f2=substr(f2, 1, RSTART-1); f4=substr(f4, 1, RSTART-1)}; if (match(r4, score)) {r2=substr(r2, 1, RSTART-1); r4=substr(r4, 1, RSTART-1)}; if (length(f2)>=len && length(r2)>=len) {print f1, f2, f3, f4, r1, r2, r3, r4 > "trimmed_interleaved.fq"; trimmed_reads++; trimmed_bp+=(length(f2)+length(r2))}} END {printf "total reads:\t%s\ntotal basepairs:\t%s\ntrimmed reads:\t%s\ntrimmed basepairs:\t%s\n", total_reads*2, total_bp, trimmed_reads*2, trimmed_bp}'`
+`awk -v score=20 -v len=30 'BEGIN {OFS="\n"; for (i=33; i<=73; i++) {if (score==j++) {score=sprintf("%c", i); break}}} /^@(.+) 1(.+)/ {f1=$0; getline f2; getline f3; getline f4; next} /^@(.+) 2(.+)/ {r1=$0; getline r2; getline r3; getline r4} {total_reads++; total_bp+=(length(f2)+length(r2)); if (match(f4, score)) {f2=substr(f2, 1, RSTART-1); f4=substr(f4, 1, RSTART-1)}; if (match(r4, score)) {r2=substr(r2, 1, RSTART-1); r4=substr(r4, 1, RSTART-1)}; if (length(f2)>=len && length(r2)>=len) {print f1, f2, f3, f4, r1, r2, r3, r4 > "trimmed_interleaved.fq"; trimmed_reads++; trimmed_bp+=(length(f2)+length(r2))}} END {printf "total reads:\t%s\ntotal basepairs:\t%s\ntrimmed reads:\t%s\ntrimmed basepairs:\t%s\n", total_reads*2, total_bp, trimmed_reads*2, trimmed_bp}' interleaved.fq`
 
 * Convert fastq to fasta.
 
