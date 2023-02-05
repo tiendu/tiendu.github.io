@@ -11,7 +11,7 @@ linkedin_username: tienhdu
 github_username:  tiendu
 
 # Configure the plugin here
-paginate_path: "/blog/page:num/"
+paginate_path: "/page:num/"
 paginate: 5
 
 # Build settings
