@@ -13,7 +13,7 @@ In this guide, we're gonna use _entrez-direct_ and _sra-tools_ provided by NCBI 
 1. Ubuntu (WSL is also fine)
 2. (Mini)conda
 - Mamba (conda if you want to with the command `conda install` but I suggest you to use mamba since it's much more convenient and efficient - install mamba via the command ```conda install mamba -n base -c conda-forge```)
-3. Basic usage of Linux/Unix command-line tools e.g., awk, sed, grep, cat, etc
+3. Basic usage of Linux/Unix command-line tools
 4. Basic usage of regular expression
 5. Basic usage of NCBI search
 
