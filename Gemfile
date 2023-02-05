@@ -2,13 +2,13 @@ source "https://rubygems.org"
 
 # gem "jekyll", "~> 4.3.1"
 
-gem "minima", "~> 2.5"
+gem "minima"
 gem "jekyll-remote-theme"
 
 gem "github-pages", ">=226", group: :jekyll_plugins
 
 group :jekyll_plugins do
-  gem "jekyll-feed", "~> 0.12"
+  gem "jekyll-feed"
   gem "jekyll-paginate"
   gem "jekyll-category-pages"
 end
