@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Updated on 2023-02-05**
+**Last updated on 2023-02-06**
 
 # Fastq
 
