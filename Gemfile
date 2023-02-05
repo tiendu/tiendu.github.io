@@ -2,7 +2,7 @@ source "https://rubygems.org"
 
 # gem "jekyll", "~> 4.3.1"
 
-gem "minima"
+gem "minima", "~> 3.0"
 gem "jekyll-remote-theme"
 
 gem "github-pages", ">=226", group: :jekyll_plugins
