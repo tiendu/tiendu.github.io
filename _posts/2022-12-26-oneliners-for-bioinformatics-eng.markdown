@@ -48,6 +48,14 @@ categories: [guide, english, bioinformatics]
 
 `zcat file.fq.gz | awk -v score=20 -v len=30 'BEGIN {OFS="\n"; for (i=33; i<=73; i++) {if (score==j++) {score=sprintf("%c", i); break}}} /^@/ {getline seq; getline extra; getline qual; total_bp+=length(seq); total_reads++; if (match(qual, score)) {seq=substr(seq, 1, RSTART-1); qual=substr(qual, 1, RSTART-1)}; if (length(seq)>=len) {print $0, seq, extra, qual > "trimmed.fq"; trimmed_bp+=length(seq); trimmed_reads++}} END {printf "total reads:\t%s\ntotal basepairs:\t%s\ntrimmed reads:\t%s\ntrimmed basepairs:\t%s\n", total_reads, total_bp, trimmed_reads, trimmed_bp}'`
 
+* Trim paired-end reads.
+
+`paste <(zcat forward.fq.gz) <(zcat reverse.fq.gz) | paste - - - - | awk 'BEGIN {FS=OFS="\t"} {print $1, $2"\n"$3, $4"\n"$5, $6"\n"$7, $8}' | awk -v score=20 -v len=30 'BEGIN {OFS="\n"; for (i=33; i<=73; i++) {if (score==j++) {score=sprintf("%c", i); break}}} /^@/ {getline seq; getline extra; getline qual; split($0, a, "\t"); split(seq, b, "\t"); split(extra, c, "\t"); split(qual, d, "\t"); total_reads++; total_bp+=(length(b[1])+length(b[2])); if (match(d[1], score)) {b[1]=substr(b[1], 1, RSTART-1); d[1]=substr(d[1], 1, RSTART-1)}; if (match(d[2], score)) {b[2]=substr(b[2], 1, RSTART-1); d[2]=substr(d[2], 1, RSTART-1)}; if (length(b[1])>=len && length(b[2])>=len) {print a[1], b[1], c[1], d[1] > "trimmed_forward.fq"; print a[2], b[2], c[2], d[2] > "trimmed_reverse.fq"; trimmed_reads++; trimmed_bp+=(length(b[1])+length(b[2]))}} END {printf "total reads:\t%s\ntotal basepairs:\t%s\ntrimmed reads:\t%s\ntrimmed basepairs:\t%s\n", total_reads*2, total_bp, trimmed_reads*2, trimmed_bp}'`
+
+* Trim interleaved reads.
+
+`awk -v score=20 -v len=30 'BEGIN {OFS="\n"; for (i=33; i<=73; i++) {if (score==j++) {score=sprintf("%c", i); break}}} /^@(.+) 1(.+)/ {f1=$0; getline f2; getline f3; getline f4; next} /^@(.+) 2(.+)/ {r1=$0; getline r2; getline r3; getline r4} {total_reads++; total_bp+=(length(f2)+length(r2)); if (match(f4, score)) {f2=substr(f2, 1, RSTART-1); f4=substr(f4, 1, RSTART-1)}; if (match(r4, score)) {r2=substr(r2, 1, RSTART-1); r4=substr(r4, 1, RSTART-1)}; if (length(f2)>=len && length(r2)>=len) {print f1, f2, f3, f4, r1, r2, r3, r4 > "trimmed_interleaved.fq"; trimmed_reads++; trimmed_bp+=(length(f2)+length(r2))}} END {printf "total reads:\t%s\ntotal basepairs:\t%s\ntrimmed reads:\t%s\ntrimmed basepairs:\t%s\n", total_reads*2, total_bp, trimmed_reads*2, trimmed_bp}'`
+
 * Convert fastq to fasta.
 
 `sed -n '1~4s/^@/>/p;2~4p' input.fastq > output.fasta`
