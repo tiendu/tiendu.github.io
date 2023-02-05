@@ -41,7 +41,7 @@ I select the first column with `awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") p
 
 For those experienced bioinformaticians, _entrez-direct_ and _sra-toolkit_ are great tools. They'll surely help you when it's inefficient and problematic to download a large number of datasets manually. When chained together with other Linux/Unix command-line tools, it's also easy to be automated and make our life easier.
 
-Also, you can download other datasets e.g., protein, nucleotide by changing the database `-db` for esearch.
+Also, you can download other datasets e.g., protein, nucleotide by changing the parameter for database `-db` in `esearch`.
 
 For example, with ```esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]"| efetch -format fasta``` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) in RefSeq database that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with ```esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]"| efetch -format fasta``` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
 
