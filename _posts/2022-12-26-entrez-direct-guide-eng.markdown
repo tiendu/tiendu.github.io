@@ -8,7 +8,7 @@ categories: [guide, english, bioinformatics]
 
 This was a question for many (including me) when first started to learn bioinformatics. We need datasets to practice skills that we learn in the tutorials and the dataset has to be as realistic as possible and close to what we will face in real life situation and the future. So what will we do?
 
-In this guide, we're gonna use `entrez-direct` and `sra-tools` provided by NCBI (FYI, NCBI also released a tool called [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) which is good for downloading large genome datasets). For the time being, to be able to utilise this guide, one should know or have these:
+In this guide, we're gonna use _entrez-direct_ and _sra-tools_ provided by NCBI (FYI, NCBI also released a tool called [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) which is good for downloading large genome datasets). For the time being, to be able to utilise this guide, one should know or have these:
 
 1. Ubuntu (WSL is also fine)
 2. (Mini)conda
@@ -39,7 +39,7 @@ I now have some basic information e.g., the sequencing technology used was 454, 
 
 I select the first column with `awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}'`. Then, I use `head -n 3` to get only the first three datasets. In the last command, `xargs`, I set the number of argument `-n` being 1 and the number of CPUs `-P` being 4. Next, `fastq-dump` will be used to download the datasets. I download the file in `--gzip`, `--skip-technical`, `--split-files` and `--split-spot`. After the download is finished, I'll have three datasets for practice.
 
-For those experienced bioinformaticians, entrez-direct and sra-toolkit are great tools. They'll surely help you in research when it's inefficient and can cause confusion to download a large number of datasets manually. When chained together with other Linux/Unix command-line tools, it's also easy to be automated and make our life easier.
+For those experienced bioinformaticians, _entrez-direct_ and _sra-toolkit_ are great tools. They'll surely help you when it's inefficient and problematic to download a large number of datasets manually. When chained together with other Linux/Unix command-line tools, it's also easy to be automated and make our life easier.
 
 Also, you can download other datasets e.g., protein, nucleotide by changing the database `-db` for esearch.
 
