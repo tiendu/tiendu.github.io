@@ -4,7 +4,7 @@ title:  "Hierarchical function classification using UniProt and KEGG"
 date:   2023-01-22
 categories: [guide, english, bioinformatics]
 ---
-**HOW DO WE KNOW WHICH FUNCTIONAL GROUP(S) OUR GENE IN INTEREST BELONGS TO?**
+**HOW DO WE KNOW WHICH FUNCTIONAL GROUP(S) THE GENE IN INTEREST BELONGS TO?**
 
 While doing many metagenomics projects, I have this question in mind and I found out, there's an easy way to figure out which groups the function assigned to the gene belong to using KEGG.
 
