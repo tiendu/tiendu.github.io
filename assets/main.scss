@@ -5,11 +5,11 @@ $base-font-family: "IBM Plex Mono", monospace;
 $code-font-family: "IBM Plex Mono", monospace;
 $base-font-size: 14px;
 $base-font-weight: 500;
-$text-color: #102030;
+$text-color: #103050;
 $background-color: #ffffcc;
 
 @import "minima";
-.site-header {border-bottom: 2px solid #204060;}
-.site-footer {border-top: 2px solid #204060;}
+.site-header {border-bottom: 2px solid #304050;}
+.site-footer {border-top: 2px solid #304050;}
 table {width: 25%; font-size: $small-font-size;}
 blockquote {border-left: 1px solid #304050; font-size: $small-font-size;}
