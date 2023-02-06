@@ -4,16 +4,13 @@
 $base-font-family: "IBM Plex Mono", monospace;
 $code-font-family: "IBM Plex Mono", monospace;
 $base-font-size: 14px;
+$base-font-weight: 500;
 $text-color: #24273a;
 $brand-color: #5b6078;
 $background-color: #eed49f;
-$border-color-01: #ed8796;
-$border-color-02: #ee99a0;
-$border-color-03: #f5a97f;
-$base-font-weight: 500;
 
 @import "minima";
-.site-header {border-bottom: 2px solid #bbbbbb;}
-.site-footer {border-top: 2px solid #bbbbbb;}
+.site-header {border-bottom: 2px solid #f0c6c6;}
+.site-footer {border-top: 2px solid #f0c6c6;}
 table {width: 25%; font-size: $small-font-size;}
-blockquote {border-left: 1px solid #dddddd; font-size: $small-font-size;}
+blockquote {border-left: 1px solid #f4dbd6; font-size: $small-font-size;}
