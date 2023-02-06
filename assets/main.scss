@@ -10,4 +10,5 @@ $base-font-weight: 500;
 @import "minima";
 .site-header {border-bottom: 2px solid #ddddff;}
 .site-footer {border-top: 2px solid #ddddff;}
-table {width: 50%; font-size: $small-font-size}
+table {font-size: $small-font-size;}
+blockquote {font-size: $small-font-size;}
