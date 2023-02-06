@@ -11,4 +11,4 @@ $base-font-weight: 500;
 .site-header {border-bottom: 2px solid #ddddff;}
 .site-footer {border-top: 2px solid #ddddff;}
 table {font-size: $small-font-size;}
-blockquote {font-size: $small-font-size;}
+blockquote {border-left: none; font-size: $small-font-size;}
