@@ -148,7 +148,7 @@ In this example, I used `xargs` to handle the deduplication and conversion of mu
 
 * Remove singletons.
 
-`awk '/^>/ {getline seq; a[seq][$0]=b[seq]++} END {for (i in a) {for (j in a[i]) {if (a[i][j]>0) {c[i]}}}; for (i in c) {for (j in a[i]) {print j"\n"i}}}' file.fa`
+`awk '/^>/ {getline seq; a[seq][$0]=b[seq]++} END {for (i in b) if (b[i]>1) c[i]; for (i in c) for (j in a[i]) print j"\n"i}' file.fa`
 
 * Find sequences based on header between a sequence with patternA to a sequence with patternB.
 
