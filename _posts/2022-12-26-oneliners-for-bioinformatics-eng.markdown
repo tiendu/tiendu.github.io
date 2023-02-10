@@ -6,6 +6,8 @@ categories: [guide, english, bioinformatics]
 ---
 **Last updated on 2023-02-10**
 
+Note that some of the commands require _gawk_ to be installed.
+
 # Fastq
 
 **Use `cat` instead of `zcat` if files are not compressed**
