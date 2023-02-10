@@ -6,7 +6,7 @@ categories: [guide, english, bioinformatics]
 ---
 **Last updated on 2023-02-10**
 
-Note that some of the commands require _gawk_ to be installed.
+Note that some of the commands require _gawk_ to be installed. If you're using Ubuntu, use `sudo apt install gawk` to install it.
 
 # Fastq
 
