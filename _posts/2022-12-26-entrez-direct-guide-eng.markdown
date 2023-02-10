@@ -33,19 +33,17 @@ Here, I choose a study in Vietnam about Norovirus with the accession being PRJDB
 
 `esearch -db sra -query "PRJDB5922" | efetch -format runinfo | awk 'BEGIN {RS=","; ORS="\t"} {print}'`
 
-I now have some basic information e.g. the sequencing technology used was 454, and it was amplicon sequencing, the source being RNA, etc. I'll redo the step above and pipe it to the other tools to process.
+I now have some basic information e.g., the sequencing technology used was 454, and it was amplicon sequencing, the source being RNA, etc. I'll redo the step above and pipe it to the other tools to process.
 
 `esearch -db sra -query "PRJDB5922" | efetch -format runinfo | awk 'BEGIN {RS=","; ORS="\t"} {print}' | awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}' | head -n 3 | xargs -n 1 -P 4 fastq-dump --gzip --split-files --skip-technical --split-spot`
 
 I select the first column with `awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}'`. Then, I use `head -n 3` to get only the first three datasets. In the last command, xargs, I set the number of argument `-n` being 1 and the number of CPUs `-P` being 4. Next, `fastq-dump` will be used to download the datasets. I download the file in `--gzip`, `--skip-technical`, `--split-files` and `--split-spot`. After the download is finished, I'll have three datasets for practice.
 
-For those experienced bioinformaticians, entrez-direct and sra-toolkit are great tools. They'll surely help you when it's inefficient and problematic to download a large number of datasets manually. When chained together with other Linux/Unix command-line tools, it's also easy to be automated and make our life easier.
-
-Also, you can download other datasets e.g. protein, nucleotide by changing the parameter for database `-db` in esearch.
+Also, you can download other datasets e.g., protein, nucleotide by changing the parameter for database `-db` in esearch.
 
 For example, with `esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]"| efetch -format fasta` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) in RefSeq database that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with `esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]"| efetch -format fasta` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
 
-For the available databases, use `einfo -dbs`. This will give a list of available databases including: 
+The available databases are shown in the stdout of `einfo -dbs` including:
 
 >annotinfo, assembly, biocollections, bioproject, biosample, 
 >blastdbinfo, books, cdd, clinvar, dbvar, gap, gapplus, gds, 
@@ -93,10 +91,14 @@ And we can check the available field for nuccore database by using `einfo -db nu
 |BRD|Breed|
 |BIOS|BioSample|
 
+Let's say we want to get the RefSeq assembly of _C. perfringens_, we can use the command: 
+
+`esearch -db assembly -query "txid10239[ORGN]" | efetch -format docsum | xtract -pattern DocumentSummary -element FtpPath_RefSeq | xargs -P 3 -I {} bash -c 'name=$(basename {}); curl -o "${name}_genomic.fna.gz" {}/"${name}_genomic.fna.gz"'`
+
+For those experienced bioinformaticians, entrez-direct and sra-toolkit are great tools. They'll surely help you when it's inefficient and problematic to download a large number of datasets manually. When chained together with other Linux/Unix command-line tools, it's also easy to automate.
+
 [1] <https://www.ncbi.nlm.nih.gov/books/NBK49540/>
 
 [2] <https://www.ncbi.nlm.nih.gov/books/NBK25501/>
 
 [3] <https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=408169>
-
-[4] <https://github.com/tiendu/utility/blob/main/filtersequence.pl>
