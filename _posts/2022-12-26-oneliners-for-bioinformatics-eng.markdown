@@ -10,7 +10,7 @@ Note that some of the commands require _gawk_ to be installed. If you're using U
 
 # Fastq
 
-**Use `cat` instead of `zcat` if files are not compressed**
+**Use _cat_ instead of _zcat_ if files are not compressed.**
 
 * Get read length and the count number for each length.
 
@@ -78,9 +78,9 @@ Note that some of the commands require _gawk_ to be installed. If you're using U
 
 `awk '/^@/ {sub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
 
-**Use `xargs` for parallel processing**
+**Use _xargs_ for parallel processing.**
 
-In this example, I used `xargs` to handle the deduplication and conversion of multiple paired-end reads fastq into interleaved-reads fasta.
+In this example, I used _xargs_ to handle the deduplication and conversion of multiple paired-end reads fastq into interleaved-reads fasta.
 
 `find . -maxdepth 1 -type f -name "*_1.fastq.gz" -print0 | sed 's/_1.fastq.gz//g' | xargs -0 -P 4 -I {} bash -c 'name=$(echo {} | cut -d'/' -f2); paste <(zcat ${name}_1.fastq.gz) <(zcat ${name}_2.fastq.gz) | paste - - - - | awk '\''BEGIN {FS=OFS="\t"} {print $1, $2"\n"$3, $4}'\'' | awk '\''/^@/ {getline l; f=!a[l]++} f {print $0"\n"l}'\'' | paste - - | awk '\''BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $2, $4}'\'' | sed '\''s/^@/>/g'\'' > interleaved_${name}.fasta'`
 
