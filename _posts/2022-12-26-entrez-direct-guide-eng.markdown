@@ -43,12 +43,55 @@ For those experienced bioinformaticians, entrez-direct and sra-toolkit are great
 
 Also, you can download other datasets e.g. protein, nucleotide by changing the parameter for database `-db` in esearch.
 
-For example, with ```esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]"| efetch -format fasta``` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) in RefSeq database that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with ```esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]"| efetch -format fasta``` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
+For example, with `esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]"| efetch -format fasta` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) in RefSeq database that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with `esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]"| efetch -format fasta` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
 
-Besides, I have written a script to filter the sequences using regular expression on the sequence header. Find it at [4]. To use, we have 3 parameters to key in: 
-- `-i`: input
-- `-m`: filtering mode, in or out, `-m in` to keep the sequences, `-m out` to remove them
-- `-k`: the keywords, for example, `-k etx plc "whole genome shotgun"`
+For the available databases, use `einfo -dbs`. This will give a list of available databases including: 
+
+>annotinfo, assembly, biocollections, bioproject, biosample, 
+>blastdbinfo, books, cdd, clinvar, dbvar, gap, gapplus, gds, 
+>gene, genome, geoprofiles, grasp, gtr, homologene, ipg, medgen,
+>mesh, nlmcatalog, nuccore, nucleotide, omim, orgtrack, pcassay, 
+>pccompound, pcsubstance, pmc, popset, protein, proteinclusters, 
+>protfam, pubmed, seqannot, snp, sra, structure, taxonomy
+
+And we can check the available field for nuccore database by using `einfo -db nuccore | xtract -pattern Field -element Name Description`
+
+|Name|Descrition|
+|---|---|
+|ALL|All terms from all searchable fields|
+|UID|Unique number assigned to each sequence|
+|FILT|Limits the records|
+|WORD|Free text associated with record|
+|TITL|Words in definition line|
+|KYWD|Nonstandardized terms provided by submitter|
+|AUTH|Author(s) of publication|
+|JOUR|Journal abbreviation of publication|
+|VOL|Volume number of publication|
+|ISS|Issue number of publication|
+|PAGE|Page number(s) of publication|
+|ORGN|Scientific and common names of organism, and all higher levels of taxonomy|
+|ACCN|Accession number of sequence|
+|PACC|Does not include retired secondary accessions|
+|GENE|Name of gene associated with sequence|
+|PROT|Name of protein associated with sequence|
+|ECNO|EC number for enzyme or CAS registry number|
+|PDAT|Date sequence added to GenBank|
+|MDAT|Date of last update|
+|SUBS|CAS chemical name or MEDLINE Substance Name|
+|PROP|Classification by source qualifiers and molecule type|
+|SQID|String identifier for sequence|
+|GPRJ|BioProject|
+|SLEN|Length of sequence|
+|FKEY|Feature annotated on sequence|
+|PORG|Scientific and common names of primary organism, and all higher levels of taxonomy|
+|COMP|Component accessions for an assembly|
+|ASSM|Assembly|
+|DIV|Division|
+|STRN|Strain|
+|ISOL|Isolate|
+|CULT|Cultivar|
+|BRD|Breed|
+|BIOS|BioSample|
 
 [1] <https://www.ncbi.nlm.nih.gov/books/NBK49540/>
 
