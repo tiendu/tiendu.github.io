@@ -52,7 +52,7 @@ The available databases are shown in the stdout of `einfo -dbs` including:
 >pccompound, pcsubstance, pmc, popset, protein, proteinclusters, 
 >protfam, pubmed, seqannot, snp, sra, structure, taxonomy
 
-And we can check the available field for nuccore database by using `einfo -db nuccore | xtract -pattern Field -element Name Description`.
+And we can check the available field that can be used in the query for nuccore database by using `einfo -db nuccore | xtract -pattern Field -element Name Description`.
 
 |Name|Descrition|
 |---|---|
