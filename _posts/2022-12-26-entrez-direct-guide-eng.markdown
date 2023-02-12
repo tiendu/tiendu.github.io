@@ -4,9 +4,9 @@ title:  "Guide to download datasets from NCBI"
 date:   2022-12-26
 categories: [guide, english, bioinformatics]
 ---
-**HOW TO GET DATASETS FOR PRACTICE?**
+**Last updated on 2023-02-12**
 
-This was a question for many (including me) when first started to learn bioinformatics. We need datasets to practice skills that we learn in the tutorials and the dataset has to be as realistic as possible and close to what we will face in real life situation and the future. So what will we do?
+How to get datasets for practice? This was a question for many (including me) when first started to learn bioinformatics. We need datasets to practice skills that we learn in the tutorials and the dataset has to be as realistic as possible and close to what we will face in real life situation and the future. So what will we do?
 
 In this guide, we're gonna use _entrez-direct_ and _sra-tools_ provided by NCBI (FYI, NCBI also released a tool called [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) which is good for downloading large genome datasets). For the time being, to be able to utilise this guide, one should know or have these:
 
@@ -55,41 +55,57 @@ The available databases are shown in the stdout of `einfo -dbs` including:
 And we can check the available field that can be used in the query for nuccore database by using `einfo -db nuccore | xtract -pattern Field -element Name Description`.
 
 |Name|Descrition|
-|---|---|
-|ALL|All terms from all searchable fields|
-|UID|Unique number assigned to each sequence|
+|---|---||ALL|All terms from all searchable fields|
+|UID|Unique number assigned to publication|
 |FILT|Limits the records|
-|WORD|Free text associated with record|
-|TITL|Words in definition line|
-|KYWD|Nonstandardized terms provided by submitter|
-|AUTH|Author(s) of publication|
-|JOUR|Journal abbreviation of publication|
-|VOL|Volume number of publication|
-|ISS|Issue number of publication|
-|PAGE|Page number(s) of publication|
-|ORGN|Scientific and common names of organism, and all higher levels of taxonomy|
-|ACCN|Accession number of sequence|
-|PACC|Does not include retired secondary accessions|
-|GENE|Name of gene associated with sequence|
-|PROT|Name of protein associated with sequence|
-|ECNO|EC number for enzyme or CAS registry number|
-|PDAT|Date sequence added to GenBank|
-|MDAT|Date of last update|
-|SUBS|CAS chemical name or MEDLINE Substance Name|
-|PROP|Classification by source qualifiers and molecule type|
-|SQID|String identifier for sequence|
-|GPRJ|BioProject|
-|SLEN|Length of sequence|
-|FKEY|Feature annotated on sequence|
-|PORG|Scientific and common names of primary organism, and all higher levels of taxonomy|
-|COMP|Component accessions for an assembly|
-|ASSM|Assembly|
-|DIV|Division|
-|STRN|Strain|
-|ISOL|Isolate|
-|CULT|Cultivar|
-|BRD|Breed|
-|BIOS|BioSample|
+|ACCN|Chromosome accessions|
+|ASAC|Space delimited assembly accessions w/ & w/o versions|
+|ASLV|How assembled is this assembly. 'Contig' to 'Chromosome'|
+|TXID|Taxonomy ID|
+|ORGN|Exploded organism names|
+|RUID|Id of RefSeq Assembly.|
+|GUID|Id of GenBank synonym of this Assembly.|
+|UIDS|Pair-id, GB-id, and RS-id of this Assembly.|
+|PROJ|Uid and accessions of this assembly's projects|
+|SAMP|BioSample Accession and Id|
+|NAME|Assembly name|
+|ALLN|All names, space separated|
+|DESC|Assembly description|
+|COV|Sequencing coverage|
+|TYPE|Type of the assembly|
+|SRDT|Date the most recent sequence went live in ID|
+|UPDT|Date the assembly was last updated|
+|LEN|Total length of chromosome/genome including bases and gaps divided by 1,000,000.|
+|REPL|Number of chromosomes in assembly|
+|PLAC|Number of placed scaffolds|
+|UNLO|Number of unordered(unlocalized) scaffolds belonging to chromosomes|
+|UNPL|Number of unplaced scaffolds which do not belong to any chromosome, ie ChrUn|
+|CN50|Contig length at which 50% of total bases in assembly are in contigs of that length or greater|
+|SN50|Scaffold length at which 50% of total bases in assembly are in contigs of that length or greater|
+|CL50|Number of contigs that are greater than or equal to the N50 length.|
+|SL50|Number of scaffolds that are greater than or equal to the N50 length.|
+|CNTG|Number of contigs|
+|UNGL|Total length excluding gaps in chromosome/genome divided by 1,000,000|
+|PROP|Properties|
+|SUBO|Organization that submitted this assembly|
+|INFR|Infraspecific Name: breed, cultivar, strain, ecotype|
+|ISOL|Isolate name|
+|SEX|Sex|
+|ASMM|Assembly Method|
+|GCOV|Genome Coverage|
+|TECH|Sequencing Technology|
+|EXFV|Expected Final Version|
+|RGAS|Reference Guided Assembly|
+|SCAM|Single Cell Amplification|
+|RCAT|RefSeq Category|
+|FTYP|From Type Material|
+|NFRS|Reasons assembly was excluded from RefSeq|
+|GRLS|Date the GenBankassembly was first released|
+|RRLS|Date the RefSeq assembly was first released|
+|RTYP|Release Type|
+|RLEN|Total length of chromosome/genome including bases and gaps|
+|LINK|Linked Assembly accession|
+|TCS|Taxonomy Check Status (ANI)|
 
 Let's say we want to get the RefSeq assembly of _C. perfringens_, we can use the command: 
 
