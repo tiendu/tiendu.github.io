@@ -4,9 +4,8 @@ title:  "Hierarchical function classification using UniProt and KEGG"
 date:   2023-01-22
 categories: [guide, english, bioinformatics]
 ---
-**HOW DO WE KNOW WHICH FUNCTIONAL GROUP(S) THE GENE IN INTEREST BELONGS TO?**
 
-While doing many metagenomics projects, I have this question in mind and I found out, there's an easy way to figure out which groups the function assigned to the gene belong to using KEGG.
+"How do we know which functional group(s) the gene of interest belongs to?" I have this question in mind while doing many metagenomic projects and recently I've found out there's an easy way to figure out which groups the function assigned to the gene belong to using KEGG and UniProt.
 
 KEGG is a well-known database for pathway studies. More than that, it also offers an inside look into the gene functions in a hierarchical classification approach. There was a hierarchical classification database called SEED, but it was no longer maintained as far as I know. KEGG BRITE is a part of KEGG and it provides functional hierarchies of several biological objects including: 
 
