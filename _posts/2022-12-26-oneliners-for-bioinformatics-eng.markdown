@@ -157,8 +157,10 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 `awk '/^>/ {getline seq; f=!a[seq]++} f {print $0"\n"seq}' file.fa`
 
 * Deduplicate and remove sequences that match other longer sequences (set n with desired length to remove sequences shorter than it).
- 
-`awk -v l=n 'function findsubs(arr, len) {for (i in arr) {for (j in arr) {if (i!=j) {if (arr[i]~arr[j] && length(arr[j])>=len) {delete arr[j]} else if (arr[j]~arr[i] && length(arr[i])>=len) {delete arr[i]}}}}} /^>/ {getline seq; a[$0]=seq} END {findsubs(a, l); for (i in a) {if (a[i]) {print i"\n"a[i]}}}' file.fa` 
+
+`awk -v l=n 'function findsubs(arr, len) {for (i in arr) {tmp=arr[i]; delete arr[i]; for (j in arr) {if (arr[j]~tmp && length(arr[j])>=length(tmp) && length(tmp)>=len) {res[i]=tmp} else if (tmp~arr[j] && length(tmp)>=length(arr[j]) && length(arr[j]>=len)) {res[j]=arr[j]}}}} /^>/ {getline seq; a[$0]=b[$0]=seq} END {findsubs(a, l); for (i in b) {if ((i in res)==0) {print i"\n"b[i]}}}' file.fa`
+
+`awk -v l=n 'function findsubs(arr, len) {for (i in arr) {for (j in arr) {if (i!=j) {if (arr[i]~arr[j] && length(arr[j])>=len) {delete arr[j]} else if (arr[j]~arr[i] && length(arr[i])>=len) {delete arr[i]}}}}} /^>/ {getline seq; a[$0]=seq} END {findsubs(a, l); for (i in a) {if (a[i]) {print i"\n"a[i]}}}' file.fa`
 
 * Remove singletons.
 
