@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2023-02-10**
+**Last updated on 2023-02-16**
 
 Note that some of the commands require _gawk_ to be installed. If you're using Ubuntu, use `sudo apt install gawk` to install it.
 
@@ -95,6 +95,10 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 * Format singleline fasta to multiline fasta (here I used the limit of 60 characters per line, set l to the desired number of characters per line).
 
 `awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) {printf "%s", $(i*l+j)}; print ""}}' file.fa`
+
+* Split a fasta file into multiple files with approximately equal number of sequences. Here, I split the file into 4 files.
+
+`awk -v n=4 '{split(FILENAME, file, ".")} /^>/ {getline seq; a[count++]=$0"\n"seq} END {step=sprintf("%.0f", count/n); for (i=1; i<=n; i++) {for (j=step*(i-1); j<step*i; j++) {if (a[j]) print a[j] >> file[1] i "." file[2]}}}' file.fa`
 
 * Rename sequence header of interleaved fastq-converted-to-fasta (this helps when one uses BLAST or any classifier to classify reads).
 
