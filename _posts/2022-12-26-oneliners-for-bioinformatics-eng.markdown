@@ -419,9 +419,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 # Tips and tricks
 
-* Handle multiple files.
-
-Here is an example when working with three files.
+* Handle multiple files. Here is an example when working with three files.
 
 `awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {} idx==2 {} idx==3 {}' file1.txt file2.txt file3.txt` 
 
