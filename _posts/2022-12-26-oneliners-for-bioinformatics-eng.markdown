@@ -429,7 +429,7 @@ Here is an example when working with three files.
 
 `awk '{a[i++]=$0} END {while (i--) print a[i]}' file`
 
-* Clone array.
+* Clone _awk_ array.
 
 `awk 'function clone(original, copy) {for (i in original) {if (isarray(original[i])) {copy[i][1]=""; delete copy[i][1]; clone(original[i], copy[i])} else {copy[i]=original[i]}}}'`
 
