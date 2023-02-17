@@ -72,9 +72,9 @@ Note that some of the commands require _gawk_ to be installed. If you're using U
 
 * Convert fastq to fasta.
 
-`sed -n '1~4s/^@/>/p;2~4p' input.fastq > output.fasta`
+`sed -n '1~4s/^@/>/p; 2~4p' input.fastq > output.fasta`
 
-`sed -e '/^@/!d;s//>/;N' input.fastq > output.fasta`
+`sed -e '/^@/!d; s//>/; N' input.fastq > output.fasta`
 
 `awk '/^@/ {sub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
 
@@ -88,7 +88,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Format multiline fasta to singleline fasta.
 
-`sed ':a; />/ !N; s/\n//; t a; s/>/\n>/; s/^\s*//' file.fa`
+`sed ':a; />/!N; s/\n//; ta; s/>/\n>/; s/^\s*//' file.fa`
 
 `awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {print ""}' file.fa`
 
@@ -369,7 +369,7 @@ Same input in the example above.
 
 * Join lines together with comma as delimiter.
 
-`sed -E ':a; N; $! b a; s/\n/,/g' text.txt`
+`sed -E ':a; N; $!ba; s/\n/,/g' text.txt`
 
 * Interleave line by line (for multiple text files).
 
@@ -425,7 +425,7 @@ Here is an example when working with three files.
 
 `awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {} idx==2 {} idx==3 {}' file1.txt file2.txt file3.txt` 
 
-* Print in reversed order (like `tac`).
+* Print in reversed order (like _tac_).
 
 `awk '{a[i++]=$0} END {while (i--) print a[i]}' file`
 
