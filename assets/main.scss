@@ -7,17 +7,17 @@ $code-font-family: "IBM Plex Mono", monospace;
 $spacing-unit: 28px;
 $base-font-size: 14px;
 $base-font-weight: 500;
-$text-color: #4c4f69;
-$background-color: #eff1f5;
-$brand-color: #dc8a78;
-$grey-color: #bcc0cc;
+$text-color: #cdd6f4;
+$background-color: #1e1e2e;
+$brand-color: #f5e0dc;
+$grey-color: #585b70;
 $grey-color-dark: darken($grey-color, 18%);
 $grey-color-light: lighten($grey-color, 18%);
 
 @import "minima";
 .site-title {font-family: "Bungee Shade", cursive; }
-.site-header {border-bottom: 2px solid #7287fd;}
-.site-footer {border-top: 2px solid #7287fd;}
+.site-header {border-bottom: 2px solid #b4befe;}
+.site-footer {border-top: 2px solid #b4befe;}
 table {width: 25%; font-size: $small-font-size;}
-blockquote {border-left: 1px solid #7287fd; font-size: $small-font-size;}
+blockquote {border-left: 1px solid #b4befe; font-size: $small-font-size;}
 a {color: $brand-color; &:visited {color: darken($brand-color, 15%);} &:hover {color: lighten($brand-color, 15%); text-decoration: underline;}};
