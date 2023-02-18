@@ -8,7 +8,7 @@ baseurl: "" # the subpath of your site, e.g. /blog
 url: "https://tiendu.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 facebook_username: tiendu107
 linkedin_username: tienhdu
-github_username:  tiendu
+github_username: tiendu
 
 # Configure the plugin here
 paginate_path: "/page:num/"
