@@ -15,7 +15,7 @@ $grey-color-dark: darken($grey-color, 18%);
 $grey-color-light: lighten($grey-color, 18%);
 
 @import "minima";
-.site-title {font-family: "Bungee", cursive; color: $text-color;}
+.site-title {font-family: "Bungee", cursive; color: $grey-color-light; &:visited {color: $grey-color-dark;}}
 .site-header {border-bottom: 2px solid #b4befe;}
 .site-footer {border-top: 2px solid #b4befe;}
 table {width: 25%; font-size: $small-font-size;}
