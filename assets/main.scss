@@ -9,10 +9,7 @@ $base-font-size: 14px;
 $base-font-weight: 500;
 $text-color: #4c4f69;
 $background-color: #eff1f5;
-$link-base-color: #dc8a78;
-$link-visited-color: #dd7878;
-$link-hover-color: #ea76cb;
-$brand-color: #dce0e8;
+$brand-color: #dc8a78;
 
 @import "minima";
 .site-title {font-family: "Bungee Shade", cursive; }
@@ -20,3 +17,4 @@ $brand-color: #dce0e8;
 .site-footer {border-top: 2px solid #7287fd;}
 table {width: 25%; font-size: $small-font-size;}
 blockquote {border-left: 1px solid #7287fd; font-size: $small-font-size;}
+a {color: $brand-color; &:visited {color: darken($brand-color, 15%);} &:hover {color: lighten($brand-color, 15%); text-decoration: underline;}};
