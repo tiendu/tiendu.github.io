@@ -7,12 +7,14 @@ $code-font-family: "IBM Plex Mono", monospace;
 $spacing-unit: 28px;
 $base-font-size: 14px;
 $base-font-weight: 500;
-$text-color: #103050;
-$background-color: #ffffcc;
+$text-color: #cad3f5;
+$background-color: #24273a;
+$link-base-color: #f4dbd6;
+$link-visited-color: #f0c6c6;
 
 @import "minima";
 .site-title {font-family: "Bungee Shade", cursive; }
-.site-header {border-bottom: 2px solid #304050;}
-.site-footer {border-top: 2px solid #304050;}
+.site-header {border-bottom: 2px solid #b7bdf8;}
+.site-footer {border-top: 2px solid #b7bdf8;}
 table {width: 25%; font-size: $small-font-size;}
-blockquote {border-left: 1px solid #304050; font-size: $small-font-size;}
+blockquote {border-left: 1px solid #b7bdf8; font-size: $small-font-size;}
