@@ -79,7 +79,7 @@ Let's see some of the first few rows.
 |P81928|K23505|Brite Hierarchies|Protein families: genetic information processing|Mitochondrial biogenesis [BR:ko03029]|TIMMDC1; complex I assembly factor TIMMDC1|
 |P48347|K06630|Environmental Information Processing|Signal transduction|MAPK signaling pathway - yeast [PATH:ko04011]|YWHAE; 14-3-3 protein epsilon|
 
-With this _uniprot_brite.tsv_, every time we use BLAST or DIAMOND BLAST with UniProt Swiss-Prot database to predict the function of a sequence, we can get to know which functional groups that it is assigned to. Probably, when one uses a database besides UniProt Swiss-Prot, one needs to look for a way to convert the ID in that database into UniProt ID to use this hierarchical classification system efficiently, and indeed, the [UniProt API](https://www.uniprot.org/help/api_queries) does provide a way to convert NCBI ID to UniProt ID.
+With this _uniprot_brite.tsv_, every time we use BLAST or DIAMOND BLAST with UniProt Swiss-Prot database to predict the function of a sequence, we can get to know which functional groups that it is assigned to. Probably, when one uses a database besides UniProt Swiss-Prot, one needs to look for a way to convert the ID in that database into UniProt ID to use this hierarchical classification system efficiently, and indeed, the [UniProt API](https://www.uniprot.org/help/programmatic_access) does provide a way to convert NCBI ID to UniProt ID.
 
 In addition, since it takes a few day to retrieve the entries from KEGG, when one needs to update this database, it doesn't have to be started from scratch. First, we need to get the newest version of UniProt Swiss-Prot (download from the link above then unzip it). Using the below command... 
 
