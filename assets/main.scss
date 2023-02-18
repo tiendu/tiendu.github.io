@@ -1,6 +1,7 @@
 ---
 ---
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bungee+Shade:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 $base-font-family: "IBM Plex Mono", monospace;
 $code-font-family: "IBM Plex Mono", monospace;
 $spacing-unit: 28px;
@@ -10,6 +11,7 @@ $text-color: #103050;
 $background-color: #ffffcc;
 
 @import "minima";
+.site-title {font: "Bungee Shade"; font-weight: 400;}
 .site-header {border-bottom: 2px solid #304050;}
 .site-footer {border-top: 2px solid #304050;}
 table {width: 25%; font-size: $small-font-size;}
