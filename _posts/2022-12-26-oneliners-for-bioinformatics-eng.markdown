@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2023-02-16**
+**Last updated on 2023-02-21**
 
 Note that some of the commands require _gawk_ to be installed. If you're using Ubuntu, use `sudo apt install gawk` to install it.
 
