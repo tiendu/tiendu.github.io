@@ -427,6 +427,10 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 `awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {} idx==2 {} idx==3 {}' file1.txt file2.txt file3.txt` 
 
+* Get k-nucleotides.
+
+`awk -v k=3 'function clone(original, copy) {for (i in original) {if (isarray(original[i])) {copy[i][1]=""; delete copy[i][1]; clone(original[i], copy[i])} else {copy[i]=original[i]}}} BEGIN {split("ATGC", a, ""); clone(a, b); i=0; while (i<k-1) {i++; temp=""; for (m in a) {for (n in b) {temp=temp (temp ? " " : "") a[m] b[n]}}; split(temp, b, " ")}; for (i in b) print i, b[i]}'`
+
 * Print in reversed order (like _tac_).
 
 `awk '{a[i++]=$0} END {while (i--) print a[i]}' file`
