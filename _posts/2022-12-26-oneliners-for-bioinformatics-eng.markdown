@@ -102,7 +102,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Rename sequence header of interleaved fastq-converted-to-fasta (this helps when one uses BLAST or any classifier to classify reads).
 
-`awk -v count=1 '/^>/ {getline seq; match($0, />(.+)* /, name); label=(a[name[1]]++) ? ">"count++"|R" : ">"count"|F"; print label"\n"seq}' file.fa`
+`awk -v count=1 '/^>/ {getline seq; match($0, />(.+)* /, name); label=(a[name[1]]++ ? ">"count++"|R" : ">"count"|F"); print label"\n"seq}' file.fa`
 
 * Get the length of each sequence.
 
@@ -130,7 +130,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Find the length of the shortest and the longest sequence.
 
-`awk '/^>/ {getline seq; print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2} {max=(max<$2) ? $2 : max; min=(min>$2) ? $2 : min} END {printf "Min: %d\tMax: %d\n", min, max}'`
+`awk '/^>/ {getline seq; print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2} {max=(max<$2 ? $2 : max); min=(min>$2 ? $2 : min)} END {printf "Min: %d\tMax: %d\n", min, max}'`
 
 `awk '/^>/ {getline seq; a[$0]=length(seq)} END {asort(a); printf "Min: %d\tMax: %d\n", a[1], a[length(a)]}' file.fa`
 
@@ -200,7 +200,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Remove a column (here I remove the 2nd column).
 
-`awk -v k=2 'BEGIN {FS=OFS="\t"} {$k=""; for (i=1; i<=NF; i++) {if ($i!="") printf "%s%s", $i, (i<NF) ? OFS : ORS}}' table.tsv`
+`awk -v k=2 'BEGIN {FS=OFS="\t"} {$k=""; for (i=1; i<=NF; i++) {if ($i!="") printf "%s%s", $i, (i<NF ? OFS : ORS)}}' table.tsv`
 
 * Swap a column with another (here I swap the 1st column and the 2nd column).
 
@@ -212,7 +212,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Outer join (for multiple tables).
 
-`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv`
+`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i] ? a[i][j] : 0); printf "%s%s", k, (j<ARGIND ? OFS : ORS)}}}' table*.tsv`
 
 >**Input:**
 >
@@ -250,15 +250,15 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Inner join (for multiple tables).
 
-`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv | awk 'BEGIN {FS=OFS="\t"} NR==1 {print} NR>1 {if (!match($0, "0")) print}'`
+`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i] ? a[i][j] : 0); printf "%s%s", k, (j<ARGIND ? OFS : ORS)}}}' table*.tsv | awk 'BEGIN {FS=OFS="\t"} NR==1 {print} NR>1 {if (!match($0, "0")) print}'`
 
 * Exclusive join (for multiple tables).
 
-`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i]) ? a[i][j] : 0; printf "%s%s", k, (j<ARGIND) ? OFS : ORS}}}' table*.tsv | awk 'BEGIN {FS=OFS="\t"} NR==1 {print} NR>1 {if (match($0, "0")) print}'`
+`awk 'BEGIN {FS=OFS="\t"} {a[$1][ARGIND]=$2} END {for (i in a) {printf "%s%s", i, OFS; for (j=1; j<=ARGIND; j++) {k=(j in a[i] ? a[i][j] : 0); printf "%s%s", k, (j<ARGIND ? OFS : ORS)}}}' table*.tsv | awk 'BEGIN {FS=OFS="\t"} NR==1 {print} NR>1 {if (match($0, "0")) print}'`
 
 * Right join (for two tables).
 
-`awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1]=$2; next} {print ($1 in a) ? $0 OFS a[$1] : $0 OFS 0}' table1.tsv table2.tsv`
+`awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1]=$2; next} {print ($1 in a ? $0 OFS a[$1] : $0 OFS 0)}' table1.tsv table2.tsv`
 
 * Find inclusive and exclusive elements based on one column.
 
@@ -266,7 +266,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Deduplicate indices and sum values associated with those indices.
 
-`awk 'BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[$1]++; for (i=1; i<=NF; i++) {dup[$1][i]+=$i}} END {for (i in label) {printf "%s%s", i, OFS; for (j=2; j<=NF; j++) {$j=dup[i][j]; printf "%s%s", $j, (j<NF) ? OFS : ORS}}}' table.tsv`
+`awk 'BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[$1]++; for (i=1; i<=NF; i++) {dup[$1][i]+=$i}} END {for (i in label) {printf "%s%s", i, OFS; for (j=2; j<=NF; j++) {$j=dup[i][j]; printf "%s%s", $j, (j<NF ? OFS : ORS)}}}' table.tsv`
 
 >**Input:**
 >
@@ -287,11 +287,11 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Calculate percentage by column.
 
-`awk 'function percent(value, total) {return (total!=0) ? sprintf("%.2f", 100*value/total) : "NA"} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[i]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[j])}; print}}' table.tsv`
+`awk 'function percent(value, total) {return (total!=0 ? sprintf("%.2f", 100*value/total) : "NA")} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[i]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[j])}; print}}' table.tsv`
 
 * Calculate percentage by row.
 
-`awk 'function percent(value, total) {return (total!=0) ? sprintf("%.2f", 100*value/total) : "NA"} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[NR]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[i])}; print}}' table.tsv`
+`awk 'function percent(value, total) {return (total!=0 ? sprintf("%.2f", 100*value/total) : "NA")} BEGIN {FS=OFS="\t"} NR==1 {print; next} {label[NR]=$1; for (i=2; i<=NF; i++) {sum[NR]+=col[i][NR]=$i}} END {for (i=2; i<=NR; i++) {$1=label[i]; for (j=2; j<=NF; j++) {$j=percent(col[j][i], sum[i])}; print}}' table.tsv`
 
 * Select row based on max or min value of a column.
 
@@ -352,7 +352,7 @@ Example: I count the occurences with the value in the second column with groupin
 
 * Display the most occuring value with grouping.
 
-`awk 'BEGIN {FS=OFS="\t"} {count[$1][$2]++; max[$1]=(max[$1]>count[$1][$2]) ? max[$1] : count[$1][$2]} END {for (i in count) {for (j in count[i]) {if (count[i][j]==max[i]) print i, j, count[i][j]}}}' table.tsv`
+`awk 'BEGIN {FS=OFS="\t"} {count[$1][$2]++; max[$1]=(max[$1]>count[$1][$2] ? max[$1] : count[$1][$2])} END {for (i in count) {for (j in count[i]) {if (count[i][j]==max[i]) print i, j, count[i][j]}}}' table.tsv`
 
 Same input in the example above.
 
@@ -377,9 +377,9 @@ Same input in the example above.
 
 * Interleave line by line (for multiple text files).
 
-`awk '{for (i=1; i<ARGC; i++) {getline < ARGV[i]; printf "%s%s", $0, (i<(ARGC-1)) ? OFS : ORS}}' text*.txt`
+`awk '{for (i=1; i<ARGC; i++) {getline < ARGV[i]; printf "%s%s", $0, (i<ARGC-1 ? OFS : ORS)}}' text*.txt`
 
-`awk 'BEGIN {do {flag=channel=0; while (++channel<ARGC) {if (getline < ARGV[channel]) {printf "%s", (channel<ARGC-1) ? $0 "\t" : $0 "\n"}; flag=1}} while (flag)}' text*.txt`
+`awk 'BEGIN {do {flag=channel=0; while (++channel<ARGC) {if (getline < ARGV[channel]) {printf "%s", (channel<ARGC-1 ? $0 "\t" : $0 "\n")}; flag=1}} while (flag)}' text*.txt`
 
 * Interleave line by nth line (here is 4 lines for multiple text files).
 
@@ -407,19 +407,19 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Subsample paired-end reads in fastq format.
 
-`paste <(zcat forward.fastq.gz) <(zcat reverse.fastq.gz) | awk '{printf "%s", $0; if (NR%4==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if(s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3"\n"$5"\n"$7 > "subsampled_forward.fastq"; print $2"\n"$4"\n"$6"\n"$8 > "subsampled_reverse.fastq"}'`
+`paste <(zcat forward.fastq.gz) <(zcat reverse.fastq.gz) | awk '{printf "%s", $0; if (NR%4==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if(s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3"\n"$5"\n"$7 > "subsampled_forward.fastq"; print $2"\n"$4"\n"$6"\n"$8 > "subsampled_reverse.fastq"}'`
 
 * Subsample paired-end reads in fasta format.
 
-`paste <(awk '/^>/ {getline seq; print $0"\n"seq}' forward.fasta) <(awk '/^>/ {getline seq; print $0"\n"seq}' reverse.fasta) | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3 > "subsampled_forward.fasta"; print $2"\n"$4 > "subsampled_reverse.fasta"}'`
+`paste <(awk '/^>/ {getline seq; print $0"\n"seq}' forward.fasta) <(awk '/^>/ {getline seq; print $0"\n"seq}' reverse.fasta) | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3 > "subsampled_forward.fasta"; print $2"\n"$4 > "subsampled_reverse.fasta"}'`
 
 * Subsample single-end reads in fastq format.
 
-`zcat single.fastq.gz | awk '{printf "%s", $0; if (NR%4==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2"\n"$3"\n"$4 > "subsampled_single.fastq"}'`
+`zcat single.fastq.gz | awk '{printf "%s", $0; if (NR%4==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2"\n"$3"\n"$4 > "subsampled_single.fastq"}'`
 
 * Subsample single-end reads in fasta format (this can also be used for subsampling without replacement of sequences).
 
-`awk '/^>/ {getline seq; print $0"\n"seq}' single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k) ? i-1 : int(rand()*i); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
+`awk '/^>/ {getline seq; print $0"\n"seq}' single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
 
 # Tips and tricks
 
