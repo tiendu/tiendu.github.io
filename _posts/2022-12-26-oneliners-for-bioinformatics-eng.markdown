@@ -6,6 +6,8 @@ categories: [guide, english, bioinformatics]
 ---
 **Last updated on 2023-02-21**
 
+Some of these one-liners are from people on Stack Overflow, Stack Exchange, Biostar etc... I can't thank them enough. Let me know if I can give any credit.
+
 Note that some of the commands require _gawk_ to be installed. If you're using Ubuntu, use `sudo apt install gawk` to install it.
 
 # Fastq
@@ -435,7 +437,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 `awk '{a[i++]=$0} END {while (i--) print a[i]}' file`
 
-* Clone _awk_ array.
+* Clone _awk_ array ([from Stephen Kitt](https://unix.stackexchange.com/questions/456315/clone-complex-array-in-awk)).
 
 `awk 'function clone(original, copy) {for (i in original) {if (isarray(original[i])) {copy[i][1]=""; delete copy[i][1]; clone(original[i], copy[i])} else {copy[i]=original[i]}}}'`
 
