@@ -134,7 +134,7 @@ Tỉ lệ lặp là 70%, chúng ta không ngạc nhiên vì đây là RNA-seq. V
 
 Sau khi lắp ráp hoàn thành, chúng ta sẽ có 2 thư mục tương ứng với tên file. Chúng ta kiểm tra N50 bằng command đã được giới thiệu ở bên trên phần hướng dẫn đánh giá lắp ráp và command sau đây để tìm độ dài ngắn và dài nhất của các .
 
-`awk '/^>/ {getline seq; print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2} {max=(max<$2) ? $2 : max; min=(min>$2) ? $2 : min} END {printf "Min: %d\tMax: %d\n", min, max}'`
+`awk '/^>/ {getline seq; print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2} {max=(max<$2 ? $2 : max); min=(min>$2 ? $2 : min)} END {printf "Min: %d\tMax: %d\n", min, max}'`
 
 Chúng ta được kết quả:
 
