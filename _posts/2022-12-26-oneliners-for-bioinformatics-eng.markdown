@@ -106,7 +106,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk -v count=1 '/^>/ {getline seq; match($0, />(.+)* /, name); label=(a[name[1]]++ ? ">"count++"|R" : ">"count"|F"); print label"\n"seq}' file.fa`
 
-* Rename sequence header of fasta with leader 10-powered.
+* Rename sequence header of fasta with leading power of 10.
 
 `awk '/>/ {getline seq; a[count++][$0]=seq} END {label=10^length(count); for (i in a) for (j in a[i]) print ">"label+i"\n"a[i][j]}' file.fa` 
 
