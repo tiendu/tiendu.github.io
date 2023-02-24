@@ -329,7 +329,7 @@ Example: I take the result from BLAST outfmt 6 to select the row based on the hi
 
 * Count with grouping.
 
-Example: I count the occurences with the value in the second column with grouping based on the first column.
+Example: I count the occurence with the value in the second column with grouping based on the first column.
 
 `awk 'BEGIN {FS=OFS="\t"} {count[$1][$2]++} END {for (i in count) {for (j in count[i]) {print i, j, count[i][j]}}}' table.tsv`
 
