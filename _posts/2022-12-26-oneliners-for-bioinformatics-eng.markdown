@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2023-02-21**
+**Last updated on 2023-02-24**
 
 Some of these one-liners are from people on Stack Overflow, Stack Exchange, Biostar etc... I can't thank them enough. Let me know if I can give any credit.
 
@@ -108,7 +108,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Rename sequence header of fasta with leading power of 10.
 
-`awk '/>/ {getline seq; a[count++][$0]=seq} END {label=10^length(count); for (i in a) for (j in a[i]) print ">"label+i"\n"a[i][j]}' file.fa` 
+`awk '/^>/ {getline seq; a[count++][$0]=seq} END {label=10^length(count); for (i in a) for (j in a[i]) print ">"label+i"\n"a[i][j]}' file.fa` 
 
 * Get the length of each sequence.
 
