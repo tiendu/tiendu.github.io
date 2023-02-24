@@ -94,7 +94,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk '/^>/ {if (NR>1) {print ""}; printf "%s\n", $0; next} {printf "%s", $0} END {print ""}' file.fa`
 
-* Format singleline fasta to multiline fasta (here I used the limit of 60 characters per line, set l to the desired number of characters per line).
+* Format singleline fasta to multiline fasta. Here I used the limit of 60 characters per line, set l to the desired number of characters per line.
 
 `awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) {printf "%s", $(i*l+j)}; print ""}}' file.fa`
 
@@ -102,7 +102,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk -v n=4 '{split(FILENAME, file, ".")} /^>/ {getline seq; a[count++]=$0"\n"seq} END {step=sprintf("%.0f", count/n); for (i=1; i<=n; i++) {for (j=step*(i-1); j<step*i; j++) {if (a[j]) print a[j] >> file[1] i "." file[2]}}}' file.fa`
 
-* Rename sequence header of interleaved fastq-converted-to-fasta (this helps when one uses BLAST or any classifier to classify reads).
+* Rename sequence header of interleaved fastq-converted-to-fasta with leading power of 10. This helps when one uses BLAST or any classifier to classify reads.
 
 `awk '/^>/ {getline seq; match($0, />(.+)* /, name); a[count++][(b[name[1]]++ ? name[1]"_R" : name[1]"_F")]=seq} END {label=10^length(count); for (i in a) {for (j in a[i]) {split(j, c, "_"); print ">"(c[2]=="R" ? label+i "_R" : label "_F")"\n"a[i][j]}}}'`
 
@@ -118,11 +118,11 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk '/^>/ {getline seq; sum+=length(seq); count++} END {printf "%s\t%.3f\t%d\n", FILENAME, sum/1e6, count}' file.fa`
 
-* Filter sequence based on sequence length (here I use 1,000, set n to the desired length).
+* Filter sequence based on sequence length (set n to the desired length).
 
 `awk -v n=1000 '/^>/ {getline seq} length(seq)>n {print $0"\n"seq}' file.fa`
 
-* Get N50, L50 (here I used 0.5 for N50, set n=0.9 for N90) and auN (area under the Nx curve, a new metric to evaluate assembly quality).
+* Get N50, L50, and auN (area under the Nx curve, a new metric to evaluate assembly quality). Here I set n=0.5 to find the N50.
 
 `awk -v n=0.5 '/^>/ {getline seq; a[$0]=length(seq)} END {asort(a); for (i in a) {sum+=a[i]; sum_sq+=(a[i]**2); len[i]=a[i]}; auN=sum_sq/sum; for (j in len) {csum+=len[j]; if (csum>sum*(1-n)) {printf "N%d: %d\tL%d: %d\tauN: %.2f\n", n*100, len[j], n*100, j, auN; break}}}' file.fa`
 
