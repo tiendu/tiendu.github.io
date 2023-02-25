@@ -104,7 +104,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Rename sequence header of interleaved fastq-converted-to-fasta with leading power of 10. This helps when one uses BLAST or any classifier to classify reads.
 
-`awk '/^>/ {getline seq; match($0, />(.+)* /, name); a[count++][(b[name[1]]++ ? name[1]"_R" : name[1]"_F")]=seq} END {label=10^length(count); for (i in a) {for (j in a[i]) {split(j, c, "_"); print ">"(c[2]=="R" ? label+i "_R" : label "_F")"\n"a[i][j]}}}'`
+`awk 'BEGIN {OFS="\n"; count=0} /^>/ {getline seq; match($0, />(.+)* /, name); if (b[name[1]]++) {a[count++][name[1]"_R"]=seq} else {a[count][name[1]"_F"]=seq}} END {label=10^length(count); for (i in a) {for (j in a[i]) {split(j, c, "_"); print ">"label+i"_"c[2], a[i][j]}}}' file.fa`
 
 * Rename sequence header of fasta with leading power of 10.
 
