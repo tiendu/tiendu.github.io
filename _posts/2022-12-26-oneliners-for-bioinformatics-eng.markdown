@@ -110,6 +110,10 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk '/^>/ {getline seq; a[count++][$0]=seq} END {label=10^length(count); for (i in a) for (j in a[i]) print ">"label+i"\n"a[i][j]}' file.fa` 
 
+* Rename sequence header of fasta with leading power of 10 and create a table of indices.
+
+`awk '/^>/ {getline seq; a[count++]=$0"\n"seq} END {label=10^length(count); for (i in a) {split(a[i], b, "\n"); print ">"label+i"\n"b[2] > "renamed_file.fa"; print label+i"\t"b[1] > "indices.tsv"}}' file.fa`
+
 * Get the length of each sequence.
 
 `awk '/^>/ {getline seq; sub(/^>/, "", $0); print $0"\t"length(seq)}' file.fa`
