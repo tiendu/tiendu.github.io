@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2023-02-24**
+**Last updated on 2023-03-03**
 
 Some of these one-liners are from people on Stack Overflow, Stack Exchange, Biostar etc... I can't thank them enough. Let me know if I can give any credit.
 
