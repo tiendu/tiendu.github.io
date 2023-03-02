@@ -192,6 +192,10 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
 
+* Remove tandem repeats. Repeats of length from 2 to 6 are removed.  
+
+`awk -v k=6 'BEGIN {split("ATGC", a, ""); split("ATGC", b, ""); while (i<k-1) {i++; temp=""; for (m in a) {for (n in b) {temp=temp (temp ? " " : "") a[m] b[n]; c[i*(m*length(b)+n+1)]=a[m] b[n]}}; split(temp, b, " ")}; delete a; delete b} /^>/ {getline seq; a[$0]=seq} END {for (i in a) {for (j in c) {l=(length(c[j])>3 ? 4 : 8); regex="("c[j]"){"l",}"; if (match(a[i], regex)) {gsub(regex, "", a[i])}}; print i"\n"a[i]}}' file.fa`
+
 # Utility
 
 ## Tables
