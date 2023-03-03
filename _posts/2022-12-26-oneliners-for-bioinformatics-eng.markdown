@@ -92,7 +92,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `sed ':a; />/!N; s/\n//; ta; s/>/\n>/; s/^\s*//' file.fa`
 
-`awk '/^>/ {if (NR>1) {printf "\n"}; printf "%s\n", $0; next} {printf "%s", $0} END {printf "\n"}' file.fa`
+`awk '/^>/ {if (NR>1) {printf "\n"}; printf "%s\n", $0; next} {printf "%s", $0} ENDFILE {printf "\n"}' file.fa`
 
 `awk '/^>/ {getline seq; if (!(seq~/^>/)) {seq=seq seq}; a[$0]=seq} END {for (i in a) print i"\n"a[i]}' file.fa`
 
