@@ -421,19 +421,19 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Subsample paired-end reads in fastq format.
 
-`paste <(zcat forward.fastq.gz) <(zcat reverse.fastq.gz) | awk '{printf "%s", $0; if (NR%4==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if(s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3"\n"$5"\n"$7 > "subsampled_forward.fastq"; print $2"\n"$4"\n"$6"\n"$8 > "subsampled_reverse.fastq"}'`
+`paste <(zcat forward.fastq.gz) <(zcat reverse.fastq.gz) | awk '{printf "%s", $0; printf "%s", (NR%4==0 ? "\n" : "\t")}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if(s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3"\n"$5"\n"$7 > "subsampled_forward.fastq"; print $2"\n"$4"\n"$6"\n"$8 > "subsampled_reverse.fastq"}'`
 
 * Subsample paired-end reads in fasta format.
 
-`paste <(awk '/^>/ {getline seq; print $0"\n"seq}' forward.fasta) <(awk '/^>/ {getline seq; print $0"\n"seq}' reverse.fasta) | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3 > "subsampled_forward.fasta"; print $2"\n"$4 > "subsampled_reverse.fasta"}'`
+`paste <(awk '/^>/ {getline seq; print $0"\n"seq}' forward.fasta) <(awk '/^>/ {getline seq; print $0"\n"seq}' reverse.fasta) | awk '{printf "%s", $0; printf "%s", (NR%2==0 ? "\n" : "\t")}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$3 > "subsampled_forward.fasta"; print $2"\n"$4 > "subsampled_reverse.fasta"}'`
 
 * Subsample single-end reads in fastq format.
 
-`zcat single.fastq.gz | awk '{printf "%s", $0; if (NR%4==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2"\n"$3"\n"$4 > "subsampled_single.fastq"}'`
+`zcat single.fastq.gz | awk '{printf "%s", $0; printf "%s", (NR%4==0 ? "\n" : "\t")}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2"\n"$3"\n"$4 > "subsampled_single.fastq"}'`
 
 * Subsample single-end reads in fasta format (this can also be used for subsampling without replacement of sequences).
 
-`awk '/^>/ {getline seq; print $0"\n"seq}' single.fasta | awk '{printf "%s", $0; if(NR%2==0) {printf "\n"} else {printf "\t"}}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
+`awk '/^>/ {getline seq; print $0"\n"seq}' single.fasta | awk '{printf "%s", $0; printf "%s", (NR%2==0 ? "\n" : "\t")}' | awk -v k=10000 '{s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0} END {for (i in a) print a[i]}' | awk -v FS="\t" '{print $1"\n"$2 > "subsampled_single.fasta"}'`
 
 # Tips and tricks
 
