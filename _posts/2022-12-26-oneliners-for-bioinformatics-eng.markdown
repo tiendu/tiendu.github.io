@@ -92,7 +92,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `sed ':a; />/!N; s/\n//; ta; s/>/\n>/; s/^\s*//' file.fa`
 
-`awk '/^>/ {if (NR>1) {printf "\n"}; printf "%s\n", $0; next} {printf "%s", $0} ENDFILE {printf "\n"}' file.fa`
+`awk '/^>/ {printf "%s%s\n", (NR>1 ? "\n" : ""), $0; next} {printf "%s", $0} ENDFILE {printf "\n"}' file.fa`
 
 * Format singleline fasta to multiline fasta. Here I used the limit of 60 characters per line, set l to the desired number of characters per line.
 
