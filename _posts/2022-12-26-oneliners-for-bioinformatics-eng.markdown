@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2023-03-03**
+**Last updated on 2023-03-10**
 
 Some of these one-liners are from people on Stack Overflow, Stack Exchange, Biostar etc... I can't thank them enough. Let me know if I can give any credit.
 
@@ -456,5 +456,9 @@ I've made some improvements to make it more readable and easy to understand. Her
 * Generate random sequences (set seed, number of sequences n and length of sequences l).
 
 `awk -v seed=3 -v n=10 -v l=1000 'BEGIN {srand(seed); OFS="\n"; split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; len=int(rand()*l+1); while (length(out)<len) {out=out a[int(rand()*length(a)+1)]}; print ">Sequence_" s, out}}'`
+
+* Get the homologous sequences from BLAST result.
+
+`awk 'BEGIN {FS="\t"; OFS="\n"} ($3>=90 && $4/$5>=0.9) {a[$1][$2]; next} /^>/ {getline seq; for (i in a) {for (j in a[i]) {if ($0==">"j) {print $0, seq > i"_homologs.fasta"}}}}' blast.out file.fasta`
 
 **_(to be cont')_**
