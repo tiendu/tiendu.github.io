@@ -461,4 +461,6 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 `awk 'BEGIN {FS="\t"; OFS="\n"} ($3>=90 && $4/$5>=0.9) {a[$1][$2]; next} /^>/ {getline seq; for (i in a) {for (j in a[i]) {if ($0==">"j) {print $0, seq > i"_homologs.fasta"}}}}' blast.out database.fasta`
 
+`awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {FS="\t"; if ($3>=90 && $4/$5>=0.9) {a[">"$1][">"$2]++}} idx==2 {if ($0~/^>/) {getline seq; b[$0]=seq}} idx==3 {if ($0~/^>/) {getline seq; c[$0]=seq}} END {for (i in b) {if (i in a) {print i"\n"b[i]; for (j in c) {if (a[i][j]) print j"\n"c[j]}}}}' blast.out query.fasta subject.fasta` 
+
 **_(to be cont')_**
