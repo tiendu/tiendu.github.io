@@ -459,6 +459,6 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Get the homologous sequences from BLAST result.
 
-`awk 'BEGIN {FS="\t"; OFS="\n"} ($3>=90 && $4/$5>=0.9) {a[$1][$2]; next} /^>/ {getline seq; for (i in a) {for (j in a[i]) {if ($0==">"j) {print $0, seq > i"_homologs.fasta"}}}}' blast.out file.fasta`
+`awk 'BEGIN {FS="\t"; OFS="\n"} ($3>=90 && $4/$5>=0.9) {a[$1][$2]; next} /^>/ {getline seq; for (i in a) {for (j in a[i]) {if ($0==">"j) {print $0, seq > i"_homologs.fasta"}}}}' blast.out database.fasta`
 
 **_(to be cont')_**
