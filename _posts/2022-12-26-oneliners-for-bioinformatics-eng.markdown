@@ -6,7 +6,7 @@ categories: [guide, english, bioinformatics]
 ---
 **Last updated on 2023-03-10**
 
-Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar etc... I can't thank them, the people on these platforms, enough.
+Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
 Note that some of the commands require _gawk_ to be installed. If you're using Ubuntu, use `sudo apt install gawk` to install it.
 
