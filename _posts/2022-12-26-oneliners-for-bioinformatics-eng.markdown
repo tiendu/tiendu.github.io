@@ -186,15 +186,19 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Get the k-mer frequency (set k=n with k=3 for trinucleotide, k=4 for tetranucleotide and so on).
 
-`awk -v k=n 'BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
+`awk -v k=n 'BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++; sum++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/sum}}' file.fa`
 
 * Find unique k-mer in all sequences. Here, I set k=16 to look for unique 16-mers among the sequences.
 
 `awk -v k=16 '/^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s][$0]}}} END {for (i in a) {if (length(a[i])==1) {for (j in a[i]) print j"\t"i}}}' file.fa`
 
-* Get the palindromic k-mer frequency (set k=n with even number only e.g., k=4 for palindromic tetranucleotide, etc).
+* Get the palindromic k-mer frequency (set k=n with even number only e.g., k=4 for palindromic tetranucleotide, etc) amongst palindromes.
 
-`awk -v k=n 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}' file.fa`
+`awk -v k=6 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"AUGC\" \"UACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++; sum++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/sum}}' file.fa`
+
+* Get the palindromic k-mer frequency (set k=n with even number only e.g., k=4 for palindromic tetranucleotide, etc) amongst other k-mers.
+
+`awk -v k=10 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"AUGC\" \"UACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++; sum++}}; for (i in a) {if (i==revcomp(i)) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}}' file.fa`
 
 * Remove tandem repeats. Repeats of length from 2 to 6 are removed.  
 
