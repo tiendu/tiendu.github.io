@@ -455,7 +455,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Generate random sequences (set seed, number of sequences n and length of sequences l).
 
-`awk -v seed=3 -v n=10 -v l=1000 'BEGIN {srand(seed); OFS="\n"; split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; len=int(rand()*l+1); while (length(out)<len) {out=out a[int(rand()*length(a)+1)]}; print ">Sequence_" s, out}}'`
+`awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; len=int(rand()*l+1); while (length(out)<len) {out=out a[int(rand()*length(a)+1)]}; printf ">%."length(n)"d\n%s\n", s, out}}'`
 
 * Get the homologous sequences from BLAST result.
 
