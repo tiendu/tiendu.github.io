@@ -311,7 +311,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 Example: I take the result from BLAST outfmt 6 to select the row based on the highest percent identity and the highest query coverage.
 
-`awk 'BEGIN {FS=OFS="\t"} ($3 > max_perc_ident[$1] && ($4/$5) > max_qcov[$1]) {max_perc_ident[$1]=$3; max_qcov[$1]=$4/$5; a[$1]=$0} END {for (i in a) print a[i]}' result.out`
+`awk 'BEGIN {FS=OFS="\t"} ($3>max_perc_ident[$1] && $4/$5>max_qcov[$1]) {max_perc_ident[$1]=$3; max_qcov[$1]=$4/$5; a[$1]=$0} END {for (i in a) print a[i]}' result.out`
 
 >**Input:**
 >
