@@ -194,11 +194,11 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Get the palindromic k-mer frequency (set k=n with even number only e.g., k=4 for palindromic tetranucleotide, etc) amongst palindromes.
 
-`awk -v k=6 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"AUGC\" \"UACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++; sum++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/sum}}' file.fa`
+`awk -v k=6 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k && s==revcomp(s)) {a[s]++; sum++}}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/sum}}' file.fa`
 
 * Get the palindromic k-mer frequency (set k=n with even number only e.g., k=4 for palindromic tetranucleotide, etc) amongst other k-mers.
 
-`awk -v k=10 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"AUGC\" \"UACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++; sum++}}; for (i in a) {if (i==revcomp(i)) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}}' file.fa`
+`awk -v k=10 'function revcomp(s) {o=""; cmd="printf \"%s\" " s "| tr \"ATGC\" \"TACG\" | rev"; while ((cmd | getline o)>0) {}; close(cmd); return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq); i++) {s=substr(seq, i, k); if (length(s)==k) {a[s]++; sum++}}; for (i in a) {if (i==revcomp(i)) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/length(a)}}}' file.fa`
 
 * Remove tandem repeats. Repeats of length from 2 to 6 are removed.  
 
@@ -459,7 +459,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Generate random sequences (set seed, number of sequences n and length of sequences l).
 
-`awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; len=int(rand()*l+1); while (length(out)<len) {out=out a[int(rand()*length(a)+1)]}; if (length(out)<0.5*l) {continue}; printf ">%."length(n)"d\n%s\n", s, out}}'`
+`awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]}; printf ">%."length(n)"d\n%s\n", s, out}}'`
 
 * Get the homologous sequences from BLAST result.
 
