@@ -138,11 +138,9 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk '/^>/ {getline seq; sub(/^>/, "", $0); len=length(seq); at_len=gsub(/[AaTt]/, "", seq); printf "%s\t%.3f\n", $0, (len-at_len)*100/len}' file.fa`
 
-* Find the length of the shortest and the longest sequence.
+* Find the shortest, longest, and average length of all sequences.
 
-`awk '/^>/ {getline seq; print $0"\t"length(seq)}' file.fa | awk 'BEGIN {FS=OFS="\t"} NR==1 {max=min=$2} {max=(max<$2 ? $2 : max); min=(min>$2 ? $2 : min)} END {printf "Min: %d\tMax: %d\n", min, max}'`
-
-`awk '/^>/ {getline seq; a[$0]=length(seq)} END {asort(a); printf "Min: %d\tMax: %d\n", a[1], a[length(a)]}' file.fa`
+`awk '/^>/ {getline seq; sum+=a[$0]=length(seq)} END {asort(a); printf "Min: %d\tMax: %d\tMean: %d\n", a[1], a[length(a)], sum/length(a)}'`
 
 * Find the sequence(s) with the shortest and longest length.
 
