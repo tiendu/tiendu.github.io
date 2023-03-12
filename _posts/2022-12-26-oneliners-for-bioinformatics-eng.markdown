@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2023-03-10**
+**Last updated on 2023-03-12**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
@@ -227,6 +227,10 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 * Transpose table.
 
 `awk 'BEGIN {FS=OFS="\t"} {if (max_cols<NF) {max_cols=NF}; max_rows=NR; for (i=1; i<=NF; i++) {a[i][NR]=$i}} END {for (i=1; i<=max_cols; i++) {printf "%s%s", a[i][1], OFS; for (j=max_rows; j>=2; j--) {printf "%s%s", a[i][j], OFS}; print ""}}' table.tsv`
+
+* Melt table.
+
+`awk 'BEGIN {FS=OFS="\t"} {if (max_cols<NF) {max_cols=NF}; max_rows=NR; for (i=1; i<=NF; i++) {a[i][NR]=$i}} END {for (i=2; i<=max_cols; i++) {for (j=max_rows; j>=2; j--) {print a[i][1], a[1][j], a[i][j]}}}' table.tsv`
 
 * Outer join (for multiple tables).
 
