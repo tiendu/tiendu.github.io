@@ -18,5 +18,5 @@ $background-color: #f3e779;
 .site-title {font-family: "Bungee Shade", cursive; font-weight: 400; color: $text-color; &:visited {color: $text-color;}}
 table {width: 25%; font-size: $small-font-size;}
 blockquote {font-size: $small-font-size;}
-a {color: $brand-color; &:visited {color: darken($brand-color, 15%);} &:hover {color: lighten($brand-color, 15%); text-decoration: underline;}};
-code {background-color: $grey-color;}
+// a {color: $brand-color; &:visited {color: darken($brand-color, 15%);} &:hover {color: lighten($brand-color, 15%); text-decoration: underline;}};
+// code {background-color: $grey-color;}
