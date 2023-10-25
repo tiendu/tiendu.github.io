@@ -106,6 +106,8 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk '/^>/ {if (seq) print seq; seq=""; print; next} {seq=seq $0} END {if (seq) print seq}' file.fa`
 
+`awk 'BEGIN {ORS=""} {if ($0 ~ /^>/) {printf "%s%s%s", (NR==1 ? "" : "\n"), $0, "\n"} else {print $0}}' file.fa`
+
 * If the fasta file is copy-and-paste from the web browser, please run this command before any processing.
 
 `sed 's/\r//g' file.fa`
