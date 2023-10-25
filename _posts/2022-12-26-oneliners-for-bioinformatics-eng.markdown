@@ -104,7 +104,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk '/^>/ {printf "%s%s\n", (NR>1 ? "\n" : ""), $0; next} {printf "%s", toupper($0)} ENDFILE {printf "\n"}' file.fa`
 
-`awk '/^>/ {if (seq) print seq; seq=""; print; next} {seq=seq $0} END {if (seq) print seq}' file.fa`
+`awk '/^>/ {if (seq) {print seq}; seq=""; print; next} {seq=seq $0} END {if (seq) {print seq}}' file.fa`
 
 `awk 'BEGIN {ORS=""} {if ($0 ~ /^>/) {printf "%s%s%s", (NR==1 ? "" : "\n"), $0, "\n"} else {print $0}}' file.fa`
 
@@ -114,7 +114,9 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Format singleline fasta to multiline fasta. Here I used the limit of 60 characters per line, set l to the desired number of characters per line.
 
-`awk -v l=60 'BEGIN {FS=""} /^>/ {print; next} {for (i=0; i<=NF/l; i++) {for (j=1; j<=l; j++) {printf "%s", $(i*l+j)}; print ""}}' file.fa`
+`awk -v width=60 'BEGIN {ORS=""} /^>/ {print $0 "\n"; next} {line=line $0; while (length(line)>=width) {print substr(line, 1, width) "\n"; line=substr(line, width+1)}} END {if (length(line)) print line "\n"}' file.fa`
+
+`awk -v width=10 'BEGIN {ORS=""} /^>/ {if (length(line)) {print line "\n"; line=""} print $0 "\n"; next} {line=line $0; while (length(line)>=width) {print substr(line, 1, width) "\n"; line=substr(line, width+1)}} END {if (length(line)) print line "\n"}' file.fa`
 
 * Split a fasta file into multiple files with approximately equal number of sequences. Here, I split the file into 4 files.
 
