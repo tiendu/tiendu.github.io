@@ -749,7 +749,7 @@ Amino acids:
 
 `echo "<Google Drive shared link>" | sed 's|/file/d/|/uc?id=|' | sed 's|/view.*||'`
 
-* (Pebblescout)[https://pebblescout.ncbi.nlm.nih.gov/] for quick sequence scan.
+* [Pebblescout](https://pebblescout.ncbi.nlm.nih.gov/) for quick sequence scan.
 
 `awk '/^>/ {gsub(/ /, "_", $0); printf $0 "\\r\\n"; getline; print}' <(zcat <input.fastq.gz> | awk 'NR%4==1 {sub(/^@/, ">", $0); print; getline; print}') | while read -r sequence; do cmd="curl -s 'https://pebblescout.ncbi.nlm.nih.gov/sra-cl-be/sra-cl-be.cgi?rettype=pebblescout' -H 'content-type: multipart/form-data; boundary=BOUNDARY' --data-raw $'--BOUNDARY\r\nContent-Disposition: form-data; name=\"m\"\r\n\r\n2\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"g\"\r\n\r\n10000\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"c\"\r\n\r\n1000\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"_r\"\r\n\r\n<number_of_rows>\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"accession\"\r\n\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"_h\"\r\n\r\n1001\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"fasta\"\r\n\r\n${sequence}\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"from\"\r\n\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"to\"\r\n\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"db\"\r\n\r\nrefseq\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"retmode\"\r\n\r\n\r\n--BOUNDARY--\r\n' --compressed"; eval $cmd | awk -v n=5 '/QueryID/ {for (i=0; i<n; i++) {getline; if ($0!~/^#.*$/ && $0!~/^$/) {print}}}'; done`
 
