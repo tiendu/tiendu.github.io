@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2023-10-04**
+**Last updated on 2023-12-14**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
@@ -751,6 +751,6 @@ Amino acids:
 
 * [Pebblescout](https://pebblescout.ncbi.nlm.nih.gov/) for quick sequence scan.
 
-`awk '/^>/ {gsub(/ /, "_", $0); printf $0 "\\r\\n"; getline; print}' <(zcat <input.fastq.gz> | awk 'NR%4==1 {sub(/^@/, ">", $0); print; getline; print}') | while read -r sequence; do cmd="curl -s 'https://pebblescout.ncbi.nlm.nih.gov/sra-cl-be/sra-cl-be.cgi?rettype=pebblescout' -H 'content-type: multipart/form-data; boundary=BOUNDARY' --data-raw $'--BOUNDARY\r\nContent-Disposition: form-data; name=\"m\"\r\n\r\n2\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"g\"\r\n\r\n10000\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"c\"\r\n\r\n1000\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"_r\"\r\n\r\n5\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"accession\"\r\n\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"_h\"\r\n\r\n1001\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"fasta\"\r\n\r\n${sequence}\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"from\"\r\n\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"to\"\r\n\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"db\"\r\n\r\nrefseq\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"retmode\"\r\n\r\n\r\n--BOUNDARY--\r\n' --compressed"; eval $cmd | awk -v n=5 '/QueryID/ {for (i=0; i<n; i++) {getline; if ($0!~/^#.*$/ && $0!~/^$/) {print}}}'; done`
+`awk '/^>/ {gsub(/ /, "_", $0); printf $0 " "; getline; print}' <(zcat file.fastq.gz | awk 'NR%4==1 {sub(/^@/, ">", $0); print; getline; print}') | xargs -P 4 -n 2 bash -c 'id="$0"; seq="$1"; nrow=1; cmd="curl -s '\''https://pebblescout.ncbi.nlm.nih.gov/sra-cl-be/sra-cl-be.cgi?rettype=pebblescout'\'' -H '\''content-type: multipart/form-data; boundary=BOUNDARY'\'' --data-raw $'\''--BOUNDARY\r\nContent-Disposition: form-data; name=\"m\"\r\n\r\n2\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"g\"\r\n\r\n10000\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"c\"\r\n\r\n1000\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"_r\"\r\n\r\n${nrow}\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"accession\"\r\n\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"_h\"\r\n\r\n1001\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"fasta\"\r\n\r\n${id}\r\n${seq}\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"from\"\r\n\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"to\"\r\n\r\n\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"db\"\r\n\r\nrefseq\r\n--BOUNDARY\r\nContent-Disposition: form-data; name=\"retmode\"\r\n\r\n\r\n--BOUNDARY--\r\n'\'' --compressed"; eval $cmd | awk -v n=$nrow '\''/QueryID/ {for (i=0; i<n; i++) {getline; if ($0!~/^#.*$/ && $0!~/^$/) {print}}}'\'''`
 
 **_(to be cont')_**
