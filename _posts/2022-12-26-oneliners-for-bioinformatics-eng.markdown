@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2023-12-14**
+**Last updated on 2024-03-22**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
@@ -746,9 +746,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
     * Amino acids: `awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ACDEFGHIKLNPQRSTVWY", a, ""); for (s=1; s<=n; s++) {out="M"; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]}; printf ">%."length(n)"d\n%s\n", s, out}}'`
 
-  * Fastq: `awk -v seed=3 -v phred=33 -v threshold=20 -v n=3 -v l=1000 -l ordchr 'BEGIN {score=threshold+phred; srand(seed); spl
-it("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; qual=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]; qual=qual chr(in
-t(rand()*score+phred))}; printf "@%." length(n) "d\n%s\n+\n%s\n", s, out, qual}}'`
+  * Fastq: `awk -v seed=3 -v phred=33 -v threshold=20 -v n=3 -v l=1000 -l ordchr 'BEGIN {score=threshold+phred; srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; qual=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]; qual=qual chr(int(rand()*score+phred))}; printf "@%." length(n) "d\n%s\n+\n%s\n", s, out, qual}}'`
 
 * Get the homologous sequences from BLAST result.
 
@@ -763,5 +761,3 @@ t(rand()*score+phred))}; printf "@%." length(n) "d\n%s\n+\n%s\n", s, out, qual}}
 * [Pebblescout](https://pebblescout.ncbi.nlm.nih.gov/) for quick sequence scan.
 
 `awk '/^>/ {gsub(/ /, "_", $0); printf $0 " "; getline; print}' <(zcat file.fastq.gz | awk 'NR%4==1 {sub(/^@/, ">", $0); print; getline; print}') | xargs -P 4 -n 2 bash -c 'id="$0"; seq="$1"; nrow=1; boundary=$(awk '\''BEGIN{ srand(); for(i=0;i<8;i++) printf "%c", int(rand()*26) + 97}'\''); cmd="curl -s '\''https://pebblescout.ncbi.nlm.nih.gov/sra-cl-be/sra-cl-be.cgi?rettype=pebblescout'\'' -H '\''content-type: multipart/form-data; boundary=${boundary}'\'' --data-raw $'\''--${boundary}\r\nContent-Disposition: form-data; name=\"m\"\r\n\r\n2\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"g\"\r\n\r\n11924\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"c\"\r\n\r\n1030\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"_r\"\r\n\r\n${nrow}\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"accession\"\r\n\r\n\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"_h\"\r\n\r\n1001\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"fasta\"\r\n\r\n${id}\r\n${seq}\r\n\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"from\"\r\n\r\n\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"to\"\r\n\r\n\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"db\"\r\n\r\nrefseq\r\n--${boundary}\r\nContent-Disposition: form-data; name=\"retmode\"\r\n\r\n\r\n--${boundary}--\r\n'\'' --compressed"; eval $cmd | awk -v n=$nrow '\''/QueryID/ {for (i=0; i<n; i++) {getline; if ($0!~/^#.*$/ && $0!~/^$/) {print}}}'\'''`
-
-**_(to be cont')_**
