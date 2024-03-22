@@ -746,7 +746,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
     * Amino acids: `awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ACDEFGHIKLNPQRSTVWY", a, ""); for (s=1; s<=n; s++) {out="M"; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]}; printf ">%."length(n)"d\n%s\n", s, out}}'`
 
-  * Fastq: `awk -v seed=3 -v phred=33 -v threshold=20 -v n=3 -v l=1000 -l ordchr 'BEGIN {score=threshold+phred; srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; qual=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]; qual=qual chr(int(rand()*score+phred))}; printf "@%." length(n) "d\n%s\n+\n%s\n", s, out, qual}}'`
+  * Fastq: `awk -v seed=3 -v phred=33 -v threshold=20 -v n=3 -v l=1000 -l ordchr 'BEGIN {score=threshold+phred; srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; qual=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]; qual=qual chr(int(rand()*score+score))}; printf "@%." length(n) "d\n%s\n+\n%s\n", s, out, qual}}'`
 
 * Get the homologous sequences from BLAST result.
 
