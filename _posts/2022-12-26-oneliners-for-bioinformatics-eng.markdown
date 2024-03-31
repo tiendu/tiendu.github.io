@@ -80,7 +80,7 @@ All calculations, modifications, etc require singleline fasta so please convert 
 
 * Check average, max, and min read quality of each base location. Set Phred for the desired Phred score.
 
-`awk -v phred=33 -l ordchr 'BEGIN {OFS="\t"} NR%4==0 {for (i=1; i<=length($0); i++) {score=sprintf("%d", ord(substr($0, i, 1)) - phred); sum[i]+=score; max[i]=(max[i] < score ? score : max[i]); min[i]=(min[i] > score || min[i] == "" ? score : min[i]); count[i]++}} END {print "Loc", "Avg", "Max", "Min";for (i in count) {print i, sum[i]/count[i], max[i], min[i]}}' file.fq`
+`awk -v phred=33 -l ordchr 'BEGIN {OFS="\t"} NR%4==0 {for (i=1; i<=length($0); i++) {score=ord(substr($0, i, 1)) - phred; sum[i]+=score; min[i]=(min[i]>score || !min[i] ? score : min[i]); max[i]=(max[i]<score ? score : max[i]); count[i]++}} END {for (i in count) {print i, sum[i]/count[i], min[i], max[i], count[i]}}' file.fq`
 
 * Convert fastq to fasta.
 
