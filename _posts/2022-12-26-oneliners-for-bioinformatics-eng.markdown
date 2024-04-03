@@ -734,6 +734,12 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 `awk '{a[i++]=$0} END {while (i--) print a[i]}' file`
 
+* Find longest non-repeated substring
+
+`awk '{longest=""; for (i=1; i<=length($0); i++) {current=""; for (j=i; j<=length($0); j++) {if (index(current, substr($0, j, 1))==0) {current=current substr($0, j, 1); if (length(current)>length(longest)) {longest=current}} else {break}}}; print longest}'`
+
+`awk '{longest=""; for (i=1; i<=length($0); i++) {current=""; for (j=i; j<=length($0); j++) {if (index(current, substr($0, j, 1))==0) {current=current substr($0, j, 1); if (length(current)>=length(longest)) {longest=(length(current)>length(longest) ? current : longest "\n" current)}} else {break}}}; print longest}'`
+
 * Clone _awk_ array (from [Stephen Kitt](https://unix.stackexchange.com/questions/456315/clone-complex-array-in-awk)).
 
 `awk 'function clone(original, copy) {for (i in original) {if (isarray(original[i])) {copy[i][1]=""; delete copy[i][1]; clone(original[i], copy[i])} else {copy[i]=original[i]}}}'`
