@@ -752,7 +752,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
     * Amino acids: `awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ACDEFGHIKLNPQRSTVWY", a, ""); for (s=1; s<=n; s++) {out="M"; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]}; printf ">%."length(n)"d\n%s\n", s, out}}'`
 
-  * Fastq: `awk -v seed=3 -v phred=33 -v threshold=20 -v n=3 -v l=1000 -l ordchr 'BEGIN {score=threshold+phred; srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; qual=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]; qual=qual chr(int(rand()*score+score))}; printf "@%." length(n) "d\n%s\n+\n%s\n", s, out, qual}}'`
+  * Fastq: `awk -v seed=3 -v phred=33 -v threshold=20 -v n=100 -v l=1000 -l ordchr 'BEGIN {score=threshold+phred; srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; qual=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]; qual=qual chr(int(rand()*score+score))}; printf "@%." length(n) "d\n%s\n+\n%s\n", s, out, qual}}'`
 
 * Get the homologous sequences from BLAST result.
 
@@ -763,6 +763,20 @@ I've made some improvements to make it more readable and easy to understand. Her
 * Generate Google Drive download link for `wget`, `curl`, etc.
 
 `echo "<Google Drive shared link>" | sed 's|/file/d/|/uc?id=|' | sed 's|/view.*||'`
+
+* Filter sequences using its k-mer profile
+
+ `awk -v k=11 'NR%4==1 && /^@/ {getline seq; for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); a[s]++}; getline id;  getline qual; b[seq]=$0 "\n" seq "\n" id "\n" qual} END {for (i in a) {if (a[i]>1) {for (j in b) {if (index(j, i)>0) {print b[j]; delete b[j]}}}}}'`
+
+* Sort sequences based on length
+
+  * Fasta:
+
+`awk 'BEGIN {PROCINFO["sorted_in"]="@ind_num_desc"} /^>/ {getline seq; a[length(seq)][$0 "\n" seq]} END {for (i in a) {for (j in a[i]) print j}}'`
+
+  * Fastq:
+
+`awk 'BEGIN {PROCINFO["sorted_in"]="@ind_num_desc"} NR%4 && /^@/ {getline seq; getline id; getline qual; a[length(seq)][$0 "\n" seq "\n" id "\n" qual]} END {for (i in a) {for (j in a[i]) print j}}'`
 
 * [Pebblescout](https://pebblescout.ncbi.nlm.nih.gov/) for quick sequence scan.
 
