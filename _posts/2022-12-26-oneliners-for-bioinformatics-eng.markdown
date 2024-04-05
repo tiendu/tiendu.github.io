@@ -674,7 +674,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Subsample paired-end reads in fasta format.
 
-`awk -v k=3 -v seed=5 'BEGIN {srand(seed); r=rand()} fname!=FILENAME {fname=FILENAME; idx++} idx==1 {f1=FILENAME; if (NR%2==1 && $0~/^>/) {getline seq; s=(i++<k ? i-1 : int(r*i)); if (s<k) a[s]=$0 "\t" seq}} idx==2 {f2=FILENAME; if (NR%2==1 && $0~/^>/) {getline seq; s=(j++<k ? j-1 : int(r*j)); if (s<k) b[s]=$0 "\t" seq}} END {for (i in a) {gsub(/\t/, "\n", a[i]); print a[i] > "subsampled_" f1}; for (i in b) {gsub(/\t/, "\n", b[i]); print b[i] > "subsampled_" f2}}' forward.fasta reverse.fasta`
+`awk -v k=10000 -v seed=3 'BEGIN {srand(seed); r=rand()} fname!=FILENAME {fname=FILENAME; idx++} idx==1 {f1=FILENAME; if (NR%2==1 && $0~/^>/) {getline seq; s=(i++<k ? i-1 : int(r*i)); if (s<k) a[s]=$0 "\t" seq}} idx==2 {f2=FILENAME; if (NR%2==1 && $0~/^>/) {getline seq; s=(j++<k ? j-1 : int(r*j)); if (s<k) b[s]=$0 "\t" seq}} END {for (i in a) {gsub(/\t/, "\n", a[i]); print a[i] > "subsampled_" f1}; for (i in b) {gsub(/\t/, "\n", b[i]); print b[i] > "subsampled_" f2}}' forward.fasta reverse.fasta`
 
 * Subsample single-end reads in fastq format.
 
