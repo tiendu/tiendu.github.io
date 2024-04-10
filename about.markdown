@@ -4,7 +4,7 @@ title: About
 permalink: /about/
 ---
 
-A biotechnologist-turned programmer, now pursuing his PhD candidacy at Kyung Hee University in Korea with main focus on metagenomics, microbiomics and viromics.
+A biotechnologist-turned-programmer, now works as a bioinformatics engineer at DataXight with a main focus on pipeline development and gene therapy.
 
 Outside of research, he's also an avid cook that has a keen interest in lacto-fermentation.
 
