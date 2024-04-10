@@ -154,12 +154,14 @@ function displaySequences(sequences) {
     const outputDiv = document.getElementById("parsed_output");
     outputDiv.innerHTML = ""; // Clear previous content
     
+    let outputText = ""; // Initialize an empty string to store concatenated sequences
+
     sequences.forEach(seq => {
-        const sequenceDiv = document.createElement("div"); // Create a new div for each sequence
-        const preElement = document.createElement("pre");
-        const fastaContent = `>${seq.id}\n${seq.sequence}`;
-        preElement.innerText = fastaContent;
-        sequenceDiv.appendChild(preElement);
-        outputDiv.appendChild(sequenceDiv); // Append the sequence div to the output div
+        const fastaContent = `>${seq.id}\n${seq.sequence}\n`; // Include newline after each sequence
+        outputText += fastaContent;
     });
+
+    const preElement = document.createElement("pre");
+    preElement.innerText = outputText;
+    outputDiv.appendChild(preElement);
 }
