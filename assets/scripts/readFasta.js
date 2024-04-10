@@ -72,6 +72,40 @@ function displayKmerProfiles(sequences, k) {
     });
 }
 
+function calculateGCContent(sequence) {
+    const gcCount = (sequence.match(/[GCgc]/g) || []).length;
+    const atCount = (sequence.match(/[ATat]/g) || []).length;
+    return (gcCount / (gcCount + atCount)) * 100;
+}
+
+function displayGCContent(sequences) {
+    const outputDiv = document.getElementById("parsed_output");
+    outputDiv.innerHTML = ""; // Clear previous content
+    
+    sequences.forEach(seq => {
+        const gcContent = calculateGCContent(seq.sequence);
+        const result = `${seq.id}\t${gcContent.toFixed(3)}\n`;
+        outputDiv.innerText += result;
+    });
+}
+
+function parseFastaFromInput() {
+    const fastaContent = document.getElementById("fasta_input").value;
+    const selectedOption = document.getElementById("option_select").value;
+    const sequences = readSequencesFromFasta(fastaContent);
+    
+    if (selectedOption === "kmer_profile") {
+        const k = parseInt(document.getElementById("k_value_input").value, 10);
+        if (isNaN(k) || k < 1) {
+            alert("Please enter a valid positive integer for k.");
+            return;
+        }
+        displayKmerProfiles(sequences, k);
+    } else if (selectedOption === "gc_content") {
+        displayGCContent(sequences);
+    }
+}
+
 function displaySequences(sequences) {
     const outputDiv = document.getElementById("parsed_output");
     outputDiv.innerHTML = ""; // Clear previous content
