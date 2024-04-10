@@ -10,10 +10,15 @@ layout: page
 <body>
     <textarea id="fasta_input" rows="6" cols="61" placeholder="Paste FASTA sequences here..."></textarea><br />
     
-    <select id="option_select">
+    <div id="kmer_option" style="display: none;">
+        <label for="k_value_input">Enter k value for k-mer profile:</label>
+        <input type="number" id="k_value_input" min="1" value="3" style="width: 50px;">
+    </div>
+    
+    <select id="option_select" onchange="toggleKmerOption()">
         <option value="gc_content">Calculate GC content</option>
+        <option value="kmer_profile" selected>Generate k-mer profile</option>
         <option value="deduplicate">Deduplicate sequences</option>
-        <option value="kmer_profile">Generate k-mer profile</option>
     </select>
     
     <button type="button" onclick="parseFastaFromInput()">Parse</button>
@@ -21,33 +26,14 @@ layout: page
 
     <script src="/assets/scripts/readFasta.js"></script>
     <script>
-        function parseFastaFromInput() {
-            const fastaContent = document.getElementById("fasta_input").value;
-            const selectedOption = document.getElementById("option_select").value;
-            const sequences = readSequencesFromFasta(fastaContent);
-            
-            if (selectedOption === "kmer_profile") {
-                const k = parseInt(document.getElementById("k_value_input").value, 10);
-                if (isNaN(k) || k < 1) {
-                    alert("Please enter a valid positive integer for k.");
-                    return;
-                }
-                displayKmerProfiles(sequences, k);
-            } else if (selectedOption === "gc_content") {
-                displayGCContent(sequences);
-            } else if (selectedOption === "deduplicate") {
-                const deduplicatedFasta = deduplicateSequences(sequences);
-                displayDeduplicatedFasta(deduplicatedFasta);
+        function toggleKmerOption() {
+            const kmerOptionDiv = document.getElementById("kmer_option");
+            const selectElement = document.getElementById("option_select");
+            if (selectElement.value === "kmer_profile") {
+                kmerOptionDiv.style.display = "block";
+            } else {
+                kmerOptionDiv.style.display = "none";
             }
-        }
-
-        function displayDeduplicatedFasta(deduplicatedFasta) {
-            const outputDiv = document.getElementById("parsed_output");
-            outputDiv.innerHTML = ""; // Clear previous content
-            
-            const preElement = document.createElement("pre");
-            preElement.innerText = deduplicatedFasta;
-            outputDiv.appendChild(preElement);
         }
     </script>
 </body>
