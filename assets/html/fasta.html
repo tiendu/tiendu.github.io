@@ -1,0 +1,56 @@
+---
+layout: page
+permalink: /fasta/
+title: Fasta Utilities
+---
+
+<form action="" name="main_form" id="main_form">
+                      Paste the raw sequence or one or more FASTA sequences into
+                      the text area below. Input limit is 100,000,000
+                      characters.<br />
+                      <textarea rows="6" cols="61">
+&gt;Sample sequence 1
+garkbdctymvhu
+
+&gt;Sample sequence 2
+ctymvhgarkbda
+
+&gt;Sample sequence 3
+ccccccccccga
+</textarea
+                      ><br />
+
+                      <input
+                        type="button"
+                        value="Submit"
+                        name="main_submit"
+                        onclick="try{revComp(document)} catch(e) {alert('The following error was encountered: ' + e);}"
+                      />
+                      <input
+                        type="button"
+                        value="Clear"
+                        onclick="document.forms[0].elements[0].value = ' '"
+                      />
+                      <input type="reset" value="Reset" />
+
+                      <ul>
+                        <li>
+                          <select>
+                            <option
+                              value="reverse-complement"
+                              selected="selected"
+                            >
+                              reverse-complement
+                            </option>
+
+                            <option value="reverse">
+                              reverse
+                            </option>
+
+                            <option value="complement">
+                              complement
+                            </option>
+                          </select>
+                        </li>
+                      </ul>
+                    </form>
