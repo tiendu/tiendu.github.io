@@ -97,39 +97,35 @@ function displayGCContent(sequences) {
 }
 
 function deduplicateSequences(sequences) {
+    const uniqueSequences = [];
+    const seenSubsequences = new Set();
+
     // Sort sequences by length in descending order
     sequences.sort((a, b) => b.sequence.length - a.sequence.length);
 
-    // Create a map to store sequences
-    const sequencesMap = {};
+    for (const seq of sequences) {
+        let isSubsequence = false;
+        const currentSeq = seq.sequence;
 
-    // Iterate through sequences
-    for (let i = 0; i < sequences.length; i++) {
-        const currentSeq = sequences[i].sequence;
-        let isMatched = false;
-
-        // Check if current sequence matches with any longer sequence
-        for (let j = i + 1; j < sequences.length; j++) {
-            const nextSeq = sequences[j].sequence;
-
-            // If the next sequence includes the current one, remove it
-            if (nextSeq.includes(currentSeq)) {
-                isMatched = true;
+        // Check if the current sequence is a subsequence of any other sequence
+        for (const uniqueSeq of uniqueSequences) {
+            if (uniqueSeq.sequence.includes(currentSeq)) {
+                isSubsequence = true;
                 break;
             }
         }
 
-        // If not matched, add the current sequence to the map
-        if (!isMatched) {
-            sequencesMap[currentSeq] = true;
+        // If the current sequence is not a subsequence and not already seen as a subsequence
+        if (!isSubsequence && !seenSubsequences.has(currentSeq)) {
+            uniqueSequences.push(seq);
+            // Add all subsequences of the current sequence to seen set
+            for (let i = 1; i < currentSeq.length; i++) {
+                for (let j = 0; j <= currentSeq.length - i; j++) {
+                    seenSubsequences.add(currentSeq.substring(j, j + i));
+                }
+            }
         }
     }
-
-    // Convert the sequences map back into sequence objects
-    const uniqueSequences = Object.keys(sequencesMap).map(sequence => ({
-        id: sequences.find(seq => seq.sequence === sequence).id,
-        sequence: sequence
-    }));
 
     return uniqueSequences;
 }
