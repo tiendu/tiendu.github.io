@@ -35,9 +35,9 @@ function displaySequences(sequences) {
     const outputDiv = document.getElementById("parsed_output");
     outputDiv.innerHTML = ""; // Clear previous content
     sequences.forEach(seq => {
-        const fastaFormatted = `>${seq.id}\n${seq.sequence}\n`;
-        const fastaDiv = document.createElement("div");
-        fastaDiv.textContent = fastaFormatted;
-        outputDiv.appendChild(fastaDiv);
+        const preElement = document.createElement("pre");
+        const fastaContent = `>${seq.id}\n${seq.sequence}`;
+        preElement.innerText = fastaContent;
+        outputDiv.appendChild(preElement);
     });
 }
