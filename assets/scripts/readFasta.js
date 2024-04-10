@@ -97,40 +97,41 @@ function displayGCContent(sequences) {
 }
 
 function deduplicateSequences(sequences) {
-    const deduplicated = {};
-    sequences.forEach(seq => {
-        const sequenceLength = seq.sequence.length;
-        if (!deduplicated[sequenceLength]) {
-            deduplicated[sequenceLength] = {};
-        }
-        deduplicated[sequenceLength][seq.id] = seq.sequence;
-    });
+    // Sort sequences by length in descending order
+    sequences.sort((a, b) => b.sequence.length - a.sequence.length);
 
-    // Remove redundant sequences
+    // Create a map to store sequences
+    const sequencesMap = {};
+
+    // Iterate through sequences
     for (let i = 0; i < sequences.length; i++) {
         const currentSeq = sequences[i].sequence;
-        const currentSeqLength = currentSeq.length;
-        if (!deduplicated[currentSeqLength][sequences[i].id]) {
-            continue;
-        }
+        let isMatched = false;
+
+        // Check if current sequence matches with any longer sequence
         for (let j = i + 1; j < sequences.length; j++) {
             const nextSeq = sequences[j].sequence;
-            const nextSeqLength = nextSeq.length;
-            if (nextSeq.includes(currentSeq) && deduplicated[nextSeqLength][sequences[j].id]) {
-                delete deduplicated[nextSeqLength][sequences[j].id];
+
+            // If the next sequence includes the current one, remove it
+            if (nextSeq.includes(currentSeq)) {
+                isMatched = true;
+                break;
             }
+        }
+
+        // If not matched, add the current sequence to the map
+        if (!isMatched) {
+            sequencesMap[currentSeq] = true;
         }
     }
 
-    // Format the deduplicated sequences into FASTA format
-    const output = [];
-    Object.keys(deduplicated).forEach(length => {
-        Object.keys(deduplicated[length]).forEach(id => {
-            output.push(`>${id}\n${deduplicated[length][id]}`);
-        });
-    });
+    // Convert the sequences map back into sequence objects
+    const uniqueSequences = Object.keys(sequencesMap).map(sequence => ({
+        id: sequences.find(seq => seq.sequence === sequence).id,
+        sequence: sequence
+    }));
 
-    return output.join('\n');
+    return uniqueSequences;
 }
 
 function parseFastaFromInput() {
@@ -149,17 +150,20 @@ function parseFastaFromInput() {
         displayGCContent(sequences);
     } else if (selectedOption === "deduplicate") {
         const deduplicatedFasta = deduplicateSequences(sequences);
-        displaySequences(readSequencesFromFasta(deduplicatedFasta));
+        displaySequences(deduplicatedFasta);
     }
 }
 
 function displaySequences(sequences) {
     const outputDiv = document.getElementById("parsed_output");
     outputDiv.innerHTML = ""; // Clear previous content
+    
     sequences.forEach(seq => {
+        const sequenceDiv = document.createElement("div"); // Create a new div for each sequence
         const preElement = document.createElement("pre");
         const fastaContent = `>${seq.id}\n${seq.sequence}`;
         preElement.innerText = fastaContent;
-        outputDiv.appendChild(preElement);
+        sequenceDiv.appendChild(preElement);
+        outputDiv.appendChild(sequenceDiv); // Append the sequence div to the output div
     });
 }
