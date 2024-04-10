@@ -56,13 +56,19 @@ function parseFastaFromInput() {
 function displayKmerProfiles(sequences, k) {
     const outputDiv = document.getElementById("parsed_output");
     outputDiv.innerHTML = ""; // Clear previous content
+    
     sequences.forEach(seq => {
-        const preElement = document.createElement("pre");
-        preElement.innerText = `ID\tK-mer\tCount\n`;
-        for (const [kmer, count] of Object.entries(generateKmerCounts(seq.sequence, k))) {
-            preElement.innerText += `${seq.id}\t${kmer}\t${count}\n`;
+        const table = document.createElement("table");
+        table.innerHTML = `<thead><tr><th>ID</th><th>K-mer</th><th>Count</th></tr></thead><tbody></tbody>`;
+        const tbody = table.querySelector("tbody");
+        
+        const kmerCounts = generateKmerCounts(seq.sequence, k);
+        for (const [kmer, count] of Object.entries(kmerCounts)) {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>${seq.id}</td><td>${kmer}</td><td>${count}</td>`;
+            tbody.appendChild(row);
         }
-        outputDiv.appendChild(preElement);
+        outputDiv.appendChild(table);
     });
 }
 
