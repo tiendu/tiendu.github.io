@@ -25,10 +25,45 @@ function readSequencesFromFasta(fastaContent) {
     return sequences;
 }
 
+function generateKmers(sequence, k) {
+    const kmers = [];
+    for (let i = 0; i <= sequence.length - k; i++) {
+        kmers.push(sequence.substring(i, i + k));
+    }
+    return kmers;
+}
+
+function generateKmerCounts(sequence, k) {
+    const kmers = generateKmers(sequence, k);
+    const kmerCounts = {};
+    kmers.forEach(kmer => {
+        kmerCounts[kmer] = (kmerCounts[kmer] || 0) + 1;
+    });
+    return kmerCounts;
+}
+
 function parseFastaFromInput() {
     const fastaContent = document.getElementById("fasta_input").value;
+    const k = parseInt(document.getElementById("k_value_input").value, 10);
+    if (isNaN(k) || k < 1) {
+        alert("Please enter a valid positive integer for k.");
+        return;
+    }
     const sequences = readSequencesFromFasta(fastaContent);
-    displaySequences(sequences);
+    displayKmerProfiles(sequences, k);
+}
+
+function displayKmerProfiles(sequences, k) {
+    const outputDiv = document.getElementById("parsed_output");
+    outputDiv.innerHTML = ""; // Clear previous content
+    sequences.forEach(seq => {
+        const preElement = document.createElement("pre");
+        preElement.innerText = `ID\tK-mer\tCount\n`;
+        for (const [kmer, count] of Object.entries(generateKmerCounts(seq.sequence, k))) {
+            preElement.innerText += `${seq.id}\t${kmer}\t${count}\n`;
+        }
+        outputDiv.appendChild(preElement);
+    });
 }
 
 function displaySequences(sequences) {
