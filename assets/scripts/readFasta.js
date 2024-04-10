@@ -96,6 +96,43 @@ function displayGCContent(sequences) {
     outputDiv.appendChild(table);
 }
 
+function deduplicateSequences(sequences) {
+    const deduplicated = {};
+    sequences.forEach(seq => {
+        const sequenceLength = seq.sequence.length;
+        if (!deduplicated[sequenceLength]) {
+            deduplicated[sequenceLength] = {};
+        }
+        deduplicated[sequenceLength][seq.id] = seq.sequence;
+    });
+
+    // Remove redundant sequences
+    for (let i = 0; i < sequences.length; i++) {
+        const currentSeq = sequences[i].sequence;
+        const currentSeqLength = currentSeq.length;
+        if (!deduplicated[currentSeqLength][sequences[i].id]) {
+            continue;
+        }
+        for (let j = i + 1; j < sequences.length; j++) {
+            const nextSeq = sequences[j].sequence;
+            const nextSeqLength = nextSeq.length;
+            if (nextSeq.includes(currentSeq) && deduplicated[nextSeqLength][sequences[j].id]) {
+                delete deduplicated[nextSeqLength][sequences[j].id];
+            }
+        }
+    }
+
+    // Format the deduplicated sequences into FASTA format
+    const output = [];
+    Object.keys(deduplicated).forEach(length => {
+        Object.keys(deduplicated[length]).forEach(id => {
+            output.push(`>${id}\n${deduplicated[length][id]}`);
+        });
+    });
+
+    return output.join('\n');
+}
+
 function parseFastaFromInput() {
     const fastaContent = document.getElementById("fasta_input").value;
     const selectedOption = document.getElementById("option_select").value;
@@ -110,6 +147,9 @@ function parseFastaFromInput() {
         displayKmerProfiles(sequences, k);
     } else if (selectedOption === "gc_content") {
         displayGCContent(sequences);
+    } else if (selectedOption === "deduplicate") {
+        const deduplicatedFasta = deduplicateSequences(sequences);
+        displaySequences(readSequencesFromFasta(deduplicatedFasta));
     }
 }
 
