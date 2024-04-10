@@ -56,12 +56,12 @@ function parseFastaFromInput() {
 function displayKmerProfiles(sequences, k) {
     const outputDiv = document.getElementById("parsed_output");
     outputDiv.innerHTML = ""; // Clear previous content
+
+    const table = document.createElement("table");
+    table.innerHTML = `<thead><tr><th>ID</th><th>K-mer</th><th>Count</th></tr></thead><tbody></tbody>`;
+    const tbody = table.querySelector("tbody");
     
     sequences.forEach(seq => {
-        const table = document.createElement("table");
-        table.innerHTML = `<thead><tr><th>ID</th><th>K-mer</th><th>Count</th></tr></thead><tbody></tbody>`;
-        const tbody = table.querySelector("tbody");
-        
         const kmerCounts = generateKmerCounts(seq.sequence, k);
         for (const [kmer, count] of Object.entries(kmerCounts)) {
             const row = document.createElement("tr");
@@ -82,11 +82,18 @@ function displayGCContent(sequences) {
     const outputDiv = document.getElementById("parsed_output");
     outputDiv.innerHTML = ""; // Clear previous content
     
+    const table = document.createElement("table");
+    table.innerHTML = `<thead><tr><th>ID</th><th>GC Content</th></tr></thead><tbody></tbody>`;
+    const tbody = table.querySelector("tbody");
+    
     sequences.forEach(seq => {
         const gcContent = calculateGCContent(seq.sequence);
-        const result = `${seq.id}\t${gcContent.toFixed(3)}\n`;
-        outputDiv.innerText += result;
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${seq.id}</td><td>${gcContent.toFixed(3)}</td>`;
+        tbody.appendChild(row);
     });
+    
+    outputDiv.appendChild(table);
 }
 
 function parseFastaFromInput() {
