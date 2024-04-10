@@ -25,18 +25,9 @@ function readSequencesFromFasta(fastaContent) {
     return sequences;
 }
 
-if (process.argv.length !== 3) {
-    console.error('Usage: node script.js <fasta-file>');
-    process.exit(1);
-}
-
-const filePath = process.argv[2];
-
-try {
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    const sequences = readSequencesFromFasta(fileContent);
+function parseFastaFromInput() {
+    const fastaContent = document.getElementById("fasta_input").value;
+    const sequences = readSequencesFromFasta(fastaContent);
     console.log(sequences);
-} catch (err) {
-    console.error('Error reading file:', err);
-    process.exit(1);
+    // Do something with the parsed sequences, like displaying them on the page
 }
