@@ -28,6 +28,16 @@ function readSequencesFromFasta(fastaContent) {
 function parseFastaFromInput() {
     const fastaContent = document.getElementById("fasta_input").value;
     const sequences = readSequencesFromFasta(fastaContent);
-    console.log(sequences);
-    // Do something with the parsed sequences, like displaying them on the page
+    displaySequences(sequences);
+}
+
+function displaySequences(sequences) {
+    const outputDiv = document.getElementById("parsed_output");
+    outputDiv.innerHTML = ""; // Clear previous content
+    sequences.forEach(seq => {
+        const fastaFormatted = `>${seq.id}\n${seq.sequence}\n`;
+        const fastaDiv = document.createElement("div");
+        fastaDiv.textContent = fastaFormatted;
+        outputDiv.appendChild(fastaDiv);
+    });
 }
