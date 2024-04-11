@@ -177,7 +177,7 @@ function findSequenceStats(sequences) {
 }
 
 function displaySequenceStats(sequenceStats) {
-    const outputDiv = document.getElementById("sequence_stats_output");
+    const outputDiv = document.getElementById("parsed_output");
     outputDiv.innerHTML = ""; // Clear previous content
 
     const ul = document.createElement("ul");
