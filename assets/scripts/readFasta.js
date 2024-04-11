@@ -137,6 +137,90 @@ function deduplicateSequences(sequences) {
     return uniqueSequences;
 }
 
+function findSequenceStats(sequences) {
+    // Initialize variables
+    let minLength = Infinity;
+    let maxLength = 0;
+    let totalLength = 0;
+    let shortestSequence = null;
+    let longestSequence = null;
+    let totalBases = 0;
+    const numSequences = sequences.length;
+
+    // Iterate through sequences to find min, max, and calculate sum
+    sequences.forEach(seq => {
+        const length = seq.sequence.length;
+        totalLength += length;
+        totalBases += seq.sequence.replace(/[^ATGCatgc]/g, "").length; // Count only A, T, G, C
+        if (length < minLength) {
+            minLength = length;
+            shortestSequence = seq;
+        }
+        if (length > maxLength) {
+            maxLength = length;
+            longestSequence = seq;
+        }
+    });
+
+    // Calculate average length
+    const averageLength = totalLength / numSequences;
+
+    return {
+        shortestSequence: shortestSequence,
+        shortestLength: minLength,
+        longestSequence: longestSequence,
+        longestLength: maxLength,
+        averageLength: averageLength,
+        totalBases: totalBases,
+        numSequences: numSequences
+    };
+}
+
+function displaySequenceStats(sequenceStats) {
+    const outputDiv = document.getElementById("sequence_stats_output");
+    outputDiv.innerHTML = ""; // Clear previous content
+
+    const ul = document.createElement("ul");
+    
+    const shortestSequenceItem = document.createElement("li");
+    shortestSequenceItem.textContent = `Shortest Sequence: ${sequenceStats.shortestSequence.id} (Length: ${sequenceStats.shortestLength})`;
+    ul.appendChild(shortestSequenceItem);
+    
+    const longestSequenceItem = document.createElement("li");
+    longestSequenceItem.textContent = `Longest Sequence: ${sequenceStats.longestSequence.id} (Length: ${sequenceStats.longestLength})`;
+    ul.appendChild(longestSequenceItem);
+
+    const averageLengthItem = document.createElement("li");
+    averageLengthItem.textContent = `Average Length: ${sequenceStats.averageLength}`;
+    ul.appendChild(averageLengthItem);
+
+    const totalBasesItem = document.createElement("li");
+    totalBasesItem.textContent = `Total Number of Bases: ${sequenceStats.totalBases}`;
+    ul.appendChild(totalBasesItem);
+
+    const numSequencesItem = document.createElement("li");
+    numSequencesItem.textContent = `Number of Sequences: ${sequenceStats.numSequences}`;
+    ul.appendChild(numSequencesItem);
+
+    outputDiv.appendChild(ul);
+}
+
+function displaySequences(sequences) {
+    const outputDiv = document.getElementById("parsed_output");
+    outputDiv.innerHTML = ""; // Clear previous content
+    
+    let outputText = ""; // Initialize an empty string to store concatenated sequences
+
+    sequences.forEach(seq => {
+        const fastaContent = `>${seq.id}\n${seq.sequence}\n`; // Include newline after each sequence
+        outputText += fastaContent;
+    });
+
+    const preElement = document.createElement("pre");
+    preElement.innerText = outputText;
+    outputDiv.appendChild(preElement);
+}
+
 function parseFastaFromInput() {
     const fastaContent = document.getElementById("fasta_input").value;
     const selectedOption = document.getElementById("option_select").value;
@@ -154,21 +238,8 @@ function parseFastaFromInput() {
     } else if (selectedOption === "deduplicate") {
         const deduplicatedFasta = deduplicateSequences(sequences);
         displaySequences(deduplicatedFasta);
+    } else if (selectedOption === "general_stats") {
+        const sequenceStats = findSequenceStats(sequences);
+        displaySequenceStats(sequenceStats);
     }
-}
-
-function displaySequences(sequences) {
-    const outputDiv = document.getElementById("parsed_output");
-    outputDiv.innerHTML = ""; // Clear previous content
-    
-    let outputText = ""; // Initialize an empty string to store concatenated sequences
-
-    sequences.forEach(seq => {
-        const fastaContent = `>${seq.id}\n${seq.sequence}\n`; // Include newline after each sequence
-        outputText += fastaContent;
-    });
-
-    const preElement = document.createElement("pre");
-    preElement.innerText = outputText;
-    outputDiv.appendChild(preElement);
 }
