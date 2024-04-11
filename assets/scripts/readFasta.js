@@ -2,28 +2,35 @@ const fs = require('fs');
 
 function readSequencesFromFasta(fastaContent) {
     const sequences = [];
-    let currentSequence = null;
     let sequenceLines = [];
+    let sequenceId = "Sequence";
 
     fastaContent.split('\n').forEach(line => {
         line = line.trim();
         if (line.startsWith('>')) {
-            if (currentSequence !== null) {
-                sequences.push({ id: currentSequence.id, sequence: sequenceLines.join('') });
+            if (sequenceLines.length > 0) {
+                sequences.push({ id: sequenceId, sequence: sequenceLines.join('') });
                 sequenceLines = [];
             }
-            currentSequence = { id: line.slice(1), sequence: '' };
-        } else if (currentSequence !== null) {
+            sequenceId = line.slice(1);
+        } else {
             sequenceLines.push(line.toUpperCase());
         }
     });
 
-    if (currentSequence !== null) {
-        sequences.push({ id: currentSequence.id, sequence: sequenceLines.join('') });
+    // If there are remaining sequence lines after processing all lines
+    if (sequenceLines.length > 0) {
+        sequences.push({ id: sequenceId, sequence: sequenceLines.join('') });
+    }
+
+    // If no sequences with headers were found, concatenate all sequences and assign a fake header
+    if (sequences.length === 0) {
+        sequences.push({ id: "Sequence", sequence: fastaContent.replace(/\n/g, '').toUpperCase() });
     }
 
     return sequences;
 }
+
 
 function generateKmers(sequence, k) {
     const kmers = [];
