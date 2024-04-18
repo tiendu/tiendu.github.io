@@ -427,10 +427,12 @@ function displayAlignmentData(alignment) {
     const globalAlignmentDiv = document.createElement("div");
     globalAlignmentDiv.innerHTML = "<h3>Global Alignment</h3>";
     outputDiv.appendChild(globalAlignmentDiv);
+
     const globalPreElement = document.createElement("pre");
-    globalPreElement.innerHTML = `Aligned Sequence 1: ${alignment.global.alignedSequence1}<br>`;
-    globalPreElement.innerHTML += `                   ${alignment.global.alignmentSymbols}<br>`;
-    globalPreElement.innerHTML += `Aligned Sequence 2: ${alignment.global.alignedSequence2}<br>`;
+    globalPreElement.style.fontFamily = "monospace"; // Set fixed-width font
+    globalPreElement.innerHTML = `${alignment.global.alignedSequence1}<br>`;
+    globalPreElement.innerHTML += `${alignment.global.alignmentSymbols}<br>`;
+    globalPreElement.innerHTML += `${alignment.global.alignedSequence2}<br>`;
     globalPreElement.innerHTML += `Alignment Score: ${alignment.global.score}`;
     globalAlignmentDiv.appendChild(globalPreElement);
 
@@ -438,10 +440,12 @@ function displayAlignmentData(alignment) {
     const localAlignmentDiv = document.createElement("div");
     localAlignmentDiv.innerHTML = "<h3>Local Alignment</h3>";
     outputDiv.appendChild(localAlignmentDiv);
+
     const localPreElement = document.createElement("pre");
-    localPreElement.innerHTML = `Aligned Sequence 1: ${alignment.local.alignedSequence1}<br>`;
-    localPreElement.innerHTML += `                   ${alignment.local.alignmentSymbols}<br>`;
-    localPreElement.innerHTML += `Aligned Sequence 2: ${alignment.local.alignedSequence2}<br>`;
+    localPreElement.style.fontFamily = "monospace"; // Set fixed-width font
+    localPreElement.innerHTML = `${alignment.local.alignedSequence1}<br>`;
+    localPreElement.innerHTML += `${alignment.local.alignmentSymbols}<br>`;
+    localPreElement.innerHTML += `${alignment.local.alignedSequence2}<br>`;
     localPreElement.innerHTML += `Alignment Score: ${alignment.local.score}`;
     localAlignmentDiv.appendChild(localPreElement);
 }
