@@ -470,23 +470,23 @@ function parseFastaFromInput() {
         displaySequenceStats(sequenceStats);
     } else if (selectedOption == "alignment") {
         const match = parseInt(document.getElementById("match_input").value, 10);
-        if (isNaN(match) || match < 1) {
+        if (isNaN(match) || match < 0) {
             alert("Please enter a valid positive integer for match.");
             return;
         }
         const mismatch = parseInt(document.getElementById("mismatch_input").value, 10);
-        if (isNaN(mismatch) || mismatch < 1) {
-            alert("Please enter a valid positive integer for k.");
+        if (isNaN(mismatch) || mismatch > 0) {
+            alert("Please enter a valid negative integer for mismatch.");
             return;
         }
         const gap_opening = parseInt(document.getElementById("gap_opening_input").value, 10);
-        if (isNaN(gap_opening) || gap_opening < 1) {
-            alert("Please enter a valid positive integer for gap_opening.");
+        if (isNaN(gap_opening) || gap_opening > 0) {
+            alert("Please enter a valid negative integer for gap_opening.");
             return;
         }
         const gap_extension = parseInt(document.getElementById("gap_extension_input").value, 10);
-        if (isNaN(gap_extension) || gap_extension < 1) {
-            alert("Please enter a valid positive integer for gap_extension.");
+        if (isNaN(gap_extension) || gap_extension > 0) {
+            alert("Please enter a valid negative integer for gap_extension.");
             return;
         }
         const alignmentData = alignSequences(sequences, match, mismatch, gap_opening, gap_extension);
