@@ -420,7 +420,7 @@ function alignSequences(sequences, match, mismatch, gap_opening, gap_extension) 
 }
 
 function displayAlignmentData(alignment) {
-    const outputDiv = document.getElementById("alignment_output");
+    const outputDiv = document.getElementById("parsed_output");
     outputDiv.innerHTML = ""; // Clear previous content
 
     // Display global alignment
