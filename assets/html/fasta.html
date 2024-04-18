@@ -43,7 +43,7 @@ layout: page
     <script src="/assets/scripts/readFasta.js"></script>
     <script>
         function toggleOptions() {
-            const optionSelect = document.getElementById("option_select");
+            const optionSelect = document.getElementById("option_select").value;
             switch (optionSelect) {
                 case "kmer_profile":
                     document.getElementById("kmer_option").style.display = "block";
