@@ -42,7 +42,7 @@ I now have some basic information e.g., the sequencing technology used was 454, 
 
 I select the first column with _awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}'_. Then, I use _head -n 3_ to get only the first three datasets. In the last command, xargs, I set the number of argument _-n_ being 1 and the number of CPUs _-P_ being 4. Next, _fastq-dump_ will be used to download the datasets. I download the file in _--gzip_, _--skip-technical_, _--split-files_ and _--split-spot_. After the download is finished, I'll have three datasets for practice.
 
-Also, you can download other datasets e.g., protein, nucleotide by changing the parameter for database `-db` in esearch.
+Also, you can download other datasets e.g., protein, nucleotide by changing the parameter for database _-db_ in esearch.
 
 For example, with _esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]"| efetch -format fasta_ I can find the sequences of RNA-dependent RNA-polymerase (RdRp) in RefSeq database that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with _esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]"| efetch -format fasta_ I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
 
@@ -98,7 +98,7 @@ Let's say we want to get the RefSeq assembly of _C. perfringens_, we can use the
 
 `esearch -db assembly -query "txid10239[ORGN]" | efetch -format docsum | xtract -pattern DocumentSummary -element FtpPath_RefSeq | xargs -P 3 -I {} bash -c 'name=$(basename {}); curl -o "${name}_genomic.fna.gz" {}/"${name}_genomic.fna.gz"'`
 
-... Or the .gbff of the genus Flavivirus:
+... Or the _.gbff_ of the genus Flavivirus:
 
 `esearch -db assembly -query "txid11051[ORGN]" | efetch -format docsum | xtract -pattern DocumentSummary -element FtpPath_RefSeq | sed 's/$/\/*genomic.gbff.gz/' | xargs -P 3 wget -c -nd; sleep 3s`
 
