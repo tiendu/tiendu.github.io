@@ -40,13 +40,13 @@ I now have some basic information e.g., the sequencing technology used was 454, 
 
 `esearch -db sra -query "PRJDB5922" | efetch -format runinfo | awk 'BEGIN {RS=","; ORS="\t"} {print}' | awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}' | head -n 3 | xargs -n 1 -P 4 fastq-dump --gzip --split-files --skip-technical --split-spot`
 
-I select the first column with _awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}'_. Then, I use _head -n 3_ to get only the first three datasets. In the last command, xargs, I set the number of argument _-n_ being 1 and the number of CPUs _-P_ being 4. Next, _fastq-dump_ will be used to download the datasets. I download the file in _--gzip_, _--skip-technical_, _--split-files_ and _--split-spot_. After the download is finished, I'll have three datasets for practice.
+I select the first column with `awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}'`. Then, I use `head -n 3` to get only the first three datasets. In the last command, xargs, I set the number of argument `-n` being 1 and the number of CPUs `-P` being 4. Next, _fastq-dump_ will be used to download the datasets. I download the file in `--gzip`, `--skip-technical`, `--split-files` and `--split-spot`. After the download is finished, I'll have three datasets for practice.
 
-Also, you can download other datasets e.g., protein, nucleotide by changing the parameter for database _-db_ in esearch.
+Also, you can download other datasets e.g., protein, nucleotide by changing the parameter for database `-db` in esearch.
 
-For example, with _esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]"| efetch -format fasta_ I can find the sequences of RNA-dependent RNA-polymerase (RdRp) in RefSeq database that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with _esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]"| efetch -format fasta_ I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
+For example, with `esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]" | efetch -format fasta` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) in RefSeq database that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with `esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]" | efetch -format fasta` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
 
-The available databases are shown in the stdout of _einfo -dbs_ including:
+The available databases are shown in the stdout of `einfo -dbs` including:
 
 >annotinfo, assembly, biocollections, bioproject, biosample, 
 >blastdbinfo, books, cdd, clinvar, dbvar, gap, gapplus, gds, 
@@ -55,7 +55,7 @@ The available databases are shown in the stdout of _einfo -dbs_ including:
 >pccompound, pcsubstance, pmc, popset, protein, proteinclusters, 
 >protfam, pubmed, seqannot, snp, sra, structure, taxonomy
 
-And we can check the available field that can be used in the query for nuccore database by using _einfo -db nuccore | xtract -pattern Field -element Name Description_.
+And we can check the available field that can be used in the query for nuccore database by using `einfo -db nuccore | xtract -pattern Field -element Name Description`.
 
 |Name|Descrition|
 |---|---|
