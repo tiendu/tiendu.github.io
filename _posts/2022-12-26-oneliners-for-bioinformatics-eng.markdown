@@ -760,7 +760,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 `awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {FS="\t"; if ($3>=90 && $4/$5>=0.9) {a[">"$1][">"$2]++}} idx==2 {if ($0~/^>/) {getline seq; b[$0]=seq}} idx==3 {if ($0~/^>/) {getline seq; c[$0]=seq}} END {for (i in b) {if (i in a) {print i"\n"b[i]; for (j in c) {if (a[i][j]) print j"\n"c[j]}}}}' blast.out query.fasta subject.fasta`
 
-* Generate Google Drive download link for `wget`, `curl`, etc.
+* Generate Google Drive download link for _wget_ or _curl_
 
 `echo "<Google Drive shared link>" | sed 's|/file/d/|/uc?id=|' | sed 's|/view.*||'`
 
