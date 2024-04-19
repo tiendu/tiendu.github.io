@@ -60,7 +60,5 @@ code {
   font-family: $code-font-family;
   background-color: $code-background-color;
   width: 100%; /* Set a fixed width */
-  padding: 10px; /* Add padding to create space between content and border */
   white-space: pre-wrap; /* Preserve line breaks */
-  border: 1px solid #ccc; /* Add border to create a box-like appearance */
 }
