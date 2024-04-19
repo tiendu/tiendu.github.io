@@ -59,6 +59,7 @@ a {
 code {
   font-family: $code-font-family;
   background-color: $code-background-color;
+  display: block;
   width: 100%; /* Set a fixed width */
   white-space: pre-wrap; /* Preserve line breaks */
 }
