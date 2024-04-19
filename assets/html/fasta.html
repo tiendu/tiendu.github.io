@@ -37,10 +37,10 @@ layout: page
         <option value="alignment">Align Sequences</option>
     </select>
     
-    <button type="button" onclick="parseFastaFromInput()">Parse</button>
+    <button type="button" onclick="parseFastaFromInput()">Run</button>
     <div id="parsed_output"></div>
 
-    <script src="/assets/scripts/readFasta.js"></script>
+    <script src="/assets/scripts/fastaUtils.js"></script>
     <script>
         function toggleOptions() {
             const optionSelect = document.getElementById("option_select").value;
