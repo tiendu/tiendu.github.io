@@ -30,9 +30,9 @@ After entrez-direct is installed, we'll use esearch to search the NCBI (for the 
 
 `esearch -db bioproject -query "txid408169[Organism] AND Vietnam[Title]" | efetch -format native | awk 'BEGIN {RS="\n"; ORS="\t"} {print}' | sed -E '1 s/^\t//;s/\t{3}/\n/g' | sed -E 's/^[0-9]*\. //' | awk 'BEGIN {FS=OFS="\t"} {match($0, /BioProject Accession: (.*)\tID: (.*)/, array); print $1, array[1], array[2]}'`
 
-In the example, I have searched the database _bioproject_ with the query _txid408169_ (representing metagenomes in the field Organism [3]) and Vietnam (in the field Title). After that, I pipe the output to efetch and put it under the format _native_. The raw result will be processed later with awk and sed. Then, I will have a table with 3 columns: column 1 is the BioProject Title (the name of the study), column 2 is the BioProject Accession, and column 3 is the ID (we're gonna use either the BioProject Accession or the ID to retrieve the reads).
+In the example, I have searched the database _bioproject_ with the query _txid408169_ (representing metagenomes in the field Organism [3]) and Vietnam (in the field Title). After that, I pipe the output to _efetch_ and put it under the format _native_. The raw result will be processed later with _awk_ and _sed_. Then, I will have a table with 3 columns: column 1 is the _BioProject Title_ (the name of the study), column 2 is the _BioProject Accession_, and column 3 is the ID (we're gonna use either the _BioProject Accession_ or the _ID_ to retrieve the reads).
 
-Here, I choose a study in Vietnam about Norovirus with the accession being PRJDB5922 as an example. I also use awk to make it easier to visualize as the original table will be in comma-delimited format and it's awful to look at in the terminal. Otherwise, you can keep it as a csv and view it in any editor.
+Here, I choose a study in Vietnam about Norovirus with the accession being _PRJDB5922_ as an example. I also use awk to make it easier to visualize as the original table will be in comma-delimited format and it's awful to look at in the terminal. Otherwise, you can keep it as a csv and view it in any editor.
 
 `esearch -db sra -query "PRJDB5922" | efetch -format runinfo | awk 'BEGIN {RS=","; ORS="\t"} {print}'`
 
