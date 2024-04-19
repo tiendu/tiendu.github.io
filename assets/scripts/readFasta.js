@@ -235,6 +235,9 @@ function alignSequences(sequences, match, mismatch, gap_opening, gap_extension) 
             this.mismatch = mismatch;
             this.gapOpening = gapOpening;
             this.gapExtension = gapExtension;
+            this.alignedSequence1 = '';
+            this.alignedSequence2 = '';
+            this.score = 0;
         }
     
         setParams(match, mismatch, gapOpening, gapExtension) {
@@ -277,31 +280,29 @@ function alignSequences(sequences, match, mismatch, gap_opening, gap_extension) 
             }
     
             // Traceback to find the alignment
-            let alignment1 = '';
-            let alignment2 = '';
             let alignmentSymbols = '';
             let i = rows - 1;
             let j = cols - 1;
             while (i > 0 && j > 0) {
                 if (matrix[i][j] === matrix[i - 1][j - 1] + (this.sequence1[i - 1] === this.sequence2[j - 1] ? this.match : this.mismatch)) {
-                    alignment1 = this.sequence1[i - 1] + alignment1;
-                    alignment2 = this.sequence2[j - 1] + alignment2;
+                    this.alignedSequence1 = this.sequence1[i - 1] + this.alignedSequence1;
+                    this.alignedSequence2 = this.sequence2[j - 1] + this.alignedSequence2;
                     alignmentSymbols = this.sequence1[i - 1] === this.sequence2[j - 1] ? '|' + alignmentSymbols : ' ' + alignmentSymbols;
                     i--;
                     j--;
                 } else if (matrix[i][j] === matrix[i - 1][j] + this.gapOpening) {
-                    alignment1 = this.sequence1[i - 1] + alignment1;
-                    alignment2 = '-' + alignment2;
+                    this.alignedSequence1 = this.sequence1[i - 1] + this.alignedSequence1;
+                    this.alignedSequence2 = '-' + this.alignedSequence2;
                     alignmentSymbols = ' ' + alignmentSymbols;
                     i--;
                 } else if (matrix[i][j] === matrix[i][j - 1] + this.gapOpening) {
-                    alignment1 = '-' + alignment1;
-                    alignment2 = this.sequence2[j - 1] + alignment2;
+                    this.alignedSequence1 = '-' + this.alignedSequence1;
+                    this.alignedSequence2 = this.sequence2[j - 1] + this.alignedSequence2;
                     alignmentSymbols = ' ' + alignmentSymbols;
                     j--;
                 } else if (matrix[i][j] === matrix[i - 1][j - 1] + this.gapExtension) {
-                    alignment1 = this.sequence1[i - 1] + alignment1;
-                    alignment2 = this.sequence2[j - 1] + alignment2;
+                    this.alignedSequence1 = this.sequence1[i - 1] + this.alignedSequence1;
+                    this.alignedSequence2 = this.sequence2[j - 1] + this.alignedSequence2;
                     alignmentSymbols = this.sequence1[i - 1] === this.sequence2[j - 1] ? '|' + alignmentSymbols : ' ' + alignmentSymbols;
                     i--;
                     j--;
@@ -310,21 +311,21 @@ function alignSequences(sequences, match, mismatch, gap_opening, gap_extension) 
     
             // Fill in the rest of the alignment if one sequence is longer than the other
             while (i > 0) {
-                alignment1 = this.sequence1[i - 1] + alignment1;
-                alignment2 = '-' + alignment2;
+                this.alignedSequence1 = this.sequence1[i - 1] + this.alignedSequence1;
+                this.alignedSequence2 = '-' + this.alignedSequence2;
                 alignmentSymbols = ' ' + alignmentSymbols;
                 i--;
             }
             while (j > 0) {
-                alignment1 = '-' + alignment1;
-                alignment2 = this.sequence2[j - 1] + alignment2;
+                this.alignedSequence1 = '-' + this.alignedSequence1;
+                this.alignedSequence2 = this.sequence2[j - 1] + this.alignedSequence2;
                 alignmentSymbols = ' ' + alignmentSymbols;
                 j--;
             }
     
-            const score = matrix[rows - 1][cols - 1];
+            this.score = matrix[rows - 1][cols - 1];
     
-            return [alignment1, alignmentSymbols, alignment2, score];
+            return [this.alignedSequence1, alignmentSymbols, this.alignedSequence2, this.score];
         }
     }
     
@@ -333,8 +334,7 @@ function alignSequences(sequences, match, mismatch, gap_opening, gap_extension) 
             const rows = this.sequence1.length + 1;
             const cols = this.sequence2.length + 1;
             const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
-    
-            let maxScore = 0;
+
             let maxI = 0;
             let maxJ = 0;
     
@@ -345,47 +345,58 @@ function alignSequences(sequences, match, mismatch, gap_opening, gap_extension) 
                     const gapExtendScore = matrix[i - 1][j - 1] + this.gapExtension;
                     matrix[i][j] = Math.max(matchScore, gapOpenScore, gapExtendScore, 0);
     
-                    if (matrix[i][j] > maxScore) {
-                        maxScore = matrix[i][j];
+                    if (matrix[i][j] > this.score) {
+                        this.score = matrix[i][j];
                         maxI = i;
                         maxJ = j;
                     }
                 }
             }
     
-            let alignment1 = '';
-            let alignment2 = '';
             let alignmentSymbols = '';
             let i = maxI;
             let j = maxJ;
     
             while (i > 0 && j > 0 && matrix[i][j] !== 0) {
                 if (matrix[i][j] === matrix[i - 1][j - 1] + (this.sequence1[i - 1] === this.sequence2[j - 1] ? this.match : this.mismatch)) {
-                    alignment1 = this.sequence1[i - 1] + alignment1;
-                    alignment2 = this.sequence2[j - 1] + alignment2;
+                    this.alignedSequence1 = this.sequence1[i - 1] + this.alignedSequence1;
+                    this.alignedSequence2 = this.sequence2[j - 1] + this.alignedSequence2;
                     alignmentSymbols = this.sequence1[i - 1] === this.sequence2[j - 1] ? '|' + alignmentSymbols : ' ' + alignmentSymbols;
                     i--;
                     j--;
                 } else if (matrix[i][j] === matrix[i - 1][j] + this.gapOpening) {
-                    alignment1 = this.sequence1[i - 1] + alignment1;
-                    alignment2 = '-' + alignment2;
+                    this.alignedSequence1 = this.sequence1[i - 1] + this.alignedSequence1;
+                    this.alignedSequence2 = '-' + this.alignedSequence2;
                     alignmentSymbols = ' ' + alignmentSymbols;
                     i--;
                 } else if (matrix[i][j] === matrix[i][j - 1] + this.gapOpening) {
-                    alignment1 = '-' + alignment1;
-                    alignment2 = this.sequence2[j - 1] + alignment2;
+                    this.alignedSequence1 = '-' + this.alignedSequence1;
+                    this.alignedSequence2 = this.sequence2[j - 1] + this.alignedSequence2;
                     alignmentSymbols = ' ' + alignmentSymbols;
                     j--;
                 } else if (matrix[i][j] === matrix[i - 1][j - 1] + this.gapExtension) {
-                    alignment1 = this.sequence1[i - 1] + alignment1;
-                    alignment2 = this.sequence2[j - 1] + alignment2;
+                    this.alignedSequence1 = this.sequence1[i - 1] + this.alignedSequence1;
+                    this.alignedSequence2 = this.sequence2[j - 1] + this.alignedSequence2;
                     alignmentSymbols = this.sequence1[i - 1] === this.sequence2[j - 1] ? '|' + alignmentSymbols : ' ' + alignmentSymbols;
                     i--;
                     j--;
                 }
             }
     
-            return [alignment1, alignmentSymbols, alignment2, maxScore];
+            return [this.alignedSequence1, alignmentSymbols, this.alignedSequence2, this.score];
+        }
+        findLocalAlignmentPosition() {
+            const alignedSequence1WithoutGaps = this.alignedSequence1.replace('-', '');
+            const alignedSequence2WithoutGaps = this.alignedSequence2.replace('-', '');
+
+            const match1 = this.sequence1.search(alignedSequence1WithoutGaps)
+            const match2 = this.sequence2.search(alignedSequence2WithoutGaps)
+
+            if (match1 !== -1 && match2 !== -1) {
+                return [match1 + 1, match2 + 1];
+            } else {
+                return null;
+            }
         }
     }
 
@@ -402,6 +413,7 @@ function alignSequences(sequences, match, mismatch, gap_opening, gap_extension) 
     const localAlignment = new LocalAlignment(sequence1, sequence2);
     localAlignment.setParams(3, -2, -3, -2);
     const [localAlignedSequence1, localAlignmentSymbols, localAlignedSequence2, localScore] = localAlignment.align();
+    const [localAlignedSequence1Position, localAlignedSequence2Position] = localAlignment.findLocalAlignmentPosition()
 
     return {
         global: {
@@ -414,7 +426,8 @@ function alignSequences(sequences, match, mismatch, gap_opening, gap_extension) 
             alignedSequence1: localAlignedSequence1,
             alignmentSymbols: localAlignmentSymbols,
             alignedSequence2: localAlignedSequence2,
-            score: localScore
+            score: localScore,
+            positions: [localAlignedSequence1Position, localAlignedSequence2Position]
         }
     };
 }
@@ -446,7 +459,9 @@ function displayAlignmentData(alignment) {
     localPreElement.innerHTML = `${alignment.local.alignedSequence1}<br>`;
     localPreElement.innerHTML += `${alignment.local.alignmentSymbols}<br>`;
     localPreElement.innerHTML += `${alignment.local.alignedSequence2}<br>`;
-    localPreElement.innerHTML += `Alignment Score: ${alignment.local.score}`;
+    localPreElement.innerHTML += `Alignment Score: ${alignment.local.score}<br>`;
+    localPreElement.innerHTML += `Aligned Sequence 1 Position: ${alignment.local.positions[0]}<br>`;
+    localPreElement.innerHTML += `Aligned Sequence 2 Position: ${alignment.local.positions[1]}`;
     localAlignmentDiv.appendChild(localPreElement);
 }
 
