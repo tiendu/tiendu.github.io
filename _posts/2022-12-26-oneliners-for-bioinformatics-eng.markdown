@@ -181,7 +181,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Locate a region of a sequence (set query with a desired pattern).
 
-`awk -v query="" 'function recwrap(str1, query1) {pos=""; end=0; return recfunc(str1, query1)} function recfunc(str2, query2) {if (match(str2, query2)!=0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos=pos (pos=="" ? "" : " ") "[" start "," end "]"; recfunc(substr(str2, RSTART+RLENGTH, length(str2)), query2)}; return pos} /^>/ {getline seq; gsub(/^>/, "", $0); loc=recwrap(seq, query); if (loc!="") {print $0 "\t" loc}}' file.fa`
+`awk -v query="NTG" 'function genregex(str) {hash["A"]="A"; hash["T"]="T"; hash["G"]="G"; hash["C"]="C"; hash["R"]="[AG]"; hash["Y"]="[CT]"; hash["S"]="[GC]"; hash["W"]="[AT]"; hash["K"]="[GT]"; hash["M"]="[AC]"; hash["B"]="[CGT]"; hash["D"]="[AGT]"; hash["H"]="[ACT]"; hash["V"]="[ACG]"; hash["N"]="[ATGC]"; regex=""; for (i=1; i<=length(str); i++) {regex=regex hash[substr(str, i, 1)]}; return regex} function recwrap(str1, query1) {pos=""; end=0; return recfunc(str1, query1)} function recfunc(str2, query2) {if (match(str2, query2)!=0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos=pos (pos=="" ? "" : " ") start ".." end; recfunc(substr(str2, RSTART+RLENGTH, length(str2)), query2)}; return pos} /^>/ {getline seq; gsub(/^>/, "", $0); loc=recwrap(seq, genregex(query)); if (loc!="") {print $0 "\t" loc}}' file.fa`
 
 * Get the reverse complement of each sequence.
 
