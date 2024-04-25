@@ -702,7 +702,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Get the k-mer frequency for each sequence.
 
-`awk -v k=n 'BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); a[s]++; sum++}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/sum}}' file.fa`
+`awk -v k=n 'BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); a[s]++; sum++}; for (i in a) {printf "%s\t%s\t%.3f\n", $0, i, a[i]/sum}; delete a}' file.fa`
 
 * Get the k-mer frequency for the whole file.
 
@@ -710,7 +710,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Get non-repeated k-mer frequency.
 
-`awk -v k=n 'BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} function findreps(s) {for (i=2; i<=length(s); i++) {if (substr(s, i, 1)!~substr(s, 1, 1)) {return 0}}; return 1} /^>/ {getline seq; sub(/^>/, "", $0); for (j=1; j<=length(seq)+1-k; j++) {subs=substr(seq, j, k); if (!findreps(subs)) {a[subs]++; count++}}; for (i in a) {printf "%s\t%s\t%.2f\n", $0, i, a[i]/count}}' file.fa`
+`awk -v k=n 'BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} function findreps(s) {for (i=2; i<=length(s); i++) {if (substr(s, i, 1)!~substr(s, 1, 1)) {return 0}}; return 1} /^>/ {getline seq; sub(/^>/, "", $0); for (j=1; j<=length(seq)+1-k; j++) {subs=substr(seq, j, k); if (!findreps(subs)) {a[subs]++; count++}}; for (i in a) {printf "%s\t%s\t%.2f\n", $0, i, a[i]/count}; delete a}' file.fa`
 
 * Find unique k-mer in all sequences.
 
@@ -718,11 +718,11 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Get the palindromic k-mer frequency (n is even number) amongst palindromes.
 
-`awk -v k=6 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (t=length(s); t>0; t--) {o=o c[substr(s, t, 1)]}; return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); if (s==revcomp(s)) {a[s]++; sum++}}; for (i in a) {printf "%s\t%s\t%.2f\n", $0, i, a[i]/sum}}' file.fa`
+`awk -v k=n 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (t=length(s); t>0; t--) {o=o c[substr(s, t, 1)]}; return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); if (s==revcomp(s)) {a[s]++; sum++}}; for (i in a) {printf "%s\t%s\t%.2f\n", $0, i, a[i]/sum}; delete a}' file.fa`
 
 * Get the palindromic k-mer frequency (n is even number) amongst other k-mers.
 
-`awk -v k=6 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (t=length(s); t>0; t--) {o=o c[substr(s, t, 1)]}; return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); a[s]++; sum++}; for (j in a) {if (j==revcomp(j)) {printf "%s\t%s\t%.2f\n", $0, j, a[j]/sum}}}' file.fa`
+`awk -v k=n 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (t=length(s); t>0; t--) {o=o c[substr(s, t, 1)]}; return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); a[s]++; sum++}; for (j in a) {if (j==revcomp(j)) {printf "%s\t%s\t%.2f\n", $0, j, a[j]/sum}}; delete a}' file.fa`
 
 * Find hairpin loops. Here the length of the loop is 20 with a spacer of 6.
 
