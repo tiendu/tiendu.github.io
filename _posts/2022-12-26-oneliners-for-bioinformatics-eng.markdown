@@ -710,7 +710,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Get non-repeated k-mer frequency.
 
-`awk -v k=4 'BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} function findreps(s) {for (i=2; i<=length(s); i++) {if (substr(s, i, 1)!=substr(s, 1, 1)) {return 0}}; return 1} /^>/ {getline seq; sub(/^>/, "", $0); count=0; for (j=1; j<=length(seq)+1-k; j++) {subs=substr(seq, j, k); sum++; if (findreps(subs)==0) {a[subs]++}}; for (i in a) {printf "%s\t%s\t%.2f\n", $0, i, a[i]/sum}; delete a}' file.fa`
+`awk -v k=n 'BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} function findreps(s) {for (i=2; i<=length(s); i++) {if (substr(s, i, 1)!=substr(s, 1, 1)) {return 0}}; return 1} /^>/ {getline seq; sub(/^>/, "", $0); count=0; for (j=1; j<=length(seq)+1-k; j++) {subs=substr(seq, j, k); sum++; if (findreps(subs)==0) {a[subs]++}}; for (i in a) {printf "%s\t%s\t%.2f\n", $0, i, a[i]/sum}; delete a}' file.fa`
 
 * Find unique k-mer in all sequences.
 
