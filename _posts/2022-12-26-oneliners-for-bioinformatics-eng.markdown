@@ -783,3 +783,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 * Detect CpG islands using [Gardiner-Garden and Frommer (1987)](https://doi.org/10.1016/0022-2836(87)90689-9) method.
 
 `awk -v window=200 -v threshold=0.6 'function cpgisland(s, w, t) {found=0; numC=0; numG=0; numCG=0; s=tolower(s); if (w>length(s)) {print "Input sequence must be longer than " w " bases!"}; for (i=1; i<=length(s); i++) {base=substr(s, i, 1); if (base=="g") {numG++}; if (base=="c") {numC++; next_base=substr(s, i+1, 1); if (next_base=="g") {numCG++; numG++; i++}}; if (i>w) {Y=(numC && numG ? numCG/((numC*numG)/w) : 0); GCcontent=(numC+numG)*100/w; if (Y>=t && GCcontent>50) {start=i-w+1; end=i; found=1; print start ".." end "\t" Y "\t" GCcontent}; tolose=substr(s, i-w+1, 1); if (tolose=="c") {numC--; next_tolose=substr(s, i-w+2, 1); if (next_tolose=="g") {numCG--}}; if (tolose=="g") {numG--}}}; if (found==0) {print "No CpG island identified"}} /^>/ {getline seq; print $0; print cpgisland(seq, window, threshold)}' file.fa`
+
+* Find stretch of repeated characters
+
+`awk 'function findrepeat(s) {max=0; current=1; char=""; for (i=2; i<=length(s); i++) {char=substr(s, i, 1); if (char==substr(s, i-1, 1)) {current++} else {if (current>max) {max=current}; current=1}}; if (current>max) {max=current}; return char "\t" max} /^>/ {getline seq; sub(/^>/, "", $0); print $0 "\t" findrepeat(seq)}' file.fa`
