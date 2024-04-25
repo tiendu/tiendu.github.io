@@ -786,4 +786,39 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Find stretch of repeated characters
 
-`awk 'function findrepeat(s) {max=0; current=1; char=""; for (i=2; i<=length(s); i++) {char=substr(s, i, 1); if (char==substr(s, i-1, 1)) {current++} else {if (current>max) {max=current}; current=1}}; if (current>max) {max=current}; return char "\t" max} /^>/ {getline seq; sub(/^>/, "", $0); print $0 "\t" findrepeat(seq)}' file.fa`
+```
+awk 'function findrepeat(s) {
+    max = 0
+    current = 1
+    delete a
+    for (i = 2; i <= length(s); i++) {
+        if (substr(s, i, 1) == substr(s, i-1, 1)) {
+            current++
+        } else {
+            if (current > max) {
+                max = current
+                a[substr(s, i-1, 1)][i-current] = max
+            }
+            current = 1
+        }
+    }
+    # Check for the maximum streak at the end of the sequence
+    if (current > max) {
+        max = current
+        a[substr(s, length(s), 1)][length(s)+1-current] = max
+    }
+    # Return the character with the longest streak
+    for (char in a) {
+        for (loc in a[char]) {
+            if (a[char][loc] == max) {
+                return char "\t" loc "\t" max
+            }
+        }
+    }
+}
+/^>/ {
+    getline seq
+    sub(/^>/, "", $0)
+    print $0 "\t" findrepeat(seq)
+}' file.fa
+```
