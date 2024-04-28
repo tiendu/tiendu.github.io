@@ -822,3 +822,33 @@ awk 'function findrepeat(s) {
     print $0 "\t" findrepeat(seq)
 }' file.fa
 ```
+
+* Highlight differences between two sequences of same length.
+
+```
+awk -v width=5 '{
+    before = $1
+    after = $2
+
+    # Iterate over each chunk of width
+    for (i = 1 ; i <= length(before); i += width) {
+        before_chunk = substr(before, i, width)
+        after_chunk = substr(after, i, width)
+
+        # Construct annotation string for the current chunk
+        annotation_chunk = ""
+        for (j = 1; j <= width; j++) {
+            if (substr(before_chunk, j, 1) != substr(after_chunk, j, 1)) {
+                annotation_chunk = annotation_chunk "↓"
+            } else {
+                annotation_chunk = annotation_chunk " "
+            }
+        }
+
+        # Print the chunk with annotations
+        printf "%d %s\n", i, before_chunk
+        printf "  %s\n", annotation_chunk
+        printf "%d %s\n", i, after_chunk
+    }
+}' <<< "ATGCTCCTG ATGCACCTG"
+```
