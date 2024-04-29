@@ -829,9 +829,34 @@ awk 'function findrepeat(s) {
 awk -v width=5 '{
     before = $1
     after = $2
+    start = $3
+    end = $4
+
+    if (length(before) != length(after)) {
+        print "Error: strings are not of equal length"
+        exit 1
+    }
+
+    # Convert start and end positions to integers if they are non-empty strings
+    if (start != "" && start + 0 == start) {
+        start = (start > 1 ? start : 1)
+    } else {
+        start = 1
+    }
+    
+    if (end != "" && end + 0 == end) {
+        end = (end < length(before) ? end : length(before))
+    } else {
+        end = length(before)
+    }
+
+    # Adjust width if the range is within the width
+    if (end - start + 1 < width) {
+        width = end - start + 1
+    }
 
     # Iterate over each chunk of width
-    for (i = 1 ; i <= length(before); i += width) {
+    for (i = start; i <= end; i += width) {
         before_chunk = substr(before, i, width)
         after_chunk = substr(after, i, width)
 
@@ -850,5 +875,5 @@ awk -v width=5 '{
         printf "  %s\n", annotation_chunk
         printf "%d %s\n", i, after_chunk
     }
-}' <<< "ATGCTCCTG ATGCACCTG"
+}' <<< "ATGCTCCTG ATGCACACG 3 10"
 ```
