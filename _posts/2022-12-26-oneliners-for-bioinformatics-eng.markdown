@@ -199,9 +199,37 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Deduplicate and remove sequences that match other longer sequences (set n with desired length to remove sequences shorter than it).
 
-`awk 'function findsubs(arr) {for (i=length(arr); i>=0; i--) {for (j=i-1; j>=0; j--) {split(arr[i], s1, "\n"); split(arr[j], s2, "\n"); if (s1[2]~s2[2]) {delete arr[j]}}}} /^>/ {getline seq; a[length(seq)][$0]=seq; count++} END {PROCINFO["sorted_in"]="@ind_num_desc"; for (i in a) {for (j in a[i]) {b[count--]=j"\n"a[i][j]}}; findsubs(b); for (i in b) if (b[i]) print b[i]}' file.fa`
-
-`awk '/^>/ {getline seq; f=!a[seq]++} f {b[length(seq)][$0]=seq} END {PROCINFO["sorted_in"]="@ind_num_desc"; len=length(b); for (i in b) {len--; cnt=length(b[i]); for (j in b[i]) {c[len][--cnt]=j "\n" b[i][j]}}; for (i=length(b)-1; i>=0; i--) {for (m in c[i]) {split(c[i][m], s1, "\n"); for (j=i-1; j>=0; j--) {for (n in c[j]) {split(c[j][n], s2, "\n"); if (s1[2]~s2[2]) {delete c[j][n]}}}}}; for (i in c) {for (j in c[i]) if (c[i][j]) print c[i][j]}}' file.fa`
+```
+awk 'BEGIN {
+        # Set the sorting order for arrays to numerical descending order
+        PROCINFO["sorted_in"] = "@ind_num_desc"
+        min = 0
+    } /^>/ {
+        getline seq
+        len = length(seq)
+        # Update the minium length
+        min = (min > len || !min ? len : min)
+        a[length(seq)][seq] = $0
+    } END {
+        for (i in a) {
+            for (j in a[i]) {
+                for (k = 1; k <= length(j) + 1 - min; k++) {
+                    s = substr(j, k, min)
+                    # If the substring has been encountered, skip processing
+                    if (b[s]) {
+                        continue
+                    }
+                    # Increment the count for the current substring
+                    b[s]++
+                    c[a[i][j]] = j
+                }
+            }
+        }
+        for (m in c) {
+            print m "\n" c[m]
+        }
+    }' file.fa
+```
 
 * Remove singletons.
 
@@ -831,35 +859,29 @@ awk -v width=5 '{
     after = $2
     start = $3
     end = $4
-
     if (length(before) != length(after)) {
         print "Error: strings are not of equal length"
         exit 1
     }
-
     # Convert start and end positions to integers if they are non-empty strings
     if (start != "" && start + 0 == start) {
         start = (start > 1 ? start : 1)
     } else {
         start = 1
     }
-    
     if (end != "" && end + 0 == end) {
         end = (end < length(before) ? end : length(before))
     } else {
         end = length(before)
     }
-
     # Adjust width if the range is within the width
     if (end - start + 1 < width) {
         width = end - start + 1
     }
-
     # Iterate over each chunk of width
     for (i = start; i <= end; i += width) {
         before_chunk = substr(before, i, width)
         after_chunk = substr(after, i, width)
-
         # Construct annotation string for the current chunk
         annotation_chunk = ""
         for (j = 1; j <= width; j++) {
@@ -869,7 +891,6 @@ awk -v width=5 '{
                 annotation_chunk = annotation_chunk " "
             }
         }
-
         # Print the chunk with annotations
         printf "%d %s\n", i, before_chunk
         printf "  %s\n", annotation_chunk
