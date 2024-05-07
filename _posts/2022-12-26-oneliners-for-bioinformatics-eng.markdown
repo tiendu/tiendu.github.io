@@ -215,14 +215,13 @@ awk 'BEGIN {
             for (j in a[i]) {
                 for (k = 1; k <= length(j) + 1 - min; k++) {
                     s = substr(j, k, min)
-                    # If the substring has been encountered, skip processing
-                    if (b[s]) {
+                    if (!(b[s])) {
+                        c[j] = a[i][j]
+                        b[s] = 1
                         continue
                     }
-                    # Increment the count for the current substring
-                    b[s]++
-                    c[j] = a[i][j]
                 }
+                delete a[i][j]
             }
         }
         for (m in c) {
