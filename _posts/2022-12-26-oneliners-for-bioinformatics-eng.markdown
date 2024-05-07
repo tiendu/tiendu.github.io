@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2024-03-22**
+**Last updated on 2024-05-04**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
@@ -209,7 +209,7 @@ awk 'BEGIN {
         len = length(seq)
         # Update the minium length
         min = (min > len || !min ? len : min)
-        a[length(seq)][seq] = $0
+        a[len][seq] = $0
     } END {
         for (i in a) {
             for (j in a[i]) {
@@ -221,12 +221,12 @@ awk 'BEGIN {
                     }
                     # Increment the count for the current substring
                     b[s]++
-                    c[a[i][j]] = j
+                    c[j] = a[i][j]
                 }
             }
         }
         for (m in c) {
-            print m "\n" c[m]
+            print c[m] "\n" m
         }
     }' file.fa
 ```
@@ -366,11 +366,9 @@ Amino acids:
 * Convert genbank format to fasta format.
 
 ```
-awk '
-    /ACCESSION/ {
+awk '/ACCESSION/ {
         match($0, / +(.*)/, id)
-    } 
-    /ORIGIN/ {
+    } /ORIGIN/ {
         seq=""; 
         while ((getline line)>0) {
             if (line ~ /\/\//) {
@@ -381,8 +379,7 @@ awk '
             }
         }; 
         gsub(/ /, "", seq)
-    } 
-    END {
+    } END {
         print ">" id[1] "\n" seq
     }' file.gb
 ```
@@ -840,85 +837,85 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 ```
 awk 'function findrepeat(s) {
-    max = 0
-    current = 1
-    delete a
-    for (i = 2; i <= length(s); i++) {
-        if (substr(s, i, 1) == substr(s, i-1, 1)) {
-            current++
-        } else {
-            if (current > max) {
-                max = current
-                a[substr(s, i-1, 1)][i-current] = max
-            }
-            current = 1
-        }
-    }
-    # Check for the maximum streak at the end of the sequence
-    if (current > max) {
-        max = current
-        a[substr(s, length(s), 1)][length(s)+1-current] = max
-    }
-    # Return the character with the longest streak
-    for (char in a) {
-        for (loc in a[char]) {
-            if (a[char][loc] == max) {
-                return char "\t" loc "\t" max
+        max = 0
+        current = 1
+        delete a
+        for (i = 2; i <= length(s); i++) {
+            if (substr(s, i, 1) == substr(s, i-1, 1)) {
+                current++
+            } else {
+                if (current > max) {
+                    max = current
+                    a[substr(s, i-1, 1)][i-current] = max
+                }
+                current = 1
             }
         }
-    }
-}
-/^>/ {
-    getline seq
-    sub(/^>/, "", $0)
-    print $0 "\t" findrepeat(seq)
-}' file.fa
+        # Check for the maximum streak at the end of the sequence
+        if (current > max) {
+            max = current
+            a[substr(s, length(s), 1)][length(s)+1-current] = max
+        }
+        # Return the character with the longest streak
+        for (char in a) {
+            for (loc in a[char]) {
+                if (a[char][loc] == max) {
+                    return char "\t" loc "\t" max
+                }
+            }
+        }
+    } 
+    /^>/ {
+        getline seq
+        sub(/^>/, "", $0)
+        print $0 "\t" findrepeat(seq)
+    }' file.fa
 ```
 
 * Highlight differences between two sequences of same length.
 
 ```
 awk -v width=5 '{
-    before = $1
-    after = $2
-    start = $3
-    end = $4
-    if (length(before) != length(after)) {
-        print "Error: strings are not of equal length"
-        exit 1
-    }
-    # Convert start and end positions to integers if they are non-empty strings
-    if (start != "" && start + 0 == start) {
-        start = (start > 1 ? start : 1)
-    } else {
-        start = 1
-    }
-    if (end != "" && end + 0 == end) {
-        end = (end < length(before) ? end : length(before))
-    } else {
-        end = length(before)
-    }
-    # Adjust width if the range is within the width
-    if (end - start + 1 < width) {
-        width = end - start + 1
-    }
-    # Iterate over each chunk of width
-    for (i = start; i <= end; i += width) {
-        before_chunk = substr(before, i, width)
-        after_chunk = substr(after, i, width)
-        # Construct annotation string for the current chunk
-        annotation_chunk = ""
-        for (j = 1; j <= width; j++) {
-            if (substr(before_chunk, j, 1) != substr(after_chunk, j, 1)) {
-                annotation_chunk = annotation_chunk "↓"
-            } else {
-                annotation_chunk = annotation_chunk " "
-            }
+        before = $1
+        after = $2
+        start = $3
+        end = $4
+        if (length(before) != length(after)) {
+            print "Error: strings are not of equal length"
+            exit 1
         }
-        # Print the chunk with annotations
-        printf "%d %s\n", i, before_chunk
-        printf "  %s\n", annotation_chunk
-        printf "%d %s\n", i, after_chunk
-    }
-}' <<< "ATGCTCCTG ATGCACACG 3 10"
+        # Convert start and end positions to integers if they are non-empty strings
+        if (start != "" && start + 0 == start) {
+            start = (start > 1 ? start : 1)
+        } else {
+            start = 1
+        }
+        if (end != "" && end + 0 == end) {
+            end = (end < length(before) ? end : length(before))
+        } else {
+            end = length(before)
+        }
+        # Adjust width if the range is within the width
+        if (end - start + 1 < width) {
+            width = end - start + 1
+        }
+        # Iterate over each chunk of width
+        for (i = start; i <= end; i += width) {
+            before_chunk = substr(before, i, width)
+            after_chunk = substr(after, i, width)
+            # Construct annotation string for the current chunk
+            annotation_chunk = ""
+            for (j = 1; j <= width; j++) {
+                if (substr(before_chunk, j, 1) != substr(after_chunk, j, 1)) {
+                    annotation_chunk = annotation_chunk "↓"
+                } else {
+                    annotation_chunk = annotation_chunk " "
+                }
+            }
+            # Print the chunk with annotations
+            printf "%d %s\n", i, before_chunk
+            printf "  %s\n", annotation_chunk
+            printf "%d %s\n", i, after_chunk
+        }
+    }' <<< "ATGCTCCTG ATGCACACG 3 10"
 ```
