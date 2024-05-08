@@ -354,6 +354,40 @@ Amino acids:
 >
 >ATGGARTTYACNGTN
 
+* Generate consensus sequence.
+
+```
+awk 'BEGIN {     
+        hash["A"] = "A"; hash["C"] = "C"; hash["G"] = "G"; hash["T"] = "T";
+        hash["AG"] = "R"; hash["CT"] = "Y"; hash["CG"] = "S"; hash["AT"] = "W";
+        hash["GT"] = "K"; hash["AC"] = "M"; hash["CGT"] = "B"; hash["AGT"] = "D";
+        hash["ACT"] = "H"; hash["ACG"] = "V"; hash["ACGT"] = "N"; 
+    }
+    {
+        split($0, a, " ")
+        len = length(a[1])
+        res = ""
+        for (i = 1; i <= len; i++) {
+            tmp = ""
+            for (j in a) {
+                split(a[j], b, "")
+                if (tmp !~ b[i]) {
+                    tmp = tmp b[i]
+                }
+            }
+            sorted = ""
+            split(tmp, chars, "")
+            asort(chars)
+            for (k in chars) {
+                sorted = sorted chars[k]
+            }
+            res = res hash[sorted]
+        }
+        print res
+    }
+    ' <<< "ATG TTG CTG GTG"
+```
+
 * Evaluate primers (replace `GCAN` with desired primer sequence). This one-liner accepts Standard Ambiguity Codes.
 
 `awk -v primer="GCAN" 'function recwrap(str1, query1) {pos=""; end=0; return recfunc(str1, query1)} function recfunc(str2, query2) {if (match(str2, query2)!=0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos=pos (pos=="" ? "" : " ") "[" start "," end "]"; recfunc(substr(str2, RSTART+RLENGTH, length(str2)), query2)}; return pos} function primerregex(s) {hash["R"]="A G"; hash["Y"]="C T"; hash["S"]="G C"; hash["W"]="A T"; hash["K"]="G T"; hash["M"]="A C"; hash["B"]="C G T"; hash["D"]="A G T"; hash["H"]="A C T"; hash["V"]="A C G"; hash["N"]="A T G C"; tmp=s; m=split(tmp, a, ""); res=""; for (i=1; i<=m; i++) {gsub(/ /, "", hash[a[i]]); pos=(hash[a[i]]!="" ? "[" hash[a[i]] "]" : a[i]); res=res pos}; return res} BEGIN {IGNORECASE=1} /^>/ {getline seq; gsub(/^>/, "", $0); primer=primerregex(primer); loc=recwrap(seq, primer); if (loc!="") {print $0 "\t" original "\t" loc}}' file.fna`
