@@ -384,8 +384,7 @@ awk 'BEGIN {
             res = res hash[sorted]
         }
         print res
-    }
-    ' <<< "ATG TTG CTG GTG"
+    }' <<< "ATG TTG CTG GTG"
 ```
 
 * Evaluate primers (replace `GCAN` with desired primer sequence). This one-liner accepts Standard Ambiguity Codes.
