@@ -320,7 +320,65 @@ Amino acids:
 
 * Reverse translate amino acid sequence to nucleotide sequence in compressed format (please refer to the [Standard Ambiguity Codes](https://cran.r-project.org/web/packages/MLMOI/vignettes/StandardAmbiguityCodes.html)).
 
-`awk 'function reverse_translate(id, s) {hash["A"]="GCN"; hash["C"]="TGY"; hash["D"]="GAY"; hash["E"]="GAR"; hash["F"]="TTY"; hash["G"]="GGN"; hash["H"]="CAY"; hash["I"]="ATH"; hash["K"]="AAR"; hash["L"]="YTR CTN"; hash["M"]="ATG"; hash["N"]="AAY"; hash["P"]="CCN"; hash["Q"]="CAR"; hash["R"]="CGN MGR"; hash["S"]="TCN AGY"; hash["T"]="ACN"; hash["V"]="GTN"; hash["W"]="TGG"; hash["Y"]="TAY"; solutions=1; for (i in hash) {n=split(hash[i], a, " "); solutions*=entries[++j]=n; keys[j]=i; for (k=0; k<n; k++) {list[i][k]=a[k+1]}}; for (i=1; i<=solutions; i++) {idx=i; for (j=1; j<=length(entries); j++) {pairs[i][j]=keys[j] " " list[keys[j]][idx%entries[j]]; idx=int(idx/entries[j])}}; count=0; for (i in pairs) {count++; for (j in pairs[i]) {split(pairs[i][j], re, " "); for (m=1; m<=length(s); m++) {each=substr(s, m, 1); if (gsub(re[1], re[2], each)) {res[count][m]=each}}}}; for (i in res) {tmp=""; for (j in res[i]) {tmp=tmp "" res[i][j]}seen[id][tmp]++}; delete res; for (i in seen) {count=1; for (j in seen[i]) {print i (length(seen[i])>1 ? "_" count++ : "") "\n" j}}; delete seen} BEGIN {IGNORECASE=1} /^>/ {getline seq; reverse_translate($0, seq)}' file.faa`
+```
+awk 'function reverse_translate(id, s) {
+        hash["W"] = "TGG"; hash["Y"] = "TAY"; hash["C"] = "TGY"; hash["E"] = "GAR";
+        hash["K"] = "AAR"; hash["Q"] = "CAR"; hash["S"] = "WSN"; hash["L"] = "YTN";
+        hash["R"] = "MGN"; hash["G"] = "GGN"; hash["F"] = "TTY"; hash["D"] = "GAY";
+        hash["H"] = "CAY"; hash["N"] = "AAY"; hash["M"] = "ATG"; hash["A"] = "GCN"; 
+        hash["P"] = "CCN"; hash["T"] = "ACN"; hash["V"] = "GTN"; hash["I"] = "ATH"; 
+        hash["*"] = "TRR";
+        solutions=1 
+        for (i in hash) {
+            n = split(hash[i], a, " ")
+            solutions *= entries[++j] = n
+            keys[j] = i
+            for (k = 0; k < n; k++) {
+                list[i][k] = a[k+1]
+            }
+        }
+        for (i = 1; i <= solutions; i++) {
+            idx = i
+            for (j = 1; j <= length(entries); j++) {
+                pairs[i][j] = keys[j] " " list[keys[j]][idx % entries[j]]
+                idx = int(idx/entries[j])
+            }
+        }
+        count = 0
+        for (i in pairs) {
+            count++
+            for (j in pairs[i]) {
+                split(pairs[i][j], re, " ")
+                for (m = 1; m <= length(s); m++) {
+                    each = substr(s, m, 1)
+                    if (gsub(re[1], re[2], each)) {
+                        res[count][m] = each
+                    }
+                }
+            }
+        }
+        for (i in res) {
+            tmp=""
+            for (j in res[i]) {
+                tmp=tmp "" res[i][j]
+            }
+            seen[id][tmp]++
+        }
+        delete res
+        for (i in seen) {
+            count=1
+            for (j in seen[i]) {
+                print i (length(seen[i]) > 1 ? "_" count++ : "") "\n" j
+            }
+        }
+        delete seen
+    } 
+    BEGIN {IGNORECASE = 1} 
+    /^>/ {
+        getline seq
+        reverse_translate($0, seq)
+    }'
+```
 
 >**Input:**
 >
