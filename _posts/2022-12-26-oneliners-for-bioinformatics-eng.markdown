@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2024-05-04**
+**Last updated on 2024-05-13**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
@@ -824,6 +824,15 @@ I've made some improvements to make it more readable and easy to understand. Her
 * Subsample single-end reads in fasta format (can also be used for subsampling without replacement of sequences).
 
 `awk -v k=10000 -v seed=3 'BEGIN {srand(seed)} /^>/ {getline seq; s=(i++<k ? i-1 : int(rand()*i)); if (s<k) a[s]=$0 "\t" seq} END {for (i in a) {gsub(/\t/, "\n", a[i]); print a[i]}}' file.fasta`
+
+* Shuffle fasta.
+
+`awk -v seed=1 'BEGIN {srand(seed)} /^>/ {getline seq; a[s++]=$0 "\n" seq} END {for (i=0; i<s; i++) {idx[i]=i}; for (i=s; i>0; i--) {k=int(rand()*i); tmp=idx[k]; idx[k]=idx[i-1]; idx[i-1]=tmp}; for (i=0; i<s; i++) {print a[idx[i]]}}' file.fa`
+
+* Shuffle fastq.
+
+`awk -v seed=1 'BEGIN {srand(seed)} NR%4==1 && /^@/ {getline seq; getline id2; getline qual; a[s++]=$0 "\n" seq "\n" id2 "\n" 
+qual} END {for (i=0; i<s; i++) {idx[i]=i}; for (i=s; i>0; i--) {k=int(rand()*i); tmp=idx[k]; idx[k]=idx[i-1]; idx[i-1]=tmp}; for (i=0; i<s; i++) {print a[idx[i]]}}' file.fq`
 
 # Tips and tricks
 
