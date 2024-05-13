@@ -377,7 +377,7 @@ awk 'function reverse_translate(id, s) {
     /^>/ {
         getline seq
         reverse_translate($0, seq)
-    }'
+    }' file.faa
 ```
 
 >**Input:**
@@ -831,8 +831,7 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 * Shuffle fastq.
 
-`awk -v seed=1 'BEGIN {srand(seed)} NR%4==1 && /^@/ {getline seq; getline id2; getline qual; a[s++]=$0 "\n" seq "\n" id2 "\n" 
-qual} END {for (i=0; i<s; i++) {idx[i]=i}; for (i=s; i>0; i--) {k=int(rand()*i); tmp=idx[k]; idx[k]=idx[i-1]; idx[i-1]=tmp}; for (i=0; i<s; i++) {print a[idx[i]]}}' file.fq`
+`awk -v seed=1 'BEGIN {srand(seed)} NR%4==1 && /^@/ {getline seq; getline id2; getline qual; a[s++]=$0 "\n" seq "\n" id2 "\n" qual} END {for (i=0; i<s; i++) {idx[i]=i}; for (i=s; i>0; i--) {k=int(rand()*i); tmp=idx[k]; idx[k]=idx[i-1]; idx[i-1]=tmp}; for (i=0; i<s; i++) {print a[idx[i]]}}' file.fq`
 
 # Tips and tricks
 
