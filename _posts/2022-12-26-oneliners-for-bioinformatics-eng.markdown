@@ -416,10 +416,10 @@ awk 'function reverse_translate(id, s) {
 
 ```
 awk 'BEGIN {     
-        hash["A"] = "A"; hash["C"] = "C"; hash["G"] = "G"; hash["T"] = "T";
-        hash["AG"] = "R"; hash["CT"] = "Y"; hash["CG"] = "S"; hash["AT"] = "W";
-        hash["GT"] = "K"; hash["AC"] = "M"; hash["CGT"] = "B"; hash["AGT"] = "D";
-        hash["ACT"] = "H"; hash["ACG"] = "V"; hash["ACGT"] = "N"; 
+        hash["A"] = "A"; hash["T"] = "T"; hash["G"] = "G"; hash["C"] = "C";
+        hash["CG"] = "S"; hash["AT"] = "W"; hash["AG"] = "R"; hash["CT"] = "Y"; 
+        hash["GT"] = "K"; hash["AC"] = "M"; hash["CGT"] = "B"; hash["ACG"] = "V"; 
+        hash["ACT"] = "H"; hash["AGT"] = "D"; hash["ACGT"] = "N";
     }
     {
         split($0, a, " ")
