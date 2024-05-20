@@ -238,6 +238,56 @@ awk 'BEGIN {
 
 `awk '/^>patternA/ {f=1} /^>patternB/ {f=0} f' file.fa`
 
+* Map sequences.
+
+```
+awk '
+    function generate_regex(seq, regex, hash, i , nu) {
+        regex = ""
+        hash["A"] = "A"; hash["C"] = "C"; hash["G"] = "G"; hash["T"] = "T"
+        hash["R"] = "[AG]"; hash["Y"] = "[CT]"; hash["S"] = "[GC]"; hash["W"] = "[AT]"
+        hash["K"] = "[GT]"; hash["M"] = "[AC]"; hash["B"] = "[CGT]"; hash["D"] = "[AGT]"
+        hash["H"] = "[ACT]"; hash["V"] = "[ACG]"; hash["N"] = "[ACGT]"
+        for (i = 1; i <= length(seq); i++) {
+            nu = substr(seq, i, 1)
+            regex = regex "" hash[nu]
+        }
+        return regex
+    }
+    function find_match(seq1, seq2, min, max, query, reference, i, sub_reference, query_pattern, sub_reference_pattern) {
+        if (length(seq1) > length(seq2)) {
+            min = length(seq2)
+            max = length(seq1)
+            query = seq2
+            reference = seq1
+        } else {
+            min = length(seq1)
+            max = length(seq2)
+            query = seq1
+            reference = seq2
+        }
+        for (i = 1; i <= max - min; i++) {
+            sub_reference = substr(reference, i, min)
+            if (length(query) == length(sub_reference) && length(query) == min) {
+                query_pattern = generate_regex(query)
+                sub_reference_pattern = generate_regex(sub_reference)
+                if (query ~ sub_reference_pattern || sub_reference ~ query_pattern) {
+                    # Print query
+                    printf "%s\t", query
+                    # Highlight the match region in red
+                    printf "%s", substr(reference, 1, i - 1)
+                    printf "\033[31m%s\033[0m", substr(reference, i, min)
+                    printf "%s\t", substr(reference, i + min)
+                    # Print location
+                    printf "%d..%d\n", i, i + min - 1
+                }
+            }
+        }
+    }
+    FNR==NR {if (/^>/) {getline seq; a[$0]=seq}; next} /^>/ {getline seq; b[$0]=seq} END {for (i in a) {for (j in b) {find_match(a[i], b[j])}}}
+' file1.fa file2.fa
+```
+
 * Remove tandem repeats. Repeats of length from 2 to 6 are removed.  
 
 `awk -v k=6 'BEGIN {split("ATGC", a, ""); split("ATGC", b, ""); while (i<k-1) {i++; temp=""; for (m in a) {for (n in b) {temp=temp (temp ? " " : "") a[m] b[n]; c[i*(m*length(b)+n+1)]=a[m] b[n]}}; split(temp, b, " ")}; delete a; delete b} /^>/ {getline seq; a[$0]=seq} END {for (i in a) {for (j in c) {l=(length(c[j])>3 ? 4 : 8); regex="("c[j]"){"l",}"; if (match(a[i], regex)) {gsub(regex, "", a[i])}}; print i"\n"a[i]}}' file.fa`
