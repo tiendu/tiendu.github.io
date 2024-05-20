@@ -57,7 +57,7 @@ The available databases are shown in the stdout of `einfo -dbs` including:
 
 And we can check the available field that can be used in the query for nuccore database by using `einfo -db nuccore | xtract -pattern Field -element Name Description`.
 
-|Name|Descrition|
+|Name|Description|
 |---|---|
 |ALL|All terms from all searchable fields|
 |UID|Unique number assigned to each sequence|
