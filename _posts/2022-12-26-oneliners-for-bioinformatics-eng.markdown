@@ -462,7 +462,7 @@ awk 'function reverse_translate(id, s) {
 >
 >ATGGARTTYACNGTN
 
-* Generate consensus sequence.
+* Generate consensus sequence of sequences of same length.
 
 ```
 awk 'BEGIN {     
@@ -471,8 +471,12 @@ awk 'BEGIN {
         hash["GT"] = "K"; hash["AC"] = "M"; hash["CGT"] = "B"; hash["ACG"] = "V"; 
         hash["ACT"] = "H"; hash["AGT"] = "D"; hash["ACGT"] = "N";
     }
-    {
-        split($0, a, " ")
+    
+    /^>/ {
+        getline seq
+        a[++i] = seq
+    }
+    END {
         len = length(a[1])
         res = ""
         for (i = 1; i <= len; i++) {
@@ -492,7 +496,7 @@ awk 'BEGIN {
             res = res hash[sorted]
         }
         print res
-    }' <<< "ATG TTG CTG GTG"
+    }' file.fa
 ```
 
 * Evaluate primers (replace `GCAN` with desired primer sequence). This one-liner accepts Standard Ambiguity Codes.
