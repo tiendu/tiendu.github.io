@@ -1023,47 +1023,56 @@ awk 'function findrepeat(s) {
 * Highlight differences between two sequences of same length.
 
 ```
-awk -v width=5 '{
-        before = $1
-        after = $2
-        start = $3
-        end = $4
-        if (length(before) != length(after)) {
-            print "Error: strings are not of equal length"
+awk -v width=60 -v start=0 -v end=0 '
+BEGIN {
+    # Define ANSI color codes
+    RED = "\033[31m"
+    RESET = "\033[0m"
+}
+/^>/ {
+    getline seq
+    sequences[++count] = seq
+    len = length(seq)
+}
+END {
+    if (start == 0) {
+        start = 1
+    }
+    if (end == 0 || end > len) {
+        end = len
+    }
+    for (i in sequences) {
+        if (length(sequences[i]) != len) {
             exit 1
         }
-        # Convert start and end positions to integers if they are non-empty strings
-        if (start != "" && start + 0 == start) {
-            start = (start > 1 ? start : 1)
-        } else {
-            start = 1
+    }
+    for (pos = start; pos <= end; pos += width) {
+        chunk_end = (pos + width - 1 <= end) ? (pos + width - 1) : end
+        # Collect and compare characters for the current chunk
+        for (i = pos; i <= chunk_end; i++) {
+            for (j = 1; j <= count; j++) {
+                char_chunk[j][i] = substr(sequences[j], i, 1)
+            }
         }
-        if (end != "" && end + 0 == end) {
-            end = (end < length(before) ? end : length(before))
-        } else {
-            end = length(before)
-        }
-        # Adjust width if the range is within the width
-        if (end - start + 1 < width) {
-            width = end - start + 1
-        }
-        # Iterate over each chunk of width
-        for (i = start; i <= end; i += width) {
-            before_chunk = substr(before, i, width)
-            after_chunk = substr(after, i, width)
-            # Construct annotation string for the current chunk
-            annotation_chunk = ""
-            for (j = 1; j <= width; j++) {
-                if (substr(before_chunk, j, 1) != substr(after_chunk, j, 1)) {
-                    annotation_chunk = annotation_chunk "↓"
-                } else {
-                    annotation_chunk = annotation_chunk " "
+        for (i = pos; i <= chunk_end; i++) {
+            for (j = 1; j <= count; j++) {
+                for (k = j + 1; k <= count; k++) {
+                    if (char_chunk[j][i] != char_chunk[k][i]) {
+                        char_chunk[j][i] = RED char_chunk[j][i] RESET
+                        char_chunk[k][i] = RED char_chunk[k][i] RESET
+                    }
                 }
             }
-            # Print the chunk with annotations
-            printf "%d %s\n", i, before_chunk
-            printf "  %s\n", annotation_chunk
-            printf "%d %s\n", i, after_chunk
         }
-    }' <<< "ATGCTCCTG ATGCACACG 3 10"
+        # Print the chunk for each sequence
+        for (j = 1; j <= count; j++) {
+            for (i = pos; i <= chunk_end; i++) {
+                printf "%s", char_chunk[j][i]
+            }
+            printf "\n"
+        }
+        printf "\n"
+    }
+}
+' file.fa
 ```
