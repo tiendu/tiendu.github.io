@@ -1020,7 +1020,7 @@ awk 'function findrepeat(s) {
     }' file.fa
 ```
 
-* Highlight differences between two sequences of same length.
+* Highlight differences between sequences of same length.
 
 ```
 awk -v width=60 -v start=0 -v end=0 '
