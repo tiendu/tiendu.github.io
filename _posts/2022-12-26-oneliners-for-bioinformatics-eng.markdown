@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2024-05-13**
+**Last updated on 2024-06-17**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
@@ -1079,4 +1079,36 @@ END {
     }
 }
 ' file.fa
+```
+
+* Remove repetitive subsequences and keep only one occurrence.
+
+```
+awk '/^>/ {
+    getline seq
+    input = tolower(seq)      # Convert input to lowercase for case insensitivity
+    str_len = length(input)  # Length of the input string
+    found = 0
+
+    for (len = 21; len <= int(str_len / 2); len++) {
+        for (i = 1; i <= str_len - 2 * len + 1; i++) {
+            substr1 = substr(input, i, len)         # Extract first substring
+            substr2 = substr(input, i + len, len)   # Extract second substring
+            if (substr1 == substr2 && !(substr1 in seen)) {
+                seen[substr1] = 1
+                i += len - 1
+                found = 1
+            }
+        }
+    }
+
+    if (found == 0) {
+        print $0 "\n" seq
+    } else {
+        for (i in seen) {
+            gsub("(" i ")+", i, input)
+        }
+        print $0 "\n" input
+    }
+}' file.fa
 ```
