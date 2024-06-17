@@ -925,6 +925,10 @@ I've made some improvements to make it more readable and easy to understand. Her
 
 `awk -v k=n 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (t=length(s); t>0; t--) {o=o c[substr(s, t, 1)]}; return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); a[s]++; sum++}; for (j in a) {if (j==revcomp(j)) {printf "%s\t%s\t%.2f\n", $0, j, a[j]/sum}}; delete a}' file.fa`
 
+* Find all possible palindromes.
+
+`awk 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (t=length(s); t>0; t--) {o=o c[substr(s, t, 1)]}; return o} BEGIN {PROCINFO["sorted_in"]="@ind_str_desc"; OFS="\t"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=4; i<=length(seq); i+=2) {for (j=1; j<=length(seq)+1-i; j++) {s=substr(seq, j, i); if (s==revcomp(s)) {a[$0][s]++}}}} END {for (i in a) {for (j in a[i]) {is_substring=0; for (k in a[i]) {if (j!=k && index(k, j)>0) {is_substring=1; break}}; if (!is_substring) {b[i][j]=a[i][j]}}}; for (i in b) {for (j in b[i]) {print i, j, b[i][j]}}}' file.fa`
+
 * Find hairpin loops. Here the length of the loop is 20 with a spacer of 6.
 
 `awk -v k=14 -v g=6 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (t=length(s); t>0; t--) {o=o c[substr(s, t, 1)]}; return o} BEGIN {PROCINFO["sorted_in"]="@val_num_desc"} /^>/ {getline seq; sub(/^>/, "", $0); for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); a[s]++; sum++}; for (j in a) {head=substr(j, 0, length(j)/2-g/2); tail=substr(j, length(j)/2+1+g/2, length(j)); if (head=revcomp(tail)) {full=head ".{" g "}" tail; if (j~full) {printf "%s\t%s\t%.3f\n", $0, j, a[j]/sum}}}}' file.fa`
