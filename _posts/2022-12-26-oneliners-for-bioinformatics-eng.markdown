@@ -510,22 +510,7 @@ awk 'BEGIN {
 * Convert genbank format to fasta format.
 
 ```
-awk '/ACCESSION/ {
-        match($0, / +(.*)/, id)
-    } /ORIGIN/ {
-        seq=""; 
-        while ((getline line)>0) {
-            if (line ~ /\/\//) {
-                break
-            } else {
-                gsub(/[0-9]+/, "", line); 
-                seq=seq toupper(line)
-            }
-        }; 
-        gsub(/ /, "", seq)
-    } END {
-        print ">" id[1] "\n" seq
-    }' file.gb
+awk '/ACCESSION/ {match($0, / +(.*)/, id)} /SOURCE/ {match($0, / +(.*)/, src)} /ORIGIN/ {seq=""; while ((getline line)>0) {if (line ~ /\/\//) {break} else {gsub(/[0-9]+/, "", line); gsub(/\r/, "", line); seq=seq toupper(line)}}; gsub(/ /, "", seq)} END {print ">" (id[1] ~ /[[:alnum:]]/ ? id[1] "_" src[1] : src[1]) "\n" seq}' file.gb
 ```
 
 * Extract feature(s) from genbank and convert to fasta.
