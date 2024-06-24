@@ -1105,3 +1105,9 @@ awk '/^>/ {
     }
 }' file.fa
 ```
+
+* Split a line according to the desired length
+
+```
+awk -v n=40 '{ start = 1; while (start <= length($0)) { end = start + n - 1; if (end >= length($0)) { chunk = substr($0, start); print chunk; break } chunk = substr($0, start, n); if (substr($0, end + 1, 1) ~ /[a-zA-Z]/) { space_pos = match(chunk, / [^ ]*$/); if (space_pos > 0) { print substr($0, start, space_pos); start = start + space_pos } else { printf "%s-\n", chunk; start = end + 1 } } else { print chunk; start = end + 1 } } }' file.txt
+```
