@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2024-06-17**
+**Last updated on 2024-07-26**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
@@ -197,10 +197,21 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk '/^>/ {getline seq; f=!a[seq]++} f {print $0"\n"seq}' file.fa`
 
-* Deduplicate and remove sequences that match other longer sequences (set n with desired length to remove sequences shorter than it).
+* Deduplicate and remove sequences that match other longer sequences (including reverse complement).
 
 ```
-awk 'BEGIN {
+awk 'function revcomp(seq) {
+    comp["A"] = "T"; comp["T"] = "A"; comp["C"] = "G"; comp["G"] = "C";
+    comp["B"] = "V"; comp["D"] = "H"; comp["H"] = "D"; comp["K"] = "M";
+    comp["M"] = "K"; comp["N"] = "N"; comp["R"] = "Y"; comp["S"] = "S";
+    comp["V"] = "B"; comp["W"] = "W"; comp["Y"] = "R"
+    o = ""
+    for (len = length(seq); len > 0; len--) {
+        o = o comp[substr(seq, len, 1)]
+    }
+    return o
+    }
+    BEGIN {
         # Set the sorting order for arrays to numerical descending order
         PROCINFO["sorted_in"] = "@ind_num_desc"
         min = 0
@@ -214,10 +225,15 @@ awk 'BEGIN {
         for (i in a) {
             for (j in a[i]) {
                 for (k = 1; k <= length(j) + 1 - min; k++) {
-                    s = substr(j, k, min)
-                    if (!(b[s])) {
+                    f = substr(j, k, min)
+                    r = substr(revcomp(j), k, min)
+                    if (!(b[f]) || !(b[r])) {
                         c[j] = a[i][j]
-                        b[s] = 1
+                        if (!(b[f])) {
+                            b[f] = 1
+                        } else if (!(b[r])) {
+                            b[r] = 1
+                        }
                         continue
                     }
                 }
