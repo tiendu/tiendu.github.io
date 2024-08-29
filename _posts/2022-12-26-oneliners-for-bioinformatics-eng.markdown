@@ -169,7 +169,7 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Find the shortest, longest, and average length of all sequences.
 
-`awk '/^>/ {getline seq; sum+=a[$0]=length(seq)} END {asort(a); printf "Min: %d\tMax: %d\tMean: %d\n", a[1], a[length(a)], sum/length(a)}' file.fa`
+`awk '/^>/ {getline seq; sum+=a[n++]=length(seq)} END {asort(a); printf "Min: %d\tMax: %d\tMean: %d\n", a[1], a[length(a)], sum/n}' file.fa`
 
 * Find the sequence(s) with the shortest and longest length.
 
