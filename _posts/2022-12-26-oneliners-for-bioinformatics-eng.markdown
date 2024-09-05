@@ -1127,3 +1127,20 @@ awk '/^>/ {
 ```
 awk -v n=40 '{ start = 1; while (start <= length($0)) { end = start + n - 1; if (end >= length($0)) { chunk = substr($0, start); print chunk; break } chunk = substr($0, start, n); if (substr($0, end + 1, 1) ~ /[a-zA-Z]/) { space_pos = match(chunk, / [^ ]*$/); if (space_pos > 0) { print substr($0, start, space_pos); start = start + space_pos } else { printf "%s-\n", chunk; start = end + 1 } } else { print chunk; start = end + 1 } } }' file.txt
 ```
+
+* Split a file according to certain characters
+
+```
+awk -v delimiter="^//" -v prefix="output_file_prefix_" -v extension=".ext" '{
+    if ($0 ~ delimiter) {
+        if (line) {
+            print line > prefix ++count extension
+        }
+        line = ""
+        next
+    }
+    line = line $0 (line == "" ? "" : "\n")
+} END {
+    if (line) print line > prefix ++count extension
+}' file.txt
+```
