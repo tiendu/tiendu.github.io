@@ -179,9 +179,35 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 `awk -v id="" -v start=n -v end=m '($0~">"id) {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j s[i]}; print $0"\n"j}' file.fa`
 
-* Locate a region of a sequence (set query with a desired pattern).
+* Locate a region of a sequence (set query with a desired pattern, accept regex). 
 
-`awk -v query="NTG" 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (i=length(s); i>0; i--) {o=o c[substr(s, i, 1)]}; return o} function genregex(str) {hash["A"]="A"; hash["T"]="T"; hash["G"]="G"; hash["C"]="C"; hash["R"]="[AG]"; hash["Y"]="[CT]"; hash["S"]="[GC]"; hash["W"]="[AT]"; hash["K"]="[GT]"; hash["M"]="[AC]"; hash["B"]="[CGT]"; hash["D"]="[AGT]"; hash["H"]="[ACT]"; hash["V"]="[ACG]"; hash["N"]="[ATGC]"; regex=""; for (i=1; i<=length(str); i++) {regex=regex hash[substr(str, i, 1)]}; return regex} function recwrap(str1, query1) {pos=""; end=0; return recfunc(str1, query1)} function recfunc(str2, query2) {if (match(str2, query2)!=0) {start=end+RSTART; end=end+RSTART+RLENGTH-1; pos=pos (pos=="" ? "" : " ") start ".." end; recfunc(substr(str2, RSTART+RLENGTH, length(str2)), query2)}; return pos} /^>/ {getline seq; gsub(/^>/, "", $0); loc=recwrap(seq, genregex(query)); if (loc!="") {print $0 "\t" loc "\t1"} else {loc=recwrap(seq, revcomp(genregex(query))); if (loc!="") {split(loc, revloc, /\.\./); print $0 "\t" length(seq)-revloc[2]+1 ".." length(seq)-revloc[1]+1 "\t-1"}}}' file.fa`
+```
+awk -v query="<pattern>" '
+    function revcomp(s) {
+        c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; 
+        for (i=length(s); i>0; i--) {o=o c[substr(s, i, 1)]}; 
+        return o
+    } 
+    function genregex(str) {
+        hash["A"]="A"; hash["T"]="T"; hash["G"]="G"; hash["C"]="C"; 
+        hash["R"]="[AG]"; hash["Y"]="[CT]"; hash["S"]="[GC]"; hash["W"]="[AT]"; hash["K"]="[GT]"; hash["M"]="[AC]"; 
+        hash["B"]="[CGT]"; hash["D"]="[AGT]"; hash["H"]="[ACT]"; hash["V"]="[ACG]"; 
+        hash["N"]="[ATGC]"; 
+        regex=""; 
+        for (i=1; i<=length(str); i++) {if (hash[substr(str, i, 1)]) {regex=regex hash[substr(str, i, 1)]} else {regex=regex substr(str, i, 1)}};
+        return regex
+    } 
+    function recwrap(str1, query1) {
+        pos=""; end=0; 
+        return recfunc(str1, query1)
+    } 
+    function recfunc(str2, query2) {
+        if (match(str2, query2)!=0) {
+            start=end+RSTART; end=end+RSTART+RLENGTH-1; pos=pos (pos=="" ? "" : " ") start ".." end; 
+            recfunc(substr(str2, RSTART+RLENGTH, length(str2)), query2)}; 
+            return pos
+    } /^>/ {getline seq; gsub(/^>/, "", $0); loc=recwrap(seq, genregex(query)); if (loc!="") {print $0 "\t" loc "\t1"} else {loc=recwrap(seq, revcomp(genregex(query))); if (loc!="") {split(loc, revloc, /\.\./); print $0 "\t" length(seq)-revloc[2]+1 ".." length(seq)-revloc[1]+1 "\t-1"}}}' file.fa
+```
 
 * Get the reverse complement of each sequence.
 
