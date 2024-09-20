@@ -192,7 +192,7 @@ awk -v id="" -v start=n -v end=m -v rc="" '
             j=j s[i]
         };
         if (rc) {
-            print $0 "\n" j
+            print $0 "\n" revcomp(j)
         } else {
             print $0 "\n" j
         }
