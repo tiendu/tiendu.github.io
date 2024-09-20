@@ -4,7 +4,7 @@ title:  "Useful oneliners for bioinformatics"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2024-07-26**
+**Last updated on 2024-09-20**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
@@ -177,7 +177,27 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 
 * Extract a region of a sequence e.g., a gene from a contig (replace "" for id, n for the starting position and m for the end position accordingly, following 1-based indexing).
 
-`awk -v id="" -v start=n -v end=m '($0~">"id) {getline seq; split(seq, s, ""); j=s[start]; for (i=start+1; i<=end; i++) {j=j s[i]}; print $0"\n"j}' file.fa`
+```
+awk -v id="" -v start=n -v end=m -v rc="" '
+    function revcomp(s) {
+        c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; 
+        for (i=length(s); i>0; i--) {o=o c[substr(s, i, 1)]}; 
+        return o
+    } 
+    ($0~">"id) {
+        getline seq; 
+        split(seq, s, ""); 
+        j=s[start]; 
+        for (i=start+1; i<=end; i++) {
+            j=j s[i]
+        };
+        if (rc) {
+            print $0 "\n" j
+        } else {
+            print $0 "\n" j
+        }
+    }' file.fa`
+```
 
 * Locate a region of a sequence (set query with a desired pattern, accept regex). 
 
