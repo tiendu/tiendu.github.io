@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Guide to download datasets from NCBI"
+title:  "Guide to Download Datasets from NCBI"
 date:   2022-12-26
 categories: [guide, english, bioinformatics]
 ---
