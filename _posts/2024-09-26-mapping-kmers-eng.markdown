@@ -59,7 +59,7 @@ This algorithm can be useful in many areas of bioinformatics, such as:
 
 Let’s say you have a query sequence (maybe a gene of interest) and you want to compare it to a reference genome in FASTA format. By running this algorithm, you can easily find regions of similarity between the query and reference sequences. The algorithm outputs matches, taking into account your desired similarity score and the coverage you want to achieve.
 
-## Example
+### Example
 
 Let’s say we have the following sequences:
 
@@ -69,7 +69,7 @@ Let’s say we have the following sequences:
 
 Ambiguous nucleotides are represented by special characters, such as N, which can stand for any nucleotide (A, T, G, or C).
 
-### Step 1: Break the Sequences into K-mers
+#### Step 1: Break the Sequences into K-mers
 
 We’ll choose `k = 3` to keep things simple and generate 3-mers.
 
@@ -77,7 +77,7 @@ We’ll choose `k = 3` to keep things simple and generate 3-mers.
 
 * Reference k-mers: `GCG, CGN, GNA, NAT`
 
-### Step 2: Handle Ambiguous Nucleotides
+#### Step 2: Handle Ambiguous Nucleotides
 
 When dealing with ambiguous nucleotides like N, the algorithm considers all possible nucleotides at that position. For instance:
 
@@ -85,7 +85,7 @@ N can represent A, T, G, or C.
 
 So, k-mer comparisons that involve ambiguous nucleotides will match any possible valid nucleotide.
 
-### Step 3: Convert K-mers into Binary (for Concept)
+#### Step 3: Convert K-mers into Binary (for Concept)
 
 Each nucleotide is converted into its binary form, with N being encoded in a way that allows flexibility. Here’s an example of a simple encoding:
 
@@ -97,7 +97,7 @@ C = 1000
 N (ambiguous) = 1111 (to represent any nucleotide)
 ```
 
-### Step 4: Compare the K-mers
+#### Step 4: Compare the K-mers
 
 Now, the algorithm compares k-mers between the query and reference sequences. Since N can be any base, k-mers containing N are considered flexible matches. Let’s go through the comparison:
 
@@ -114,7 +114,8 @@ NGC (query NGC matches with reference CGN, considering N can be any base)
 
 In this case, even though there are ambiguous nucleotides, the algorithm treats them flexibly and matches them to any possible nucleotide.
 
-### Step 5: Calculate the Similarity Score
+#### Step 5: Calculate the Similarity Score
+
 Now that we’ve found the matching k-mers, the algorithm calculates the similarity score:
 
 * Total Query k-mers: `4`
@@ -129,7 +130,6 @@ Similarity Score = Matching k-mers / Total Query k-mers = 2 / 4 = 0.5
 
 This means that 50% of the k-mers from the query sequence match with the reference sequence.
 
-### Step 6: Reverse Complement Matching (Optional)
+#### Step 6: Reverse Complement Matching (Optional)
 
 If we were to generate the reverse complement of the query sequence, the algorithm would repeat the k-mer extraction and comparison process, ensuring that matches are detected regardless of strand orientation.
-
