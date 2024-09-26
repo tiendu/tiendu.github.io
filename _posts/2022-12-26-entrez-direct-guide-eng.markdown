@@ -4,49 +4,104 @@ title:  "Guide to download datasets from NCBI"
 date:   2022-12-26
 categories: [guide, english, bioinformatics]
 ---
-**Last updated on 2023-02-12**
+**Last updated on 2024-09-26**
 
-"How to get datasets for practice?" This was a question for many (including me) when first started to learn bioinformatics. We need datasets to practice skills that we learn in the tutorials and the dataset has to be as realistic as possible and close to what we will face in real life situation and the future. So what will we do?
+When I first started learning bioinformatics, I had a common question: _"Where can I find datasets to practice my skills?"_ We need realistic datasets that mirror the challenges we’ll encounter in real-life research or projects. In this guide, I’ll walk you through downloading datasets from NCBI using two powerful tools: **entrez-direct** and **sra-tools**. Additionally, NCBI offers a tool called [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) for downloading large genome datasets, which might be helpful for some users.
 
-In this guide, we're gonna use _entrez-direct_ and _sra-tools_ provided by NCBI (FYI, NCBI also released a tool called [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) which is good for downloading large genome datasets). For the time being, to be able to utilise this guide, one should have knowledge of these:
+Before we begin, you’ll need the following:
 
-1. Ubuntu (WSL is also fine)
+* Ubuntu (or WSL on Windows)
 
-2. (Mini)conda or Mamba
+* (Mini)conda or Mamba (for package management)
 
-3. Basic usage of Linux/Unix command-line tools
+* Basic knowledge of Linux/Unix command-line tools
 
-4. Basic usage of regular expression
+* Familiarity with regular expressions
 
-5. Basic usage of NCBI search
+* Understanding of NCBI search parameters
 
-We'll begin with installing _entrez-direct_ and _sra-tools_ by using Mamba:
 
-`mamba install -c bioconda entrez-direct`
+# Step 1: Install Entrez-Direct and SRA-Tools
 
-`mamba install -c bioconda sra-tools`
+First, install the required tools using Mamba (Mamba is my preference due to its speed):
 
-After entrez-direct is installed, we'll use esearch to search the NCBI (for the available fields to be used, please read the manual for NCBI search [1]). To know more about the parameters of esearch and efetch, again please find their manual [2]. In the example below, I'll use the information provided by NCBI Taxonomy Browser to look for the topic that I'd like to investigate.
+`mamba install -c bioconda entrez-direct sra-tools`
 
-`esearch -db bioproject -query "txid408169[Organism] AND Vietnam[Title]" | efetch -format native | awk 'BEGIN {RS="\n"; ORS="\t"} {print}' | sed -E '1 s/^\t//;s/\t{3}/\n/g' | sed -E 's/^[0-9]*\. //' | awk 'BEGIN {FS=OFS="\t"} {match($0, /BioProject Accession: (.*)\tID: (.*)/, array); print $1, array[1], array[2]}'`
+# Step 2: Search and Fetch Data with Entrez-Direct
 
-In the example, I have searched the database _bioproject_ with the query _txid408169_ (representing metagenomes in the field Organism [3]) and Vietnam (in the field Title). After that, I pipe the output to _efetch_ and put it under the format _native_. The raw result will be processed later with _awk_ and _sed_. Then, I will have a table with 3 columns: column 1 is the _BioProject Title_ (the name of the study), column 2 is the _BioProject Accession_, and column 3 is the ID (we're gonna use either the _BioProject Accession_ or the _ID_ to retrieve the reads).
+Once installed, we’ll use **esearch** (from entrez-direct) to query the NCBI database. To learn more about available search fields, refer to the [NCBI search manual](https://www.ncbi.nlm.nih.gov/books/NBK49540/).
 
-Here, I choose a study in Vietnam about Norovirus with the accession being _PRJDB5922_ as an example. I also use awk to make it easier to visualize as the original table will be in comma-delimited format and it's awful to look at in the terminal. Otherwise, you can keep it as a csv and view it in any editor.
+In this example, I’ll search the bioproject database for metagenomes related to Vietnam using NCBI’s taxonomy ID system:
 
-`esearch -db sra -query "PRJDB5922" | efetch -format runinfo | awk 'BEGIN {RS=","; ORS="\t"} {print}'`
+```
+esearch -db bioproject -query "txid408169[Organism] AND Vietnam[Title]" \
+| efetch -format native \
+| awk 'BEGIN {RS="\n"; ORS="\t"} {print}' \
+| sed -E '1 s/^\t//;s/\t{3}/\n/g' \
+| sed -E 's/^[0-9]*\. //' \
+| awk 'BEGIN {FS=OFS="\t"} {match($0, /BioProject Accession: (.*)\tID: (.*)/, array); print $1, array[1], array[2]}'
+```
 
-I now have some basic information e.g., the sequencing technology used was 454, and it was amplicon sequencing, the source being RNA, etc. I'll redo the step above and pipe it to the other tools to process.
+This command searches for metagenomes (taxonomy ID `txid408169`) in `Vietnam`. The result is piped through efetch, formatted as native, and processed with awk and sed to generate a table with three columns:
 
-`esearch -db sra -query "PRJDB5922" | efetch -format runinfo | awk 'BEGIN {RS=","; ORS="\t"} {print}' | awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}' | head -n 3 | xargs -n 1 -P 4 fastq-dump --gzip --split-files --skip-technical --split-spot`
+* BioProject Title (Study Name)
 
-I select the first column with `awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}'`. Then, I use `head -n 3` to get only the first three datasets. In the last command, xargs, I set the number of argument `-n` being 1 and the number of CPUs `-P` being 4. Next, _fastq-dump_ will be used to download the datasets. I download the file in `--gzip`, `--skip-technical`, `--split-files` and `--split-spot`. After the download is finished, I'll have three datasets for practice.
+* BioProject Accession
 
-Also, you can download other datasets e.g., protein, nucleotide by changing the parameter for database `-db` in esearch.
+* BioProject ID (needed for retrieving reads)
 
-For example, with `esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]" | efetch -format fasta` I can find the sequences of RNA-dependent RNA-polymerase (RdRp) in RefSeq database that belong to virus (txid10239 is the taxonomy id of virus in NCBI); or with `esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]" | efetch -format fasta` I can retrieve the beta toxin (cpb) belonging to _C. perfringens_.
+# Step 3: Downloading Data from SRA
 
-The available databases are shown in the stdout of `einfo -dbs` including:
+Let’s say you found a BioProject related to Norovirus with the accession `PRJDB5922`. To retrieve sequence data from this project, we query the SRA (Sequence Read Archive):
+
+```
+esearch -db sra -query "PRJDB5922" \
+| efetch -format runinfo \
+| awk 'BEGIN {RS=","; ORS="\t"} {print}'
+```
+This will output a table with details such as the sequencing platform, source type (e.g., RNA), and more. Now, let’s download the first three datasets from this project:
+
+```
+esearch -db sra -query "PRJDB5922" \
+| efetch -format runinfo \
+| awk 'BEGIN {FS=OFS="\t"} NR > 1 {if ($1 != "") print $1}' \
+| head -n 3 \
+| xargs -n 1 -P 4 fastq-dump --gzip --split-files --skip-technical --split-spot
+```
+
+Here, we select the first three datasets using awk and head. The fastq-dump command downloads the FASTQ files with the following options:
+
+* `--gzip`: Compress output files
+
+* `--split-files`: Split paired-end reads into separate files
+
+* `--skip-technical`: Skip technical reads
+
+* `--split-spot`: Split reads based on spot layout
+
+# Additional Tips
+
+## Retrieving Datasets from Other Databases
+
+You can also retrieve protein, nucleotide, or other datasets by specifying a different database (-db). For example: 
+
+* To get RNA-dependent RNA polymerase (RdRp) sequences from the RefSeq database for viruses:
+
+```
+esearch -db nuccore -query "RdRp[GENE] AND txid10239[ORGN] AND RefSeq[FILT]" \
+| efetch -format fasta
+```
+
+* To retrieve beta toxin (cpb) sequences from _C. perfringens_:
+
+```
+esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]" \
+| efetch -format fasta
+```
+
+## Checking Available Databases and Fields
+
+* To list all available databases, run: `einfo -dbs`
 
 >annotinfo, assembly, biocollections, bioproject, biosample, 
 >blastdbinfo, books, cdd, clinvar, dbvar, gap, gapplus, gds, 
@@ -55,7 +110,7 @@ The available databases are shown in the stdout of `einfo -dbs` including:
 >pccompound, pcsubstance, pmc, popset, protein, proteinclusters, 
 >protfam, pubmed, seqannot, snp, sra, structure, taxonomy
 
-And we can check the available field that can be used in the query for nuccore database by using `einfo -db nuccore | xtract -pattern Field -element Name Description`.
+* To view searchable fields for a specific database (e.g., nuccore), use: `einfo -db nuccore | xtract -pattern Field -element Name Description`. Here’s a small snippet of what you’ll find:
 
 |Name|Description|
 |---|---|
@@ -64,48 +119,29 @@ And we can check the available field that can be used in the query for nuccore d
 |FILT|Limits the records|
 |WORD|Free text associated with record|
 |TITL|Words in definition line|
-|KYWD|Nonstandardized terms provided by submitter|
-|AUTH|Author(s) of publication|
-|JOUR|Journal abbreviation of publication|
-|VOL|Volume number of publication|
-|ISS|Issue number of publication|
-|PAGE|Page number(s) of publication|
-|ORGN|Scientific and common names of organism, and all higher levels of taxonomy|
-|ACCN|Accession number of sequence|
-|PACC|Does not include retired secondary accessions|
-|GENE|Name of gene associated with sequence|
-|PROT|Name of protein associated with sequence|
-|ECNO|EC number for enzyme or CAS registry number|
-|PDAT|Date sequence added to GenBank|
-|MDAT|Date of last update|
-|SUBS|CAS chemical name or MEDLINE Substance Name|
-|PROP|Classification by source qualifiers and molecule type|
-|SQID|String identifier for sequence|
-|GPRJ|BioProject|
-|SLEN|Length of sequence|
-|FKEY|Feature annotated on sequence|
-|PORG|Scientific and common names of primary organism, and all higher levels of taxonomy|
-|COMP|Component accessions for an assembly|
-|ASSM|Assembly|
-|DIV|Division|
-|STRN|Strain|
-|ISOL|Isolate|
-|CULT|Cultivar|
-|BRD|Breed|
-|BIOS|BioSample|
+|...|...|
 
-Let's say we want to get the RefSeq assembly of _C. perfringens_, we can use the command: 
+# Example
 
-`esearch -db assembly -query "txid10239[ORGN]" | efetch -format docsum | xtract -pattern DocumentSummary -element FtpPath_RefSeq | xargs -P 3 -I {} bash -c 'name=$(basename {}); curl -o "${name}_genomic.fna.gz" {}/"${name}_genomic.fna.gz"'`
+To download RefSeq assemblies for _C. perfringens_, use:
 
-... Or the _.gbff_ of the genus Flavivirus:
+```
+esearch -db assembly -query "txid10239[ORGN]" \
+| efetch -format docsum \
+| xtract -pattern DocumentSummary -element FtpPath_RefSeq \
+| xargs -P 3 -I {} bash -c 'name=$(basename {}); curl -o "${name}_genomic.fna.gz" {}/"${name}_genomic.fna.gz"'
+```
 
-`esearch -db assembly -query "txid11051[ORGN]" | efetch -format docsum | xtract -pattern DocumentSummary -element FtpPath_RefSeq | sed 's/$/\/*genomic.gbff.gz/' | xargs -P 3 wget -c -nd; sleep 3s`
+Or download the .gbff files for Flavivirus:
 
-For those experienced bioinformaticians, _entrez-direct_ and _sra-toolkit_ are great tools. They'll surely help you when it's inefficient and problematic to download a large number of datasets manually. When chained together with other Linux/Unix command-line tools, it's also easy to automate.
+```
+esearch -db assembly -query "txid11051[ORGN]" \
+| efetch -format docsum \
+| xtract -pattern DocumentSummary -element FtpPath_RefSeq \
+| sed 's/$/\/*genomic.gbff.gz/' \
+| xargs -P 3 wget -c -nd
+```
 
-[1] <https://www.ncbi.nlm.nih.gov/books/NBK49540/>
+# Conclusion
 
-[2] <https://www.ncbi.nlm.nih.gov/books/NBK25501/>
-
-[3] <https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=408169>
+For bioinformatics professionals, tools like entrez-direct and sra-tools are invaluable for efficiently downloading large datasets. Combined with other Linux command-line utilities, they can be powerful components in automation workflows.
