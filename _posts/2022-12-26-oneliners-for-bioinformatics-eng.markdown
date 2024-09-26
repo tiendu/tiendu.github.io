@@ -1,9 +1,10 @@
 ---
 layout: post
-title:  "Useful oneliners for bioinformatics"
+title:  "Useful Bioinformatics One-liners"
 date:   2022-12-20
 categories: [guide, english, bioinformatics]
 ---
+
 **Last updated on 2024-09-20**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
@@ -1190,3 +1191,7 @@ awk -v delimiter="^//" -v prefix="output_file_prefix_" -v extension=".ext" '{
     if (line) print line > prefix ++count extension
 }' file.txt
 ```
+
+* Skip a section based on the pattern
+
+`awk -v patternA="START" -v patternB="END" '/patternA/ {skip=1; next} /patternB/ {skip=0} !skip' file.txt`
