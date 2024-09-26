@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Hierarchical function classification using UniProt and KEGG"
+title:  "Hierarchical Function Classification using UniProt and KEGG"
 date:   2023-01-22
 categories: [guide, english, bioinformatics]
 ---
