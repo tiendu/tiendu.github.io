@@ -25,6 +25,40 @@ To make the process even faster, each nucleotide (A, T, G, C) is mapped to a uni
 
 This allows us to compare k-mers using bitwise operations, which are really quick! Even ambiguous bases, like 'N', can be handled with their own binary codes. By converting everything into bits, the algorithm becomes both compact and lightning fast.
 
+Here’s a breakdown of the full nucleotide-to-binary encoding used in the algorithm:
+
+```
+'A': 0b0001,  # A = 1
+'T': 0b0010,  # T = 2
+'G': 0b0100,  # G = 4
+'C': 0b1000,  # C = 8
+'W': 0b0011,  # W = A | T = 3 (A or T)
+'R': 0b0101,  # R = A | G = 5 (A or G)
+'Y': 0b1010,  # Y = C | T = 10 (C or T)
+'S': 0b1100,  # S = G | C = 12 (G or C)
+'K': 0b0110,  # K = G | T = 6 (G or T)
+'M': 0b1001,  # M = A | C = 9 (A or C)
+'B': 0b1110,  # B = C | G | T = 14 (C, G, or T)
+'D': 0b0111,  # D = A | G | T = 7 (A, G, or T)
+'H': 0b1011,  # H = A | C | T = 11 (A, C, or T)
+'V': 0b1101,  # V = A | C | G = 13 (A, C, or G)
+'N': 0b1111   # N = A | C | G | T = 15 (any nucleotide)
+```
+
+This encoding allows for fast bitwise comparisons:
+
+* Exact matches are determined by comparing the binary representations.
+
+* For ambiguous nucleotides, bitwise OR operations are used to match any of the possible nucleotides they represent.
+
+For example, if you're comparing R (A or G) with A, the algorithm uses bitwise operations like this:
+
+```
+R (A|G) = 0101
+A = 0001
+0101 & 0001 = 0001 (match!)
+```
+
 ## How the Matching Works
 
 At the core of the algorithm is the process of matching k-mers between the query sequence and a reference sequence:
