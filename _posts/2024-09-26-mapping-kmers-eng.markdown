@@ -75,7 +75,7 @@ DNA sequences can be read in both directions, so it’s important to consider th
 
 ## Handling Circular Sequences
 
-Some sequences, like plasmids or viral genomes, are circular. The algorithm treats circular sequences by simply appending the sequence to itself and checking for matches in this extended version. This way, even if a match wraps around the sequence, it will be detected.
+Some sequences, like plasmids or viral genomes, are circular. The algorithm treats circular sequences by simply appending the sequence to itself and checking for matches in this extended version. This way, even if a match wraps around the sequence, it will be detected. For example, `ATCGTA` would become `ATCGTAATCGTA`.
 
 # Practical Applications
 
