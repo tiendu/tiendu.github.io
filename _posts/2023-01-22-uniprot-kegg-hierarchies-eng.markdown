@@ -5,36 +5,61 @@ date:   2023-01-22
 categories: [guide, english, bioinformatics]
 ---
 
-"How do we know which functional group(s) the gene of interest belongs to?" I have this question in mind while doing many metagenomic projects and recently I've found out there's an easy way to figure out which groups the function assigned to the gene belong to using KEGG and UniProt.
+# Introduction
 
-KEGG is a well-known database for pathway studies. More than that, it also offers an inside look into the gene functions in a hierarchical classification approach. There was a hierarchical classification database called SEED, but it was no longer maintained as far as I know. KEGG BRITE is a part of KEGG and it provides functional hierarchies of several biological objects including: 
+When working on metagenomic projects, a common question arises: _"How do we determine which functional group(s) a gene of interest belongs to?"_ In this guide, I will demonstrate an easy and effective way to classify genes using the KEGG and UniProt databases.
 
-- genes and proteins,
-- compounds and reactions,
-- drugs,
-- diseases,
-- organisms and viruses.
+**KEGG** (Kyoto Encyclopedia of Genes and Genomes) is a widely known resource for studying biological pathways. Beyond pathways, KEGG also provides insight into gene functions through a hierarchical classification system called KEGG BRITE, which organizes biological objects such as:
 
-In this guide, I’ll show you how we can utilise the UniProt database and the KEGG database to understand better the function of the classified genes and which functional groups they belong to.
+* Genes and proteins
+* Compounds and reactions
+* Drugs
+* Diseases
+* Organisms and viruses
 
-First, we need to download the Swiss-Prot database from Uniprot and the KEGG BRITE hierarchies
+By combining KEGG BRITE with UniProt, you can categorize genes into their respective functional hierarchies. This tutorial will guide you through the steps to achieve this classification efficiently.
 
-- [UniProt Swiss-Prot](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz)
-- [KEGG BRITE](https://rest.kegg.jp/get/br:ko00001/json)
+# Step 1: Download Necessary Databases
 
-Unzipping the downloaded Swiss-Prot file will give us a fasta file (with approx. 568,000 records) from which we can extract the UniProt ID, and by using the KEGG API, we can convert the UniProt ID into the Gene ID in KEGG’s classification system. After that, we can find their KO IDs represented in the hierarchy from these Gene IDs. Using the below command, we will have a table with three columns, one for the UniProt ID and the other two for the Gene ID and the KO ID.
+First, download the following datasets:
 
-`for i in $(awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}'; done > uniprot_genes_ko.tsv`
+* [UniProt Swiss-Prot](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz)
+* [KEGG BRITE](https://rest.kegg.jp/get/br:ko00001/json)
 
-The above step will take some time to finish since we have to use KEGG API to retrieve the information from the website. Although there's a way to use xargs to have multiple connections to the site by setting the number of processes through the parameter `-P`, the firewall may detect that we are having way too many connections, so please use it with cautions. I've tested several times and 3 seems to be the maximum connections allowed at a time.
+After downloading and unzipping the UniProt Swiss-Prot file, you will get a FASTA file containing approximately 568,000 records. This will be used to extract UniProt IDs and map them to KEGG gene IDs, which will help link these genes to functional KO (KEGG Orthology) IDs.
 
-`awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta | xargs -P 3 -I {} bash -c 'awk -v uniprot_id={} '\''BEGIN {FS=OFS="\t"; "curl -s -L https://rest.kegg.jp/conv/genes/uniprot:" uniprot_id | getline conv; split(conv, arr, "\t"); "curl -s -L https://rest.kegg.jp/link/ko/" arr[2] | getline link; if (link!="") print arr[1], link}'\'' >> uniprot_genes_ko.tsv'`
+# Step 2: Map UniProt IDs to KEGG Gene and KO IDs
 
-While waiting, we can convert the json file for KEGG BRITE into tsv format using this command.
+We will map the UniProt IDs to KEGG gene IDs and KO IDs using the KEGG API. You can use the following command to create a table with UniProt ID, KEGG Gene ID, and KO ID:
 
-`sed -E 's/^\t{2}"name"/\t\t"level 1"/g;s/^\t{3}"name"/\t\t\t"level 2"/g;s/^\t{4}"name"/\t\t\t\t"level 3"/g;s/^\t{5}"name"/\t\t\t\t\t"level 4"/g' json | awk 'BEGIN {OFS="\t"} NR > 4 {match($0, /"([^"]+)": *("[^"]*")/, a)} {tag = a[1]; val = gensub(/^"|"$/, "", "g", a[2]); f[tag] = val; if (tag == "level 4") {print f["level 1"], f["level 2"], f["level 3"], f["level 4"]}}' > brite.tsv`
+```
+for i in $(awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta); do
+  curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}';
+done > uniprot_genes_ko.tsv
+```
 
-We'll have a table like this after conversion from json to tsv. These are some first few rows. Still, we need to reorganise and fix some content before we can merge it with the UniProtID.
+This command retrieves the gene and KO IDs from KEGG and stores them in a TSV file. Since the process can take a long time, consider limiting the number of simultaneous connections using the xargs command:
+
+```
+awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta | xargs -P 3 -I {} bash -c '
+  awk -v uniprot_id={} '\''BEGIN {FS=OFS="\t"; "curl -s -L https://rest.kegg.jp/conv/genes/uniprot:" uniprot_id | getline conv; split(conv, arr, "\t"); "curl -s -L https://rest.kegg.jp/link/ko/" arr[2] | getline link; if (link!="") print arr[1], link}'\''
+  >> uniprot_genes_ko.tsv'
+```
+
+**⚠️ Note**: Limit the number of parallel connections to 3 to avoid being blocked by the KEGG firewall.
+
+# Step 3: Convert KEGG BRITE JSON to TSV Format
+
+Next, convert the KEGG BRITE hierarchical data from JSON to TSV format:
+
+```
+sed -E 's/^\t{2}"name"/\t\t"level 1"/g; s/^\t{3}"name"/\t\t\t"level 2"/g; s/^\t{4}"name"/\t\t\t\t"level 3"/g; s/^\t{5}"name"/\t\t\t\t\t"level 4"/g' json | awk '
+BEGIN {OFS="\t"} 
+NR > 4 {match($0, /"([^"]+)": *("[^"]*")/, a)} 
+{tag = a[1]; val = gensub(/^"|"$/, "", "g", a[2]); f[tag] = val; if (tag == "level 4") {print f["level 1"], f["level 2"], f["level 3"], f["level 4"]}}' > brite.tsv
+```
+
+This will generate a hierarchical table in TSV format, which shows the first few rows like this:
 
 |Level 1|Level 2|Level 3|Level 4|
 |:---|:---|:---|:---|
@@ -44,18 +69,14 @@ We'll have a table like this after conversion from json to tsv. These are some f
 |09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K25026  glk; glucokinase [EC:2.7.1.2]|
 |09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K01810  GPI, pgi; glucose-6-phosphate isomerase [EC:5.3.1.9]|
 
-A brief check of the table shows that there are 8 groups at the first level, 56 groups at the second level and 547 groups at the third level.
+# Step 4: Clean and Reorganize the BRITE Data
+To tidy up the BRITE data, you can run the following command:
 
-- Level 1: Metabolism, Genetic Information Processing, Environmental Information Processing, Cellular Processes, Organismal Systems, etc.
-- Level 2: Carbohydrate metabolism, Energy metabolism, Lipid metabolism, Nucleotide metabolism, Amino acid metabolism, etc.
-- Level 3: Glycolysis \/ Gluconeogenesis [PATH:ko00010], Citrate cycle (TCA cycle) [PATH:ko00020], Pentose phosphate pathway [PATH:ko00030], Pentose and glucuronate interconversions [PATH:ko00040], Fructose and mannose metabolism [PATH:ko00051], etc.
+```
+awk -i inplace 'BEGIN {FS=OFS="\t"} {for (i=1; i<=3; i++) {sub(/[0-9]* /, "", $i)}; j=""; n=patsplit($4, a, /[^ ]*/); for (i=3; i<=n; i++) {j=j" "a[i]}; gsub(/^ /, "", j); print a[1], $1, $2, $3, j}' brite.tsv
+```
 
-
-By using this command...
-
-`awk -i inplace 'BEGIN {FS=OFS="\t"} {for (i=1; i<=3; i++) {sub(/[0-9]* /, "", $i)}; j=""; n=patsplit($4, a, /[^ ]*/); for (i=3; i<=n; i++) {j=j" "a[i]}; gsub(/^ /, "", j); print a[1], $1, $2, $3, j}' brite.tsv`
-
-We'll have something like this...
+This will create a cleaner output like:
 
 |KO ID|Level 1|Level 2|Level 3|Level 4|
 |:---|:---|:---|:---|:---|
@@ -65,11 +86,15 @@ We'll have something like this...
 |K25026|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|glk; glucokinase [EC:2.7.1.2]|
 |K01810|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|GPI, pgi; glucose-6-phosphate isomerase [EC:5.3.1.9]|
 
-It looks much cleaner and has KO IDs in a separate column. Now, we can merge it with the _uniprot_genes_ko.tsv_ with the command below.
+# Step 5: Merge UniProt and KEGG BRITE Data
 
-`awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1][i++]=$2 FS $3 FS $4 FS $5; next} {split($3, b, ":"); split($1, c, ":"); if (b[2] in a) for (i in a[b[2]]) print c[2], b[2], a[b[2]][i]}' brite.tsv uniprot_genes_ko.tsv > uniprot_brite.tsv`
+Now, merge the UniProt and BRITE data:
 
-Let's see some of the first few rows.
+```
+awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1][i++]=$2 FS $3 FS $4 FS $5; next} {split($3, b, ":"); split($1, c, ":"); if (b[2] in a) for (i in a[b[2]]) print c[2], b[2], a[b[2]][i]}' brite.tsv uniprot_genes_ko.tsv > uniprot_brite.tsv
+```
+
+The merged data will have rows like:
 
 |UniProt ID|KO ID|Level 1|Level 2|Level 3|Level 4|
 |:---|:---|:---|:---|:---|:---|
@@ -79,17 +104,25 @@ Let's see some of the first few rows.
 |P81928|K23505|Brite Hierarchies|Protein families: genetic information processing|Mitochondrial biogenesis [BR:ko03029]|TIMMDC1; complex I assembly factor TIMMDC1|
 |P48347|K06630|Environmental Information Processing|Signal transduction|MAPK signaling pathway - yeast [PATH:ko04011]|YWHAE; 14-3-3 protein epsilon|
 
-With this _uniprot_brite.tsv_, every time we use BLAST or DIAMOND BLAST with UniProt Swiss-Prot database to predict the function of a sequence, we can get to know which functional groups that it is assigned to. Probably, when one uses a database besides UniProt Swiss-Prot, one needs to look for a way to convert the ID in that database into UniProt ID to use this hierarchical classification system efficiently, and indeed, the [UniProt API](https://www.uniprot.org/help/programmatic_access) does provide a way to convert NCBI ID to UniProt ID.
+# Step 6: Updating the Database (Optional)
 
-In addition, since it takes a few day to retrieve the entries from KEGG, when one needs to update this database, it doesn't have to be started from scratch. First, we need to get the newest version of UniProt Swiss-Prot (download from the link above then unzip it). Using the below command... 
+To update the database, start by downloading the latest UniProt Swiss-Prot version. You can identify new entries by running:
 
-`awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {if ($0~/^>/) {match($0, /\|(.+)*\|/, id1); a[id1[1]][FILENAME]=b[id1[1]]+=1}} idx==2 {match($0, /:(.+)* /, id2); a[id2[1]][FILENAME]=b[id2[1]]+=1} END {for (i in b) {if (b[i]==1) {for (j in a[i]) {print i, j}} else if (b[i]>1) {j=""; for (k in a[i]) {j=j k " "}; print i, j}}}' uniprot_sprot.fasta uniprot_genes_ko.tsv > temp.tsv`
+```
+awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {if ($0~/^>/) {match($0, /\|(.+)*\|/, id1); a[id1[1]][FILENAME]=b[id1[1]]+=1}} idx==2 {match($0, /:(.+)* /, id2); a[id2[1]][FILENAME]=b[id2[1]]+=1} END {for (i in b) {if (b[i]==1) {for (j in a[i]) {print i, j}} else if (b[i]>1) {j=""; for (k in a[i]) {j=j k " "}; print i, j}}}' uniprot_sprot.fasta uniprot_genes_ko.tsv > temp.tsv
+```
 
-We will get the _temp.tsv_ containing the IDs not present in the _uniprot_genes_ko.tsv_ from which we can retrieve the new entries and append it to the current database and a similar manner.
+Then, fetch and append the new entries:
 
-`for i in $(awk -v FS='\t' '{print $1}' temp.tsv); do curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}'; done >> uniprot_genes_ko.tsv`
+```
+for i in $(awk -v FS='\t' '{print $1}' temp.tsv); do
+  curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}';
+done >> uniprot_genes_ko.tsv
+```
 
-Nonetheless, it's recommended to create a fresh database once in a while since there might be some changes for the genes with function unknown. For those who want to use the database right away, I have prepared the _uniprot_genes_ko.tsv_ and the _brite.tsv_, you only need to merge it together to produce the _uniprot_brite.tsv_.
+# Conclusion
+
+By following this guide, you can effectively classify gene functions into hierarchical groups using UniProt and KEGG BRITE. This approach allows you to understand which functional groups genes belong to in a structured and automated way, especially when working with metagenomics or large datasets.
 
 [1] [https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/uniprot_genes_ko.tsv](https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/uniprot_genes_ko.tsv)
 
