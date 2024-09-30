@@ -1170,14 +1170,12 @@ awk -v n=40 '{ start = 1; while (start <= length($0)) { end = start + n - 1; if 
 awk -v delimiter="^//" -v prefix="output_file_prefix_" -v extension=".ext" '{
     if ($0 ~ delimiter) {
         if (line) {
-            print line > prefix ++count extension
+            print line > prefix count++ extension
         }
         line = ""
         next
     }
     line = line $0 (line == "" ? "" : "\n")
-} END {
-    if (line) print line > prefix ++count extension
 }' file.txt
 ```
 
