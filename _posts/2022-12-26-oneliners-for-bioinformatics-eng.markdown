@@ -248,47 +248,28 @@ awk -v query="<pattern>" '
 
 ```
 awk '
-function is_substr(short_seq, long_seq, len_short, len_long, i) {
-    len_short = length(short_seq)
-    len_long = length(long_seq)
-    for (i = 1; i <= len_long - len_short + 1; i++) {
-        if (substr(long_seq, i, len_short) == short_seq) {
-            return 1  # Found substring
-        }
-    }
-    return 0  # Not a substring
-}
-
 /^>/ {
-    header = $0
     getline sequence
     count++
-    headers[count] = header
+    headers[count] = $0
     sequences[count] = sequence
     lengths[count] = length(sequence)
 }
 
 END {
-    n = count
-    for (i = 1; i <= n; i++) {
-        for (j = i+1; j <= n; j++) {
+    for (i = 1; i <= count; i++) {
+        for (j = i+1; j <= count; j++) {
             if (lengths[i] > lengths[j]) {
-                tmp = lengths[i]
-                lengths[i] = lengths[j]
-                lengths[j] = tmp
-                tmp = sequences[i]
-                sequences[i] = sequences[j]
-                sequences[j] = tmp
-                tmp = headers[i]
-                headers[i] = headers[j]
-                headers[j] = tmp
+                tmp = lengths[i]; lengths[i] = lengths[j]; lengths[j] = tmp
+                tmp = sequences[i]; sequences[i] = sequences[j]; sequences[j] = tmp
+                tmp = headers[i]; headers[i] = headers[j]; headers[j] = tmp
             }
         }
     }
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= count; i++) {
         deduped = 1
-        for (j = i + 1; j <= n; j++) {
-            if (is_substr(sequences[i], sequences[j])) {
+        for (j = i + 1; j <= count; j++) {
+            if (index(sequences[j], sequences[i]) > 0) {
                 deduped = 0  # Mark as duplicate
                 break
             }
