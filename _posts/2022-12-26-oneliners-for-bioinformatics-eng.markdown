@@ -244,53 +244,61 @@ awk -v query="<pattern>" '
 
 `awk '/^>/ {getline seq; f=!a[seq]++} f {print $0"\n"seq}' file.fa`
 
-* Deduplicate and remove sequences that match other longer sequences (including reverse complement).
+* Deduplicate and remove sequences that match other longer sequences.
 
 ```
-awk 'function revcomp(seq) {
-    comp["A"] = "T"; comp["T"] = "A"; comp["C"] = "G"; comp["G"] = "C";
-    comp["B"] = "V"; comp["D"] = "H"; comp["H"] = "D"; comp["K"] = "M";
-    comp["M"] = "K"; comp["N"] = "N"; comp["R"] = "Y"; comp["S"] = "S";
-    comp["V"] = "B"; comp["W"] = "W"; comp["Y"] = "R"
-    o = ""
-    for (len = length(seq); len > 0; len--) {
-        o = o comp[substr(seq, len, 1)]
+awk '
+function is_substr(short_seq, long_seq, len_short, len_long, i) {
+    len_short = length(short_seq)
+    len_long = length(long_seq)
+    for (i = 1; i <= len_long - len_short + 1; i++) {
+        if (substr(long_seq, i, len_short) == short_seq) {
+            return 1  # Found substring
+        }
     }
-    return o
-    }
-    BEGIN {
-        # Set the sorting order for arrays to numerical descending order
-        PROCINFO["sorted_in"] = "@ind_num_desc"
-        min = 0
-    } /^>/ {
-        getline seq
-        len = length(seq)
-        # Update the minium length
-        min = (min > len || !min ? len : min)
-        a[len][seq] = $0
-    } END {
-        for (i in a) {
-            for (j in a[i]) {
-                for (k = 1; k <= length(j) + 1 - min; k++) {
-                    f = substr(j, k, min)
-                    r = substr(revcomp(j), k, min)
-                    if (!(b[f]) || !(b[r])) {
-                        c[j] = a[i][j]
-                        if (!(b[f])) {
-                            b[f] = 1
-                        } else if (!(b[r])) {
-                            b[r] = 1
-                        }
-                        continue
-                    }
-                }
-                delete a[i][j]
+    return 0  # Not a substring
+}
+
+/^>/ {
+    header = $0
+    getline sequence
+    count++
+    headers[count] = header
+    sequences[count] = sequence
+    lengths[count] = length(sequence)
+}
+
+END {
+    n = count
+    for (i = 1; i <= n; i++) {
+        for (j = i+1; j <= n; j++) {
+            if (lengths[i] > lengths[j]) {
+                tmp = lengths[i]
+                lengths[i] = lengths[j]
+                lengths[j] = tmp
+                tmp = sequences[i]
+                sequences[i] = sequences[j]
+                sequences[j] = tmp
+                tmp = headers[i]
+                headers[i] = headers[j]
+                headers[j] = tmp
             }
         }
-        for (m in c) {
-            print c[m] "\n" m
+    }
+    for (i = 1; i <= n; i++) {
+        deduped = 1
+        for (j = i + 1; j <= n; j++) {
+            if (is_substr(sequences[i], sequences[j])) {
+                deduped = 0  # Mark as duplicate
+                break
+            }
         }
-    }' file.fa
+        if (deduped) {
+            print headers[i]
+            print sequences[i]
+        }
+    }
+}' file.fa
 ```
 
 * Remove singletons.
