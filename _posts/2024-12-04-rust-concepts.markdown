@@ -5,7 +5,7 @@ date:   2024-12-04
 categories: [guide, english, programming, rust]
 ---
 
-Rust is known for its memory safety without a garbage collector, and at the heart of this are **ownership**, **borrowing**, and **lifetimes**. Let’s break them down with analogies and examples!
+Rust is known for its memory safety without a garbage collector, and at the heart of this are **ownership**, **borrowing**, and **lifetimes**. These concepts are tied to how Rust allows data to be accessed and modified. For example, with **immutable borrowing**, multiple parts of your program can read data simultaneously, but **mutable borrowing** ensures that only one part of the program can modify the data at a time. These rules prevent common issues like data races and ensure efficient memory management.
 
 ---
 
@@ -22,10 +22,11 @@ Imagine you have a **treasure chest** (data). Whoever has the **key** (ownership
 ```rust
 fn main() {
     let treasure = String::from("Gold Coins"); // `treasure` owns the data
-    let another_treasure = treasure; // Ownership transferred to `another_treasure`
 
-    // println!("{}", treasure); // ❌ Error: `treasure` no longer owns the data
-    println!("{}", another_treasure); // ✅ Ownership moved here
+    let another_treasure = treasure; // Ownership is moved from `treasure` to `another_treasure`
+
+    // println!("{}", treasure); // ❌ Error: Ownership has been transferred, `treasure` no longer has access
+    println!("{}", another_treasure); // ✅ `another_treasure` now owns the data and can use it
 }
 ```
 
@@ -68,15 +69,14 @@ Think of **lifetime** as the time a borrowed key is valid. A borrowed key must *
 ### Example: Valid Lifetime
 ```rust
 fn main() {
-    let treasure = String::from("Gold Coins"); // Ownership: `treasure` owns the data.
+    let treasure = String::from("Gold Coins"); // Ownership: `treasure` owns the data
 
-    let viewer = &treasure; // Borrowing: `viewer` gets an immutable reference.
-    println!("{}", viewer); // ✅ Accessing the data through the reference.
+    let viewer = &treasure; // Borrowing: `viewer` gets an immutable reference
+    println!("{}", viewer); // ✅ Accessing the data through the reference
 
     // The borrow ends after `viewer` is no longer used (after the `println!`).
     // Now `treasure` is free to be used or dropped without issues.
-
-    // When `main` ends, `treasure` goes out of scope
+    // When `main` ends, `treasure` goes out of scope.
 }
 ```
 
