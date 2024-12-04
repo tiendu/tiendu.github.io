@@ -55,6 +55,9 @@ fn main() {
     let editor = &mut treasure; // ✅ Mutable borrow is now allowed
     editor.push_str(" and Silver Coins!");
     println!("{}", editor); // ✅ Ownership is returned after editing
+
+    // println!("{}", viewer1); // ❌ Error: `viewer1` no longer valid after mutable borrow
+    // println!("{}", viewer2); // ❌ Error: Same as above
 }
 ```
 
@@ -65,12 +68,15 @@ Think of **lifetime** as the time a borrowed key is valid. A borrowed key must *
 ### Example: Valid Lifetime
 ```rust
 fn main() {
-    let treasure = String::from("Gold Coins");
+    let treasure = String::from("Gold Coins"); // Ownership: `treasure` owns the data.
 
-    let viewer = &treasure; // Borrow the treasure
-    println!("{}", viewer); // ✅ Viewer reads the treasure
+    let viewer = &treasure; // Borrowing: `viewer` gets an immutable reference.
+    println!("{}", viewer); // ✅ Accessing the data through the reference.
 
-    // `treasure` goes out of scope here, but the borrow ends first, so it's fine.
+    // The borrow ends after `viewer` is no longer used (after the `println!`).
+    // Now `treasure` is free to be used or dropped without issues.
+
+    // When `main` ends, `treasure` goes out of scope
 }
 ```
 
