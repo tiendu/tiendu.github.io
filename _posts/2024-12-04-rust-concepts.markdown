@@ -23,6 +23,9 @@ Imagine you have a **treasure chest** (data). Whoever has the **key** (ownership
 fn main() {
     let treasure = String::from("Gold Coins"); // `treasure` owns the data
 
+    // Mutable borrow of an immutable variable will cause an error
+    // let another_treasure = &mut treasure; // ❌ Error: Cannot borrow `treasure` as mutable because it's immutable
+
     let another_treasure = treasure; // Ownership is moved from `treasure` to `another_treasure`
 
     // println!("{}", treasure); // ❌ Error: Ownership has been transferred, `treasure` no longer has access
