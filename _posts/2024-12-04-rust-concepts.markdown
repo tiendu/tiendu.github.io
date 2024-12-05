@@ -74,15 +74,71 @@ Think of **lifetime** as the time a borrowed key is valid. A borrowed key must *
 fn main() {
     let treasure = String::from("Gold Coins"); // Ownership: `treasure` owns the data
 
-    let viewer = &treasure; // Borrowing: `viewer` gets an immutable reference
-    println!("{}", viewer); // ✅ Accessing the data through the reference
+    {
+        let viewer = &treasure; // Borrowing: `viewer` gets an immutable reference
+        println!("{}", viewer); // ✅ Accessing the data through the reference
+        // The borrow by `viewer` ends here at the end of this block
+    }
 
-    // The borrow ends after `viewer` is no longer used (after the `println!`).
-    // Now `treasure` is free to be used or dropped without issues.
-    // When `main` ends, `treasure` goes out of scope.
+    // At this point, `treasure` is no longer borrowed and can be used again.
+    println!("{}", treasure); // ✅ We can safely use `treasure` now
+
+    // println!("{}", viewer); // ❌ Error: `viewer` is not in scope here
 }
 ```
 
+### Example: Mismatched Lifetimes
+
+#### Error Version
+
+```rust
+fn main() {
+    let description;
+    let treasure = String::from("Gold Coins"); // Outer scope
+
+    {
+        let map = String::from("Treasure Map"); // Inner scope
+        description = locate(&treasure, &map); // ❌ Error: `map` does not live long enough
+    } // `map` goes out of scope here
+
+    println!("{}", description); // Attempting to use `description` after `map` is dropped
+}
+
+fn locate<'a, 'b>(item: &'a str, location: &'b str) -> &'a str {
+    // `location` is not returned, but lifetimes are mismatched
+    println!("Item: {}, Location: {}", item, location);
+    item
+}
+```
+
+**Why This Fails:**
+- `map` is declared in an inner block and is dropped when the block ends.
+- The function `locate` accepts two references:
+  - `&treasure` (longer lifetime, valid for the whole function)
+  - `&map` (shorter lifetime, invalid after the block ends)
+- Since `description` depends on `map`, it cannot outlive `map`, but it is used after `map` is dropped.
+
+#### Fixed Version
+```rust
+fn main() {
+    let treasure = String::from("Gold Coins");
+    let map = String::from("Treasure Map"); // Moved to outer scope
+
+    let description = locate(&treasure, &map); // ✅ Both references are valid
+    println!("{}", description);
+}
+
+fn locate<'a, 'b>(item: &'a str, location: &'b str) -> &'a str {
+    println!("Item: {}, Location: {}", item, location);
+    item
+}
+```
+
+**Why This Works:**
+- Both `treasure` and `map` are now in the same outer scope, ensuring their lifetimes that overlap.
+- `locate` receives valid references and safely return one (`item`)
+- Rust's borrow checker confirms that no references outlive their owners.
+ 
 ## Why Does This Matter?
 These rules prevent:
 1. **Dangling Pointers**: No referencing invalid memory.
