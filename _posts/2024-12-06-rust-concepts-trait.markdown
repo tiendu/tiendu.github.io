@@ -165,7 +165,7 @@ impl Treasure for Artifact {
 }
 ```
 
-4. Dynamic Dispatch: Use `Box<dyn Treasure>` to work with different types in one collection. For example: Calculate the total value of treasures:
+4. **Dynamic Dispatch**: Use `Box<dyn Treasure>` to work with different types in one collection. For example: Calculate the total value of treasures:
 
 ```rust
 let total_value: u32 = treasures.iter().map(|t| t.value()).sum();
