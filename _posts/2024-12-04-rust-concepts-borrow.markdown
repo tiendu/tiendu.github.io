@@ -143,6 +143,6 @@ These rules prevent:
 ## Key Takeaways
 - **Ownership**: Each piece of data can have only **one owner at a time**.
 - **Borrowing**: 
-  - _Immutable borrows (`&T`)_: Allow **multiple readers** simultaneously.
-  - _Mutable borrows (`&mut T`)_: Allow only **one writer**, with no readers at the same time.
+  - **Immutable borrows** (`&T`): Allow **multiple readers** simultaneously.
+  - **Mutable borrows** (`&mut T`): Allow only **one writer**, with no readers at the same time.
 - **Lifetimes**: References must stay valid as long as the data they point to exists, ensuring safety.
