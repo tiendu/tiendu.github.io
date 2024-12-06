@@ -22,7 +22,6 @@ With **trait objects**, Rust enables **dynamic dispatch**, allowing you to work 
 
 ## Example: Treasure Hunt
 Below is an example of how traits and trait objects work together.
-
 ```rust
 // Define the `Treasure` trait with shared behaviors
 trait Treasure {
@@ -128,9 +127,9 @@ The **Treasure** trait ensures all types of treasures (like `Map`, `Chest`, and 
 This means you can handle all treasures in the same way, no matter their type.
 
 ## Why Traits Are Powerful
-1. **Organized Code**: Traits keep shared behaviors in one place.
-2. **Reusability**: Different types (like **Map** and **Chest**) can reuse the same trait without duplicating code.
-3. **Flexibility**: You can add new types without changing old ones. For example:
+- **Organized Code**: Traits keep shared behaviors in one place.
+-  **Reusability**: Different types (like **Map** and **Chest**) can reuse the same trait without duplicating code.
+- **Flexibility**: You can add new types without changing old ones. For example:
 ```rust
 struct Artifact {
     age: u32,
@@ -149,7 +148,8 @@ impl Treasure for Artifact {
     }
 }
 ```
-4. **Dynamic Dispatch**: Use `Box<dyn Treasure>` to work with different types in one collection. For example: Calculate the total value of treasures:
+
+- **Dynamic Dispatch**: Use `Box<dyn Treasure>` to work with different types in one collection. For example: Calculate the total value of treasures:
 ```rust
 let total_value: u32 = treasures.iter().map(|t| t.value()).sum();
 println!("Total value of treasures: {}", total_value);
