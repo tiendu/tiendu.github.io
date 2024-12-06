@@ -12,21 +12,15 @@ With **trait objects**, Rust enables **dynamic dispatch**, allowing you to work 
 ---
 
 ## Why Use Traits?
-
 1. **Shared Behavior**: Different types can have the same methods.
-
 2. **Polymorphism**: You can treat different types as the same if they implement the same trait.
-
 3. **Extensibility**: Add new types without changing old code. Just make the new type implement the trait.
-
 4. **Abstraction**: Focus on **what a type does**, not **how it works**. This keeps your code simple and clean.
 
 ## What Are Trait Objects?
-
 **Trait objects** allow you to handle different types together, as long as they share the same trait. You use `Box<dyn Trait>` to group them.
 
 ## Example: Treasure Hunt
-
 Below is an example of how traits and trait objects work together.
 
 ```rust
@@ -127,25 +121,16 @@ Hint: Guarded by pirates! Inside: Jewels
 ```
 
 ## How the Example Works
-
 The **Treasure** trait ensures all types of treasures (like `Map`, `Chest`, and `Gold Coins`) have these behaviors:
-
 - `description()`
-
 - `value()`
-
 - `reveal_hint()`
-
 This means you can handle all treasures in the same way, no matter their type.
 
 ## Why Traits Are Powerful
-
 1. **Organized Code**: Traits keep shared behaviors in one place.
-
 2. **Reusability**: Different types (like **Map** and **Chest**) can reuse the same trait without duplicating code.
-
 3. **Flexibility**: You can add new types without changing old ones. For example:
-
 ```rust
 struct Artifact {
     age: u32,
@@ -164,9 +149,7 @@ impl Treasure for Artifact {
     }
 }
 ```
-
 4. **Dynamic Dispatch**: Use `Box<dyn Treasure>` to work with different types in one collection. For example: Calculate the total value of treasures:
-
 ```rust
 let total_value: u32 = treasures.iter().map(|t| t.value()).sum();
 println!("Total value of treasures: {}", total_value);
