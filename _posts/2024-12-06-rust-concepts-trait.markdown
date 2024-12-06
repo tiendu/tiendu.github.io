@@ -130,7 +130,7 @@ This means you can handle all treasures in the same way, no matter their type.
 
 ## Why Traits Are Powerful
 - **Organized Code**: Traits keep shared behaviors in one place.
--  **Reusability**: Different types (like **Map** and **Chest**) can reuse the same trait without duplicating code.
+- **Reusability**: Different types (like **Map** and **Chest**) can reuse the same trait without duplicating code.
 - **Flexibility**: You can add new types without changing old ones. For example:
 
 ```rust
