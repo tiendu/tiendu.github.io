@@ -161,7 +161,7 @@ Different types (like **Map** and **Chest**) can reuse the same trait without du
 
 You can add new types without changing old ones. For example:
 
-```
+```rust
 struct Artifact {
     age: u32,
     rarity: u32,
