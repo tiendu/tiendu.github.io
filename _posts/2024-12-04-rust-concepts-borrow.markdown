@@ -10,7 +10,6 @@ Rust is a programming language known for managing memory safely without needing 
 ---
 
 ## Ownership: Who Controls the Data?
-
 Think of ownership like having the **key** to a treasure chest. Only the person with the key can control the treasure.
 
 ### Key Rules:
@@ -34,14 +33,12 @@ fn main() {
 ```
 
 ## Borrowing: Sharing Without Losing Ownership
-
 Instead of giving the key away, the owner can **lend** it. Borrowing lets others use the treasure temporarily.
 
 ### Two Types of Borrowing:
 1. Immutable Borrow (`&T`):
   - You can use the treasure but not change it.
   - Multiple people can borrow it at the same time.
-
 2. Mutable Borrow (`&mut T`):
   - You can change the treasure, but only one person can borrow it at a time.
 
@@ -67,7 +64,6 @@ fn main() {
 ```
 
 ## Lifetimes: How Long Borrowing Lasts
-
 A **lifetime** is the period when a borrowed key is valid. A borrowed key must return to the owner before the owner disappears.
 
 ### Example: Valid Lifetime
@@ -89,11 +85,9 @@ fn main() {
 ```
 
 ### Common Lifetime Error: Borrowing Ends Too Soon
-
 If you borrow something from data that will disappear soon, Rust will stop you.
 
 #### Error Example
-
 ```rust
 fn main() {
     let description;
@@ -113,7 +107,6 @@ fn locate<'a, 'b>(item: &'a str, location: &'b str) -> &'a str {
     item
 }
 ```
-
 **Why This Fails:**
 - `map` is created inside a smaller block and disappears when the block ends.
 - The function `locate` takes two references:
@@ -136,7 +129,6 @@ fn locate<'a, 'b>(item: &'a str, location: &'b str) -> &'a str {
     item
 }
 ```
-
 **Why This Works:**
 - Both `treasure` and `map` are created in the same block, so they exist at the same time.
 - The `locate` function gets valid references and safely returns one of them.
