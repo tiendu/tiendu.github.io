@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Rust Basics: Concurrency with std::thread"
-date:   2024-12-08
+date:   2024-12-07
 categories: [guide, english, programming, rust]
 ---
 
