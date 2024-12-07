@@ -13,21 +13,21 @@ In Rust, **smart pointers** are special types of pointers that do more than just
 Smart pointers are like regular pointers but with extra features. They keep track of who owns the data, when it's no longer needed, and how it can be accessed. Smart pointers in Rust implement special traits that allow them to clean up memory automatically when it's no longer in use.
 
 ## Main Smart Pointers
-1. **`Box<T>`**: Moving Data to the Heap
+- **`Box<T>`**: Moving Data to the Heap
    
   In Rust, data is usually stored on the **stack**, which is fast but limited. Sometimes, we need to store large data or data that has a complex structure. **Box** lets us store data on the **heap**, which is larger and more flexible.
   - **What It Does**: Moves data to the heap and gives it a single owner.
   - **When to Use It**: When the data is too large or complex to fit on the stack.
   - **Key Point**: Only one owner can have access to the data at a time.
 
-2. **`Rc<T>`**: Sharing Ownership
+- **`Rc<T>`**: Sharing Ownership
    
   Sometimes, we want **multiple** parts of a program to own the same data. **Rc** (Reference Counted) is a smart pointer that lets you share ownership of data between different parts of your program.
   - **What It Does**: Allows multiple owners to share access to the same data.
   - **When to Use It**: When you need multiple parts of the program to read or share the same data.
   - **Key Point**: The data is only deleted when no one is using it anymore.
 
-3. **`RefCell<T>`**: Changing Data Through Immutable References
+- **`RefCell<T>`**: Changing Data Through Immutable References
    
   Rust usually doesn't allow you to change data unless you have a mutable reference to it. But sometimes, you want to change data even if you only have an immutable reference. **RefCell** lets you do this by checking the borrow rules at runtime (not compile time).
   - **What It Does**: Lets you change data even when it seems to be immutable.
