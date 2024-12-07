@@ -135,19 +135,19 @@ This means you can handle all treasures in the same way, no matter their type.
 
 ```rust
 struct Artifact {
-    age: u32,
-    rarity: u32,
+    age: u32,      // 🕰️ Age of the artifact
+    rarity: u32,   // 🌟 Rarity score
 }
 
 impl Treasure for Artifact {
     fn description(&self) -> String {
-        format!("An ancient artifact, {} years old", self.age)
+        format!("An ancient artifact, {} years old", self.age) // 🏺✨
     }
     fn value(&self) -> u32 {
-        self.rarity * 200
+        self.rarity * 200 // 💰 Value based on rarity
     }
     fn reveal_hint(&self) -> String {
-        "Discovered in a forgotten temple.".to_string()
+        "Discovered in a forgotten temple.".to_string() // 🏛️🔍
     }
 }
 ```
