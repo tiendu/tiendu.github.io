@@ -12,10 +12,10 @@ With **trait objects**, Rust enables **dynamic dispatch**, allowing you to work 
 ---
 
 ## Why Use Traits?
-1. **Shared Behavior**: Different types can have the same methods.
-2. **Polymorphism**: You can treat different types as the same if they implement the same trait.
-3. **Extensibility**: Add new types without changing old code. Just make the new type implement the trait.
-4. **Abstraction**: Focus on **what a type does**, not **how it works**. This keeps your code simple and clean.
+- **Shared Behavior**: Different types can have the same methods.
+- **Polymorphism**: You can treat different types as the same if they implement the same trait.
+- **Extensibility**: Add new types without changing old code. Just make the new type implement the trait.
+- **Abstraction**: Focus on **what a type does**, not **how it works**. This keeps your code simple and clean.
 
 ## What Are Trait Objects?
 **Trait objects** allow you to handle different types together, as long as they share the same trait. You use `Box<dyn Trait>` to group them.
