@@ -9,15 +9,15 @@ Rust is a programming language known for managing memory safely without needing 
 
 ---
 
-## Ownership: Who Controls the Data?
-Think of ownership like having the **key** to a treasure chest. Only the person with the key can control the treasure.
+## Ownership: Who Controls the Data? 🗝️📦
+Think of ownership like having the **key** to a treasure chest. Only the person with the key can control the treasure. 💰
 
 ### Key Rules:
 1. Each piece of data has only **one owner**.
 2. When the owner is gone, the data is gone too.
 3. Ownership can be **transferred** to someone else.
 
-### Example: Ownership Transfer
+### Example: Ownership Transfer 🔑➡️
 ```rust
 fn main() {
     let treasure = String::from("Gold Coins"); // `treasure` owns the data
@@ -32,17 +32,17 @@ fn main() {
 }
 ```
 
-## Borrowing: Sharing Without Losing Ownership
+## Borrowing: Sharing Without Losing Ownership 🫱🔗🫲
 Instead of giving the key away, the owner can **lend** it. Borrowing lets others use the treasure temporarily.
 
 ### Two Types of Borrowing:
 1. Immutable Borrow (`&T`):
-  - You can use the treasure but not change it.
-  - Multiple people can borrow it at the same time.
+  - You can use the treasure but not change it. 🛡️
+  - Multiple people can borrow it at the same time. 👥
 2. Mutable Borrow (`&mut T`):
-  - You can change the treasure, but only one person can borrow it at a time.
+  - You can change the treasure, but only one person can borrow it at a time. ✍️
 
-### Example: Borrowing Rules
+### Example: Borrowing Rules 📜
 ```rust
 fn main() {
     let mut treasure = String::from("Gold Coins");
@@ -63,8 +63,8 @@ fn main() {
 }
 ```
 
-## Lifetimes: How Long Borrowing Lasts
-A **lifetime** is the period when a borrowed key is valid. A borrowed key must return to the owner before the owner disappears.
+## Lifetimes: How Long Borrowing Lasts ⌛🔒
+A **lifetime** is the period when a borrowed key is valid. A borrowed key must return to the owner before the owner disappears. 🚪⏳
 
 ### Example: Valid Lifetime
 ```rust
@@ -84,7 +84,7 @@ fn main() {
 }
 ```
 
-### Common Lifetime Error: Borrowing Ends Too Soon
+### Common Lifetime Error: Borrowing Ends Too Soon ⚠️⛔
 If you borrow something from data that will disappear soon, Rust will stop you.
 
 #### Error Example
