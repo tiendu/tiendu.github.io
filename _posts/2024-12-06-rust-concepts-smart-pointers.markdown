@@ -18,17 +18,18 @@ Smart pointers are like regular pointers but with extra features. 🌟 They keep
 Smart pointers in Rust implement special traits that allow them to clean up memory automatically when it’s no longer in use.
 
 ## Main Smart Pointers
-| **Feature**           | **Box<T>** 📦                                                     | **Rc<T>** 🔗                                                     | **RefCell<T>** 🔧                                               |
-|-----------------------|------------------------------------------------------------------|-----------------------------------------------------------------|----------------------------------------------------------------|
-| **Purpose**          | Moves data to the heap, giving it a single owner 🛠️              | Shares ownership of data between multiple parts of the program 🤝 | Allows mutable access to data through immutable references 🔄  |
-| **Ownership**        | Single owner 👤                                                  | Multiple owners (reference counted) 👥                           | Single owner 👤                                                 |
-| **Mutability**       | Mutable only if the owner has a mutable reference ✍️            | Immutable by default; mutability requires `RefCell` 🛡️          | Allows interior mutability 🌀                                   |
-| **Runtime Behavior** | Compile-time ownership checks ✅                                 | Compile-time ownership checks ✅                                 | Runtime borrow checking; panics if borrow rules are violated 🚨 |
-| **Key Points**       | Data is stored on the heap; fast and simple for single-owner scenarios ⚡ | Deletes the data only when all references are dropped 🗑️        | Enables mutable access when immutable references are required 🔑 |
-| **When to Use**      | Large or complex data unsuitable for the stack 🏗️            | Multiple readers of shared data 📚                            | When mutability is needed in an otherwise immutable context 🔓 |
-| **Example Use Case** | Storing a large binary tree on the heap 🌳                        | Sharing access to a read-only configuration file 📖             | Mutating an internal cache from a shared reference 📈           |
-| **Performance**      | Low overhead; no runtime checks 🚀                              | Some overhead for maintaining reference count ⚖️                | Runtime cost due to borrow rule checks ⏱️                      |
-| **Code Example**     | `let b = Box::new(42);` 📦                                      | `let r = Rc::new(vec![1, 2, 3]);` 🔗                            | `let c = RefCell::new(10);` 🔧                                  |
+
+| Feature | Box 📦 | Rc 🌐 | RefCell 🔄 |
+|---------|--------|-------|-------------|
+| **Purpose** | Moves data to the heap, giving it a single owner 🛠️ | Shares ownership of data between multiple parts of the program 🤝 | Allows mutable access to data through immutable references 🔄 |
+| **Ownership** | Single owner 👤 | Multiple owners (reference counted) 👥 | Single owner 👤 |
+| **Mutability** | Mutable only if the owner has a mutable reference ✍️ | Immutable by default; mutability requires `RefCell` 🛡️ | Allows interior mutability 🌀 |
+| **Runtime Behavior** | Compile-time ownership checks ✅ | Compile-time ownership checks ✅ | Runtime borrow checking; panics if borrow rules are violated 🚨 |
+| **Key Points** | Data is stored on the heap; fast and simple for single-owner scenarios ⚡ | Deletes the data only when all references are dropped 🗑️ | Enables mutable access when immutable references are required 🔑 |
+| **When to Use** | Large or complex data unsuitable for the stack 🏗️ | Multiple readers of shared data 📚 | When mutability is needed in an otherwise immutable context 🔓 |
+| **Example Use Case** | Storing a large binary tree on the heap 🌳 | Sharing access to a read-only configuration file 📖 | Mutating an internal cache from a shared reference 📈 |
+| **Performance** | Low overhead; no runtime checks 🚀 | Some overhead for maintaining reference count ⚖️ | Runtime cost due to borrow rule checks ⏱️ |
+| **Code Example** | `let b = Box::new(42);` 📦 | `let r = Rc::new(vec![1, 2, 3]);` 🌐 | `let c = RefCell::new(10);` 🔄 |
 
 
 ## Combining Smart Pointers
