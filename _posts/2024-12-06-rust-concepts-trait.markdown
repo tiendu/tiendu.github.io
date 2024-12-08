@@ -61,6 +61,7 @@ fn print_description(item: &dyn Treasure) {
 | **Binary Size** |	Larger due to code duplication.	| Smaller, single implementation. |
 | **Use Case** | Performance-critical applications. | Flexible, type-agnostic code. |
 
+
 ## Example: Treasure Hunt
 Below is an example of how traits and trait objects work together.
 
