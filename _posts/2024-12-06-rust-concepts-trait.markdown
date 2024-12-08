@@ -20,6 +20,47 @@ With **trait objects**, Rust enables **dynamic dispatch**, allowing you to work 
 ## What Are Trait Objects?
 **Trait objects** allow you to handle different types together, as long as they share the same trait. You use `Box<dyn Trait>` to group them like a treasure chest full of diverse items.
 
+## Dynamic vs. Static Dispatch
+
+When working with **traits**, Rust provides two ways to resolve method calls: **dynamic dispatch** and **static dispatch**. Understanding these is key to deciding how to balance performance and flexibility in your code.
+
+### Static Dispatch 🚀
+
+With **static dispatch**, the compiler determines the method to call at **compile time** using generics. This ensures highly optimized performance by inlining method calls.
+
+```rust
+fn print_description<T: Treasure>(item: &T) {
+    println!("Description: {}", item.description());
+}
+```
+
+- Performance is high due to compile-time optimizations.
+- Each type gets its own copy of the method code, which may increase binary size.
+- Ideal when working with known types for maximum speed.
+
+### Dynamic Dispatch 🏎️
+
+**Dynamic dispatch** occurs at **runtime** using trait objects. This approach allows for more flexible code by working with heterogeneous types through a shared interface.
+
+```rust
+fn print_description(item: &dyn Treasure) {
+    println!("Description: {}", item.description());
+}
+```
+
+- Runtime flexibility, allowing handling of different types that implement the same trait.
+- Slight performance cost due to method lookups at runtime.
+- Suitable for scenarios where the exact types are unknown at compile time.
+
+### Choosing Between Static and Dynamic Dispatch
+
+| Aspect | Static Dispatch 🚀 | Dynamic Dispatch 🏎️ |
+|---|---|---|
+| **Performance** | High, compile-time optimized. | Slightly slower due to runtime lookup. |
+| **Flexibility** |	Limited, one type per instantiation. | High, works with multiple types. |
+| **Binary Size** |	Larger due to code duplication.	| Smaller, single implementation. |
+| **Use Case** | Performance-critical applications. | Flexible, type-agnostic code. |
+
 ## Example: Treasure Hunt
 Below is an example of how traits and trait objects work together.
 
