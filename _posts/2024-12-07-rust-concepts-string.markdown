@@ -93,7 +93,7 @@ fn main() {
 }
 ```
 
-You **cannot** modify a &str because it’s borrowed and not owned by you.
+You **cannot** modify a `&str` because it’s borrowed and not owned by you.
 
 ### Iterating Over Strings 🔍
 You can loop through characters or bytes in a string to find specific patterns or characters.
