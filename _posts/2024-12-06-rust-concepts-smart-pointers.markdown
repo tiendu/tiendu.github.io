@@ -20,7 +20,7 @@ Smart pointers in Rust implement special traits that allow them to clean up memo
 ## Main Smart Pointers
 
 | Feature | Box 📦 | Rc 🌐 | RefCell 🔄 |
-|---------|--------|-------|-------------|
+|---------|--------------------|--------------------|--------------------|
 | **Purpose** | Moves data to the heap, giving it a single owner 🛠️ | Shares ownership of data between multiple parts of the program 🤝 | Allows mutable access to data through immutable references 🔄 |
 | **Ownership** | Single owner 👤 | Multiple owners (reference counted) 👥 | Single owner 👤 |
 | **Mutability** | Mutable only if the owner has a mutable reference ✍️ | Immutable by default; mutability requires `RefCell` 🛡️ | Allows interior mutability 🌀 |
