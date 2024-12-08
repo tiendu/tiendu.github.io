@@ -11,9 +11,9 @@ In Rust, **smart pointers** are special types of pointers that do more than just
 
 ## What Are Smart Pointers?
 Smart pointers are like regular pointers but with extra features. 🌟 They keep track of:
-- 🧑‍🤝‍🧑 Ownership: Who owns the data?
-- 🗑️ Cleanup: When is the data no longer needed?
-- 🔍 Access: How can it be accessed safely?
+- 🧑‍🤝‍🧑 **Ownership**: Who owns the data?
+- 🗑️ **Cleanup**: When is the data no longer needed?
+- 🔍 **Access**: How can it be accessed safely?
 
 Smart pointers in Rust implement special traits that allow them to clean up memory automatically when it’s no longer in use.
 
