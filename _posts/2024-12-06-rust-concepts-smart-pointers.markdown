@@ -18,26 +18,18 @@ Smart pointers are like regular pointers but with extra features. 🌟 They keep
 Smart pointers in Rust implement special traits that allow them to clean up memory automatically when it’s no longer in use.
 
 ## Main Smart Pointers
-- **`Box<T>`**: Moving Data to the Heap
-   
-  In Rust, data is usually stored on the **stack**, which is fast but limited. Sometimes, we need to store large data or data that has a complex structure. **Box** lets us store data on the **heap**, which is larger and more flexible.
-  - **What It Does**: Moves data to the heap and gives it a single owner.
-  - **When to Use It**: When the data is too large or complex to fit on the stack.
-  - **Key Point**: Only one owner can have access to the data at a time.
+| **Feature**           | **Box<T>** 📦                                                     | **Rc<T>** 🔗                                                     | **RefCell<T>** 🔧                                               |
+|-----------------------|------------------------------------------------------------------|-----------------------------------------------------------------|----------------------------------------------------------------|
+| **Purpose**          | Moves data to the heap, giving it a single owner 🛠️              | Shares ownership of data between multiple parts of the program 🤝 | Allows mutable access to data through immutable references 🔄  |
+| **Ownership**        | Single owner 👤                                                  | Multiple owners (reference counted) 👥                           | Single owner 👤                                                 |
+| **Mutability**       | Mutable only if the owner has a mutable reference ✍️            | Immutable by default; mutability requires `RefCell` 🛡️          | Allows interior mutability 🌀                                   |
+| **Runtime Behavior** | Compile-time ownership checks ✅                                 | Compile-time ownership checks ✅                                 | Runtime borrow checking; panics if borrow rules are violated 🚨 |
+| **Key Points**       | Data is stored on the heap; fast and simple for single-owner scenarios ⚡ | Deletes the data only when all references are dropped 🗑️        | Enables mutable access when immutable references are required 🔑 |
+| **When to Use**      | Large or complex data unsuitable for the stack 🏗️            | Multiple readers of shared data 📚                            | When mutability is needed in an otherwise immutable context 🔓 |
+| **Example Use Case** | Storing a large binary tree on the heap 🌳                        | Sharing access to a read-only configuration file 📖             | Mutating an internal cache from a shared reference 📈           |
+| **Performance**      | Low overhead; no runtime checks 🚀                              | Some overhead for maintaining reference count ⚖️                | Runtime cost due to borrow rule checks ⏱️                      |
+| **Code Example**     | `let b = Box::new(42);` 📦                                      | `let r = Rc::new(vec![1, 2, 3]);` 🔗                            | `let c = RefCell::new(10);` 🔧                                  |
 
-- **`Rc<T>`**: Sharing Ownership
-   
-  Sometimes, we want **multiple** parts of a program to own the same data. **Rc** (Reference Counted) is a smart pointer that lets you share ownership of data between different parts of your program.
-  - **What It Does**: Allows multiple owners to share access to the same data.
-  - **When to Use It**: When you need multiple parts of the program to read or share the same data.
-  - **Key Point**: The data is only deleted when no one is using it anymore.
-
-- **`RefCell<T>`**: Changing Data Through Immutable References
-   
-  Rust usually doesn't allow you to change data unless you have a mutable reference to it. But sometimes, you want to change data even if you only have an immutable reference. **RefCell** lets you do this by checking the borrow rules at runtime (not compile time).
-  - **What It Does**: Lets you change data even when it seems to be immutable.
-  - **When to Use It**: When you need to change data even if you only have an immutable reference to it.
-  - **Key Point**: It checks the borrow rules during runtime and panics if the rules are broken.
 
 ## Combining Smart Pointers
 You can combine these smart pointers to handle more complex situations. For example:
