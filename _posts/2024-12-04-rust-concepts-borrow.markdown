@@ -44,13 +44,13 @@ Instead of giving the key away, the owner can **lend** it. Borrowing lets others
 
 ### Borrowing Rules Simplified
 
-| Scenario | Is it Allowed? | Explanation |
+| Scenario | Allowed? | Why? |
 |---|---|---|
-| Immutable borrow (`&T`) | ✅ Yes | Multiple readers can look at the treasure without changing it |
-| Mutable borrow (`&mut T`) | ✅ Yes | Only one editor can borrow and modify the treasure at a time |
-| Borrowing while it’s already mutably borrowed (`& &mut T` or `&mut T`) | ❌ No | You can’t borrow data (immutably or mutably) while it’s already mutably borrowed |
-| Borrowing a mutable borrow (`&mut &mut T`) | ❌ No | Rust doesn’t allow re-borrowing a mutable borrow; only direct access is allowed |
-| Borrowing an immutable borrow (`& &T`) | ✅ Yes | Immutable borrows can be shared further without issues |
+| Immutable borrow (`&T`) | ✅ Yes | Multiple readers can safely read the data |
+| Mutable borrow (`&mut T`) | ✅ Yes | Only one writer can modify the data at a time |
+| Borrow while mutably borrowed (`& &mut T` or `&mut T`) | ❌ No | Mutable borrow prevents any other borrowing |
+| Re-borrow mutable (`&mut &mut T`) | ❌ No | Rust allows direct access but not re-borrowing |
+| Re-borrow immutable (`& &T`) | ✅ Yes | Immutable borrows can be shared further without conflicts |
 
 ### Example: Borrowing Rules 📜
 ```rust
