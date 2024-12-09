@@ -4,15 +4,15 @@ title: About
 permalink: /about/
 ---
 
-This is the base Jekyll theme. You can find out more info about customizing your Jekyll theme, as well as basic Jekyll usage documentation at [jekyllrb.com](https://jekyllrb.com/)
+A biotechnologist-turned-programmer, now works as a bioinformatics engineer at DataXight with a main focus on pipeline development and gene therapy.
 
-You can find the source code for Minima at GitHub:
-[jekyll][jekyll-organization] /
-[minima](https://github.com/jekyll/minima)
+Outside of research, he's also an avid cook that has a keen interest in lacto-fermentation.
 
-You can find the source code for Jekyll at GitHub:
-[jekyll][jekyll-organization] /
-[jekyll](https://github.com/jekyll/jekyll)
+**Interest**
+- Cooking
+- Nature sightseeing
+- Bioinformatics software development and statistical analysis
 
-
-[jekyll-organization]: https://github.com/jekyll
+**Education**
+- MSc in Bioinformatics and Computational Biology, University College Cork - 2019
+- BSc in Biotechnology, Northumbria University - 2017

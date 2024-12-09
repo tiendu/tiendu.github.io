@@ -1,0 +1,64 @@
+---
+---
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,500;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:ital,wght@0,100;0,300;0,400;0,500;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bungee+Shade&display=swap');
+$base-font-family: "Lato", sans-serif;
+$code-font-family: "Noto Sans Mono", monospace;
+$spacing-unit: 28px;
+
+$base-font-size: 16px; /* Increase base font size */
+$base-font-weight: 300; /* Use a lighter base font weight */
+
+/* Define the yellow tint background color */
+$background-color: #fef9e7; /* Light yellow tint */
+
+/* Darken the text color for better contrast */
+$text-color: #424242; /* Dark grey text color */
+
+/* Adjust the grey color shades */
+$grey-color: #757575; /* Darker grey for better readability */
+$grey-color-dark: darken($grey-color, 10%); /* Darken the darker grey */
+
+/* Lighten the brand color */
+$brand-color: #ffa000; /* Lighten the accent color to match the yellow tint */
+
+/* Lighter shade for code block background */
+// $code-background-color: #fafafa; /* Lighter grey for code block background */
+
+@import "minima";
+.site-title {
+  font-family: "Bungee Shade", cursive;
+  font-weight: 400;
+  color: $text-color;
+  &:visited {
+    color: $text-color;
+  }
+}
+
+table {
+  width: 25%;
+  font-size: $small-font-size;
+}
+
+blockquote {
+  font-size: $small-font-size;
+}
+
+a {
+  color: $brand-color;
+  &:visited {
+    color: darken($brand-color, 15%);
+  }
+  &:hover {
+    color: lighten($brand-color, 15%);
+    text-decoration: underline;
+  }
+}
+
+code {
+  font-family: $code-font-family;
+//  background-color: $code-background-color;
+  width: 100%; /* Set a fixed width */
+  white-space: pre-wrap; /* Preserve line breaks */
+}
