@@ -19,10 +19,6 @@ $brand-color: #ff4500;
 $link-hover-color: lighten($brand-color, 20%);
 $link-visited-color: darken($brand-color, 20%);
 
-/* High-contrast code block background */
-$code-background-color: #333333;
-$code-text-color: #f1f1f1;
-
 @import "minima";
 
 .site-title {
@@ -61,9 +57,6 @@ a {
 }
 
 code {
-  font-family: $code-font-family;
-  background-color: $code-background-color;
-  color: $code-text-color;
   padding: $spacing-unit / 4;
   border-radius: 4px;
   white-space: pre-wrap;
