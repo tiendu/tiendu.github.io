@@ -5,7 +5,7 @@ date:   2024-12-06
 categories: [guide, english, programming, rust]
 ---
 
-In Rust, **smart pointers** are special types of pointers that do more than just point to data. They help manage the memory and ownership of data safely and automatically. Rust uses smart pointers to ensure the program runs efficiently without memory leaks or unsafe access to data. Let's look at three important smart pointers: **Box**, **Rc**, and **RefCell**.
+In Rust, **smart pointers** are special types of pointers that do more than just point to data. They help manage the memory and ownership of data safely and automatically. Rust uses smart pointers to ensure the program runs efficiently without memory leaks or unsafe access to data. Let's look at these important smart pointers: **Box**, **Rc**, and **RefCell**.
 
 ---
 
@@ -19,17 +19,16 @@ Smart pointers in Rust implement special traits that allow them to clean up memo
 
 ## Main Smart Pointers
 
-| Feature | Box 📦 | Rc 🌐 | RefCell 🔄 |
-|---|---|---|---|
-| **Purpose** | Moves data to the heap, giving it a single owner 🛠️ | Shares ownership of data between multiple parts of the program 🤝 | Allows mutable access to data through immutable references 🔄 |
-| **Ownership** | Single owner 👤 | Multiple owners (reference counted) 👥 | Single owner 👤 |
-| **Mutability** | Mutable only if the owner has a mutable reference ✍️ | Immutable by default; mutability requires `RefCell` 🛡️ | Allows interior mutability 🌀 |
-| **Runtime Behavior** | Compile-time ownership checks ✅ | Compile-time ownership checks ✅ | Runtime borrow checking; panics if borrow rules are violated 🚨 |
-| **Key Points** | Data is stored on the heap; fast and simple for single-owner scenarios ⚡ | Deletes the data only when all references are dropped 🗑️ | Enables mutable access when immutable references are required 🔑 |
-| **When to Use** | Large or complex data unsuitable for the stack 🏗️ | Multiple readers of shared data 📚 | When mutability is needed in an otherwise immutable context 🔓 |
-| **Example Use Case** | Storing a large binary tree on the heap 🌳 | Sharing access to a read-only configuration file 📖 | Mutating an internal cache from a shared reference 📈 |
-| **Performance** | Low overhead; no runtime checks 🚀 | Some overhead for maintaining reference count ⚖️ | Runtime cost due to borrow rule checks ⏱️ |
-| **Code Example** | `let b = Box::new(42);` 📦 | `let r = Rc::new(vec![1, 2, 3]);` 🌐 | `let c = RefCell::new(10);` 🔄 |
+| Feature | Box 📦 | Rc 🌐 | RefCell 🔄 | Weak 🔄🚫
+|---|---|---|---|---|
+| **Purpose** | Moves data to the heap, giving it a single owner 🛠️ | Shares ownership of data between multiple parts of the program 🤝 | Allows mutable access to data through immutable references 🔄 | Provides non-owning references to prevent cyclic references 🚫 |
+| **Ownership** | Single owner 👤 | Multiple owners (reference counted) 👥 | Single owner 👤 | Non-owning 👥 |
+| **Mutability** | Mutable only if the owner has a mutable reference ✍️ | Immutable by default; mutability requires `RefCell` 🛡️ | Allows interior mutability 🌀 | Non-mutable by itself, relies on associated smart pointer |
+| **Runtime Behavior** | Compile-time ownership checks ✅ | Compile-time ownership checks ✅ | Runtime borrow checking; panics if borrow rules are violated 🚨 | Provides weak references; does not prevent data from being dropped 🗑️ |
+| **Key Points** | Data is stored on the heap; fast and simple for single-owner scenarios ⚡ | Deletes the data only when all references are dropped 🗑️ | Enables mutable access when immutable references are required 🔑 | Prevents memory leaks in cyclic references 🔄 |
+| **When to Use** | Large or complex data unsuitable for the stack 🏗️ | Multiple readers of shared data 📚 | When mutability is needed in an otherwise immutable context 🔓 | Cyclic references like parent-child relationships 🌳 |
+| **Example Use Case** | Storing a large binary tree on the heap 🌳 | Sharing access to a read-only configuration file 📖 | Mutating an internal cache from a shared reference 📈 | Managing parent-child relationships in a tree structure 🌲 |
+| **Performance** | Low overhead; no runtime checks 🚀 | Some overhead for maintaining reference count ⚖️ | Runtime cost due to borrow rule checks ⏱️ | Very low overhead, avoids cycles efficiently |
 
 
 ## Combining Smart Pointers
@@ -106,7 +105,52 @@ fn main() {
 
 **Key Point**: Use `Rc` and `RefCell` together for shared ownership and the ability to modify data.
 
+### Weak: Avoiding a Treasure Map's Curse 🔄🚫
+Imagine during the treasure hunt, the treasure map points to a chest, and the chest references the map to explain its origin. If both the map and the chest hold strong references to each other, they’ll never let go, creating a **cyclic dependency**. 😱
+
+This is where `Weak` saves the day! It allows one of the references (e.g., the chest's reference to the map) to be `non-owning`, breaking the cycle.
+
+#### The Curse-Free Treasure Hunt 🌲
+
+Let’s create a scenario where the treasure map references its chest without causing a memory leak:
+
+```rust
+use std::rc::{Rc, Weak};
+use std::cell::RefCell;
+
+#[derive(Debug)]
+struct Treasure {
+    name: String,
+    map: RefCell<Weak<TreasureMap>>, // Weak reference to prevent a cycle
+}
+
+#[derive(Debug)]
+struct TreasureMap {
+    details: String,
+    chest: RefCell<Rc<Treasure>>, // Strong reference to own the chest
+}
+
+fn main() {
+    let map = Rc::new(TreasureMap {
+        details: "X marks the spot".to_string(),
+        chest: RefCell::new(Rc::new(Treasure {
+            name: "Golden Chest".to_string(),
+            map: RefCell::new(Weak::new()), // Initially no reference
+        })),
+    });
+
+    // Establishing the weak link
+    if let Ok(chest) = Rc::try_unwrap(map.chest.replace(Rc::clone(&map.chest.borrow()))) {
+        *chest.map.borrow_mut() = Rc::downgrade(&map); // Chest weakly references the map
+    }
+
+    println!("Map: {:?}", map);
+    println!("Chest: {:?}", map.chest.borrow());
+}
+```
+
 ## Key Takeaways
 - **Box** 📦: Use for large or complex data that needs to be on the heap.
 - **Rc** 🌐: Share ownership between multiple parts of the program.
 - **RefCell** 🔄: Mutate data even when it's immutable, with runtime checks.
+- **Weak** 🔄🚫: Prevent cyclic references and memory leaks.
