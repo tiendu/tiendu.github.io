@@ -7,29 +7,27 @@ $base-font-family: "Lato", sans-serif;
 $code-font-family: "Noto Sans Mono", monospace;
 $spacing-unit: 28px;
 
-$base-font-size: 16px; /* Increase base font size */
-$base-font-weight: 300; /* Use a lighter base font weight */
+$base-font-size: 16px;
+$base-font-weight: 400;
 
-/* Define the yellow tint background color */
-$background-color: #fef9e7; /* Light yellow tint */
+$background-color: #ffffff;
+$text-color: #000000;
+$grey-color: #555555;
+$brand-color: #ff4500;
 
-/* Darken the text color for better contrast */
-$text-color: #424242; /* Dark grey text color */
+/* Adjust link hover and visited colors */
+$link-hover-color: lighten($brand-color, 20%);
+$link-visited-color: darken($brand-color, 20%);
 
-/* Adjust the grey color shades */
-$grey-color: #757575; /* Darker grey for better readability */
-$grey-color-dark: darken($grey-color, 10%); /* Darken the darker grey */
-
-/* Lighten the brand color */
-$brand-color: #ffa000; /* Lighten the accent color to match the yellow tint */
-
-/* Lighter shade for code block background */
-// $code-background-color: #fafafa; /* Lighter grey for code block background */
+/* High-contrast code block background */
+$code-background-color: #333333;
+$code-text-color: #f1f1f1;
 
 @import "minima";
+
 .site-title {
   font-family: "Bungee Shade", cursive;
-  font-weight: 400;
+  font-weight: 700;
   color: $text-color;
   &:visited {
     color: $text-color;
@@ -38,27 +36,47 @@ $brand-color: #ffa000; /* Lighten the accent color to match the yellow tint */
 
 table {
   width: 75%;
-  font-size: $small-font-size;
+  font-size: $base-font-size;
+  color: $text-color;
+  border: 1px solid $grey-color;
 }
 
 blockquote {
-  font-size: $small-font-size;
+  font-size: $base-font-size;
+  color: $grey-color;
+  border-left: 4px solid $brand-color;
+  padding-left: $spacing-unit;
 }
 
 a {
   color: $brand-color;
+  text-decoration: none;
   &:visited {
-    color: darken($brand-color, 15%);
+    color: $link-visited-color;
   }
   &:hover {
-    color: lighten($brand-color, 15%);
+    color: $link-hover-color;
     text-decoration: underline;
   }
 }
 
 code {
   font-family: $code-font-family;
-//  background-color: $code-background-color;
-  width: 100%; /* Set a fixed width */
-  white-space: pre-wrap; /* Preserve line breaks */
+  background-color: $code-background-color;
+  color: $code-text-color;
+  padding: $spacing-unit / 4;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  display: inline-block;
+}
+
+body {
+  background-color: $background-color;
+  color: $text-color;
+  font-family: $base-font-family;
+  font-size: $base-font-size;
+  font-weight: $base-font-weight;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
 }
