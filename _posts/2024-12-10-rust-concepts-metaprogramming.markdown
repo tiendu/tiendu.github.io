@@ -18,7 +18,167 @@ In Rust, macros come in two main flavors:
 - **Declarative Macros (`macro_rules!`)**: A straightforward way to match patterns and generate code.
 - **Procedural Macros**: More advanced and useful for custom annotations like `#[derive(Debug)]`.
 
-For now, we’ll focus on **declarative macros** since they’re part of the standard library and incredibly versatile.
+### Key Differences Between Declarative and Procedural Macros 🧐
+
+| Feature | Declarative Macros | Procedural Macros |
+|---|---|---|
+| **Purpose**| Pattern matching and expansion | Abstract Syntax Tree manipulation |
+| **Syntax** | `macro_rules!` | Attributes like `#[...]` |
+| **Complexity** | Simple, built-in | Requires external crates |
+| **Use Cases** | Flexible syntax, small patterns | Custom derives, advanced logic |
+
+For now, we’ll focus on **declarative macros** (referred to as macros from here on) and **built-in procedural macros** (referred to as `derive` from here on), as they are part of the standard library and offer great versatility.
+
+## Built-in Procedural Macros in Rust 📦
+
+Rust's standard library provides several built-in procedural macros, which simplify repetitive coding tasks. These are especially useful when working with structs or enums. Here are the most commonly used ones:
+
+### `#[derive(Debug)]`
+Automatically implements the `Debug` trait, allowing you to print a human-readable representation of your structs or enums.
+
+```rust
+#[derive(Debug)]
+struct Treasure {
+    name: String,
+    value: i32,
+}
+
+fn main() {
+    let treasure = Treasure {
+        name: String::from("Golden Crown"),
+        value: 500,
+    };
+    println!("{:?}", treasure); // Output: Treasure { name: "Golden Crown", value: 500 }
+}
+```
+
+### `#[derive(Clone)]`
+Implements the Clone trait, allowing you to create deep copies of your types.
+
+```rust
+#[derive(Clone, Debug)]
+struct Treasure {
+    name: String,
+    value: i32,
+}
+
+fn main() {
+    let original = Treasure {
+        name: String::from("Silver Chalice"),
+        value: 300,
+    };
+    let duplicate = original.clone();
+    println!("{:?} and {:?}", original, duplicate);
+}
+```
+
+### `#[derive(Copy)]`
+Used with `Clone` to implement the `Copy` trait for bitwise copyable types.
+
+```rust
+#[derive(Copy, Clone, Debug)]
+struct Coin {
+    value: i32,
+}
+
+fn main() {
+    let coin = Coin { value: 10 };
+    let another_coin = coin; // `coin` is still valid
+    println!("{:?} {:?}", coin, another_coin);
+}
+```
+
+### `#[derive(Default)]`
+Implements the `Default` trait, providing an easy way to create default instances of your types when none is specified.
+
+```rust
+#[derive(Default, Debug)]
+struct Treasure {
+    name: String,
+    value: i32,
+}
+
+fn main() {
+    let default_treasure = Treasure::default();
+    println!("{:?}", default_treasure); // Output: Treasure { name: "", value: 0 }
+}
+```
+
+### `#[derive(PartialEq, Eq)]`
+Implements traits to compare your types for equality.
+
+```rust
+#[derive(PartialEq, Eq, Debug)]
+struct Treasure {
+    name: String,
+    value: i32,
+}
+
+fn main() {
+    let t1 = Treasure {
+        name: String::from("Emerald Gem"),
+        value: 700,
+    };
+    let t2 = Treasure {
+        name: String::from("Emerald Gem"),
+        value: 700,
+    };
+    assert_eq!(t1, t2);
+}
+```
+
+### `#[derive(PartialOrd, Ord)]`
+Implements traits for comparing and ordering instances.
+
+
+```rust
+#[derive(PartialOrd, Ord, PartialEq, Eq, Debug)]
+struct Treasure {
+    name: String,
+    value: i32,
+}
+
+fn main() {
+    let t1 = Treasure {
+        name: String::from("Diamond"),
+        value: 1000,
+    };
+    let t2 = Treasure {
+        name: String::from("Gold Coin"),
+        value: 500,
+    };
+
+    assert!(t1 > t2);
+    println!("{:?} is more valuable than {:?}", t1, t2);
+}
+```
+
+### `#[derive(Hash)]`
+Implements the `Hash` trait, enabling your type to be used in hash-based collections.
+
+```rust
+use std::collections::HashSet;
+
+#[derive(Hash, PartialEq, Eq, Debug)]
+struct Treasure {
+    name: String,
+    value: i32,
+}
+
+fn main() {
+    let mut treasures = HashSet::new();
+    treasures.insert(Treasure {
+        name: String::from("Ruby Necklace"),
+        value: 800,
+    });
+    treasures.insert(Treasure {
+        name: String::from("Golden Crown"),
+        value: 1200,
+    });
+
+    println!("{:?}", treasures);
+}
+```
 
 ## Why Not Just Use Functions? 🤷‍♂️
 Functions and macros both improve code reusability, but they serve different purposes. Here's a comparison:
@@ -114,7 +274,7 @@ While macros are powerful, they aren’t a silver bullet:
 - **Debugging Complexity**: Macro-generated code doesn’t show up explicitly, so errors can be harder to trace.
 - **Readability**: Overusing macros can make code harder to understand.
 - **Compile Times**: Extensive macro use can slightly increase compile times.
-
+    
 ## When to Use Macros? 🕵️‍♀️
 Macros are ideal when:
 1. You need flexible and reusable patterns.
@@ -124,9 +284,10 @@ Macros are ideal when:
 But for simple tasks, stick to functions—they’re easier to debug and read.
 
 ## Key Takeaways
-- **Macros vs. Functions**: Functions are great for runtime logic with fixed input types, while macros excel at generating flexible, reusable code during compilation.
-- **Declarative Macros**: Use `macro_rules!` to define macros that match patterns and generate code. They are part of Rust’s standard library and are highly versatile.
-- **Flexibility**: Macros allow flexible syntax and work across various data structures and types without requiring rigid definitions.
-- **Efficiency**: Since macros generate code at compile time, they improve runtime performance by avoiding repetitive runtime checks.
-- **Syntax Customization**: Macros let you write more expressive and concise code.
-- **Caution**: Overusing macros can make debugging and code readability harder.
+- **Macros vs. Functions**: Functions handle fixed input types at runtime, while macros generate flexible, reusable code at compile time.
+- **Declarative Macros**: Use `macro_rules!` to define pattern-based code generation.
+- **`derive` Macros**: Automatically implement traits, reducing boilerplate.
+- **Flexibility**: Macros work with various data structures and types.
+- **Efficiency**: Macros improve runtime performance by generating code at compile time.
+- **Syntax Customization**: Macros allow more concise and expressive syntax.
+- **Caution**: Excessive macro use can reduce code readability and complicate debugging.
