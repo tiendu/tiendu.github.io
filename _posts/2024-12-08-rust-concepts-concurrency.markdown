@@ -136,9 +136,103 @@ fn main() {
 - The `Mutex` ensures only one thread accesses the chest at a time.
 - Use `.lock()` to access the data inside the `Mutex`.
 
+## Expanding Concurrency: Async with `std::thread`
+Rust’s standard library can handle concurrency and simulate async behavior using Future and threads.
+
+### What Is Async in Rust’s Standard Library?
+Async tasks represent computations that yield control, like adventurers pausing to let others work. With std::thread and a custom Future, you can run tasks concurrently.
+
+### Example: Two Adventurers, Two Tasks
+- **Adventurer A** digs in the cave 🕳️, pausing between checks.
+- **Adventurer B** searches the forest 🌳 while A works.
+
+```rust
+use std::future::Future; // Import Future trait to define custom futures
+use std::pin::Pin; // Pin is used to guarantee that the memory location of the value does not change
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering}; // AtomicBool for thread-safe boolean flag
+use std::task::{Context, Poll}; // Context and Poll are used for implementing the Future trait
+use std::thread;
+use std::time::Duration; // Duration type for time-based operations
+
+struct FindTreasure {
+    duration: Duration,  // Duration before the treasure is found
+    start: Option<std::time::Instant>, // Optional start time of the operation
+}
+
+impl Future for FindTreasure {
+    // The output of this future is a String
+    type Output = String;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let now = std::time::Instant::now(); // Get the current time
+
+        // If the start time is available, check if the duration has elapsed
+        if let Some(start) = self.start {
+            if now - start >= self.duration {
+                // If the duration is met, return Poll::Ready with a result
+                return Poll::Ready("Treasure Found! 💰".to_string());
+            }
+        } else {
+            // If start time isn't set, set it and wake the task up when it's ready
+            self.start = Some(now);
+            cx.waker().wake_by_ref(); // Notify the task when it can continue
+        }
+
+        // If the treasure isn't found yet, continue waiting
+        Poll::Pending
+    }
+}
+
+fn main() {
+    // Create an atomic boolean to track if the treasure is found
+    let treasure_found = Arc::new(AtomicBool::new(false));
+    let treasure_clone = Arc::clone(&treasure_found);
+
+    // Spawn a new thread to simulate the adventurer digging for treasure
+    thread::spawn(move || {
+        // Create a pinned future representing the treasure hunt that lasts 3 seconds
+        let mut future = Box::pin(FindTreasure {
+            duration: Duration::from_secs(3), // Set the treasure hunt duration to 3 seconds
+            start: None, // No start time yet
+        });
+
+        // Create a no-op waker since we're manually driving the future with poll
+        let waker = futures::task::noop_waker_ref();
+        let mut context = Context::from_waker(waker); // Set up a context with the no-op waker
+
+        // Poll the future to check if the treasure has been found
+        while let Poll::Pending = future.as_mut().poll(&mut context) {
+            // Print a message simulating adventurer A digging for treasure
+            println!("Adventurer A: Digging in the cave... 🕳️");
+
+            // Sleep for a second to simulate time passing
+            thread::sleep(Duration::from_secs(1));
+        }
+
+        // Once the treasure is found, set the atomic flag to true
+        treasure_clone.store(true, Ordering::SeqCst);
+        println!("Adventurer A: Found treasure! 🎉"); // Print a message when the treasure is found
+    });
+
+    // Main thread simulates adventurer B searching for the treasure
+    while !treasure_found.load(Ordering::SeqCst) {
+        // Print a message simulating adventurer B searching in the forest
+        println!("Adventurer B: Searching in the forest... 🌳");
+
+        // Sleep for a second to simulate time passing
+        thread::sleep(Duration::from_secs(1));
+    }
+
+    println!("Adventurer B: Hunt is over! 🎊");
+}
+```
+
 ## Key Takeaways
-- **`std::thread`**: Use `thread::spawn` to create threads for parallel tasks.
-- **Waiting**: Use `.join()` to ensure threads finish before the program ends.
-- **Ownership**: Move data into threads or share safely using `Arc`.
-- **Data Races**: Prevent conflicts with `Mutex` when threads modify shared data.
+- `std::thread`: Use `thread::spawn` to create threads for parallel tasks. Each thread runs concurrently, allowing independent execution of operations.
+- **Waiting**: Use `.join()` to ensure threads finish before the program ends. This ensures that the main thread waits for spawned threads to complete.
+- **Ownership**: Move data into threads or share safely using `Arc`. `Arc` (atomic reference counting) is used to share ownership of data across threads safely. For mutable data, consider using `Mutex` or `RwLock` to ensure safe access.
+- **Data Races**: Prevent conflicts with `Mutex` when threads modify shared data. Mutex ensures that only one thread can access the data at a time, avoiding race conditions.
+- **Async Programming**: Rust's `Future` trait enables asynchronous programming, allowing tasks to run concurrently without blocking the thread. Implement poll to manually drive the execution of a future. Use `Context` and `Waker` to notify when the future can make progress. Futures can be awaited using async executors, allowing efficient execution of long-running tasks.
+- **Custom Futures**: You can create custom futures by implementing the `Future` trait and using `Pin` to prevent moving the data, ensuring memory safety in async tasks. The `poll` method checks if the task is completed or still pending, and `Poll::Ready` signals completion.
 
