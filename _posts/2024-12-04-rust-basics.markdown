@@ -81,7 +81,7 @@ fn main() {
 ## Smart Pointers
 Smart pointers extend regular pointers with extra capabilities like heap allocation, shared ownership, and interior mutability.
 
-### Example: Box – Heap Allocation
+### Example: `Box` – Heap Allocation
 A `Box<T>` moves data to the heap. Think of it as storing a heavy treasure off the ship’s deck.
 
 ```rust
@@ -91,7 +91,7 @@ fn main() {
 }
 ```
 
-### Example: Rc – Shared Ownership
+### Example: `Rc` – Shared Ownership
 `Rc<T>` allows multiple owners. Imagine several pirates sharing the same treasure map without making copies.
 
 ```rust
@@ -108,7 +108,7 @@ fn main() {
 }
 ```
 
-### Example: RefCell – Interior Mutability
+### Example: `RefCell` – Interior Mutability
 `RefCell<T>` enables mutation even when data is borrowed immutably at compile time, with runtime checks. It’s like a locked chest that you can open (at runtime) to adjust its contents.
 
 ```rust
@@ -124,8 +124,8 @@ fn main() {
 }
 ```
 
-### Example: Combining Rc and RefCell
-When multiple owners need to mutate shared data, combine Rc and RefCell.
+### Example: Combining `Rc` and `RefCell`
+When multiple owners need to mutate shared data, combine `Rc` and `RefCell`.
 
 ```rust
 use std::rc::Rc;
@@ -200,7 +200,7 @@ Rust uses two primary string types:
 - `String`: An owned, mutable, heap-allocated string.
 - `&str`: A borrowed, immutable string slice.
 
-### Example: Creating and Modifying a String
+### Example: Creating and Modifying a `String`
 
 ```rust
 fn main() {
@@ -210,7 +210,7 @@ fn main() {
 }
 ```
 
-### Example: Borrowing a String Slice (&str)
+### Example: Borrowing a String Slice (`&str`)
 
 ```rust
 fn main() {
@@ -219,7 +219,7 @@ fn main() {
 }
 ```
 
-### Example: Converting Between String and &str
+### Example: Converting Between `String` and `&str`
 
 ```rust
 fn main() {
@@ -488,13 +488,11 @@ fn main() {
 ```
 
 ## Key Takeaways
-- Ownership, Borrowing, and Lifetimes: These rules ensure that each piece of data has a single owner, borrowed data never outlives its owner, and references remain valid.
-- Smart Pointers: Use `Box`, `Rc`, and `RefCell` to manage heap data, share ownership, and allow controlled mutation.
-- Traits and Trait Objects: Define shared behavior with traits and use dynamic dispatch with trait objects when needed.
-- Strings: Understand the difference between an owned `String` and a borrowed `&str`; converting between them is straightforward.
-- Concurrency: Use threads with safe ownership transfer (`move`), and share data safely using `Arc` and `Mutex`.
-- Macros: Write macros to eliminate boilerplate and generate code at compile time.
-- Iterators and Closures: Use iterator chains and closures to work with collections in a clear, functional style.
-- Standard Collections: Choose from various collections (`Vec`, `HashMap`, `BinaryHeap`, etc.) based on your data organization and performance needs.
-
-This guide—with its detailed examples—provides a solid foundation in Rust’s core concepts. As you build more sophisticated programs, these building blocks will help you write safe, efficient, and expressive code.
+- **Ownership, Borrowing, and Lifetimes**: These rules ensure that each piece of data has a single owner, borrowed data never outlives its owner, and references remain valid.
+- **Smart Pointers**: Use `Box`, `Rc`, and `RefCell` to manage heap data, share ownership, and allow controlled mutation.
+- **Traits and Trait Objects**: Define shared behavior with traits and use dynamic dispatch with trait objects when needed.
+- **Strings**: Understand the difference between an owned `String` and a borrowed `&str`; converting between them is straightforward.
+- **Concurrency**: Use threads with safe ownership transfer (`move`), and share data safely using `Arc` and `Mutex`.
+- **Macros**: Write macros to eliminate boilerplate and generate code at compile time.
+- **Iterators and Closures**: Use iterator chains and closures to work with collections in a clear, functional style.
+- **Standard Collections**: Choose from various collections (`Vec`, `HashMap`, `BinaryHeap`, etc.) based on your data organization and performance needs.
