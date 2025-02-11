@@ -197,7 +197,7 @@ awk -v id="" -v start=n -v end=m -v rc="" '
         } else {
             print $0 "\n" j
         }
-    }' file.fa`
+    }' file.fa
 ```
 
 * Locate a region of a sequence (set query with a desired pattern, accept regex). 
