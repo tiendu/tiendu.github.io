@@ -574,7 +574,7 @@ awk '/ACCESSION/ {match($0, / +(.*)/, id)} /SOURCE/ {match($0, / +(.*)/, src)} /
 * Roll forward a number of nucleotides (in circular topology)
 
 ```
-awk -v id="" -v roll=3 '$0 ~ "^>" id {getline seq; if (roll > length(seq)) {exit}; print $0 "_before" "\n" seq; split(seq "" seq, a, ""); b=""; for (i=roll+1; i<=length(a)+1-roll; i++) {b=b "" a[i]}; print $0 "_after" "\n" b}' file.fa
+awk -v id="" -v roll=0 '$0 ~ "^>" id {getline seq; if (roll > length(seq)) {exit}; print $0 "_before" "\n" seq; split(seq "" seq, a, ""); b=""; for (i=roll+1; i<=length(a) && length(b)<length(seq); i++) {b=b "" a[i]}; print $0 "_after" "\n" b}' file.fa
 ```
 
 # Utility
