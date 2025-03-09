@@ -1,8 +1,8 @@
 ---
-layout: post
+layout: ../../layouts/MarkdownPostLayout.astro
 title:  "Useful Bioinformatics One-liners"
-date:   2022-12-20
-categories: [guide, english, bioinformatics]
+pubDate: 2022-12-20
+tags: ["guide", "english", "bioinformatics"]
 ---
 
 **Last updated on 2024-09-20**

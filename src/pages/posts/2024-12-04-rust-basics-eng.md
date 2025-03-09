@@ -1,8 +1,8 @@
 ---
-layout: post
+layout: ../../layouts/MarkdownPostLayout.astro
 title: "Rust Basics: A Comprehensive Guide to Rust Fundamentals"
-date: 2024-12-15
-categories: [guide, english, programming, rust]
+pubDate: 2024-12-15
+tags: ["guide", "english", "programming"]
 ---
 
 Rust is a systems programming language known for its focus on memory safety, zero-cost abstractions, and concurrency without data races. In this guide, we’ll cover the core building blocks of Rust programming—from managing memory with ownership and borrowing to leveraging smart pointers, traits, strings, concurrency, metaprogramming, iterators, closures, and the standard library collections.

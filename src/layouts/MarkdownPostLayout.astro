@@ -1,36 +1,42 @@
 ---
 import BaseLayout from "./BaseLayout.astro";
 const { frontmatter } = Astro.props;
+
+// Set default values for safety
+const title = frontmatter.title || "Untitled Post";
+const description = frontmatter.description || "";
+const pubDate = frontmatter.pubDate ? new Date(frontmatter.pubDate).toLocaleDateString() : "";
+const tags = frontmatter.tags || [];
 ---
 
-<BaseLayout pageTitle={frontmatter.title}>
-  <p><em>{frontmatter.description}</em></p>
-  <p>{frontmatter.pubDate.toString().slice(0, 10)}</p>
+<BaseLayout pageTitle={title}>
+  {description && <p><em>{description}</em></p>}
+  {pubDate && <p>{pubDate}</p>}
 
-  <p>Written by: {frontmatter.author}</p>
-
-  <img src={frontmatter.image.url} width="300" alt={frontmatter.image.alt} />
-
-  <div class="tags">
-    {
-      frontmatter.tags.map((tag: string) => (
-        <p class="tag">
+  {tags.length > 0 && (
+    <div class="tags">
+      {tags.map((tag) => (
+        // Using a span for inline display; alternatively, consider a <li> in a <ul> for better semantics
+        <span class="tag">
           <a href={`/tags/${tag}`}>{tag}</a>
-        </p>
-      ))
-    }
-  </div>
+        </span>
+      ))}
+    </div>
+  )}
 
   <slot />
 </BaseLayout>
+
 <style>
   a {
     color: #00539f;
+    text-decoration: none;
   }
 
   .tags {
     display: flex;
     flex-wrap: wrap;
+    margin: 1em 0;
   }
 
   .tag {
@@ -42,3 +48,4 @@ const { frontmatter } = Astro.props;
     background-color: #f8fcfd;
   }
 </style>
+

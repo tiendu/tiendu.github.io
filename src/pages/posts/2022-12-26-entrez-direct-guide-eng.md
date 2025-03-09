@@ -2,9 +2,6 @@
 layout: ../../layouts/MarkdownPostLayout.astro
 title:  "Guide to Download Datasets from NCBI"
 pubDate: 2022-12-26
-image:
-  url: "https://docs.astro.build/assets/rose.webp"
-  alt: "The Astro logo on a dark background with a pink glow."
 tags: ["guide", "english", "bioinformatics"]
 ---
 

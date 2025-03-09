@@ -1,13 +1,57 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import BlogPost from "../components/BlogPost.astro";
-const pageTitle = "My Astro Learning Blog";
+
+// Set a page title
+const pageTitle = "";
+
+// Import and sort posts by publication date (if pubDate is available)
 const allPosts = Object.values(await import.meta.glob('./posts/*.md', { eager: true }));
+allPosts.sort((a, b) => new Date(b.frontmatter.pubDate) - new Date(a.frontmatter.pubDate));
 ---
 
 <BaseLayout pageTitle={pageTitle}>
-  <p>This is where I will post about my journey learning Astro.</p>
-  <ul>
-    {allPosts.map((post:any) => <BlogPost url={post.url} title={post.frontmatter.title} />)}
+  <ul class="blog-post-list">
+    {allPosts.map((post: any) => (
+      <li>
+        <BlogPost url={post.url} title={post.frontmatter.title} />
+      </li>
+    ))}
   </ul>
+
+  <style>
+    /* Increase font size for the list and add spacing */
+    .blog-post-list {
+      font-size: 1.2rem;
+      list-style: none;
+      padding: 0;
+    }
+    .blog-post-list li {
+      margin-bottom: 1.5rem;
+    }
+    /* Optional: style the header if desired */
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Define default (light mode) link colors */
+    :root {
+      --link-color: #00539f; /* default blue */
+      --visited-link-color: #003f7f; /* darker blue for visited links */
+    }
+    /* Override colors for dark mode */
+    html.dark {
+      --link-color: #a8d1ff; /* brighter blue for better contrast */
+      --visited-link-color: #7caeff; /* adjust visited color accordingly */
+    }
+    /* Apply the variables */
+    a {
+      color: var(--link-color);
+    }
+    a:visited {
+      color: var(--visited-link-color);
+    }
+  </style>
 </BaseLayout>
+

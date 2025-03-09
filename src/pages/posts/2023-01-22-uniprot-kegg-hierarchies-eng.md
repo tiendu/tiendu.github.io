@@ -1,8 +1,8 @@
 ---
-layout: post
+layout: ../../layouts/MarkdownPostLayout.astro
 title:  "Hierarchical Function Classification using UniProt and KEGG"
-date:   2023-01-22
-categories: [guide, english, bioinformatics]
+pubDate: 2023-01-22
+tags: ["guide", "english", "bioinformatics"]
 ---
 
 # Introduction
