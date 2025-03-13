@@ -2,32 +2,126 @@
 layout: default
 ---
 
-<!-- This loops through the paginated posts -->
-{% for post in paginator.posts %}
-  <h1><a href="{{ post.url }}">{{ post.title }}</a></h1>
-  <p class="author">
-    <span class="date">{{ post.date }}</span>
-  </p>
-  <div class="content">
-    {{ post.content }}
-  </div>
-{% endfor %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+    <style>
+        /* Frappe Theme */
+        * {
+            background: #303446;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 500;
+            color: #c6d0f5;
+            margin: 0;
+            padding: 0;
+        }
 
-<!-- Pagination links -->
-<div class="pagination">
-  {% if paginator.previous_page %}
-    <a href="{{ paginator.previous_page_path }}" class="previous">
-      Previous
-    </a>
-  {% else %}
-    <span class="previous">Previous</span>
-  {% endif %}
-  <span class="page_number ">
-    Page: {{ paginator.page }} of {{ paginator.total_pages }}
-  </span>
-  {% if paginator.next_page %}
-    <a href="{{ paginator.next_page_path }}" class="next">Next</a>
-  {% else %}
-    <span class="next ">Next</span>
-  {% endif %}
-</div>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-size: 1rem;
+            padding: 1rem;
+            justify-content: flex-start;
+        }
+
+        h1 {
+            font-size: 2rem;
+            background-color: #684eff;
+            color: #fafafa;
+            padding: 0.5rem;
+        }
+
+        .typeme {
+            display: inline-block;
+            width: 30ch;
+            animation: typing 2s steps(25), blink 0.5s step-end infinite alternate;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 10px solid #f2d5cf;
+        }
+
+        .text-secondary {
+            color: #8CAAEE;
+        }
+
+        .text-background {
+            color: #B5BFE2;
+        }
+
+        .cursor {
+            color: #f2d5cf;
+        }
+
+        /* Animation for typing */
+        @keyframes typing {
+            0% { width: 0; }
+            100% { width: 30ch; }
+        }
+
+        @keyframes blink {
+            50% { border-color: transparent; }
+        }
+
+        .output {
+            width: 100%;
+            max-width: 80ch;
+            animation: fade 5s;
+        }
+
+        /* Links Section */
+        a {
+            color: #f2d5cf;
+            text-decoration: none;
+        }
+
+        footer {
+            color: #B5BFE2;
+            margin-top: auto;
+        }
+
+        .links li {
+            list-style: none;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        /* Dynamic resizing */
+        @media (min-width: 600px) {
+            body {
+                font-size: 1.25rem;
+            }
+        }
+
+        /* Fade animation */
+        @keyframes fade {
+            0% { opacity: 0; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="typeme"><span class="text-secondary">coffee@fridge</span><span class="text-background"> ~ </span><span class="cursor">$ </span>me -h</div>
+    <section class="output">
+        <p>Hi! I'm Tien, a Bioinformatics Engineer passionate about genomics, coding, and a good cup of coffee ☕.</p>
+        <p>I'm constantly learning and exploring new bioinformatics techniques to contribute to scientific research. Here are a few things about me:</p>
+
+        <h3>Interests</h3>
+        <ul>
+            <li>Genomics & Bioinformatics</li>
+            <li>Programming & Software Engineering</li>
+            <li>Data Analysis and Visualization</li>
+            <li>Coffee (always ☕)</li>
+        </ul>
+   </section>
+</body>
+</html>
+
