@@ -1,6 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Greeting from '../components/Greeting';
+import TerminalLanding from '../components/TerminalLanding';
+
 const pageTitle = "";
 const greetingsData = [
   "Hallo! Danke, dass du vorbeischaust!",
@@ -12,5 +14,62 @@ const greetingsData = [
 ];
 ---
 <BaseLayout pageTitle={pageTitle}>
-    <Greeting client:load messages={greetingsData} showButton={false} />
+  <Greeting client:load messages={greetingsData} showButton={false} />
+
+  <TerminalLanding client:load command="me -h" speed={300}>
+    <div class="revealed-content">
+      <p>I am Tien, a Bioinformatics Engineer passionate about genomics, coding, and a good cup of coffee ☕.</p>
+    </div>
+  </TerminalLanding>
+
+  <style global>
+      /* Terminal container */
+      .terminal {
+        /* Looks like a code block */
+        background-color: #1e1e2e; /* Dark Catppuccin Mocha */
+        color: #cdd6f4;
+        padding: 1rem;
+        border-radius: 5px;
+        font-family: 'Courier New', Courier, monospace;
+        max-width: 600px;
+        margin: 2rem auto;
+      }
+
+      /* Prompt row */
+      .prompt {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem; /* small spacing between spans */
+        margin-bottom: 1rem;
+      }
+
+      /* Color-coded spans for the prompt */
+      .username {
+        color: #50fa7b; /* green */
+      }
+      .symbol,
+      .host,
+      .separator {
+        color: #999;    /* gray */
+      }
+      .dollar {
+        color: #ff79c6; /* pink */
+      }
+
+      /* Typewriter text */
+      .typing {
+        margin-left: 0.5rem;
+        display: inline-block;
+      }
+
+      /* Cursor blinking */
+      .cursor.blinking {
+        animation: blink 1s step-end infinite;
+      }
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+      }
+  </style>
 </BaseLayout>
+

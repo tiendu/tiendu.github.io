@@ -37,8 +37,6 @@ h1 {
   font-size: 2.5rem;
 }
 
-
-
 /* Navigation Styles */
 .hamburger {
   padding-right: 20px;
@@ -117,4 +115,18 @@ html.dark .nav-links a {
   padding: 20px;
   overflow: auto;
   border-radius: 5px;
+}
+
+.cursor {
+  display: inline-block;
+  margin-left: 2px;
+}
+
+.cursor.blinking {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
