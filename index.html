@@ -11,35 +11,20 @@ layout: default
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap" rel="stylesheet">
     <style>
-        /* Frappe Theme */
-        * {
+        /* Frappe Theme applied only to terminal section */
+        .terminal-container {
             background: #303446;
             font-family: 'IBM Plex Mono', monospace;
             font-weight: 500;
             color: #c6d0f5;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            font-size: 1rem;
             padding: 1rem;
-            justify-content: flex-start;
-        }
-
-        h1 {
-            font-size: 2rem;
-            background-color: #684eff;
-            color: #fafafa;
-            padding: 0.5rem;
+            border-radius: 10px; /* Rounded corners */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Optional: adds shadow for more depth */ 
         }
 
         .typeme {
             display: inline-block;
-            width: 30ch;
+            width: 23;
             animation: typing 2s steps(25), blink 0.5s step-end infinite alternate;
             white-space: nowrap;
             overflow: hidden;
@@ -109,19 +94,24 @@ layout: default
     </style>
 </head>
 <body>
-    <div class="typeme"><span class="text-secondary">coffee@fridge</span><span class="text-background"> ~ </span><span class="cursor">$ </span>me -h</div>
-    <section class="output">
-        <p>Hi! I'm Tien, a Bioinformatics Engineer passionate about genomics, coding, and a good cup of coffee ☕.</p>
-        <p>I'm constantly learning and exploring new bioinformatics techniques to contribute to scientific research. Here are a few things about me:</p>
+    <!-- Terminal-like section with Frappe theme -->
+    <div class="terminal-container">
+        <div class="typeme">
+            <span class="text-secondary">coffee@fridge</span><span class="text-background"> ~ </span><span class="cursor">$ </span>me -h
+        </div>
+        <section class="output">
+            <p>Hi! I'm Tien, a Bioinformatics Engineer passionate about genomics, coding, and a good cup of coffee ☕.</p>
+            <p>I'm constantly learning and exploring new bioinformatics techniques to contribute to scientific research. Here are a few things about me:</p>
 
-        <h3>Interests</h3>
-        <ul>
-            <li>Genomics & Bioinformatics</li>
-            <li>Programming & Software Engineering</li>
-            <li>Data Analysis and Visualization</li>
-            <li>Coffee (always ☕)</li>
-        </ul>
-   </section>
+            <h3>Interests</h3>
+            <ul>
+                <li>Genomics & Bioinformatics</li>
+                <li>Programming & Software Engineering</li>
+                <li>Data Analysis and Visualization</li>
+                <li>Coffee (always ☕)</li>
+            </ul>
+        </section>
+    </div>
 </body>
 </html>
 
