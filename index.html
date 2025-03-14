@@ -76,6 +76,64 @@ layout: default
         .links a:hover {
             text-decoration: underline;
         }
+/* Menu Bar styles */
+.menu-bar {
+  display: flex;
+  margin: -1rem -1rem 1rem -1rem; /* Cancels the container's top and side padding */
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: #e0e0e0; /* Light gray background */
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  margin-bottom: 1rem; /* Space below the menu bar */
+}
+
+.menu-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.menu-buttons .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot.red {
+  background-color: #ff5f57;
+}
+
+.dot.yellow {
+  background-color: #ffbd2e;
+}
+
+.dot.green {
+  background-color: #28c840;
+}
+
+/* Optional styling for menu items */
+.menu-items {
+  margin-left: auto;
+}
+
+.menu-items ul {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+}
+
+.menu-items li {
+  cursor: pointer;
+  color: black; /* Menu item font color set to black */
+}
+
+.menu-items li:hover {
+  text-decoration: underline;
+}
+
 
         /* Dynamic resizing */
         @media (min-width: 600px) {
@@ -95,6 +153,22 @@ layout: default
 <body>
     <!-- Terminal-like section with Frappe theme -->
     <div class="terminal-container">
+  <!-- Menu bar similar to macOS -->
+  <div class="menu-bar">
+    <div class="menu-buttons">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <div class="menu-items">
+      <ul>
+        <li>File</li>
+        <li>Edit</li>
+        <li>View</li>
+        <li>Help</li>
+      </ul>
+    </div>
+  </div>
         <div class="typeme">
             <span class="text-secondary">coffee@fridge</span><span class="text-background"> ~ </span><span class="cursor">$ </span>me -h
         </div>
