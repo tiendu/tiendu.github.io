@@ -6,71 +6,75 @@ title: projects
 
 <!DOCTYPE html>
 <html lang="en">
-<div class="projects">  
-    <article class="project">
-      <h2>Gommitizen</h2>
-      <p>
-        A Go-based implementation of <a href="https://commitizen-tools.github.io/commitizen/" target="_blank" rel="noopener">Commitizen</a> for automating the generation of conventional commit messages, which helps streamline the release process and maintain a consistent commit history.
-      </p>
-    </article>
-    <article class="project">
-      <h2>gentr</h2>
-      <p>
-        A tool to execute commands when files change, inspired by <a href="https://github.com/eradman/entr" target="_blank" rel="noopener">entr</a> and implemented in Go. It is designed for automating tasks like re-running tests or restarting services, enhancing the development workflow.
-      </p>
-    </article>
-  </div>
-  <style>
-    /* Container for the projects page */
-    .projects {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-    }
-    /* Center the main heading */
-    .projects h1 {
-    text-align: center;
-    margin-bottom: 2rem;
-    font-size: 2.5rem;
-    color: #333;
-    }
-    /* Each project card */
-    .project {
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    /* Hover effect for a subtle lift */
-    .project:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    /* Project title styling */
-    .project h2 {
-    margin-top: 0;
-    color: #007acc;
-    font-size: 1.75rem;
-    }
-    /* Paragraph styling for the project description */
-    .project p {
-    line-height: 1.6;
-    color: #555;
-    }
-    /* Link styling within projects */
-    .project a {
-    color: #007acc;
-    text-decoration: none;
-    transition: color 0.2s ease;
-    }
-
-    .project a:hover {
-    color: #005fa3;
-    text-decoration: underline;
-    }
-  </style>
+    <div class="projects">  
+        <article class="project">
+          <h2>
+            <a href="https://github.com/tiendu/gommitizen" target="_blank" rel="noopener">Gommitizen</a>
+          </h2>
+          <p>
+            A Go-based implementation of <a href="https://commitizen-tools.github.io/commitizen/" target="_blank" rel="noopener">Commitizen</a> for automating the generation of conventional commit messages, which helps streamline the release process and maintain a consistent commit history.
+          </p>
+        </article>
+        <article class="project">
+          <h2>
+            <a href="https://github.com/tiendu/gentr" target="_blank" rel="noopener">gentr</a>
+          </h2>
+          <p>
+            A tool to execute commands when files change, inspired by <a href="https://github.com/eradman/entr" target="_blank" rel="noopener">entr</a> and implemented in Go. It is designed for automating tasks like re-running tests or restarting services, enhancing the development workflow.
+          </p>
+        </article>
+      </div>
+      
+      <style>
+        /* Container for the projects page */
+        .projects {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 2rem 1rem;
+        }
+        /* Center the main heading if you decide to add one */
+        .projects h1 {
+          text-align: center;
+          margin-bottom: 2rem;
+          font-size: 2.5rem;
+          color: #333;
+        }
+        /* Each project card */
+        .project {
+          background-color: #f9f9f9;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          padding: 1.5rem;
+          margin-bottom: 1.5rem;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        /* Hover effect for a subtle lift */
+        .project:hover {
+          transform: scale(1.02);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        /* Project title styling */
+        .project h2 {
+          margin-top: 0;
+          color: #007acc;
+          font-size: 1.75rem;
+        }
+        /* Paragraph styling for the project description */
+        .project p {
+          line-height: 1.6;
+          color: #555;
+        }
+        /* Link styling within projects */
+        .project a {
+          color: #007acc;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        .project a:hover {
+          color: #005fa3;
+          text-decoration: underline;
+        }
+      </style>
 </html>
 
 
