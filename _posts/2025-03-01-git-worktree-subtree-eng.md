@@ -17,7 +17,7 @@ When an urgent hotfix is needed, many developers default to a process like this:
 
 1. Stash Your Work:
 
-```shell
+```bash
 git stash save "WIP on feature-A"
 ```
 
@@ -25,7 +25,7 @@ You stash uncommitted changes, risking messy conflict resolutions later if the s
 
 2. Switch Branches:
 
-```shell
+```bash
 git checkout main
 git checkout -b hotfix
 ```
@@ -34,7 +34,7 @@ You work on the hotfix in the same directory, then merge back into main and late
 
 3. Reapply the Stash:
 
-```shell
+```bash
 git checkout feature-A
 git merge main
 git stash pop
@@ -52,7 +52,7 @@ With Git worktree, you can create multiple working directories from a single rep
 
 Imagine you have two feature branches—**feature-A** and **feature-B**—and then a hotfix is needed.
 
-```shell
+```bash
 # In your main directory, you're on feature-A:
 git checkout feature-A
 
@@ -75,7 +75,7 @@ Each branch gets its own directory:
 
 In the hotfix directory, copy over essential changes from feature-A and feature-B if needed, then commit and push:
 
-```shell
+```bash
 # In the ../hotfix directory:
 git add .
 git commit -m "Hotfix: Apply critical fix with enhancements from feature-A & feature-B"
@@ -86,7 +86,7 @@ git push origin hotfix
 
 After merging the hotfix into main, update your feature branches in their respective worktrees:
 
-```shell
+```bash
 # For feature-A:
 git checkout feature-A
 git merge main
@@ -129,7 +129,7 @@ Many projects use submodules to manage external dependencies. However, submodule
   - External code is merged into your main repo's history, so you can update it with straightforward subtree commands.
   - _Benefit:_ Changes are part of your regular commit history, making tracking and merging easier.
 
-  ```shell
+  ```bash
   # Add an external library:
   git subtree add --prefix=lib/external-library https://github.com/example/external-library.git main --squash
 
