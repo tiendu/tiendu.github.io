@@ -18,11 +18,12 @@ $background-color: #282a36;
 $current-line-color: #44475a;
 $text-color: #f8f8f2;
 $comment-color: #6272a4;
-$brand-color: #ff79c6; // PINK
+$brand-color: #ff79c6;
+
 $link-hover-color: lighten($brand-color, 10%);
 $link-visited-color: darken($brand-color, 10%);
 
-// Extra accent colors (if needed)
+// Accent colors (if needed)
 $cyan-color: #8be9fd;
 $green-color: #50fa7b;
 $orange-color: #ffb86c;
@@ -40,7 +41,7 @@ $yellow-color: #f1fa8c;
   text-transform: uppercase;
   font-size: 2.5rem;
 
-  // Make it feel pixelated
+  // Pixelated look
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeSpeed;
@@ -79,6 +80,8 @@ p {
 a {
   color: $brand-color;
   text-decoration: none;
+  position: relative;
+
   &:visited {
     color: $link-visited-color;
   }
@@ -86,13 +89,13 @@ a {
     color: $link-hover-color;
     text-decoration: underline;
   }
-}
 
-a::after {
-  content: '↗';
-  font-family: $code-font-family;
-  font-size: 0.85em;
-  margin-left: 2px;
+  &::after {
+    content: ' ↗';
+    font-family: $code-font-family;
+    font-size: 0.85em;
+    margin-left: 2px;
+  }
 }
 
 // Tables
@@ -124,18 +127,15 @@ blockquote {
   margin-right: 0;
   background-color: $current-line-color;
   border-radius: 4px;
-  white-space: pre;
-  word-wrap: normal;
-  max-width: 100%;
 }
 
 // Inline Code
 code {
   font-family: $code-font-family;
   font-size: 0.95em;
-  padding: 0;
   background: none;
   color: inherit;
+  padding: 0;
 }
 
 // Code blocks
@@ -148,4 +148,7 @@ pre {
   font-family: $code-font-family;
   font-size: 0.95em;
   line-height: 1.5;
+  white-space: pre;
+  word-wrap: normal;
+  max-width: 100%;
 }
