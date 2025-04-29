@@ -89,7 +89,7 @@ a {
 }
 
 a::after {
-  content: ' ↗';
+  content: '↗';
   font-family: $code-font-family;
   font-size: 0.85em;
   margin-left: 2px;
@@ -124,16 +124,18 @@ blockquote {
   margin-right: 0;
   background-color: $current-line-color;
   border-radius: 4px;
+  white-space: pre;
+  word-wrap: normal;
+  max-width: 100%;
 }
 
 // Inline Code
 code {
   font-family: $code-font-family;
   font-size: 0.95em;
-  background: $current-line-color;
-  padding: 0.2em 0.4em;
-  border-radius: 4px;
-  white-space: pre-wrap;
+  padding: 0;
+  background: none;
+  color: inherit;
 }
 
 // Code blocks
