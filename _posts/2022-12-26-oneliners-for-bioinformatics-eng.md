@@ -671,9 +671,17 @@ awk '/ACCESSION/ {match($0, / +(.*)/, id)} /SOURCE/ {match($0, / +(.*)/, src)} /
 
 * Extract feature(s) from genbank and convert to fasta.
 
-  * from [Ed Morton and vgersh99](https://stackoverflow.com/questions/63652927/converting-a-genbank-like-multiline-record-into-a-new-file-format-fasta-format): `awk -v width=80 'function collect(array, tag, value) {if (key=="CDS") {while (match(record, /\/([^=]+)=(\S+|"[^"]+")/, tmp)) {tag=tmp[1]; value=tmp[2]; gsub(/^"|"$/, "", value); array[tag]=value; record=substr(record, RSTART+RLENGTH)}; if (width) {gsub(/\s+/,"", array["translation"]); gsub(".{" width "}", "&" RS, array["translation"]); sub(RS "$", "", array["translation"])} else {gsub(/\s+/, "", array["translation"])}; print ">" array["protein_id"], array["db_xref"], array["locus_tag"], array["product"]; print array["translation"]}; record=""} (NF==2 && !check && !/"/) {collect(); key=$1; sub(/\s*\$+/, "")} {if (check) {check=(sub(/"/, "&") ? 0 : check)} else {check=(n=gsub(/"/, "&") ? n%2 : 0); gsub(/^\s+|\s+$/, ""); record=(record=="" ? "" : record " ") $0}} END {collect()}' file.gb`
+  * from [Ed Morton and vgersh99](https://stackoverflow.com/questions/63652927/converting-a-genbank-like-multiline-record-into-a-new-file-format-fasta-format):
 
-  * general approach: `awk 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (i=length(s); i>0; i--) {o=o c[substr(s, i, 1)]}; return o} /.*[0-9]+.*\.\..*[0-9]+.*/ {split($0, a, " "); gsub(/[><]/, "", a[2]); b[a[2]]=a[1]} /ACCESSION/ {match($0, /ACCESSION.* (.*)/, acc)} /ORIGIN/ {seq=""; while ((getline line)>0) {if (line ~ /\/\//) {break} else {gsub(/[0-9]+/, "", line); gsub(/\r/, "", line); seq=seq toupper(line)}}; gsub(/ /, "", seq)} END {revseq=revcomp(seq); split(revseq, revarr, ""); split(seq, fwdarr, ""); for (i in b) {res=">" acc[1] "|" b[i] "|" i "\n"; if (i ~ /complement/) {match(i, /([0-9]+)\.\./, start); match(i, /\.\.([0-9]+)/, end); for (j=length(revseq)-end[1]+1; j<=length(revseq)-start[1]+1; j++) {res=res revarr[j]}} else if (i ~ /join/) {match(i, /\((.+)\)/, locs); split(locs[1], locs, ","); for (idx in locs) {match(locs[idx], /([0-9]+)\.\./, start); match(locs[idx], /\.\.([0-9]+)/, end); for (j=start[1]; j<=end[1]; j++) {res=res fwdarr[j]}}} else {match(i, /([0-9]+)\.\./, start); match(i, /\.\.([0-9]+)/, end); for (j=start[1]; j<=end[1]; j++) {res=res fwdarr[j]}}; print res}}' file.gb`
+```bash
+awk -v width=80 'function collect(array, tag, value) {if (key=="CDS") {while (match(record, /\/([^=]+)=(\S+|"[^"]+")/, tmp)) {tag=tmp[1]; value=tmp[2]; gsub(/^"|"$/, "", value); array[tag]=value; record=substr(record, RSTART+RLENGTH)}; if (width) {gsub(/\s+/,"", array["translation"]); gsub(".{" width "}", "&" RS, array["translation"]); sub(RS "$", "", array["translation"])} else {gsub(/\s+/, "", array["translation"])}; print ">" array["protein_id"], array["db_xref"], array["locus_tag"], array["product"]; print array["translation"]}; record=""} (NF==2 && !check && !/"/) {collect(); key=$1; sub(/\s*\$+/, "")} {if (check) {check=(sub(/"/, "&") ? 0 : check)} else {check=(n=gsub(/"/, "&") ? n%2 : 0); gsub(/^\s+|\s+$/, ""); record=(record=="" ? "" : record " ") $0}} END {collect()}' file.gb
+```
+
+  * general approach:
+
+```bash
+awk 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; for (i=length(s); i>0; i--) {o=o c[substr(s, i, 1)]}; return o} /.*[0-9]+.*\.\..*[0-9]+.*/ {split($0, a, " "); gsub(/[><]/, "", a[2]); b[a[2]]=a[1]} /ACCESSION/ {match($0, /ACCESSION.* (.*)/, acc)} /ORIGIN/ {seq=""; while ((getline line)>0) {if (line ~ /\/\//) {break} else {gsub(/[0-9]+/, "", line); gsub(/\r/, "", line); seq=seq toupper(line)}}; gsub(/ /, "", seq)} END {revseq=revcomp(seq); split(revseq, revarr, ""); split(seq, fwdarr, ""); for (i in b) {res=">" acc[1] "|" b[i] "|" i "\n"; if (i ~ /complement/) {match(i, /([0-9]+)\.\./, start); match(i, /\.\.([0-9]+)/, end); for (j=length(revseq)-end[1]+1; j<=length(revseq)-start[1]+1; j++) {res=res revarr[j]}} else if (i ~ /join/) {match(i, /\((.+)\)/, locs); split(locs[1], locs, ","); for (idx in locs) {match(locs[idx], /([0-9]+)\.\./, start); match(locs[idx], /\.\.([0-9]+)/, end); for (j=start[1]; j<=end[1]; j++) {res=res fwdarr[j]}}} else {match(i, /([0-9]+)\.\./, start); match(i, /\.\.([0-9]+)/, end); for (j=start[1]; j<=end[1]; j++) {res=res fwdarr[j]}}; print res}}' file.gb
+```
  
 * Roll forward a number of nucleotides (in circular topology)
 
@@ -1128,7 +1136,9 @@ awk -v seed=1 'BEGIN {srand(seed)} NR%4==1 && /^@/ {getline seq; getline id2; ge
 
 * Handle multiple files. Here is an example when working with three files (from [Kai Yuan](https://www.baeldung.com/linux/awk-multiple-input-files)).
 
-`awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {} idx==2 {} idx==3 {}' file1.txt file2.txt file3.txt` 
+```bash
+awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {} idx==2 {} idx==3 {}' file1.txt file2.txt file3.txt
+``` 
 
 * Get k-nucleotides (from [KamilCuk](https://stackoverflow.com/questions/75517740/join-string-within-loop-using-awk-involve-replacing-an-array-with-another)).
 
@@ -1228,11 +1238,23 @@ awk 'function clone(original, copy) {for (i in original) {if (isarray(original[i
 
   * Fasta
     
-    * Nucleotides: `awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]}; printf ">%."length(n)"d\n%s\n", s, out}}'`
+    * Nucleotides:
 
-    * Amino acids: `awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ACDEFGHIKLNPQRSTVWY", a, ""); for (s=1; s<=n; s++) {out="M"; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]}; printf ">%."length(n)"d\n%s\n", s, out}}'`
+```bash
+awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]}; printf ">%."length(n)"d\n%s\n", s, out}}'
+```
 
-  * Fastq: `awk -v seed=3 -v phred=33 -v threshold=20 -v n=100 -v l=1000 -l ordchr 'BEGIN {score=threshold+phred; srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; qual=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]; qual=qual chr(int(rand()*score+score))}; printf "@%." length(n) "d\n%s\n+\n%s\n", s, out, qual}}'`
+    * Amino acids: 
+
+```bash
+awk -v seed=3 -v n=100 -v l=1000 'BEGIN {srand(seed); split("ACDEFGHIKLNPQRSTVWY", a, ""); for (s=1; s<=n; s++) {out="M"; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]}; printf ">%."length(n)"d\n%s\n", s, out}}'
+```
+
+  * Fastq:
+
+```bash
+awk -v seed=3 -v phred=33 -v threshold=20 -v n=100 -v l=1000 -l ordchr 'BEGIN {score=threshold+phred; srand(seed); split("ATGC", a, ""); for (s=1; s<=n; s++) {out=""; qual=""; len=int(rand()*l+1); while (length(out)<len || length(out)<0.5*l) {out=out a[int(rand()*length(a)+1)]; qual=qual chr(int(rand()*score+score))}; printf "@%." length(n) "d\n%s\n+\n%s\n", s, out, qual}}'
+```
 
 * Get the homologous sequences from BLAST result.
 
