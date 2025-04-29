@@ -59,6 +59,9 @@ a {
   }
   &::after {
     content: '↗';
+    font-family: $code-font-family;
+    font-size: 0.85em;
+    margin-left: 2px;
   }
 }
 
