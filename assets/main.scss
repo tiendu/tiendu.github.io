@@ -65,13 +65,6 @@ a {
   }
 }
 
-code {
-  padding: $spacing-unit / 12;
-  border-radius: 4px;
-  white-space: pre-wrap;
-  display: inline-block;
-}
-
 body {
   background-color: $background-color;
   color: $text-color;
@@ -96,11 +89,32 @@ p {
 
 h1, h2 { letter-spacing: -0.5px; }
 
-pre {
-  background-color: #f5f5f5;
+// code {
+//   padding: $spacing-unit / 12;
+//   border-radius: 4px;
+//   white-space: pre-wrap;
+//   display: inline-block;
+// }
+
+// pre {
+//   background-color: #f5f5f5;
+//   color: #2d2d2d;
+//   padding: $spacing-unit / 2;
+//   overflow-x: auto;
+//   border-radius: 6px;
+//   font-family: $code-font-family;
+// }
+
+code {
+  padding: $spacing-unit / 16; /* slightly tighter */
+  font-family: $code-font-family; /* ensure mono font for all inline code */
+  background-color: #f5f5f5; /* match pre background */
   color: #2d2d2d;
-  padding: $spacing-unit / 2;
-  overflow-x: auto;
-  border-radius: 6px;
-  font-family: $code-font-family;
+}
+
+pre code {
+  padding: 0; /* prevent double padding inside pre */
+  background: none; /* prevent weird background inside pre>code */
+  color: inherit;
+  font-family: inherit;
 }
