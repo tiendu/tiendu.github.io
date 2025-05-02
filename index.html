@@ -1,3 +1,4 @@
+
 ---
 layout: default
 ---
@@ -11,15 +12,14 @@ layout: default
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap" rel="stylesheet">
     <style>
-        /* Frappe Theme applied only to terminal section */
         .terminal-container {
             background: #303446;
             font-family: 'IBM Plex Mono', monospace;
             font-weight: 500;
             color: #c6d0f5;
             padding: 1rem;
-            border-radius: 10px; /* Rounded corners */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Optional: adds shadow for more depth */ 
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
         .typeme {
             display: inline-block;
@@ -37,7 +37,6 @@ layout: default
         .cursor {
             color: #f2d5cf;
         }
-        /* Animation for typing */
         @keyframes typing {
             0% { width: 0; }
             100% { width: 24ch; }
@@ -50,16 +49,15 @@ layout: default
             max-width: 80ch;
             animation: fade 5s;
         }
-        /* Menu Bar styles */
         .menu-bar {
           display: flex;
-          margin: -1rem -1rem 1rem -1rem; /* Cancels the container's top and side padding */
+          margin: -1rem -1rem 1rem -1rem;
           align-items: center;
           padding: 0.5rem 1rem;
-          background-color: #e0e0e0; /* Light gray background */
+          background-color: #e0e0e0;
           border-top-left-radius: 10px;
           border-top-right-radius: 10px;
-          margin-bottom: 1rem; /* Space below the menu bar */
+          margin-bottom: 1rem;
         }
         .menu-buttons {
           display: flex;
@@ -80,13 +78,11 @@ layout: default
         .dot.green {
           background-color: #28c840;
         }
-        /* Dynamic resizing */
         @media (min-width: 600px) {
             body {
                 font-size: 1.25rem;
             }
         }
-        /* Fade animation */
         @keyframes fade {
             0% { opacity: 0; }
             50% { opacity: 0; }
@@ -95,9 +91,7 @@ layout: default
     </style>
 </head>
 <body>
-    <!-- Terminal-like section with Frappe theme -->
     <div class="terminal-container">
-        <!-- Menu bar similar to macOS -->
         <div class="menu-bar">
             <div class="menu-buttons">
                 <span class="dot red"></span>
@@ -109,17 +103,23 @@ layout: default
             <span class="text-secondary">coffee@fridge</span><span class="text-background"> ~ </span><span class="cursor">$ </span>me -h
         </div>
         <section class="output">
-            <p>Hi! I'm Tien, a Bioinformatics Engineer passionate about genomics, coding, and a good cup of coffee ☕.</p>
-            <p>I'm constantly learning and exploring new bioinformatics techniques to contribute to scientific research. Here are a few things about me:</p>
-            <h3>Interests</h3>
+            <p>Hi, I'm someone who took the long road - 4 years in medical school, a full degree in biotechnology, and then made the leap into bioinformatics. Now, I work as a developer, but I've never really been "just a dev."</p>
+
+            <p>My strength isn't in pure software engineering or traditional research. It's in bridging domains.</p>
+
+            <p>I understand biology deeply enough to know what matters - and I can build tools and platforms that actually work for scientists, not just developers.</p>
+
+            <p><strong>What drives me:</strong></p>
             <ul>
-                <li>Genomics & Bioinformatics</li>
-                <li>Programming & Software Engineering</li>
-                <li>Data Analysis and Visualization</li>
-                <li>Coffee (always ☕)</li>
+                <li>Building infrastructure for scientific workflows that don't fall apart under real data</li>
+                <li>Making complex ideas clear and usable</li>
+                <li>Empowering domain experts through tools they can trust</li>
             </ul>
+
+            <p>I enjoy working independently or in small focused teams - where clarity, ownership, and purpose matter more than titles or KPIs.</p>
+
+            <p>If your team is solving problems at the intersection of life science, data, and engineering - and you need someone who "gets it" on both sides - I'd love to be part of that.</p>
         </section>
     </div>
 </body>
 </html>
-
