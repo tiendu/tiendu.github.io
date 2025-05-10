@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Bringing Pixi to Nextflow: A Smarter Way to Manage Environments"
-date: 2025-05-11
+date: 2025-05-10
 categories: [guide, english, programming, nextflow, bioinformatics]
 ---
 
@@ -72,7 +72,6 @@ This script:
 - Checks if Pixi has already installed the environment (via `.pixi` and `pixi.lock`)
 - Runs `pixi install` only if needed
 - Activates the environment via `pixi shell-hook`
-
 
 ## ☁️ Deploying to AWS Batch
 
