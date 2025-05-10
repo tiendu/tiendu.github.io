@@ -9,7 +9,7 @@ Managing multiple branches and external dependencies in Git can sometimes feel l
 
 ---
 
-## Git Worktree — Efficient Multi-Branch Development without the Hassle
+## Git Worktree - Efficient Multi-Branch Development without the Hassle
 
 ### The Challenge: The “Normie” Approach 🥴
 
@@ -50,7 +50,7 @@ With Git worktree, you can create multiple working directories from a single rep
 
 ##### Separate Worktrees for Each Branch:
 
-Imagine you have two feature branches—**feature-A** and **feature-B**—and then a hotfix is needed.
+Imagine you have two feature branches-**feature-A** and **feature-B**-and then a hotfix is needed.
 
 ```bash
 # In your main directory, you're on feature-A:
@@ -107,7 +107,7 @@ git push origin feature-B
 
 ---
 
-## Git Subtree — Unified Dependency Management Made Easy 📂
+## Git Subtree - Unified Dependency Management Made Easy 📂
 
 ### The Traditional Alternative: Git Submodules
 
@@ -123,7 +123,7 @@ Many projects use submodules to manage external dependencies. However, submodule
 
 #### Unified Codebase 📂🤝:
   - The entire project, including the external dependency, lives in one repository.
-  - _Benefit:_ Cloning and building the project is simpler—no extra steps required.
+  - _Benefit:_ Cloning and building the project is simpler-no extra steps required.
 
 #### Simplified Dependency Management 🔄✅:
   - External code is merged into your main repo's history, so you can update it with straightforward subtree commands.
@@ -148,7 +148,7 @@ Many projects use submodules to manage external dependencies. However, submodule
 By leveraging **Git worktree** and **Git subtree**, you can simplify multi-branch development and manage external dependencies more efficiently:
 
 - **Git Worktree** enables parallel branch development without the need for stashing or multiple clones, keeping your work organized and reducing the risk of lost code.
-- **Git Subtree** offers a unified approach to dependency management, avoiding the complexity of submodules—even if it means a larger repository.
+- **Git Subtree** offers a unified approach to dependency management, avoiding the complexity of submodules-even if it means a larger repository.
 
 Together, these tools help you maintain a clean, agile, and highly collaborative Git workflow. Whether you’re addressing urgent hotfixes or integrating external libraries, these strategies keep you in control and your codebase in top shape.
 

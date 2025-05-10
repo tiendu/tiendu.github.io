@@ -5,7 +5,7 @@ date:   2024-09-25
 categories: [guide, english, bioinformatics]
 ---
 
-When it comes to bioinformatics, comparing sequences-whether DNA, RNA, or proteins—is a key part of understanding how biological systems work. Whether you're identifying shared regions in genomes or aligning sequences, having an efficient algorithm for sequence comparison is crucial. Here, we’ll dive into how k-mers help make this process faster and more efficient.
+When it comes to bioinformatics, comparing sequences-whether DNA, RNA, or proteins-is a key part of understanding how biological systems work. Whether you're identifying shared regions in genomes or aligning sequences, having an efficient algorithm for sequence comparison is crucial. Here, we’ll dive into how k-mers help make this process faster and more efficient.
 
 # Core Concepts Behind the Algorithm
 
