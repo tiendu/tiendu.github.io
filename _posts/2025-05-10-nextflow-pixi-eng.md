@@ -17,7 +17,7 @@ However, unlike Conda, **Pixi is not yet a first-class citizen in Nextflow's DSL
 
 ## 🧪 A Minimal Pixi + Nextflow Example
 
-Let’s test it with a simple process that runs `samtools --version`.
+Let's test it with a simple process that runs `samtools --version`.
 
 ### 🧾 Step 1: Define `pixi.toml`
 
@@ -110,6 +110,6 @@ WORKDIR /workspace
 
 ## 💬 Final Thoughts
 
-Pixi offers a lightweight, predictable, and developer-friendly way to manage environments - without the overhead often associated with Conda. While it isn’t yet supported as a native DSL directive in Nextflow, this guide shows how easy it is to integrate Pixi into your pipelines today using simple configuration patterns.
+Pixi offers a lightweight, predictable, and developer-friendly way to manage environments - without the overhead often associated with Conda. While it isn't yet supported as a native DSL directive in Nextflow, this guide shows how easy it is to integrate Pixi into your pipelines today using simple configuration patterns.
 
 Whether you're exploring reproducibility on your laptop or scaling to AWS Batch, **Pixi + Nextflow** is a powerful and modern combination worth trying.

@@ -5,7 +5,7 @@ date: 2024-12-15
 categories: [guide, english, programming, rust]
 ---
 
-Rust is a systems programming language known for its focus on memory safety, zero-cost abstractions, and concurrency without data races. In this guide, we’ll cover the core building blocks of Rust programming-from managing memory with ownership and borrowing to leveraging smart pointers, traits, strings, concurrency, metaprogramming, iterators, closures, and the standard library collections.
+Rust is a systems programming language known for its focus on memory safety, zero-cost abstractions, and concurrency without data races. In this guide, we'll cover the core building blocks of Rust programming-from managing memory with ownership and borrowing to leveraging smart pointers, traits, strings, concurrency, metaprogramming, iterators, closures, and the standard library collections.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@ Rust is a systems programming language known for its focus on memory safety, zer
 
 ## Ownership, Borrowing, and Lifetimes
 
-Rust’s unique approach to memory safety is built on three interrelated concepts:
+Rust's unique approach to memory safety is built on three interrelated concepts:
 
 - **Ownership:** Each piece of data has a single owner. When the owner goes out of scope, the data is dropped.
 - **Borrowing:** Instead of transferring ownership, you can lend references to data. There are immutable borrows (`&T`) that allow multiple readers, and mutable borrows (`&mut T`) that allow one writer at a time.
@@ -82,7 +82,7 @@ fn main() {
 Smart pointers extend regular pointers with extra capabilities like heap allocation, shared ownership, and interior mutability.
 
 ### Example: `Box` – Heap Allocation
-A `Box<T>` moves data to the heap. Think of it as storing a heavy treasure off the ship’s deck.
+A `Box<T>` moves data to the heap. Think of it as storing a heavy treasure off the ship's deck.
 
 ```rust
 fn main() {
@@ -109,7 +109,7 @@ fn main() {
 ```
 
 ### Example: `RefCell` – Interior Mutability
-`RefCell<T>` enables mutation even when data is borrowed immutably at compile time, with runtime checks. It’s like a locked chest that you can open (at runtime) to adjust its contents.
+`RefCell<T>` enables mutation even when data is borrowed immutably at compile time, with runtime checks. It's like a locked chest that you can open (at runtime) to adjust its contents.
 
 ```rust
 use std::cell::RefCell;
@@ -344,7 +344,7 @@ fn main() {
 ```
 
 ## Iterators and Closures
-Rust’s iterators and closures offer a powerful and concise way to work with collections.
+Rust's iterators and closures offer a powerful and concise way to work with collections.
 
 ### Example: Using Iterators
 Instead of manually looping, you can use iterator chains:
@@ -389,7 +389,7 @@ fn main() {
 ```
 
 ## Standard Library Collections
-Rust’s collections let you organize data efficiently. Each collection type has characteristics suited for different tasks.
+Rust's collections let you organize data efficiently. Each collection type has characteristics suited for different tasks.
 
 ### `Vec` – Dynamic Array
 

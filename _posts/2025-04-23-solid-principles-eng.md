@@ -86,7 +86,7 @@ class Car:
         ...
 ```
 
-Now every time you want to upgrade the self-driving logic, you’re editing the main `Car` class-risking bugs in the existing driving logic.
+Now every time you want to upgrade the self-driving logic, you're editing the main `Car` class-risking bugs in the existing driving logic.
 
 #### ✅ Good Example:
 

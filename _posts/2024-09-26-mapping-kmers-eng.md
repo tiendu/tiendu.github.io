@@ -5,7 +5,7 @@ date:   2024-09-25
 categories: [guide, english, bioinformatics]
 ---
 
-When it comes to bioinformatics, comparing sequences-whether DNA, RNA, or proteins-is a key part of understanding how biological systems work. Whether you're identifying shared regions in genomes or aligning sequences, having an efficient algorithm for sequence comparison is crucial. Here, we’ll dive into how k-mers help make this process faster and more efficient.
+When it comes to bioinformatics, comparing sequences-whether DNA, RNA, or proteins-is a key part of understanding how biological systems work. Whether you're identifying shared regions in genomes or aligning sequences, having an efficient algorithm for sequence comparison is crucial. Here, we'll dive into how k-mers help make this process faster and more efficient.
 
 # Core Concepts Behind the Algorithm
 
@@ -25,7 +25,7 @@ To make the process even faster, each nucleotide (A, T, G, C) is mapped to a uni
 
 This allows us to compare k-mers using bitwise operations, which are really quick! Even ambiguous bases, like 'N', can be handled with their own binary codes. By converting everything into bits, the algorithm becomes both compact and lightning fast.
 
-Here’s a breakdown of the full nucleotide-to-binary encoding used in the algorithm:
+Here's a breakdown of the full nucleotide-to-binary encoding used in the algorithm:
 
 ```
 'A': 0b0001,  # A = 1
@@ -71,7 +71,7 @@ At the core of the algorithm is the process of matching k-mers between the query
 
 ## What About Reverse Complements?
 
-DNA sequences can be read in both directions, so it’s important to consider the reverse complement of the query sequence. The algorithm does just that, ensuring that matches are found no matter which direction the sequences are in.
+DNA sequences can be read in both directions, so it's important to consider the reverse complement of the query sequence. The algorithm does just that, ensuring that matches are found no matter which direction the sequences are in.
 
 ## Handling Circular Sequences
 
@@ -91,11 +91,11 @@ This algorithm can be useful in many areas of bioinformatics, such as:
 
 ## Real-World Example
 
-Let’s say you have a query sequence (maybe a gene of interest) and you want to compare it to a reference genome in FASTA format. By running this algorithm, you can easily find regions of similarity between the query and reference sequences. The algorithm outputs matches, taking into account your desired similarity score and the coverage you want to achieve.
+Let's say you have a query sequence (maybe a gene of interest) and you want to compare it to a reference genome in FASTA format. By running this algorithm, you can easily find regions of similarity between the query and reference sequences. The algorithm outputs matches, taking into account your desired similarity score and the coverage you want to achieve.
 
 ### Example
 
-Let’s say we have the following sequences:
+Let's say we have the following sequences:
 
 * Query Sequence: `ATNGCG`
 
@@ -105,7 +105,7 @@ Ambiguous nucleotides are represented by special characters, such as N, which ca
 
 #### Step 1: Break the Sequences into K-mers
 
-We’ll choose `k = 3` to keep things simple and generate 3-mers.
+We'll choose `k = 3` to keep things simple and generate 3-mers.
 
 * Query k-mers: `ATN, TNG, NGC, GCG`
 
@@ -121,7 +121,7 @@ So, k-mer comparisons that involve ambiguous nucleotides will match any possible
 
 #### Step 3: Convert K-mers into Binary (for Concept)
 
-Each nucleotide is converted into its binary form, with N being encoded in a way that allows flexibility. Here’s an example of a simple encoding:
+Each nucleotide is converted into its binary form, with N being encoded in a way that allows flexibility. Here's an example of a simple encoding:
 
 ```
 A = 0001
@@ -133,7 +133,7 @@ N (ambiguous) = 1111 (to represent any nucleotide)
 
 #### Step 4: Compare the K-mers
 
-Now, the algorithm compares k-mers between the query and reference sequences. Since N can be any base, k-mers containing N are considered flexible matches. Let’s go through the comparison:
+Now, the algorithm compares k-mers between the query and reference sequences. Since N can be any base, k-mers containing N are considered flexible matches. Let's go through the comparison:
 
 * Query k-mers: `ATN, TNG, NGC, GCG`
 
@@ -150,7 +150,7 @@ In this case, even though there are ambiguous nucleotides, the algorithm treats 
 
 #### Step 5: Calculate the Similarity Score
 
-Now that we’ve found the matching k-mers, the algorithm calculates the similarity score:
+Now that we've found the matching k-mers, the algorithm calculates the similarity score:
 
 * Total Query k-mers: `4`
 

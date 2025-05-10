@@ -6,9 +6,9 @@ categories: [guide, english, bioinformatics]
 ---
 **Last updated on 2024-09-26**
 
-When I first started learning bioinformatics, I had a common question: _"Where can I find datasets to practice my skills?"_ We need realistic datasets that mirror the challenges we’ll encounter in real-life research or projects. In this guide, I’ll walk you through downloading datasets from NCBI using two powerful tools: **entrez-direct** and **sra-tools**. Additionally, NCBI offers a tool called [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) for downloading large genome datasets, which might be helpful for some users.
+When I first started learning bioinformatics, I had a common question: _"Where can I find datasets to practice my skills?"_ We need realistic datasets that mirror the challenges we'll encounter in real-life research or projects. In this guide, I'll walk you through downloading datasets from NCBI using two powerful tools: **entrez-direct** and **sra-tools**. Additionally, NCBI offers a tool called [datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/) for downloading large genome datasets, which might be helpful for some users.
 
-Before we begin, you’ll need the following:
+Before we begin, you'll need the following:
 
 * Ubuntu (or WSL on Windows)
 
@@ -29,9 +29,9 @@ First, install the required tools using Mamba (Mamba is my preference due to its
 
 # Step 2: Search and Fetch Data with Entrez-Direct
 
-Once installed, we’ll use **esearch** (from entrez-direct) to query the NCBI database. To learn more about available search fields, refer to the [NCBI search manual](https://www.ncbi.nlm.nih.gov/books/NBK49540/).
+Once installed, we'll use **esearch** (from entrez-direct) to query the NCBI database. To learn more about available search fields, refer to the [NCBI search manual](https://www.ncbi.nlm.nih.gov/books/NBK49540/).
 
-In this example, I’ll search the bioproject database for metagenomes related to Vietnam using NCBI’s taxonomy ID system:
+In this example, I'll search the bioproject database for metagenomes related to Vietnam using NCBI's taxonomy ID system:
 
 ```
 esearch -db bioproject -query "txid408169[Organism] AND Vietnam[Title]" \
@@ -52,14 +52,14 @@ This command searches for metagenomes (taxonomy ID `txid408169`) in `Vietnam`. T
 
 # Step 3: Downloading Data from SRA
 
-Let’s say you found a BioProject related to Norovirus with the accession `PRJDB5922`. To retrieve sequence data from this project, we query the SRA (Sequence Read Archive):
+Let's say you found a BioProject related to Norovirus with the accession `PRJDB5922`. To retrieve sequence data from this project, we query the SRA (Sequence Read Archive):
 
 ```
 esearch -db sra -query "PRJDB5922" \
 | efetch -format runinfo \
 | awk 'BEGIN {RS=","; ORS="\t"} {print}'
 ```
-This will output a table with details such as the sequencing platform, source type (e.g., RNA), and more. Now, let’s download the first three datasets from this project:
+This will output a table with details such as the sequencing platform, source type (e.g., RNA), and more. Now, let's download the first three datasets from this project:
 
 ```
 esearch -db sra -query "PRJDB5922" \
@@ -110,7 +110,7 @@ esearch -db nuccore -query "cpb[GENE] AND txid1502[ORGN]" \
 >pccompound, pcsubstance, pmc, popset, protein, proteinclusters, 
 >protfam, pubmed, seqannot, snp, sra, structure, taxonomy
 
-* To view searchable fields for a specific database (e.g., nuccore), use: `einfo -db nuccore | xtract -pattern Field -element Name Description`. Here’s a small snippet of what you’ll find:
+* To view searchable fields for a specific database (e.g., nuccore), use: `einfo -db nuccore | xtract -pattern Field -element Name Description`. Here's a small snippet of what you'll find:
 
 |Name|Description|
 |---|---|

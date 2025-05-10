@@ -5,7 +5,7 @@ date: 2025-03-01
 categories: [guide, english, programming, git]
 ---
 
-Managing multiple branches and external dependencies in Git can sometimes feel like juggling flaming torches 🔥. Fortunately, Git offers powerful tools like **worktree** and **subtree** that simplify your workflow, improve collaboration, and reduce the risk of messy merges. In this post, we’ll explore both Git worktree and Git subtree, compare them to more common approaches (including submodules and stashing), and show you why they can transform your development process.
+Managing multiple branches and external dependencies in Git can sometimes feel like juggling flaming torches 🔥. Fortunately, Git offers powerful tools like **worktree** and **subtree** that simplify your workflow, improve collaboration, and reduce the risk of messy merges. In this post, we'll explore both Git worktree and Git subtree, compare them to more common approaches (including submodules and stashing), and show you why they can transform your development process.
 
 ---
 
@@ -21,7 +21,7 @@ When an urgent hotfix is needed, many developers default to a process like this:
 git stash save "WIP on feature-A"
 ```
 
-You stash uncommitted changes, risking messy conflict resolutions later if the stash isn’t applied cleanly. 😬
+You stash uncommitted changes, risking messy conflict resolutions later if the stash isn't applied cleanly. 😬
 
 2. Switch Branches:
 
@@ -119,7 +119,7 @@ Many projects use submodules to manage external dependencies. However, submodule
 
 ### Why Git Subtree is Superior ✨
 
-**Git subtree** integrates an external repository directly into a subdirectory of your main repo. Here’s why it’s often preferred:
+**Git subtree** integrates an external repository directly into a subdirectory of your main repo. Here's why it's often preferred:
 
 #### Unified Codebase 📂🤝:
   - The entire project, including the external dependency, lives in one repository.
@@ -150,5 +150,5 @@ By leveraging **Git worktree** and **Git subtree**, you can simplify multi-branc
 - **Git Worktree** enables parallel branch development without the need for stashing or multiple clones, keeping your work organized and reducing the risk of lost code.
 - **Git Subtree** offers a unified approach to dependency management, avoiding the complexity of submodules-even if it means a larger repository.
 
-Together, these tools help you maintain a clean, agile, and highly collaborative Git workflow. Whether you’re addressing urgent hotfixes or integrating external libraries, these strategies keep you in control and your codebase in top shape.
+Together, these tools help you maintain a clean, agile, and highly collaborative Git workflow. Whether you're addressing urgent hotfixes or integrating external libraries, these strategies keep you in control and your codebase in top shape.
 
