@@ -104,7 +104,7 @@ WORKDIR /workspace
 | Feature | Pixi Support with Nextflow |
 | --- | --- |
 | Local development | ✅ Full support via beforeScript |
-| Dynamic install	| ✅ Conditional logic included |
+| Dynamic install | ✅ Conditional logic included |
 | AWS Batch | ✅ With prebuilt container |
 | Native DSL syntax | ❌ Not supported (no pixi directive yet) |
 
