@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Designing for Growth: Why SOLID Principles Matter in Large Systems"
-date: 2025-04-23
+date: 2025-04-30
 categories: [guide, english, programming, oop]
 ---
 
@@ -229,6 +229,18 @@ When your objects follow SOLID principles:
 - And they're flexible to test and extend (**DIP**)
 
 Clean architecture isn't just about individual lines of code - it's about shaping **how your objects talk to each other**.
+
+### Easy Way to Remember SOLID
+
+Think like a LEGO set:
+
+- **S**: Separate the bricks (**Single Responsibility**)
+- **O**: Add new pieces, don't reshape old ones (**Open/Closed**)
+- **L**: Any brick should fit where expected (**Liskov Substitution**)
+- **I**: Don't force all bricks to snap together (**Interface Segregation**)
+- **D**: Use connectors, not glue (**Dependency Inversion**)
+
+> ✨ Build systems like LEGO: modular, replaceable, and fun to scale.
 
 ## 🏁 Conclusion
 
