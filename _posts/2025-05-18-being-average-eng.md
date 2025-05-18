@@ -15,9 +15,11 @@ It has taken me years to unlearn that belief. To understand that being average i
 
 ---
 
-## Sticking to the Benches
+## On the Sidelines
 
-Looking back, I think I developed an aversion to competition early on. School already carried the pressure of high performance. Adding more - through sports, games, or extracurriculars - felt unbearable. So, I opted out.
+Looking back, I think I developed an aversion to competition early on. School already carried the pressure of high performance - and it was never subtle. If you underperformed, you knew. They'd tell your parents, rank you publicly, compare you to the top. You were always being measured.
+
+Adding more - through sports, games, or extracurriculars - felt unbearable. So, I opted out.
 
 I stayed on the sidelines.
 
@@ -27,6 +29,8 @@ Back then, I told myself I just wasn't interested. But the truth? **I was scared
 
 **That I was just average.**
 
+And that fear didn't stop at school. It followed me into work, too. In a world obsessed with top performers, being average feels risky. Average means replaceable. **Average means first in line when cuts come.** Average means you’re quietly passed over - again and again.
+
 ---
 
 ## What It Means to Be Average
@@ -35,7 +39,7 @@ Over time, I have come to see that average is not the same as meaningless. It is
 
 Social media has magnified this obsession with exceptionalism. Every scroll is a reminder of someone else's peak moment. You are shown success, brilliance, beauty, and boldness - condensed into bite-sized envy. In a world where "greatness" is constantly paraded in front of us, **being "okay" feels like being invisible.**
 
-But the truth is: **most lives are built in the quiet.** They are not viral. They are not groundbreaking. And yet, **they are full of meaning.**
+**The truth is, most lives are built in the quiet.** They are not viral. They are not groundbreaking. And yet, **they are full of meaning.**
 
 Being average might mean choosing stability over spectacle. It might mean prioritizing consistency over chaos. It might mean building something slowly, quietly, without applause - because it matters to _you_.
 
