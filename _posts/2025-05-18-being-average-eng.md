@@ -5,8 +5,6 @@ date: 2025-05-18
 categories: [mindset, english]
 ---
 
-# The Fear of Being Average
-
 Let me start with this: I've always feared being average. Or more precisely, discovering that I'm nothing more than average.
 
 That fear was one of the biggest undercurrents of my childhood. I grew up with the weighty promise that each of us is _special_ - a product, perhaps, of that millennial-era parenting philosophy. During my teenage years, I believed I had to outgrow myself every year. Reinvent, evolve, become someone new - _year after year_.
