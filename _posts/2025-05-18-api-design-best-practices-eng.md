@@ -17,27 +17,31 @@ This post is my personal checklist — grounded in real-world reliability — fo
 
 Reliable REST APIs follow the same principles that make software maintainable:
 
-### Single Responsibility
-  
-Every endpoint should do *just one thing*. No side effects, no "magic."  
+- **S — Single Responsibility**  
+  - Each endpoint should do *one thing well*.  
+  - ✅ `POST /users` creates a user  
+  - ❌ `POST /users` creates *and* emails them *and* logs an event
 
-✅ `POST /users` creates a user — and nothing else.
+- **O — Open/Closed Principle**  
+  - Design endpoints to be **extensible** but **closed for modification**.  
+  - Use versioning and schema evolution to extend functionality without breaking clients.
 
-### Open/Closed Principle
+- **L — Liskov Substitution (loosely interpreted)**  
+  - Clients should be able to rely on consistent behavior.  
+  - ✅ Add optional fields  
+  - ❌ Remove or change field types without warning
 
-Design for **extension**, not modification.  
+- **I — Interface Segregation**  
+  - Don’t return bloated objects — split things up.  
+  - ✅ `/users/123/roles`, `/users/123/settings`  
+  - ❌ `/users/123/full-profile-with-everything`
 
-Version your APIs. Don't break old contracts to add new features.
+- **D — Dependency Inversion** 
+  - APIs should return stable contracts — not internal DB structure. 
+  - ✅ Use output DTOs or serializers  
+  - ❌ Leak database column names or internal enum codes
 
-### Stable Interfaces
-
-Don't surprise clients by changing field types or removing keys.
-
-Add optional fields instead of changing existing ones.
-
-### Explicit Contracts
-
-Hide internals. Don't expose raw database models or internal logic in responses.
+These principles keep your APIs reliable under pressure, maintainable under change, and readable by future you.
 
 ---
 
