@@ -32,7 +32,7 @@ Reliable REST APIs follow the same principles that make software maintainable:
   - ❌ Remove or change field types without warning
 
 - **I — Interface Segregation**  
-  - Don’t return bloated objects — split things up.  
+  - Don't return bloated objects — split things up.  
   - ✅ `/users/123/roles`, `/users/123/settings`  
   - ❌ `/users/123/full-profile-with-everything`
 
