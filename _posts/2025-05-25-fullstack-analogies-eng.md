@@ -42,8 +42,8 @@ Let's break down how different technologies handle these roles.
 
 When you walk in and tell the host your name, they write it in a reservation log (on the server). Every time the waiter checks your name, they just look it up in the book behind the counter.
 
-- ✅ Easy to manage — just look up the name
-- ✅ Easy to remove — just cross it out
+- ✅ Easy to manage - just look up the name
+- ✅ Easy to remove - just cross it out
 - ⚠️ Takes up space in the book for every customer
 
 ---
@@ -155,7 +155,7 @@ It works, but it's noisy and wastes kitchen resources.
 
 ---
 
-### 🍽 GraphQL = Custom Menu
+### 🍽 GraphQL = Custom Order Menu
 
 With GraphQL, the customer doesn't need to stick to the menu. They can say:
 
