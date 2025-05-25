@@ -42,9 +42,9 @@ Let's break down how different technologies handle these roles.
 
 When you walk in and tell the host your name, they write it in a reservation log (on the server). Every time the waiter checks your name, they just look it up in the book behind the counter.
 
-- ✅ Simple
-- ✅ Easy to invalidate (just cross your name out)
-- ⚠️ The server must store a session for every customer
+- ✅ Easy to manage — just look up the name
+- ✅ Easy to remove — just cross it out
+- ⚠️ Takes up space in the book for every customer
 
 ---
 
@@ -54,8 +54,8 @@ It's like getting a stamp on your hand when you check in.
 
 That way the waiter doesn't have to ask again each time.
 
-- ✅ Great for remembering preferences
-- ⚠️ Can be stolen without `httpOnly` + `secure` flags
+- ✅ Quick and convenient for regulars
+- ⚠️ Someone else could copy your stamp if security isn't tight (without `httpOnly` + `secure` flags)
 
 ---
 
@@ -65,11 +65,10 @@ You get a wristband. Staff just checks the wristband instead of the reservation 
 
 > "This is Alice. She's a VIP and gets 20% off."
 
-You just have to flash your wristband every time you order - no need for the staff to check the log again.
+You flash your wristband with each order - no need for the staff to check the book again.
 
-- ✅ Fast and stateless
-- ✅ Great for APIs, mobile apps
-- ⚠️ If stolen, it can't be invalidated unless you add extra logic
+- ✅ Fast and portable - you can use it in any diner that accepts it (great for APIs, mobile apps)
+- ⚠️ If someone steals your wristband, they can pretend to be you - and it's hard to take back
 
 ---
 
@@ -83,8 +82,8 @@ That's like showing up and saying,
 
 The diner trusts Google's word and lets you in.
 
-- ✅ Convenient
-- ⚠️ Adds complexity and relies on third-party trust
+- ✅ Super convenient - no need to make a new account
+- ⚠️ Adds complexity and relies on someone else's ID check and rules
 
 ---
 
@@ -105,8 +104,10 @@ The kitchen only prepares what's on the slip, one request at a time.
 - `PUT` = Change your order
 - `DELETE` = Cancel the order
 
+Just like paper slips:
+
 - ✅ Simple, clear, and predictable
-- ⚠️ No real-time updates, one request = one response
+- ⚠️ Only handle one request at a time - and the kitchen doesn't remember your last one
 
 ---
 
@@ -121,8 +122,8 @@ Now:
 
 This is WebSocket: a **persistent**, **real-time**, **two-way connection**.
 
-- ✅ Great for chat, live updates
-- ⚠️ Harder to scale and debug than REST
+- ✅ Great for fast, back-and-forth updates like chat or live status
+- ⚠️ Walkie-talkies can be tricky to manage when the diner gets crowded (harder to scale and debug than REST)
 
 ---
 
@@ -136,8 +137,8 @@ You can hear them, but you can't reply through that speaker.
 
 That's Server-Sent Events - one-way communication from server to browser.
 
-- ✅ Simpler than WebSocket
-- ⚠️ No back-channel (you can't talk back over SSE)
+- ✅ Perfect if the kitchen just needs to make announcements (simpler than WebSocket)
+- ⚠️ No back-channel (you can hear them, but you can't talk back through SSE)
 
 ---
 
@@ -149,8 +150,8 @@ Polling is the annoying customer asking:
 
 It works, but it's noisy and wastes kitchen resources.
 
-- ✅ Easy to implement
-- ⚠️ Inefficient and noisy
+- ✅ Works anywhere - even if the diner doesn't have a speaker or walkie-talkie
+- ⚠️ Noisy and inefficient - takes extra effort on both sides
 
 ---
 
@@ -162,8 +163,8 @@ With GraphQL, the customer doesn't need to stick to the menu. They can say:
 
 The kitchen only gives exactly what's requested.
 
-- ✅ Efficient
-- ⚠️ More setup + security filtering required
+- ✅ Efficient - no extras you don't want
+- ⚠️ The kitchen needs to be flexible and carefully check every custom request (more setup + security filtering required)
 
 ---
 
