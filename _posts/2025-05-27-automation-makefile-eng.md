@@ -5,13 +5,13 @@ date: 2025-05-27
 categories: [devops, tooling, programming, productivity]
 ---
 
-Every software project needs a little backstage magic — the part where folders get created, servers spin up, and tests run with a single command. But which tool do you hand that wand to?
+Every software project needs a little backstage magic - the part where folders get created, servers spin up, and tests run with a single command. But which tool do you hand that wand to?
 
 Should you write a **Makefile**? A **justfile**? A classic **shell script**?
 
 Or... try to glue it all together with `subprocess.run()` and regret it later?
 
-Let’s walk through your options with examples, trade-offs, and a few pro tricks — served just the way you like it.
+Let's walk through your options with examples, trade-offs, and a few pro tricks - served just the way you like it.
 
 ---
 
@@ -26,13 +26,13 @@ Imagine your project like a cozy kitchen.
 | Shell script | Your seasoned sous-chef |
 | Python subprocess | The accountant you asked to make coffee |
 
-Let’s see how each fits on your counter.
+Let's see how each fits on your counter.
 
 ---
 
 ## 🛠️ Makefile – The Espresso Machine
 
-Reliable, fast, and built for jobs that only need to run when something’s changed.
+Reliable, fast, and built for jobs that only need to run when something's changed.
 
 ### Best for:
 
@@ -46,7 +46,7 @@ Reliable, fast, and built for jobs that only need to run when something’s chan
 - Standard in almost every language ecosystem
 - Super concise for simple tasks
 
-```bash
+```make
 build:  ## Compile the app
 	cargo build
 ```
@@ -55,7 +55,7 @@ build:  ## Compile the app
 
 #### Tab-sensitive syntax
 
-```bash
+```make
 init:
     echo "Hello world"  # those are spaces! ☠️
 ```
@@ -64,11 +64,11 @@ init:
 make: *** missing separator.  Stop.
 ```
 
-You’ll curse the tab key at least once.
+You'll curse the tab key at least once.
 
 #### Awkward parameter handling
 
-```bash
+```make
 say_hello:
 	echo "Hello, $(NAME)"
 
@@ -76,11 +76,11 @@ say_hello:
 make say_hello NAME=Alice
 ```
 
-Want `make say_hello Alice`? Tough luck.
+Want `make say_hello Alice`? Nope.
 
 #### Feels ancient for real logic
 
-```
+```make
 ifeq ($(ENV),prod)
     CMD = run-prod
 else
@@ -88,13 +88,33 @@ else
 endif
 ```
 
-If you want `if/else`, loops, or functions — push them to a script. Seriously.
+If you want `if/else`, loops, or functions - push them to a script. Seriously.
+
+#### Bash logic gets ugly fast
+
+Bash in Makefiles is fine for one-liners. But for loops?
+
+```make
+clean:
+	for dir in logs cache temp; do \
+		echo "Cleaning $$dir..."; \
+		rm -rf "$$dir"/*.tmp || true; \
+	done
+```
+
+Not terrible… but:
+
+- You need to double-escape variables (`$$dir`)
+- Every line ends in a backslash
+- Missing a semicolon? Silent failure
+
+For anything beyond three lines: call a script.
 
 ---
 
 ## 📋 justfile – The Recipe Cheat Sheet
 
-**justfile** is your kitchen cheat sheet — modern, clean, and delightfully predictable.
+**justfile** is your kitchen cheat sheet - modern, clean, and delightfully predictable.
 
 ### Best for:
 
@@ -122,14 +142,16 @@ set dotenv-load
 
 #### No idea when files changed
 
-```bash
+```just
 build:
     cargo build  # this always runs, even if unchanged
 ```
 
+There's no dependency tracking - everything runs every time.
+
 #### Requires install
 
-It’s not built-in like Make. But it’s a one-liner:
+It's not built-in like Make. But it's easy:
 
 ```bash
 brew install just
@@ -137,9 +159,9 @@ brew install just
 cargo install just
 ```
 
-#### Not meant for real logic
+#### Same Bash problem as Make
 
-You _can_ write Bash inline... but you shouldn’t go wild:
+Loops and conditionals can get messy:
 
 ```
 clean:
@@ -149,11 +171,13 @@ clean:
     done
 ```
 
-Not terrible… but:
+Looks simple - until:
 
-- You need to escape every line with backslashes
-- It’s easy to miss a semicolon or quote
-- Multi-line conditionals become unreadable fast
+- You forget a `;`
+- You mess up a quote
+- You try nesting logic 😵‍💫
+
+Like Make, justfile shines as a wrapper, not a full-blown script.
 
 ---
 
@@ -197,10 +221,10 @@ greet_user "Alice"
 
 Without great discipline, your `deploy.sh` turns into a 400-line spaghetti bowl.
 
-#### Unsafe unless you tell it to be
+#### Unforgiving unless told to be
 
 ```
-echo "Welcome, $USERNAME"  # if USERNAME isn’t set? Silence.
+echo "Welcome, $USERNAME"  # if USERNAME isn't set? No error.
 
 # Always start with:
 set -euo pipefail
@@ -210,49 +234,49 @@ set -euo pipefail
 
 ## 🧩 The Golden Trick: Mix and Match
 
-Here’s the trick every great project uses:
+Here's the trick every great project uses:
 
 > Use Makefile or justfile as your menu.
 > Let shell scripts do the cooking.
 
 That way:
 
-- You avoid logic mess in Make or Just
+- You avoid logic mess in Makefile or justfile
 - You still get a clean, discoverable CLI in Makefile:
 
-```
+```make
 init: ## Set up the project
 	./scripts/init.sh
 ```
 
 or in justfile:
 
-```
+```just
 init:
     ./scripts/init.sh
 ```
 
 Easy for newcomers. Powerful for the team.
 
-## 🐍 Python’s subprocess – The Accountant with an Apron
+## 🐍 Python's subprocess – The Accountant with an Apron
 
-You _can_ do automation with Python. But should you?
+You _can_ automate with Python. But should you?
 
 ```python
 import subprocess
 subprocess.run(["mkdir", "-p", "data/results"])
 ```
 
-That’s a lot of ceremony to create a folder.
+That's a lot of ceremony to create a folder.
 
 ### ❌ Why it often sucks
 
-- Verbose for simple tasks
+- Too verbose for small tasks
 - Fragile quoting with `shell=True`
-- Error handling is way more boilerplate
-- You reinvent Bash... poorly
+- Error handling is noisy
+- You reinvent Bash... but worse
 
-Stick to Python for data, APIs, and business logic — not for gluing scripts together.
+Use Python for data and logic-heavy work. For glue? Stick to shell.
 
 ---
 
@@ -272,7 +296,7 @@ Stick to Python for data, APIs, and business logic — not for gluing scripts to
 
 ### 📝 Self-Documenting Makefile
 
-```bash
+```make
 help:  ## Show all commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 	awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -286,13 +310,27 @@ make help
 
 Boom: instant CLI doc.
 
-### 🌿 Load .env in Makefile
+### 🌿 Load `.env` in Makefile
 
-```bash
+```make
 ifneq (,$(wildcard .env))
   include .env
   export
 endif
+```
+
+Then:
+
+```
+PORT=8080
+ENV=prod
+```
+
+And use it like:
+
+```
+serve:
+	python app.py --port $(PORT) --env $(ENV)
 ```
 
 Define your vars in `.env`, use `$(VAR_NAME)` in the Makefile. Clean and versionable.
@@ -306,36 +344,24 @@ Define your vars in `.env`, use `$(VAR_NAME)` in the Makefile. Clean and version
 ### 🗂 Keep all logic in scripts/
 
 - `scripts/init.sh`
--`scripts/deploy.sh`
--`scripts/build.sh`
+- `scripts/deploy.sh`
+- `scripts/build.sh`
 
-Then call them from Makefile or justfile. Don’t let your tasks become novels.
+Your Makefile or justfile should read like a menu - not a novel.
 
 ---
 
 ## 🍰 Final Slice
 
-Your project glue shouldn't feel like a pile of tangled cables.
+Your project glue shouldn't feel like a pile of tangled spaghetti.
 
-- Use Makefile when you need dependencies or CI hooks
-- Use justfile for developer happiness and local CLI
-- Use shell scripts for anything real
-- Use Python when you’ve outgrown bash — not before
+- **Makefile**: Great for builds and CI
+- **justfile**: Friendly for local tasks
+- **Shell scripts**: Where real logic belongs
+- **Python**: Use when Bash can't cut it
 
-Stick to that, and your project setup will be simple, powerful, and smooth as a flat white.
+Keep things modular. Keep glue invisible. 
 
-☕ Automation is craft — keep it modular, invisible, and clean.
+And when it breaks? Fix it with one clean command.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+☕ Automation is craft - serve it like a pro.
