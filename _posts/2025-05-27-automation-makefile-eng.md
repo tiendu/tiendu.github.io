@@ -28,7 +28,7 @@ Imagine your project like a cozy kitchen.
 
 You write orders on the menu or ticket (justfile or Makefile), but the real cooking happens in the kitchen (shell scripts).
 
-Use the right tool in the right role — and your kitchen runs smooth.
+Use the right tool in the right role - and your kitchen runs smooth.
 
 ---
 
