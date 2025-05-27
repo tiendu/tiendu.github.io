@@ -21,16 +21,18 @@ Imagine your project like a cozy kitchen.
 
 | Automation Tool | Role in the Kitchen |
 | --- | --- |
-| Makefile | The espresso machine |
-| justfile | The recipe cheat sheet |
-| Shell script | Your seasoned sous-chef |
+| Makefile | The order slip system (tracks what to do) |
+| justfile | The chalkboard menu (quick, clear, editable) |
+| Shell script | The seasoned sous-chef (does the actual work) |
 | Python subprocess | The accountant you asked to make coffee |
 
-Let's see how each fits on your counter.
+You write orders on the menu or ticket (justfile or Makefile), but the real cooking happens in the kitchen (shell scripts).
+
+Use the right tool in the right role — and your kitchen runs smooth.
 
 ---
 
-## 🛠️ Makefile – The Espresso Machine
+## 🛠️ Makefile – The Order Slip System
 
 Reliable, fast, and built for jobs that only need to run when something's changed.
 
@@ -112,7 +114,7 @@ For anything beyond three lines: call a script.
 
 ---
 
-## 📋 justfile – The Recipe Cheat Sheet
+## 📋 justfile – The Chalkboard Menu
 
 **justfile** is your kitchen cheat sheet - modern, clean, and delightfully predictable.
 
@@ -161,7 +163,7 @@ cargo install just
 
 #### Same Bash problem as Make
 
-Loops and conditionals can get messy:
+Bash in justfile is fine for simple echo tasks. But for loops or conditionals?
 
 ```
 clean:
@@ -181,7 +183,7 @@ Like Make, justfile shines as a wrapper, not a full-blown script.
 
 ---
 
-## 🐚 Shell Scripts – Your Seasoned Sous-Chef
+## 🐚 Shell Scripts – The Seasoned Sous-Chef
 
 Shell scripts are flexible, reliable, and perfect when you need control over how the onions are chopped.
 
