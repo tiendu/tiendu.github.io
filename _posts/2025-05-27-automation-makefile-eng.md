@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Automation à la Carte: Makefile, Justfile, or Shell Script?"
+title: "Automation à la Carte: Makefile, justfile, or Shell Script?"
 date: 2025-05-27
 categories: [devops, tooling, programming, productivity]
 ---
