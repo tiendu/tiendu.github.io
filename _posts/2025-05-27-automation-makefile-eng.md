@@ -239,6 +239,7 @@ set -euo pipefail
 Here's the trick every great project uses:
 
 > Use Makefile or justfile as your menu.
+> 
 > Let shell scripts do the cooking.
 
 That way:
