@@ -2,7 +2,7 @@
 layout: post
 title: "The Fullstack Diner: Web Dev Terms Explained Simply"
 date: 2025-05-25
-categories: [webdev, fullstack, analogy, programming, english]
+categories: ["Web Development"]
 ---
 
 Web development can feel overwhelming with all its buzzwords.

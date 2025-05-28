@@ -2,7 +2,7 @@
 layout: post
 title: "Biết đâu… Bình thường là đủ rồi"
 date: 2025-05-18
-categories: [mindset, vietnamese]
+categories: ["Personal Notes & Reflections"]
 ---
 
 Hãy để tôi bắt đầu bằng điều này: tôi luôn sợ mình chỉ là người bình thường. Hay nói đúng hơn, sợ phát hiện ra rằng mình **chỉ là mức trung bình mà thôi**.

@@ -2,7 +2,7 @@
 layout: post
 title: "Maybe Average Is Enough"
 date: 2025-05-18
-categories: [mindset, english]
+categories: ["Personal Notes & Reflections"]
 ---
 
 Let me start with this: I've always feared being average. Or more precisely, discovering that I'm nothing more than average.

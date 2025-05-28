@@ -1,8 +1,8 @@
 ---
 layout: post
 title: "Automation à la Carte: Makefile, justfile, or Shell Script?"
-date: 2025-05-27
-categories: [devops, tooling, programming, productivity]
+date: 2025-05-28
+categories: ["Automation, Systems & Engineering"]
 ---
 
 Every software project needs a little backstage magic - the part where folders get created, servers spin up, and tests run with a single command. But which tool do you hand that wand to?

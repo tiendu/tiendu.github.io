@@ -2,7 +2,7 @@
 layout: post
 title: "Mastering Git Worktree & Git Subtree: Streamlining Multi-Branch Workflows and Dependency Management"
 date: 2025-03-01
-categories: [guide, english, programming, git]
+categories: ["Automation, Systems & Engineering"]
 ---
 
 Managing multiple branches and external dependencies in Git can sometimes feel like juggling flaming torches 🔥. Fortunately, Git offers powerful tools like **worktree** and **subtree** that simplify your workflow, improve collaboration, and reduce the risk of messy merges. In this post, we'll explore both Git worktree and Git subtree, compare them to more common approaches (including submodules and stashing), and show you why they can transform your development process.

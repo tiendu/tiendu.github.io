@@ -2,7 +2,7 @@
 layout: post
 title: "Designing Reliable REST APIs: Principles That Stand the Test of Time"
 date: 2025-05-21
-categories: [guide, api, programming, english]
+categories: ["Web Development"]
 ---
 
 REST APIs are the connective tissue of modern systems — especially when you're building tools that others will build on. Whether you're exposing models in production, querying genomic metadata, or orchestrating workflows from the CLI, a good API can be the difference between smooth automation and brittle chaos.

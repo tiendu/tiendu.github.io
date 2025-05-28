@@ -2,18 +2,18 @@
 layout: post
 title:  "Useful Bioinformatics One-liners"
 date:   2022-12-20
-categories: [guide, english, bioinformatics]
+categories: ["Bioinformatics & Scientific Tools"]
 ---
-
-**Last updated on 2024-09-20**
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.
 
 Note that some of the commands require _gawk_ to be installed. If you're using Ubuntu, use `sudo apt install gawk` to install it.
 
-All calculations, modifications, etc require singleline fasta so please convert your fasta into singleline format first.
+All calculations, modifications, etc. require singleline fasta so please convert your fasta into singleline format first.
 
-# Fastq
+---
+
+## FASTQ
 
 **Use _cat_ instead of _zcat_ if files are not compressed.**
 
@@ -150,7 +150,9 @@ In this example, I used _xargs_ to handle the deduplication and conversion of mu
 find . -maxdepth 1 -type f -name "*_1.fastq.gz" -print0 | sed 's/_1.fastq.gz//g' | xargs -0 -P 4 -I {} bash -c 'name=$(basename {}); paste <(zcat ${name}_1.fastq.gz) <(zcat ${name}_2.fastq.gz) | paste - - - - | awk '\''BEGIN {FS=OFS="\t"} {print $1, $2"\n"$3, $4}'\'' | awk '\''/^@/ {getline l; f=!a[l]++} f {print $0"\n"l}'\'' | paste - - | awk '\''BEGIN {FS="\t"; OFS="\n"} {print $1, $3, $2, $4}'\'' | sed '\''s/^@/>/g'\'' > interleaved_${name}.fasta'
 ```
 
-# Fasta
+---
+
+## FASTA
 
 * Format multiline fasta to singleline fasta.
 
@@ -689,9 +691,11 @@ awk 'function revcomp(s) {c["A"]="T"; c["C"]="G"; c["G"]="C"; c["T"]="A"; o=""; 
 awk -v id="" -v roll=0 '$0 ~ "^>" id {getline seq; if (roll > length(seq)) {exit}; print $0 "_before" "\n" seq; split(seq "" seq, a, ""); b=""; for (i=roll+1; i<=length(a) && length(b)<length(seq); i++) {b=b "" a[i]}; print $0 "_after" "\n" b}' file.fa
 ```
 
-# Utility
+---
 
-## Tables
+## Utility
+
+### Tables
 
 * Convert csv to tsv.
 
@@ -1012,7 +1016,7 @@ Same input in the example above.
 >|Seq2|Gene2|1|
 >|Seq3|Gene3|3|
 
-## Text
+### Text
 
 * Insert 1st line from a file to another.
 

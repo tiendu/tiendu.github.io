@@ -2,7 +2,7 @@
 layout: post
 title: "Bringing Pixi to Nextflow: A Smarter Way to Manage Environments"
 date: 2025-05-10
-categories: [guide, english, programming, nextflow, bioinformatics]
+categories: ["Bioinformatics & Scientific Tools"]
 ---
 
 Reproducible environments are a cornerstone of modern bioinformatics workflows - and while **Conda** has long been the default in Nextflow pipelines, it's not without challenges: slow environment resolution, inconsistent lockfile behavior, and bloated specs. Enter **Pixi**, a fast, modern, and TOML-based package and environment manager developed by [prefix.dev](https://prefix.dev/).

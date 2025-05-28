@@ -2,7 +2,7 @@
 layout: post
 title: "Designing for Growth: Why SOLID Principles Matter in Large Systems"
 date: 2025-04-30
-categories: [guide, english, programming, oop]
+categories: ["Automation, Systems & Engineering"]
 ---
 
 When software projects are small, it's easy to write code that "just works." But as systems scale - with more features, more developers, and more users - that early code can become a nightmare to maintain.

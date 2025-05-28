@@ -2,7 +2,7 @@
 layout: post
 title: "Beyond Code: Why Infrastructure Is the Backbone of Big Projects"
 date: 2025-04-23
-categories: [guide, english, programming, devops]
+categories: ["Automation, Systems & Engineering"]
 ---
 
 When you're building a side project, you write code and ship it. Done.
