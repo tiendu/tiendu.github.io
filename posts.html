@@ -6,8 +6,10 @@ title: posts
 
 <!-- This loops through all the posts -->
 {% for post in site.posts %}
-  <h1><a href="{{ post.url }}">{{ post.title }}</a></h1>
-  <small>{{ post.date | date: "%b %-d, %Y" }}</small>
-  <p>{{ post.excerpt }}</p>
-  <a href="{{ post.url }}">Read more →</a>
+  <article style="margin-bottom: 2em; padding-bottom: 1em; border-bottom: 1px solid #ccc;">
+    <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
+    <small>{{ post.date | date: "%B %-d, %Y" }}</small>
+    <p>{{ post.excerpt }}</p>
+    <a href="{{ post.url }}">Read more →</a>
+  </article>
 {% endfor %}
