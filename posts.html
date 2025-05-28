@@ -7,5 +7,5 @@ title: posts
 <!-- This loops through all the posts -->
 {% for post in site.posts %}
   <h1><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></h1>
+  <p>{{ post.excerpt }}</p>
 {% endfor %}
-
