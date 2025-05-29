@@ -31,6 +31,34 @@ Hoặc một phiên bản sạch hơn:
 
 ---
 
+## ⚠️ Cảnh báo quan trọng khi dùng EBIT trong RoL
+
+Mặc dù **RoL_EBIT** rất hiệu quả với nhiều ngành nghề, nhưng có những giới hạn quan trọng — đặc biệt với các lĩnh vực như **ngân hàng**, **bất động sản**, và **dịch vụ tài chính**.
+
+- Ví dụ, trong ngành ngân hàng, EBIT bao gồm **thu nhập lãi từ cho vay** và **lợi nhuận từ tài sản thế chấp bị thu giữ**, những khoản này có thể không chuyển thành dòng tiền ngay lập tức. Những "lợi nhuận" này đôi khi chỉ là kết quả ghi nhận theo nguyên tắc kế toán, chưa phải là thu nhập thực tế.
+- Các công ty bất động sản có thể ghi nhận lợi nhuận từ việc bán tài sản với **chu kỳ thu hồi tiền dài**, làm cho EBIT không phản ánh đúng lợi nhuận thực tế bằng tiền mặt.
+- Những yếu tố này có thể khiến EBIT bị thổi phồng, làm cho RoL_EBIT không **phản ánh đúng khả năng thực sự của công ty trong việc biến nợ thành lợi nhuận thực tế**.
+
+---
+
+## 💡 Giải pháp thay thế: Sử dụng dòng tiền từ hoạt động kinh doanh (OCF)
+
+Để khắc phục những hạn chế này, bạn có thể thay EBIT bằng **dòng tiền từ hoạt động kinh doanh (Operating Cash Flow - OCF)** khi tính RoL:
+
+**RoL_OCF = OCF / Nợ_vay_tài_chính**
+
+hoặc nếu không có số liệu về nợ tài chính, có thể dùng:
+
+**RoL_OCF = OCF / Nợ_ngắn_hạn** (cần thận trọng khi áp dụng)
+
+**Tại sao chọn OCF?**
+
+- OCF đo lường **lượng tiền mặt thực tế** được tạo ra từ hoạt động kinh doanh cốt lõi, loại bỏ các khoản không phải tiền mặt và các ảnh hưởng thời gian trong ghi nhận kế toán.
+- Nó cung cấp **bức tranh thực tế hơn về khả năng công ty thanh toán nợ và sinh lời từ khoản vay**.
+- Điều này đặc biệt quan trọng với các ngành mà EBIT dễ bị biến động do chính sách kế toán hoặc ghi nhận lợi nhuận từ bán tài sản.
+
+---
+
 ## 📈 Vì sao RoL có giá trị?
 
 | Ưu điểm | Giải thích |
