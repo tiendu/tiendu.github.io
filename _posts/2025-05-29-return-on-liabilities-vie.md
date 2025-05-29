@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "RoL-Based Alpha: Tỷ số đơn giản giúp bạn phát hiện cổ phiếu tiềm năng vượt mặt ông lớn"
+title: "Tỷ số RoL: Săn cổ phiếu nhỏ xài nợ hiệu quả"
 date: 2025-05-29
 categories: ["Personal Notes & Reflections"]
 ---
