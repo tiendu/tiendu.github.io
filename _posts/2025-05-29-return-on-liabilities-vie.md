@@ -33,7 +33,7 @@ Hoặc một phiên bản sạch hơn:
 
 ## ⚠️ Cảnh báo quan trọng khi dùng EBIT trong RoL
 
-Mặc dù **RoL_EBIT** rất hiệu quả với nhiều ngành nghề, nhưng có những giới hạn quan trọng — đặc biệt với các lĩnh vực như **ngân hàng**, **bất động sản**, và **dịch vụ tài chính**.
+Mặc dù **RoL_EBIT** rất hiệu quả với nhiều ngành nghề, nhưng có những giới hạn quan trọng - đặc biệt với các lĩnh vực như **ngân hàng**, **bất động sản**, và **dịch vụ tài chính**.
 
 - Ví dụ, trong ngành ngân hàng, EBIT bao gồm **thu nhập lãi từ cho vay** và **lợi nhuận từ tài sản thế chấp bị thu giữ**, những khoản này có thể không chuyển thành dòng tiền ngay lập tức. Những "lợi nhuận" này đôi khi chỉ là kết quả ghi nhận theo nguyên tắc kế toán, chưa phải là thu nhập thực tế.
 - Các công ty bất động sản có thể ghi nhận lợi nhuận từ việc bán tài sản với **chu kỳ thu hồi tiền dài**, làm cho EBIT không phản ánh đúng lợi nhuận thực tế bằng tiền mặt.
