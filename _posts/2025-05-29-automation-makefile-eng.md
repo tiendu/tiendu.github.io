@@ -339,35 +339,58 @@ serve:
 
 Define your vars in `.env`, use `$(VAR_NAME)` in the Makefile. Clean and versionable.
 
-### 🧰 Built-in variables cheat sheet
+### 🧰 Built-in Make variables
 
-Make has smart defaults:
+Make has smart defaults - less typing, more automation:
 
-- `$(MAKE)` - recursive make
-- `$(CC)` - compiler
-- `$(CFLAGS)` - compiler flags
-
-```make
-CC = gcc
-CFLAGS = -Wall -Werror
-
-my_program: my_program.c
-	$(CC) $(CFLAGS) -o my_program my_program.c
-```
-
-Less typing, more compiling.
-
-### 🌀 Wildcards for file ops
+- `$(MAKE)` - Recursive make
+- `$(RM)` - Cross-platform `rm -f`
+- `$(CURDIR)` - Absolute path to the current directory
+- `$(MAKEFILE_LIST)` - List of included Makefiles
+- `$(MAKEFLAGS)` - Flags passed to make (e.g. `-j`, `--silent`)
+- `$(wildcard ...)` - Match files with globbing (e.g. `*.sh`)
+- `$(basename ...)`, `$(notdir ...)` - Strip path or extension
 
 ```make
-SOURCES = $(wildcard *.c)
-OBJECTS = $(SOURCES:.c=.o)
+# Recursive make to keep your root Makefile clean.
+subdir:
+	$(MAKE) -C subdir
 
-$(OBJECTS): %.o: %.c
-	$(CC) -c $< -o $@
+# Shell command to get current Git branch
+branch:
+	@echo "Current branch: $(shell git rev-parse --abbrev-ref HEAD)"
+
+# Use wildcard to list script files dynamically
+SCRIPTS := $(wildcard scripts/*.sh)
+
+# Use CURDIR for absolute paths
+print-dir:
+	@echo "This Makefile lives in $(CURDIR)"
+
+# Using RM for safe deletion
+clean:
+	$(RM) -rf build dist
+
+# Manipulate filenames
+FILES := $(notdir $(SCRIPTS))
+NAMES := $(basename $(FILES))
 ```
 
-Dynamic and DRY - no manual file list needed.
+### 🌀 Automatic Make variables
+
+These are dynamically set by Make for each rule (valid only inside recipe commands):
+
+- `$@` - The target name
+- `$<` - The first prerequisite
+- `$^` - All prerequisites
+- `$?` - Only the prerequisites newer than the target
+
+```make
+output.txt: input.txt
+	cat $< > $@  # Reads input.txt and writes to output.txt
+```
+
+Use these when chaining steps or avoiding hardcoded filenames.
 
 ### 🔁 Smart dependency handling
 
@@ -377,15 +400,6 @@ output.txt: input.txt process_data.sh
 ```
 
 Only reruns when `input.txt` or `process_data.sh` changes.
-
-### 🧭 Recursive Make for subprojects
-
-```make
-subdir:
-	cd subdir && $(MAKE)
-```
-
-Keeps your root Makefile clean.
 
 ### ⚡ Parallel Make
 
