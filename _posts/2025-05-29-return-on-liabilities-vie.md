@@ -117,7 +117,7 @@ Mà là: **"Nếu tôi vay, tôi có biến được tiền vay thành giá tr�
 
 Từ góc nhìn nhà đầu tư:
 
-- Khi **dòng tiền từ hoạt động kinh doanh (CFO) tương thích hoặc vượt lợi nhuận kế toán**, đó là dấu hiệu lợi nhuận chất lượng cao, doanh nghiệp vận hành khỏe mạnh — một điểm cộng lớn khi lựa chọn đầu tư.
+- Khi **dòng tiền từ hoạt động kinh doanh (OCF) tương thích hoặc vượt lợi nhuận kế toán**, đó là dấu hiệu lợi nhuận chất lượng cao, doanh nghiệp vận hành khỏe mạnh — một điểm cộng lớn khi lựa chọn đầu tư.
 - Ngược lại, nếu **lợi nhuận kế toán cao nhưng dòng tiền yếu hoặc không ổn định**, nhà đầu tư cần thận trọng, vì đây có thể là tín hiệu lợi nhuận "ảo", hoặc doanh nghiệp gặp vấn đề về quản trị vốn lưu động, tồn kho hay công nợ.
 
 Hiểu được sự khác biệt này giống như có "kính hiển vi" giúp nhà đầu tư nhìn thấu bức tranh tài chính thật sự, tránh bị đánh lừa bởi các con số ảo hoặc biến động kế toán ngắn hạn.
