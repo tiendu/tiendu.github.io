@@ -23,11 +23,11 @@ Giả sử ta hỏi:
 
 Đó chính là bản chất của RoL:
 
-**RoL = Lợi nhuận ròng / Tổng nợ phải trả**
+**RoL = Lợi_nhuận_ròng / Tổng_nợ_phải_trả**
 
 Hoặc một phiên bản sạch hơn:
 
-**RoL_EBIT = EBIT / Nợ vay tài chính**
+**RoL_EBIT = EBIT / Nợ_vay_tài_chính**
 
 ---
 
@@ -70,7 +70,7 @@ Và đồng thời thỏa:
 - **Tạo ra dòng tiền thật sự** (OCF dương)
 - **Được giao dịch với định giá rẻ hơn trung bình ngành** (P/E thấp hơn mặt bằng chung)
 
-→ Thì đó chính là một **ứng viên alpha tiềm năng** - doanh nghiệp chưa được thị trường định giá đúng.
+Thì đó chính là một **ứng viên alpha tiềm năng** - doanh nghiệp chưa được thị trường định giá đúng.
 
 ---
 
