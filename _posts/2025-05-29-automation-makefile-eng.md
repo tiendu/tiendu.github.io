@@ -339,7 +339,7 @@ serve:
 
 Define your vars in `.env`, use `$(VAR_NAME)` in the Makefile. Clean and versionable.
 
-### 🧰 Built-in Make variables
+### 🧰 Built-in variables cheat sheet
 
 Make has smart defaults - less typing, more automation:
 
@@ -376,7 +376,7 @@ FILES := $(notdir $(SCRIPTS))
 NAMES := $(basename $(FILES))
 ```
 
-### 🌀 Automatic Make variables
+### 🌀 Automatic variables
 
 These are dynamically set by Make for each rule (valid only inside recipe commands):
 
