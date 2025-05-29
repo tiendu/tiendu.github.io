@@ -325,6 +325,7 @@ endif
 Then:
 
 ```
+# .env
 PORT=8080
 ENV=prod
 ```
@@ -453,14 +454,18 @@ Your Makefile or justfile should read like a menu - not a novel.
 
 ## 🍰 Final Slice
 
-Your project glue shouldn't feel like a pile of tangled spaghetti.
+Your project glue shouldn't become a tangled spaghetti monster.
 
 - **Makefile**: Great for builds and CI
 - **justfile**: Friendly for local tasks
 - **Shell scripts**: Where real logic belongs
 - **Python**: Use when Bash can't cut it
 
-Keep things modular. Keep glue invisible. 
+Some folks cram everything into a Makefile or one giant Python script and expect magic.
+
+But glue code should stay minimal - not become the whole system.
+
+Keep things modular. Let each part do one job well.
 
 And when it breaks? Fix it with one clean command.
 
