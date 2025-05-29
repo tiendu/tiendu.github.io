@@ -116,7 +116,7 @@ To dig deeper than just numbers, investors must understand the different perspec
 
 From an investor's viewpoint:
 
-- When **cash flow from operations aligns well with reported profits**, it signals healthy, quality earnings - a strong buy indicator.
+- When **operating cash flow (OCF) aligns well with reported profits**, it signals healthy, quality earnings - a strong buy indicator.
 
 - When **profits appear strong but cash flow is weak or inconsistent**, it raises red flags about potential accounting gimmicks, inventory issues, or stretched working capital.
 
