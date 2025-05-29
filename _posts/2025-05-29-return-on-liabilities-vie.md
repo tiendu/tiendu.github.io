@@ -34,11 +34,11 @@ Hoặc một phiên bản sạch hơn:
 ## 📈 Vì sao RoL có giá trị?
 
 | Ưu điểm | Giải thích |
-| --- | --- |
-| Cắt giảm sự "ảo" của sổ sách | Lợi nhuận so với nợ khó bị làm đẹp hơn so với ROE/ROA |
-| Loại bỏ doanh nghiệp "xác sống" | Vay mà không sinh lời là dấu hiệu đáng ngại |
-| Ưu ái doanh nghiệp hiệu quả | RoL thưởng cho những ai biết dùng đòn bẩy đúng cách |
-| Tránh bẫy ROE cao do vốn thấp | Một số công ty ROE cao vì không vay - chưa chắc là điều tốt |
+|--------|------------|
+| Hạn chế số liệu "ảo" trong sổ sách | So sánh lợi nhuận với nợ là cách trực diện - khó làm đẹp số liệu như ROE hay ROA |
+| Loại bỏ doanh nghiệp "xác sống" | Vay mà không sinh lời là dấu hiệu rõ ràng của mô hình yếu kém |
+| Làm nổi bật doanh nghiệp dùng vốn vay hiệu quả | RoL đánh giá cao những ai biết tận dụng đòn bẩy để sinh lời thực sự |
+| Tránh bẫy ROE cao vì vốn chủ quá thấp | ROE cao đôi khi chỉ phản ánh vốn mỏng - không đồng nghĩa với hiệu quả kinh doanh |
 
 ---
 
