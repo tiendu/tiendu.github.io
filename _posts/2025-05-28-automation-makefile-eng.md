@@ -32,7 +32,7 @@ Use the right tool in the right role - and your kitchen runs smooth.
 
 ---
 
-## 🛠️ Makefile – The Order Slip System
+## 🛠️ Makefile - The Order Slip System
 
 Reliable, fast, and built for jobs that only need to run when something's changed.
 
@@ -114,7 +114,7 @@ For anything beyond three lines: call a script.
 
 ---
 
-## 📋 justfile – The Chalkboard Menu
+## 📋 justfile - The Chalkboard Menu
 
 **justfile** is your kitchen cheat sheet - modern, clean, and delightfully predictable.
 
@@ -183,7 +183,7 @@ Like Make, justfile shines as a wrapper, not a full-blown script.
 
 ---
 
-## 🐚 Shell Scripts – The Seasoned Sous-Chef
+## 🐚 Shell Scripts - The Seasoned Sous-Chef
 
 Shell scripts are flexible, reliable, and perfect when you need control over how the onions are chopped.
 
@@ -261,7 +261,7 @@ init:
 
 Easy for newcomers. Powerful for the team.
 
-## 🐍 Python's subprocess – The Accountant with an Apron
+## 🐍 Python's subprocess - The Accountant with an Apron
 
 You _can_ automate with Python. But should you?
 
@@ -297,7 +297,7 @@ Use Python for data and logic-heavy work. For glue? Stick to shell.
 
 ## 🔧 Pro Tips & Tricks
 
-### 📝 Self-Documenting Makefile
+### 📝 Self-documenting Makefile
 
 ```make
 help:  ## Show all commands
@@ -337,6 +337,103 @@ serve:
 ```
 
 Define your vars in `.env`, use `$(VAR_NAME)` in the Makefile. Clean and versionable.
+
+### 🧰 Built-in variables cheat sheet
+
+Make has smart defaults:
+
+- `$(MAKE)` - recursive make
+- `$(CC)` - compiler
+- `$(CFLAGS)` - compiler flags
+
+```make
+CC = gcc
+CFLAGS = -Wall -Werror
+
+my_program: my_program.c
+	$(CC) $(CFLAGS) -o my_program my_program.c
+```
+
+Less typing, more compiling.
+
+### 🌀 Wildcards for file ops
+
+```make
+SOURCES = $(wildcard *.c)
+OBJECTS = $(SOURCES:.c=.o)
+
+$(OBJECTS): %.o: %.c
+	$(CC) -c $< -o $@
+```
+
+Dynamic and DRY - no manual file list needed.
+
+### 🔁 Smart dependency handling
+
+```make
+output.txt: input.txt process_data.sh
+	./process_data.sh input.txt output.txt
+```
+
+Only reruns when `input.txt` or `process_data.sh` changes.
+
+### 🧭 Recursive Make for subprojects
+
+```make
+subdir:
+	cd subdir && $(MAKE)
+```
+
+Keeps your root Makefile clean.
+
+### ⚡ Parallel Make
+
+```make
+.PHONY: all build test
+
+all: build test
+
+build:
+	cargo build
+
+test:
+	cargo test
+```
+
+Run with:
+
+```bash
+make -j 2
+```
+
+Builds and tests at the same time - faster feedback!
+
+### 🪄 One-liner to create a Makefile from existing scripts
+
+```bash
+# For Makefile (requires tabs!)
+ls scripts/*.sh | sed 's|scripts/||; s|\.sh||' | xargs -I{} echo -e "{}:\n\t./scripts/{}.sh\n"
+
+# For justfile (uses spaces, no tab issues)
+ls scripts/*.sh | sed 's|scripts/||; s|\.sh||' | xargs -I{} echo "{}:\n    ./scripts/{}.sh"
+```
+
+This generates:
+
+```make
+init:
+	./scripts/init.sh
+
+deploy:
+	./scripts/deploy.sh
+
+build:
+	./scripts/build.sh
+```
+
+Assumes you have shell scripts like `scripts/init.sh`, `scripts/deploy.sh`, etc.
+
+Great for bootstrapping your automation menu in seconds.
 
 ### 🎯 Use `.PHONY` to avoid caching weirdness
 
