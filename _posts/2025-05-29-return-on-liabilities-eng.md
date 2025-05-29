@@ -5,7 +5,7 @@ date: 2025-05-29
 categories: ["Personal Notes & Reflections"]
 ---
 
-Can a simple ratio expose under-the-radar companies that use debt more efficiently than industry giants?
+Can a simple ratio expose under-the-radar companies that borrow smart, grow fast, and outperform giants?
 
 In this post, I'll introduce **RoL (Return on Liabilities)** - a practical, underrated metric to spot hidden alpha. It's fast, simple, and brutally honest about one thing:
 
@@ -64,7 +64,11 @@ If a smaller company has:
 - **Stable or growing RoL trend over 3+ quarters**
 - **Manageable financial debt (not exploding)**
 
-Then you've found an **undervalued alpha candidate**.
+If all apply, you've found a strong **undervalued alpha candidate** - one that not only uses debt well, but also:
+
+- Runs a profitable core business (positive gross margin)
+- Generates real cash (positive OCF)
+- Trades at a discount (low P/E vs peers)
 
 ---
 
