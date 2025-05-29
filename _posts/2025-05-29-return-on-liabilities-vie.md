@@ -101,10 +101,10 @@ Mà là: **"Nếu tôi vay, tôi có biến được tiền vay thành giá tr�
 
 | Rủi ro | Cách xử lý |
 | --- | --- |
-| Lợi nhuận ròng bị làm đẹp | Ưu tiên dùng EBIT hoặc CFO nếu có |
-| Nợ bao gồm cả khoản không tài chính | Chỉ lấy nợ vay tài chính để tính |
-| Công ty nợ quá thấp → RoL ảo | Loại bỏ doanh nghiệp có nợ <5% tổng tài sản |
-| Thanh khoản kém | Kiểm tra khối lượng giao dịch trước khi quyết định đầu tư |
+| Lợi nhuận ròng ảo | Ưu tiên dùng EBIT hoặc dòng tiền từ hoạt động kinh doanh (CFO) nếu có |
+| Nợ bao gồm cả khoản không mang tính vay mượn | Chỉ tính nợ vay tài chính để phản ánh đúng mức đòn bẩy |
+| Nợ quá thấp khiến RoL bị thổi phồng | Loại bỏ doanh nghiệp có nợ vay < 5% tổng tài sản |
+| Thanh khoản kém | Kiểm tra khối lượng giao dịch trung bình trước khi đầu tư |
 
 ---
 
