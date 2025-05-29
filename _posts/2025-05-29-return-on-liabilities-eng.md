@@ -42,6 +42,34 @@ Or for a cleaner version:
 
 ---
 
+## ⚠️ Important Warning on Using EBIT in RoL
+
+While **RoL_EBIT** is powerful for many industries, it has important limitations—especially in sectors like **banking**, **real estate**, and **financial services**.
+
+- In banks, for example, EBIT includes **interest income from loans** and **profits from foreclosed assets**, which may not translate into immediate cash flow. Such "profits" can be **accounting constructs** rather than realized earnings.
+- Real estate companies might recognize gains on property sales that have **long cash conversion cycles**, making EBIT less reflective of true cash profitability.
+- These factors can **inflate EBIT**, causing RoL_EBIT to **misrepresent the company's actual ability to turn debt into real profits**.
+
+---
+
+## 💡 Alternative Approach: Using Operating Cash Flow (OCF)
+
+To address these issues, consider replacing EBIT with **Operating Cash Flow (OCF)** when calculating RoL:
+
+**RoL_OCF = OCF / Financial_Debt**
+
+or if Financial Debt is unavailable, use:  
+
+**RoL_OCF = OCF / Short-Term Debt** (with caution)
+
+**Why OCF?**
+
+- OCF measures the **actual cash generated** from core business operations, stripping away accounting non-cash items and timing effects.
+- It provides a more **realistic picture of a company's ability to service and profit from its debt**.
+- This is especially crucial for industries where EBIT can be distorted by accounting policies or asset sales.
+
+---
+
 ## 🧠 Turning RoL Into a Stock Screener
 
 ### Step 1: Pick an Industry
