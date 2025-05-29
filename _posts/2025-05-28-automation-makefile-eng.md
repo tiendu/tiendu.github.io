@@ -454,7 +454,7 @@ Your Makefile or justfile should read like a menu - not a novel.
 
 ## 🍰 Final Slice
 
-Your project glue shouldn't become a tangled spaghetti monster.
+Your project glue shouldn't feel like a pile of tangled spaghetti.
 
 - **Makefile**: Great for builds and CI
 - **justfile**: Friendly for local tasks
