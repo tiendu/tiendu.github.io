@@ -129,14 +129,16 @@ For anything beyond three lines: call a script.
 - No tabs, no drama
 - Arguments work the way you expect:
 
-```bash
+```just
+{% raw %}
 greet name="chef":
     echo "Hello, {{name}}!"
+{% endraw %}
 ```
 
 - Easy `.env` support:
 
-```bash
+```just
 set dotenv-load
 ```
 
