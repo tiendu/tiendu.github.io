@@ -130,10 +130,8 @@ For anything beyond three lines: call a script.
 - Arguments work the way you expect:
 
 ```just
-{% raw %}
 greet name="chef":
-    echo "Hello, {{name}}!"
-{% endraw %}
+    echo "Hello, &#123;&#123;name&#125;&#125;!"
 ```
 
 - Easy `.env` support:
