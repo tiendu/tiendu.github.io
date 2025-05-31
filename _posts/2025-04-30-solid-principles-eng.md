@@ -256,20 +256,42 @@ class IEngine(ABC):
     def start(self) -> str:
         pass
 
+class IRefuelable(ABC):
+    @abstractmethod
+    def refuel(self) -> str:
+        pass
+
+class IRechargeable(ABC):
+    @abstractmethod
+    def recharge(self) -> str:
+        pass
+
 # D: Dependency Inversion Principle (DIP)
-class ElectricEngine(IEngine):
+class ElectricEngine(IEngine, IRechargeable):
     def start(self) -> str:
         return "🔋 Electric engine started."
 
-class GasEngine(IEngine):
+    def recharge(self) -> str:
+        return "⚡ Battery recharged."
+
+class GasEngine(IEngine, IRefuelable):
     def start(self) -> str:
         return "⛽ Gas engine started."
 
-class HybridEngine(IEngine):
+    def refuel(self) -> str:
+        return "⛽ Tank refilled."
+
+class HybridEngine(IEngine, IRefuelable, IRechargeable):
     def start(self) -> str:
         return "⚡⛽ Hybrid engine started."
 
-class MockEngine(IEngine):  # For testing
+    def refuel(self) -> str:
+        return "⛽ Hybrid tank refilled."
+
+    def recharge(self) -> str:
+        return "⚡ Hybrid battery recharged."
+
+class MockEngine(IEngine):
     def start(self) -> str:
         return "[TEST] Mock engine started."
 
@@ -278,6 +300,30 @@ class MockEngine(IEngine):  # For testing
 class TripLogger:
     def log_start(self):
         print("📝 Trip started.")
+
+    def log_fuel(self, message: str):
+        print(f"📋 Fuel Log: {message}")
+
+    def log_charge(self, message: str):
+        print(f"📋 Battery Log: {message}")
+
+@dataclass
+class FuelSystem:
+    engine: IRefuelable
+    logger: TripLogger
+
+    def refuel(self):
+        message = self.engine.refuel()
+        self.logger.log_fuel(message)
+
+@dataclass
+class BatterySystem:
+    engine: IRechargeable
+    logger: TripLogger
+
+    def recharge(self):
+        message = self.engine.recharge()
+        self.logger.log_charge(message)
 
 # O: Open/Closed Principle (OCP)
 @dataclass
@@ -290,20 +336,28 @@ class Car:
         print(self.engine.start())
         print("🚗 Car is driving...")
 
-# ✅ L: Liskov Substitution Principle (LSP)
-# All subclasses of IEngine can be passed to Car safely
+# ✅ Liskov Substitution Principle (LSP)
+# All engines conform to IEngine and optional fuel/charge interfaces
 
 def main():
+    logger = TripLogger()
+
     cars = [
-        ("Electric", Car(ElectricEngine(), TripLogger())),
-        ("Gas", Car(GasEngine(), TripLogger())),
-        ("Hybrid", Car(HybridEngine(), TripLogger())),
-        ("Mock", Car(MockEngine(), TripLogger()))
+        ("Electric", Car(ElectricEngine(), logger)),
+        ("Gas", Car(GasEngine(), logger)),
+        ("Hybrid", Car(HybridEngine(), logger)),
+        ("Mock", Car(MockEngine(), logger))
     ]
 
     for label, car in cars:
         print(f"\n=== {label} Car ===")
         car.drive()
+
+        if isinstance(car.engine, IRechargeable):
+            BatterySystem(car.engine, logger).recharge()
+
+        if isinstance(car.engine, IRefuelable):
+            FuelSystem(car.engine, logger).refuel()
 
 if __name__ == "__main__":
     main()
@@ -313,18 +367,36 @@ if __name__ == "__main__":
 # 📝 Trip started.
 # 🔋 Electric engine started.
 # 🚗 Car is driving...
-# ...
+# 📋 Battery Log: ⚡ Battery recharged.
+
+# === Gas Car ===
+# 📝 Trip started.
+# ⛽ Gas engine started.
+# 🚗 Car is driving...
+# 📋 Fuel Log: ⛽ Tank refilled.
+
+# === Hybrid Car ===
+# 📝 Trip started.
+# ⚡⛽ Hybrid engine started.
+# 🚗 Car is driving...
+# 📋 Battery Log: ⚡ Hybrid battery recharged.
+# 📋 Fuel Log: ⛽ Hybrid tank refilled.
+
+# === Mock Car ===
+# 📝 Trip started.
+# [TEST] Mock engine started.
+# 🚗 Car is driving...
 ```
 
 ✅ What this example shows:
 
-- `Car` depends only on the **IEngine interface** (DIP).
-- Engines like **ElectricEngine**, **GasEngine**, and **MockEngine** are all interchangeable without breaking the system (LSP).
-- `TripLogger` focuses only on logging (SRP).
-- You can add new engines like `SolarEngine` without modifying Car (OCP).
-- `IEngine` is minimal - no unnecessary methods (ISP).
-
-> This tiny example packs all five principles - and is a great starting point for any system that needs to grow and adapt over time.
+| Principle | In Action |
+| --- | --- |
+| SRP | `TripLogger`, `BatterySystem`, and `FuelSystem` each handle only one concern. |
+| OCP | You can add `SolarEngine()` or `BiofuelEngine()` without touching `Car`. |
+| LSP | Every `IEngine` subclass behaves correctly when used as a `Car` engine. |
+| ISP | Clients like `FuelSystem` depend only on `IRefuelable`; not everything needs `recharge()`. |
+| DIP | `Car`, `BatterySystem`, and `FuelSystem` all depend on abstractions (`IEngine`, `IRefuelable`, `IRechargeable`). |
 
 ## 🏁 Conclusion
 
