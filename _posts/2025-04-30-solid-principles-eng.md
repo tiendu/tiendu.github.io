@@ -242,6 +242,90 @@ Think like a LEGO set:
 
 > ✨ Build systems like LEGO: modular, replaceable, and fun to scale.
 
+## 🧪 Complete Example: All SOLID Principles Together
+
+Here's a small, end-to-end Python example that brings all five SOLID principles together using the car metaphor we've followed throughout this post.
+
+```python
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+# I: Interface Segregation Principle (ISP)
+class IEngine(ABC):
+    @abstractmethod
+    def start(self) -> str:
+        pass
+
+# D: Dependency Inversion Principle (DIP)
+class ElectricEngine(IEngine):
+    def start(self) -> str:
+        return "🔋 Electric engine started."
+
+class GasEngine(IEngine):
+    def start(self) -> str:
+        return "⛽ Gas engine started."
+
+class HybridEngine(IEngine):
+    def start(self) -> str:
+        return "⚡⛽ Hybrid engine started."
+
+class MockEngine(IEngine):  # For testing
+    def start(self) -> str:
+        return "[TEST] Mock engine started."
+
+# S: Single Responsibility Principle (SRP)
+@dataclass
+class TripLogger:
+    def log_start(self):
+        print("📝 Trip started.")
+
+# O: Open/Closed Principle (OCP)
+@dataclass
+class Car:
+    engine: IEngine
+    logger: TripLogger
+
+    def drive(self):
+        self.logger.log_start()
+        print(self.engine.start())
+        print("🚗 Car is driving...")
+
+# ✅ L: Liskov Substitution Principle (LSP)
+# All subclasses of IEngine can be passed to Car safely
+
+def main():
+    cars = [
+        ("Electric", Car(ElectricEngine(), TripLogger())),
+        ("Gas", Car(GasEngine(), TripLogger())),
+        ("Hybrid", Car(HybridEngine(), TripLogger())),
+        ("Mock", Car(MockEngine(), TripLogger()))
+    ]
+
+    for label, car in cars:
+        print(f"\n=== {label} Car ===")
+        car.drive()
+
+if __name__ == "__main__":
+    main()
+
+# Output:
+# === Electric Car ===
+# 📝 Trip started.
+# 🔋 Electric engine started.
+# 🚗 Car is driving...
+# ...
+```
+
+✅ What this example shows:
+
+- `Car` depends only on the **IEngine interface** (DIP).
+- Engines like **ElectricEngine**, **GasEngine**, and **MockEngine** are all interchangeable without breaking the system (LSP).
+- `TripLogger` focuses only on logging (SRP).
+- You can add new engines like `SolarEngine` without modifying Car (OCP).
+- `IEngine` is minimal - no unnecessary methods (ISP).
+
+> This tiny example packs all five principles - and is a great starting point for any system that needs to grow and adapt over time.
+
 ## 🏁 Conclusion
 
 The SOLID principles are more than just theory. They're practical tools for building:
