@@ -5,9 +5,9 @@ date: 2025-06-01
 categories: ["Personal Notes & Reflections"]
 ---
 
-Ở tuổi 20, mình thường theo đuổi những thứ *ngỡ là* quan trọng - chức danh oách, những chuyến đi để “sống ảo”, hay một mối quan hệ tưởng như hoàn hảo. Nhưng khi bước sang tuổi 30, mọi thứ bắt đầu đổi khác. Luật chơi thay đổi.
+Ở tuổi 20, mình thường theo đuổi những thứ *ngỡ là* quan trọng - chức danh oách, những chuyến đi để "sống ảo", hay một mối quan hệ tưởng như hoàn hảo. Nhưng khi bước sang tuổi 30, mọi thứ bắt đầu đổi khác. Luật chơi thay đổi.
 
-Tuổi 30 không còn là lúc để “tick” vào từng mục tiêu nữa. Đây là giai đoạn đặt nền móng - những thứ bền vững và có ý nghĩa thật sự về lâu dài.
+Tuổi 30 không còn là lúc để "tick" vào từng mục tiêu nữa. Đây là giai đoạn đặt nền móng - những thứ bền vững và có ý nghĩa thật sự về lâu dài.
 
 Nhiều người dành cả thập kỷ này để tối ưu nhầm thứ. Leo lên những vị trí khiến mình tự hào, rồi chợt phát hiện… mình đang ở nhầm chỗ. Gật đầu với mọi yêu cầu vì ngại từ chối. Tìm kiếm sự công nhận từ bên ngoài thay vì lắng nghe điều mình thực sự muốn.
 
@@ -99,6 +99,24 @@ Tuổi 30 giống như một lần cập nhật lớn - không chỉ cho suy ngh
 - Nhận diện và tháo gỡ những lối mòn tư duy đã bám theo từ những năm 20 tuổi
 
 > Một trong những kỹ năng giải phóng nhất ở tuổi 30: dám nói "không" mà không thấy áy náy.
+
+Cũng là lúc bắt đầu rẽ hướng trong cách suy nghĩ - không phải để "khôn ra", mà để sống rõ ràng hơn:
+
+- **Tư duy ngược (Inversion thinking):**  
+
+*Thay vì chỉ hỏi "làm sao để thành công?", hãy hỏi "làm sao để thất bại?" - rồi né nó trước.*  
+
+- **Tư duy tầng hai (Second-order thinking):**  
+
+*Đừng dừng ở cái lợi trước mắt. Hỏi tiếp: "Rồi sau đó thì sao?"*
+
+- **Tư duy tránh hối tiếc (Regret minimization):**  
+
+*Mình ở tuổi 50 có cảm ơn hay trách mình vì quyết định này không?*
+
+Đôi khi, việc nghĩ khác đi không giúp mình giải được bài toán...  
+
+Nhưng nó giúp mình **chọn đúng bài toán để giải.**
 
 ---
 
