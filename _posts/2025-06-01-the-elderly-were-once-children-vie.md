@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Người Già Cũng Từng Có Ba, Có Má"
+title: "Người Già Cũng Từng Có Ba, Có Má, Có Người Thương"
 date: 2025-06-01
 categories: ["Personal Notes & Reflections"]
 ---
@@ -78,12 +78,23 @@ Ai lau từng giọt nước mắt cho bạn mà không một lời than phiền
 
 Người già… *cũng từng là một đứa trẻ*, cũng từng có má.
 
-Mà giờ đây, **họ chỉ còn bạn thôi.**
+---
+
+Rồi lớn lên, họ từng có một người bên cạnh –  
+Một người cùng chia sẻ từng bữa cơm, từng cơn đau lưng, từng cái thở dài cuối ngày.
+
+Một người lặng lẽ gắp phần ngon, nhường phần ấm, ngồi nghe họ kể đi kể lại một chuyện cũ… mà vẫn gật đầu cười: *“Ờ, tui nhớ rồi.”*
+
+Nhưng rồi thời gian lấy đi cả người đó.
+
+Không còn má.  
+Không còn bạn đời.  
+Chỉ còn lại một mình – với ký ức và cái ghế trống bên cạnh.
 
 ---
 
 > **Muốn làm người tử tế hả?**  
-> *Bắt đầu bằng cách thương một người già – như thể bạn đang ôm một đứa con nít… không còn ai để dỗ dành.*
+> *Bắt đầu bằng cách thương một người già – như thể bạn đang ôm một đứa con nít… hoặc một người vừa mất đi người họ thương nhất.*
 
 ---
 
