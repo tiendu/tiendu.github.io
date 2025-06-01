@@ -46,16 +46,20 @@ Tự hỏi bản thân:
 - Những người đi trước mình 10 năm trong lĩnh vực này - họ có sống cuộc đời mà mình muốn không?
 - Mình có sẵn sàng đánh đổi để sống như họ không?
 
-Hãy dám thử. Làm điều nhỏ trước. Chuyển hướng nếu cần - mình đã đủ kinh nghiệm để người khác tin tưởng, và vẫn đủ trẻ để người khác tin tưởng, và đủ trẻ để bắt đầu lại.
+Hãy dám thử. Làm điều nhỏ trước. Chuyển hướng nếu cần - mình đã đủ kinh nghiệm để người khác tin tưởng, và vẫn đủ trẻ để bắt đầu lại.
 
 > Tránh rủi ro quá mức cũng là một rủi ro. Ở lại một nơi khiến mình cạn kiệt năng lượng là một kiểu đánh cược âm ỉ.
 
 **Nên đầu tư vào các kỹ năng lâu bền:**
 
-- Giao tiếp
-- Thấu hiểu
-- Tư duy phản biện
+- Giao tiếp  
+- Thấu hiểu  
+- Tư duy phản biện  
 - Kết nối và tạo ảnh hưởng
+
+Đôi khi, **biết đúng người còn quan trọng hơn biết đủ mọi thứ**. Một lời gợi ý, một kết nối đúng lúc, có thể thay đổi cả hướng đi.
+
+Hãy đầu tư thời gian vào việc xây dựng mối quan hệ chất lượng - không phải để "network", mà để cùng nhau lớn lên.
 
 Đừng để đến lúc cần mới lo kết nối - hãy vun đắp các mối quan hệ ngay từ bây giờ.
 
@@ -67,8 +71,8 @@ Tuổi 30 là lúc mình bắt đầu sàng lọc lại các mối quan hệ. Kh
 
 Theo nghiên cứu hơn 80 năm của Harvard, **mối quan hệ** chính là yếu tố dự đoán lớn nhất cho hạnh phúc và sức khỏe - còn hơn cả tiền bạc hay danh vọng.
 
-- Học cách yêu và thể hiện tình cảm theo cách mà người kia cảm nhận được - không phải theo cách mình muốn cho đi.
-- Bao dung hơn với ba mẹ, nhất là khi vai trò bắt đầu đổi chỗ - khi mình không còn là đứa con được chăm lo, mà là người bắt đầu chăm sóc lại họ.
+- Học cách yêu và thể hiện tình cảm theo cách mà người kia cảm nhận được - không phải theo cách mình muốn cho đi.  
+- Bao dung hơn với ba mẹ, nhất là khi vai trò bắt đầu đổi chỗ - khi mình không còn là đứa con được chăm lo, mà là người bắt đầu chăm sóc lại họ.  
 - Buông những mối quan hệ đã hết duyên - không phải là thất bại, mà là một bước trưởng thành.
 
 > Ai là người khiến mình được là chính mình - và mình có đang thật sự hiện diện với họ không?
@@ -81,8 +85,8 @@ Hãy giữ lại những người khiến mình thấy thoải mái, không ph�
 
 Tuổi 20, mình có thể thức trắng, ăn uống bừa bãi và vẫn tỉnh như sáo. Nhưng đến tuổi 30, cơ thể bắt đầu lên tiếng - chậm hơn, mệt hơn, và không còn dễ hồi phục như trước.
 
-- Giấc ngủ là nền tảng của mọi thứ. Đừng coi thường nó.
-- Đi bộ mỗi ngày 10 phút vẫn tốt hơn là một kế hoạch tập luyện hoành tráng nhưng mình bỏ dở sau 1 tuần.
+- Giấc ngủ là nền tảng của mọi thứ. Đừng coi thường nó.  
+- Đi bộ mỗi ngày 10 phút vẫn tốt hơn là một kế hoạch tập luyện hoành tráng nhưng mình bỏ dở sau 1 tuần.  
 - Chăm sóc sức khỏe tinh thần sớm - đừng đợi nó kêu cứu.
 
 > Mục tiêu không phải là một thân hình hoàn hảo - chỉ cần một cơ thể và tinh thần đủ khoẻ để sống lâu, sống sâu.
@@ -93,28 +97,32 @@ Tuổi 20, mình có thể thức trắng, ăn uống bừa bãi và vẫn tỉn
 
 Tuổi 30 giống như một lần cập nhật lớn - không chỉ cho suy nghĩ, mà cả cách mình nhìn nhận cuộc sống.
 
-- Bỏ qua chủ nghĩa hoàn hảo
-- Học cách nói "không" mà không phải xin lỗi
-- Đón nhận thất bại như một phần tự nhiên của hành trình học hỏi
+- Bỏ qua chủ nghĩa hoàn hảo  
+- Học cách nói "không" mà không phải xin lỗi  
+- Đón nhận thất bại như một phần tự nhiên của hành trình học hỏi  
 - Nhận diện và tháo gỡ những lối mòn tư duy đã bám theo từ những năm 20 tuổi
 
 > Một trong những kỹ năng giải phóng nhất ở tuổi 30: dám nói "không" mà không thấy áy náy.
 
+Một trong những chuyển biến lớn ở tuổi 30 là mình **ít đổ lỗi cho hoàn cảnh hơn**. Thay vì than "giá mà...", mình bắt đầu hỏi: *"Với điều mình đang có, mình có thể làm gì ngay bây giờ?"*
+
+Sự giới hạn không còn là cái cớ - nó trở thành nền để sáng tạo.
+
 Cũng là lúc bắt đầu rẽ hướng trong cách suy nghĩ - không phải để "khôn ra", mà để sống rõ ràng hơn:
 
-- **Tư duy ngược (Inversion thinking):**  
+- **Tư duy ngược (Inversion thinking):**
 
 *Thay vì chỉ hỏi "làm sao để thành công?", hãy hỏi "làm sao để thất bại?" - rồi né nó trước.*  
 
-- **Tư duy tầng hai (Second-order thinking):**  
+- **Tư duy tầng hai (Second-order thinking):**
 
 *Đừng dừng ở cái lợi trước mắt. Hỏi tiếp: "Rồi sau đó thì sao?"*
 
-- **Tư duy tránh hối tiếc (Regret minimization):**  
+- **Tư duy tránh hối tiếc (Regret minimization):**
 
 *Mình ở tuổi 50 có cảm ơn hay trách mình vì quyết định này không?*
 
-Đôi khi, việc nghĩ khác đi không giúp mình giải được bài toán...  
+Đôi khi, việc nghĩ khác đi không giúp mình giải được bài toán...
 
 Nhưng nó giúp mình **chọn đúng bài toán để giải.**
 
@@ -124,7 +132,7 @@ Nhưng nó giúp mình **chọn đúng bài toán để giải.**
 
 Càng lớn, mình càng thấy thời gian trôi nhanh. Nhưng cũng dễ lãng phí hơn.
 
-- Phân biệt điều gấp gáp và điều quan trọng - hai thứ rất khác nhau.  
+- Phân biệt điều cần làm gấp và điều quan trọng - hai thứ rất khác nhau.  
 - Dành thời gian cho những gì thực sự tạo ra giá trị lâu dài: nghỉ ngơi, sáng tạo, kết nối.  
 - Chừa khoảng trống trong lịch trình - đừng để từng phút đều bị nhồi kín.  
 - Đặt ranh giới rõ ràng cho thời gian - cả với công việc lẫn... mạng xã hội.
@@ -161,8 +169,8 @@ Những câu hỏi về "ý nghĩa cuộc đời" bắt đầu vang lên - và �
 
 Tuổi 30 là thời điểm mình bắt đầu "hiểu" cuộc đời - không chỉ qua con chữ, mà qua trải nghiệm.
 
-- Học cách tin vào trực giác, nhất là khi đầu óc quá ồn ào.
-- Nhận ra rằng: có giới hạn không phải là bất tiện, mà là điều giúp mình kết nối thật hơn.
+- Học cách tin vào trực giác, nhất là khi đầu óc quá ồn ào.  
+- Nhận ra rằng: có giới hạn không phải là bất tiện, mà là điều giúp mình kết nối thật hơn.  
 - Đừng chỉ mơ đến thành công. Hãy hình dung cả những chướng ngại - để chuẩn bị, không phải để hoảng sợ.
 
 > Trí tuệ không nằm ở việc biết thêm điều gì mới. Mà ở chỗ mình bắt đầu sống thật với những gì mình đã biết từ lâu.
@@ -173,8 +181,8 @@ Tuổi 30 là thời điểm mình bắt đầu "hiểu" cuộc đời - không 
 
 Tuổi 30 không phải là giai đoạn mình phải "giải xong" mọi thứ. Mà là lúc mình bắt đầu **hiểu điều gì xứng đáng để đầu tư**.
 
-- Khi tài chính ổn định, mình có thể chọn công việc phù hợp.
-- Khi sức khỏe tốt, mình dễ kết nối sâu sắc hơn.
+- Khi tài chính ổn định, mình có thể chọn công việc phù hợp.  
+- Khi sức khỏe tốt, mình dễ kết nối sâu sắc hơn.  
 - Khi thời gian được quản lý rõ ràng, mục tiêu sống sẽ có không gian để xuất hiện.
 
 > Đừng cố sửa từng mảnh rời rạc. Cuộc đời mình là một tổng thể - và thứ mình cần là **sự hài hòa**, không phải sự hoàn hảo.
@@ -187,4 +195,3 @@ Hãy sống một cuộc đời **mà mình thấy đáng sống** - không ph�
 
 Và có lẽ, đó chính là món quà lớn nhất tuổi 30 có thể trao cho mình:  
 **được sống bằng chủ đích, chứ không phải kỳ vọng.**
-
