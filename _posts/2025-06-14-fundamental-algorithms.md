@@ -15,7 +15,7 @@ In this post, we'll walk through these fundamental patterns — each one with Py
 
 ### Problem: Two Sum
 
-```Python
+```python
 from typing import List
 
 # Given an array and a target sum, return the indices of the two numbers that add up to the target
@@ -40,7 +40,7 @@ Use a dictionary to trade space for time — turning a brute-force O(n^2) scan i
 
 ### Problem: Longest Substring Without Repeating Characters
 
-```Python
+```python
 # Find the length of the longest substring without repeating characters
 
 def length_of_longest_substring(s: str) -> int:
@@ -68,7 +68,7 @@ Use a "window" that expands and contracts dynamically while maintaining some inv
 
 ### Problem: Binary Search on Sorted Array
 
-```Python
+```python
 from typing import List
 
 # Classic binary search for a target in a sorted array
@@ -88,7 +88,7 @@ def binary_search(arr: List[int], target: int) -> int:
 
 ### Problem: Binary Search on Answer Space
 
-```Python
+```python
 from typing import List
 import math
 
@@ -119,7 +119,7 @@ Use binary search even when the data isn’t sorted — as long as the **solutio
 
 ### Problem: Max Depth of Binary Tree
 
-```Python
+```python
 from typing import Optional
 
 class TreeNode:
@@ -153,7 +153,7 @@ Tree traversal orders:
 
 ### Problem: Climbing Stairs (Fib-like)
 
-```Python
+```python
 # Number of distinct ways to climb to the top
 
 def climb_stairs(n: int) -> int:
@@ -175,7 +175,7 @@ DP problems have overlapping subproblems. Use bottom-up iteration with minimal s
 
 ### Problem: Number of Islands (DFS)
 
-```Python
+```python
 from typing import List
 
 def num_islands(grid: List[List[str]]) -> int:
@@ -204,7 +204,7 @@ def num_islands(grid: List[List[str]]) -> int:
 
 ### Problem: Number of Islands (BFS)
 
-```Python
+```python
 from typing import List, Tuple
 from collections import deque
 
@@ -252,7 +252,7 @@ Topological Sort (not shown here) is another essential graph algorithm for sched
 
 ### Problem: Valid Parentheses
 
-```Python
+```python
 # Check if a string has valid parentheses
 
 def is_valid(s: str) -> bool:
