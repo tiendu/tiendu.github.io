@@ -57,14 +57,14 @@ You don't need to tune 50 hyperparameters. Just two:
 This controls **how much you want to avoid mistakes** on the training set.
 
 - **Low `C`**: The model allows more mistakes to keep the boundary simple and smooth.
-- **High `C`**: The model tries to classify every point correctly — even if that means drawing a complex boundary.
+- **High `C`**: The model tries to classify every point correctly - even if that means drawing a complex boundary.
 
 ### 2. `γ` (Gamma): Kernel Influence
 
 This controls **how far each training point reaches** in shaping the decision boundary.
 
-- **Low `γ`**: Each point has a wide influence — leading to smoother, broader boundaries.
-- **High `γ`**: Each point has a tight influence — resulting in sharper curves and a higher chance of overfitting.
+- **Low `γ`**: Each point has a wide influence - leading to smoother, broader boundaries.
+- **High `γ`**: Each point has a tight influence - resulting in sharper curves and a higher chance of overfitting.
 
 Together, `C` and `γ` shape the behavior of your SVM like two knobs on a sound mixer.
 
@@ -126,6 +126,4 @@ Even if you move on to deep learning later, understanding SVMs gives you a rock-
 
 SVMs are like the **hand tools of machine learning**. Maybe not as flashy as a neural network, but elegant, precise, and always worth keeping in your kit.
 
-They taught me how to think in terms of margins and generalization — and they still earn their keep in my projects.
-
-
+They taught me how to think in terms of margins and generalization - and they still earn their keep in my projects.
