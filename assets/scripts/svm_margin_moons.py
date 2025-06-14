@@ -23,63 +23,70 @@ y_min, y_max = X_train[:, 1].min() - 1, X_train[:, 1].max() + 1
 xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                      np.arange(y_min, y_max, h))
 
-# ---- 4. Set Up Output ----
-frame_dir = "svm_moons_frames"
-os.makedirs(frame_dir, exist_ok=True)
-gif_path = "svm_moons_margin_evolution.gif"
-frames = []
-C_values = np.logspace(-2, 2, 20)
+def make_gif(title_prefix, varying_param, values, fixed_C=None, fixed_gamma=None, out_dir="svm_frames", out_gif="output.gif"):
+    os.makedirs(out_dir, exist_ok=True)
+    frames = []
 
-# ---- 5. Training & Plotting Loop ----
-for idx, C in enumerate(C_values):
-    clf = SVC(kernel='rbf', C=C, gamma='scale')
-    clf.fit(X_train, y_train)
+    for idx, val in enumerate(values):
+        C = fixed_C if fixed_C is not None else val
+        gamma = fixed_gamma if fixed_gamma is not None else val
 
-    Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
+        clf = SVC(kernel='rbf', C=C, gamma=gamma)
+        clf.fit(X_train, y_train)
 
-    # Plot
-    plt.figure(figsize=(6, 5))
-    
-    # Contour: margin (-1, +1) and decision boundary (0)
-    plt.contour(xx, yy, Z, levels=[-1, 0, 1], linestyles=['--', '-', '--'], colors='k')
+        Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
+        Z = Z.reshape(xx.shape)
 
-    # Background color
-    plt.contourf(xx, yy, Z > 0, alpha=0.3, cmap=plt.cm.coolwarm)
+        plt.figure(figsize=(6, 5))
+        plt.contour(xx, yy, Z, levels=[-1, 0, 1], linestyles=['--', '-', '--'], colors='k')
+        plt.contourf(xx, yy, Z > 0, alpha=0.3, cmap=plt.cm.coolwarm)
+        plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=plt.cm.coolwarm, edgecolors='k', s=30)
+        plt.scatter(clf.support_vectors_[:, 0], clf.support_vectors_[:, 1],
+                    facecolors='none', edgecolors='k', s=80, linewidths=1.5)
 
-    # Data points
-    plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=plt.cm.coolwarm, edgecolors='k', s=30)
+        legend_elements = [
+            Line2D([0], [0], color='k', linestyle='-', label='Decision Boundary'),
+            Line2D([0], [0], color='k', linestyle='--', label='Margins (±1)'),
+            Line2D([0], [0], marker='o', markerfacecolor='none', markeredgecolor='k',
+                   markersize=10, linestyle='None', label='Support Vectors')
+        ]
+        plt.legend(handles=legend_elements, loc="upper left")
 
-    # Support vectors
-    plt.scatter(clf.support_vectors_[:, 0], clf.support_vectors_[:, 1],
-                facecolors='none', edgecolors='k', s=80, linewidths=1.5, label='Support Vectors')
+        var_label = f"{varying_param} = {val:.2e}" if varying_param == "gamma" else f"{varying_param} = {val:.2f}"
+        plt.title(f"{title_prefix} ({var_label})")
+        plt.xlabel("Feature 1")
+        plt.ylabel("Feature 2")
+        plt.tight_layout()
 
-    # Legend explaining what’s what
-    legend_elements = [
-        Line2D([0], [0], color='k', linestyle='-', label='Decision Boundary'),
-        Line2D([0], [0], color='k', linestyle='--', label='Margins (±1)'),
-        Line2D([0], [0], marker='o', markerfacecolor='none', markeredgecolor='k',
-               markersize=10, linestyle='None', label='Support Vectors')
-    ]
-    plt.legend(handles=legend_elements, loc="upper left")
+        fname = os.path.join(out_dir, f"frame_{idx:02d}.png")
+        plt.savefig(fname, dpi=100)
+        frames.append(imageio.imread(fname))
+        plt.close()
 
-    plt.title(f"SVM Margin Evolution (C = {C:.2f})")
-    plt.xlabel("Feature 1")
-    plt.ylabel("Feature 2")
-    plt.tight_layout()
+        print(f"[{title_prefix}] Frame {idx+1}/{len(values)} saved")
 
-    fname = os.path.join(frame_dir, f"frame_{idx:02d}.png")
-    plt.savefig(fname, dpi=100)
-    frames.append(imageio.imread(fname))
-    plt.close()
+    imageio.mimsave(out_gif, frames, fps=3, loop=0)
+    print(f"\n=== GIF saved as: {out_gif}")
 
-    print(f"=== Frame {idx+1}/{len(C_values)} saved")
+# ---- 4. Generate Both GIFs ----
 
-# ---- 6. Create GIF ----
-imageio.mimsave(gif_path, frames, fps=3, loop=0)
-print(f"\n=== GIF saved as: {gif_path}")
+# A. Fixed gamma, sweep C
+make_gif(
+    title_prefix="SVM Margin Evolution",
+    varying_param="C",
+    values=np.logspace(-2, 2, 20),
+    fixed_gamma='scale',
+    out_dir="svm_moons_C_frames",
+    out_gif="svm_moons_C_evolution.gif"
+)
 
-# ---- 7. Optional Cleanup ----
-# import shutil
-# shutil.rmtree(frame_dir)
+# B. Fixed C, sweep gamma
+make_gif(
+    title_prefix="SVM Margin Evolution",
+    varying_param="gamma",
+    values=np.logspace(-2, 2, 20),
+    fixed_C=1.0,
+    out_dir="svm_moons_gamma_frames",
+    out_gif="svm_moons_gamma_evolution.gif"
+)
 

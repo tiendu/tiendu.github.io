@@ -72,13 +72,27 @@ Together, `C` and `γ` shape the behavior of your SVM like two knobs on a sound 
 
 ## 🖼️ Visualizing SVM in Action
 
-To make this more concrete, I trained an SVM using the classic `make_moons` dataset - a simple 2D dataset that's not linearly separable - and visualized how the **decision boundary and margin** evolve as `C` increases from 0.01 to 100.
+To see how SVMs actually behave, I trained a model on the classic `make_moons` dataset - a 2D dataset that's *not* linearly separable - and visualized how the decision boundary evolves as we tweak its two key hyperparameters.
+
+### Effect of `C`: Margin Tightening
+
+First, I kept the kernel sensitivity (`gamma`) constant and animated how the margin and decision boundary change as `C` increases from `0.01` to `100`.
 
 <p align="center">
-  <img src="/assets/images/svm_moons_margin_evolution.gif" alt="SVM Margin GIF" width="600">
+  <img src="/assets/images/svm_moons_C_evolution.gif" alt="SVM C Evolution GIF" width="600">
 </p>
 
-*As `C` increases, the margin shrinks and the boundary gets sharper. The support vectors (circled) anchor the margin edges.*
+*As `C` increases, the model becomes less tolerant of mistakes. The margin narrows, the boundary sharpens, and the number of support vectors often decreases as the model tries to fit the data more tightly.*
+
+### Effect of `γ`: Kernel Flexibility
+
+Next, I fixed `C = 1.0` and varied `gamma` - which controls how much each training point influences the decision boundary.
+
+<p align="center">
+  <img src="/assets/images/svm_moons_gamma_evolution.gif" alt="SVM Gamma Evolution GIF" width="600">
+</p>
+
+*Lower `γ` values produce broad, smooth boundaries. Higher `γ` values lead to sharp, highly localized curves that can perfectly trace training data - but risk overfitting.*
 
 ---
 
