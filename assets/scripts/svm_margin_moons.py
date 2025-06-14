@@ -76,7 +76,7 @@ for idx, C in enumerate(C_values):
     print(f"=== Frame {idx+1}/{len(C_values)} saved")
 
 # ---- 6. Create GIF ----
-imageio.mimsave(gif_path, frames, fps=3)
+imageio.mimsave(gif_path, frames, fps=3, loop=0)
 print(f"\n=== GIF saved as: {gif_path}")
 
 # ---- 7. Optional Cleanup ----
