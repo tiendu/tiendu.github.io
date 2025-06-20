@@ -206,26 +206,59 @@ poetry export -f requirements.txt --without-hashes > requirements.txt
 
 ## 6. 🐍 Master Python's Object Model
 
+Understanding Python's object model turns you from a user of the language into a toolmaker.
+
+Whether you're designing APIs, optimizing memory, or building extensible systems — it all comes back to the object model.
+
 ### 🔎 Why You Need to Care
 
-- Write memory-efficient classes (`__slots__`)
-- Build extensible base classes with `abc`
-- Intercept attribute access
-- Implement context managers, descriptors, metaclasses
+- 🧠 Python treats **everything as an object** — yes, even functions and modules.
+- 🧊 You can optimize memory via `__slots__`.
+- 🧰 You can define contracts using `abc.ABC`.
+- 🧼 You can hook into dynamic behavior with `__getattr__`, `__setattr__`, or `__getattribute__`.
+- ⚙️ You can build your own DSLs or plugins with **metaclasses** or **descriptors**.
 
-### ✅ Examples
+### 🧪 Attribute Interception
+
+Want to defer loading, inject behaviors, or proxy access?
 
 ```python
 class LazyLoader:
     def __getattr__(self, name):
-        print(f"Loading {name}")
-        return 42
+        print(f"[LazyLoad] Loading {name}")
+        return f"value_for_{name}"
+
+ll = LazyLoader()
+print(ll.db)  # → Loading db → value_for_db
 ```
+
+This is how many frameworks implement "virtual" fields, config resolution, or lazy bindings.
+
+### 🧊 Save Memory with __slots__
 
 ```python
 class Point:
-    __slots__ = ("x", "y")
+    __slots__ = ("x", "y")  # Prevents __dict__ allocation
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 ```
+
+#### Benefits:
+
+- 50–70% memory savings when creating millions of objects
+- Faster attribute access (no `dict` lookup)
+- Prevents typos from creating unexpected attributes
+
+#### Drawbacks:
+
+- No dynamic attributes
+- Limited compatibility with some tools (`dataclasses`, `pickle`)
+
+### 🔐 Abstract Base Classes (ABCs)
+
+Use `abc` when you want to define formal interfaces:
 
 ```python
 from abc import ABC, abstractmethod
@@ -233,11 +266,45 @@ from abc import ABC, abstractmethod
 class Engine(ABC):
     @abstractmethod
     def start(self): ...
+
+class GasEngine(Engine):
+    def start(self):
+        return "Vroom"
+
+g = GasEngine()
+print(g.start())  # ✅ Works
 ```
+
+If you forget to implement `start()`, Python will raise an error at class construction time — not during runtime. That's safer.
+
+### 🧬 Dynamically Create Classes
+
+This powers things like plugin systems, serializers, or even custom ORM models:
 
 ```python
 MyType = type("MyType", (object,), {"x": 42})
+print(MyType().x)  # → 42
 ```
+
+Yes, `type` is also a class — and this is what metaclasses build upon.
+
+### 🧙 Bonus: Context Managers with Dunder Methods
+
+```python
+class FileWriter:
+    def __enter__(self):
+        self.file = open("log.txt", "w")
+        return self.file
+    def __exit__(self, *exc):
+        self.file.close()
+
+with FileWriter() as f:
+    f.write("Hello world")
+```
+
+This is how Python's with block works — and why `open(...)` is so elegant.
+
+> 🧠 TL;DR: Python's object model is not "advanced" — it's foundational. It's the key to building elegant, maintainable, _powerful_ code.
 
 ---
 
