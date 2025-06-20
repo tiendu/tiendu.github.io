@@ -17,25 +17,27 @@ You'll find **what went wrong**, **why**, and **how to do it better**.
 
 ## 📚 Table of Contents
 
-- [1. 🧱 Project Structure Is Half the Battle](#1-️-project-structure-is-half-the-battle)
-- [2. 🧰 Know the Standard Library Inside Out](#2-know-the-standard-library-inside-out)
-- [3. 🔍 Debug Like a Surgeon](#3-debug-like-a-surgeon)
-- [4. 🧵 Async, Threads, and Processes: Pick the Right Tool](#4-async-threads-and-processes-pick-the-right-tool)
-- [5. 📦 Be a Packaging Minimalist](#5-be-a-packaging-minimalist)
-- [6. 🐍 Master Python's Object Model](#6-master-pythons-object-model)
-- [7. 🧪 Testing & CLI? Go Native Before You Go Fancy](#7-testing--cli-go-native-before-you-go-fancy)
-- [8. 🔥 Real Tips from Monorepo Hell](#8-real-tips-from-monorepo-hell)
-- [9. ✨ Pythonic Isn't Just Style — It's Predictability](#9-pythonic-isnt-just-style--its-predictability)
-- [10. 💣 Mutable Default Arguments Will Betray You](#10-mutable-default-arguments-will-betray-you)
-- [11. ⛔ Don't Use `__del__` for Cleanup](#11-dont-use-__del__-for-cleanup)
-- [12. 🔄 Circular Imports Are Real](#12-circular-imports-are-real)
-- [13. ☠️ Never Swallow All Exceptions](#13-never-swallow-all-exceptions)
-- [14. 📏 Float Precision Lies](#14-float-precision-lies)
-- [15. 🧊 Use `__slots__` Only for Performance-Constrained Code](#15-use-__slots__-only-for-performance-constrained-code)
-- [16. 🧪 Mock Responsibly](#16-mock-responsibly)
-- [17. 🐢 Optimize Import Time in CLI Tools](#17-optimize-import-time-in-cli-tools)
-- [18. 🧨 Multiprocessing Can Blow Up](#18-multiprocessing-can-blow-up)
-- [🏁 Final Words: What Makes You a Python Expert](#-final-words-what-makes-you-a-python-expert)
+## 📚 Table of Contents
+
+- [1. Project Structure Is Half the Battle](#1-project-structure-is-half-the-battle)
+- [2. Know the Standard Library Inside Out](#2-know-the-standard-library-inside-out)
+- [3. Debug Like a Surgeon](#3-debug-like-a-surgeon)
+- [4. Async Threads and Processes Pick the Right Tool](#4-async-threads-and-processes-pick-the-right-tool)
+- [5. Be a Packaging Minimalist](#5-be-a-packaging-minimalist)
+- [6. Master Pythons Object Model](#6-master-pythons-object-model)
+- [7. Testing--CLI-Go-Native-Before-You-Go-Fancy](#7-testing--cli-go-native-before-you-go-fancy)
+- [8. Real Tips from Monorepo Hell](#8-real-tips-from-monorepo-hell)
+- [9. Pythonic-Isnt-Just-Style--Its-Predictability](#9-pythonic-isnt-just-style--its-predictability)
+- [10. Mutable Default Arguments Will Betray You](#10-mutable-default-arguments-will-betray-you)
+- [11. Dont-Use-__del__-for-Cleanup](#11-dont-use-__del__-for-cleanup)
+- [12. Circular Imports Are Real](#12-circular-imports-are-real)
+- [13. Never Swallow All Exceptions](#13-never-swallow-all-exceptions)
+- [14. Float Precision Lies](#14-float-precision-lies)
+- [15. Use-__slots__-Only-for-Performance-Constrained-Code](#15-use-__slots__-only-for-performance-constrained-code)
+- [16. Mock Responsibly](#16-mock-responsibly)
+- [17. Optimize Import Time in CLI Tools](#17-optimize-import-time-in-cli-tools)
+- [18. Multiprocessing Can Blow Up](#18-multiprocessing-can-blow-up)
+- [Final Words What Makes You a Python Expert](#final-words-what-makes-you-a-python-expert)
 
 ---
 
