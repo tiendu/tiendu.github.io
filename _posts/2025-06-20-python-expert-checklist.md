@@ -347,18 +347,68 @@ funcs = [lambda x, i=i: x + i for i in range(3)]
 
 ## 10. 💣 Mutable Default Arguments Will Betray You
 
+### 😱 The Hidden Trap
+
+In Python, default arguments are evaluated once — at function definition time, not each time the function is called.
+
+This leads to a **shared mutable object** across calls.
+
 ```python
 def append(item, items=[]):  # BAD
     items.append(item)
     return items
+
+print(append("a"))  # ['a']
+print(append("b"))  # ['a', 'b'] ← Unexpected!
 ```
+
+Instead of starting fresh every time, you're modifying the **same list**.
+
+### ✅ The Idiomatic Fix
 
 ```python
 def append(item, items=None):
-    items = items or []
+    if items is None:
+        items = []
     items.append(item)
     return items
 ```
+
+Now it works as expected:
+
+```python
+print(append("a"))  # ['a']
+print(append("b"))  # ['b']
+```
+
+### 💡 For the Type-Safe Folks
+
+If you're using type hints:
+
+```python
+from typing import Optional, List, Any
+
+def append(item: Any, items: Optional[List[Any]] = None) -> List[Any]:
+    if items is None:
+        items = []
+    items.append(item)
+    return items
+```
+
+### 🧠 When Might You _Intentionally_ Use It?
+
+Rarely, but if you **want shared state**:
+
+```python
+def cache(value, _cache={}):
+    if value not in _cache:
+        _cache[value] = expensive_compute(value)
+    return _cache[value]
+```
+
+Just comment it clearly — because it's often misunderstood.
+
+> ⚠️ TL;DR: Never use mutable defaults unless you're doing it on purpose and you're absolutely sure it's safe.
 
 ---
 
