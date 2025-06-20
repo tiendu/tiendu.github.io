@@ -15,6 +15,30 @@ You'll find **what went wrong**, **why**, and **how to do it better**.
 
 ---
 
+## 📚 Table of Contents
+
+- [1. 🧱 Project Structure Is Half the Battle](#1-️-project-structure-is-half-the-battle)
+- [2. 🧰 Know the Standard Library Inside Out](#2-know-the-standard-library-inside-out)
+- [3. 🔍 Debug Like a Surgeon](#3-debug-like-a-surgeon)
+- [4. 🧵 Async, Threads, and Processes: Pick the Right Tool](#4-async-threads-and-processes-pick-the-right-tool)
+- [5. 📦 Be a Packaging Minimalist](#5-be-a-packaging-minimalist)
+- [6. 🐍 Master Python's Object Model](#6-master-pythons-object-model)
+- [7. 🧪 Testing & CLI? Go Native Before You Go Fancy](#7-testing--cli-go-native-before-you-go-fancy)
+- [8. 🔥 Real Tips from Monorepo Hell](#8-real-tips-from-monorepo-hell)
+- [9. ✨ Pythonic Isn't Just Style — It's Predictability](#9-pythonic-isnt-just-style--its-predictability)
+- [10. 💣 Mutable Default Arguments Will Betray You](#10-mutable-default-arguments-will-betray-you)
+- [11. ⛔ Don't Use `__del__` for Cleanup](#11-dont-use-__del__-for-cleanup)
+- [12. 🔄 Circular Imports Are Real](#12-circular-imports-are-real)
+- [13. ☠️ Never Swallow All Exceptions](#13-never-swallow-all-exceptions)
+- [14. 📏 Float Precision Lies](#14-float-precision-lies)
+- [15. 🧊 Use `__slots__` Only for Performance-Constrained Code](#15-use-__slots__-only-for-performance-constrained-code)
+- [16. 🧪 Mock Responsibly](#16-mock-responsibly)
+- [17. 🐢 Optimize Import Time in CLI Tools](#17-optimize-import-time-in-cli-tools)
+- [18. 🧨 Multiprocessing Can Blow Up](#18-multiprocessing-can-blow-up)
+- [🏁 Final Words: What Makes You a Python Expert](#-final-words-what-makes-you-a-python-expert)
+
+---
+
 ## 1. 🧱 Project Structure Is Half the Battle
 
 ### 🔥 The Pain:
@@ -409,7 +433,8 @@ mytool/
 
 This avoids accidentally importing from the working directory and enforces clean packaging.
 
-> 💡 Tip: Your import paths reflect your architecture. If they look deep and ugly, your structure probably is too.
+> 💡 Your import paths reflect your architecture.
+> If they look deep and ugly, your structure probably is too.
 
 ---
 
@@ -668,11 +693,13 @@ class Node:
 - Can't mix with regular classes unless careful
 - Doesn't work with `dataclass` unless you use `@dataclass(slots=True)` (Python 3.10+)
 
-> 🔍 Profile before using `__slots__`. It’s a micro-optimization that can backfire in dynamic apps.
+> 🔍 Profile before using `__slots__`. It's a micro-optimization that can backfire in dynamic apps.
 
 ---
 
 ## 16. 🧪 Mock Responsibly
+
+Mocking lets you isolate your code under test — but bad mocking makes tests worse than useless.
 
 ### 😱 The Mess:
 
@@ -683,27 +710,97 @@ def test_foo(mock_fetch):
     ...
 ```
 
-- Over-patching creates brittle tests
-- Global patching leaks across tests
+Problems:
 
-### ✅ Cleaner:
+- ❌ Too much patching turns your test into a simulation of reality — not reality itself.
+- ❌ Global patching leaks state between tests, leading to unpredictable behavior.
+- ❌ Patching the wrong path (`utils.fetch_data` vs `module_under_test.fetch_data`) leads to "mock not applied" bugs.
+
+### ✅ Good Mocking Practices
+
+#### 🔒 1. Patch Where the Function is Used, Not Where It's Defined
+
+```python
+# module_a.py
+from utils import fetch_data
+
+def run(): return fetch_data()
+```
+
+```python
+# tests/test_module_a.py
+@patch("module_a.fetch_data")  # ✅ patch where it's used
+def test_run(mock_fetch):
+    mock_fetch.return_value = {"ok": True}
+    assert run() == {"ok": True}
+```
+
+> 💡 If you patch `utils.fetch_data`, it won't replace the already-imported reference in `module_a`.
+
+#### 🎯 2. Use with `patch()` to Control Scope
 
 ```python
 from unittest.mock import patch
 
-def test_something():
-    with patch("module.fetch") as fake:
-        fake.return_value = {"ok": True}
-        assert logic() == ...
+def test_logic():
+    with patch("module.logic.fetch_data") as fake:
+        fake.return_value = {"status": "ok"}
+        result = logic()
+        assert result == ...
 ```
 
-Or use a fixture:
+- ✅ Limits patching to one test
+- ✅ Automatically restores the original function
+
+#### 🧪 3. Prefer Fixtures or Monkeypatching in pytest
 
 ```python
+# conftest.py
+import pytest
+
 @pytest.fixture
-def mock_data(monkeypatch):
-    monkeypatch.setattr("module.fetch", lambda: {...})
+def fake_fetch(monkeypatch):
+    monkeypatch.setattr("module.api.fetch_data", lambda: {"fake": True})
 ```
+
+```python
+# test_logic.py
+def test_using_fixture(fake_fetch):
+    result = logic()
+    assert result["fake"] is True
+```
+
+- ✅ Fixtures make setup/teardown explicit
+- ✅ Easier to reuse across tests
+
+#### 🚫 4. Don't Over-Mock Internal Logic
+
+Instead of mocking everything, consider using **integration-style** tests that hit real code paths:
+
+```python
+# Instead of mocking add():
+def test_total_price():
+    cart = Cart()
+    cart.add(Product("apple", 1.0))
+    assert cart.total() == 1.0
+```
+
+> Mocks are great for **external APIs**, **I/O**, or **long-running calls** — not your own logic.
+
+#### 🧼 5. Always Clean Up
+
+If you're writing custom patches:
+
+```python
+original = module.fetch
+module.fetch = fake_func
+...
+module.fetch = original  # ⚠️ Risky and easy to forget
+```
+
+Just don't. Use `patch()` or `monkeypatch` to avoid leaking state.
+
+> 🧠 Good mocks don't hide problems — they reveal structure. If mocking a function feels painful, your design probably needs refactoring.
 
 ---
 
@@ -760,7 +857,7 @@ from concurrent.futures import ProcessPoolExecutor
 def work(n): return n * n
 
 with ProcessPoolExecutor() as pool:
-    print(list(pool.map(work, range(4)))
+    print(list(pool.map(work, range(4))))
 ```
 
 #### 2. Use the `spawn` Start Method (Especially on macOS or in Jupyter)
@@ -801,9 +898,7 @@ If you really need both, start processes first.
 
 ## 🔚 Final Words: What Makes You a Python Expert
 
-It's not how many libraries you know.
-
-It's:
+It's not about syntax or speed — it's about:
 
 - Knowing how Python **fails**
 - Writing code that **survives production**
