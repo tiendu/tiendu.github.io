@@ -17,7 +17,7 @@ You'll find **what went wrong**, **why**, and **how to do it better**.
 
 ## 📚 Table of Contents
 
-- [1. Project Structure Is Half the Battle](#project-structure-is-half-the-battle)
+- [1. Project Structure Is Half the Battle](#1--project-structure-is-half-the-battle)
 - [2. Know the Standard Library Inside Out](#know-the-standard-library-inside-out)
 - [3. Debug Like a Surgeon](#debug-like-a-surgeon)
 - [4. Async Threads and Processes Pick the Right Tool](#async-threads-and-processes-pick-the-right-tool)
