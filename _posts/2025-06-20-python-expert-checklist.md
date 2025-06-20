@@ -337,26 +337,79 @@ Monorepos sound great — until you hit circular imports, ambiguous entry points
 
 ### 😱 Common Issues:
 
-- Deeply nested internal imports
-- Mixing dev tools (Poetry + pip + conda...)
-- Ambiguous relative vs absolute imports
-- Scripts that only run from project root
+- Deep, fragile import paths like `from myproj.foo.bar.baz.qux import Thing`
+- Scripts that **only work if run from project root**
+- Mixing Poetry, pip, conda, `PYTHONPATH` hacks...
+- Circular imports from overconnected modules
 
 ### ✅ Best Practices:
 
-- Keep it flat and explicit
-- One root `pyproject.toml`, or break into separate installable packages
-- Use glue modules to re-export common components
+#### 1. 📦 Keep Your Layout Flat
+
+Avoid over-nesting like `src/tool/core/internal/engine/runner.py` unless you _must_. Prefer:
+
+```
+tool/
+  api.py
+  cli.py
+  core/
+    logic.py
+    runner.py
+```
+
+#### 2. 🪞 Use Glue Modules to Flatten Imports
+
+Avoid importing using full module paths. Create re-export modules near the root:
 
 ```python
 # shared/api.py
-from .internal.rest import fetch_data, post_json
-__all__ = ["fetch_data", "post_json"]
+from .core.logic import fetch_data
+from .core.runner import Runner
+
+__all__ = ["fetch_data", "Runner"]
 ```
 
-- Use `poetry install --sync` to avoid stale installs
-- Use `src/` layout only if you're publishing libraries
-- Never rely on `PYTHONPATH`. It breaks in CI and containers.
+Then everywhere else:
+
+```python
+from shared.api import fetch_data
+```
+
+Easy to change structure later — no need to rewrite dozens of imports.
+
+#### 3. ✅ One pyproject.toml, One Install
+
+Install your tool like a real package — even during dev:
+
+```bash
+poetry install --sync
+```
+
+Don't run uninstalled scripts via `python path/to/script.py`. That's fragile.
+
+#### 4. 🚫 Never Use `PYTHONPATH`
+
+- It hides real import errors.
+- It breaks in containers, CI, and deployment tools.
+- Use relative imports inside packages and install your package locally.
+
+#### 5. 📦 Use `src/` Layout Only If You’re Publishing
+
+If you're building a library:
+
+```
+mytool/
+  pyproject.toml
+  src/
+    mytool/
+      __init__.py
+      engine.py
+      utils.py
+```
+
+This avoids accidentally importing from the working directory and enforces clean packaging.
+
+> 💡 Tip: Your import paths reflect your architecture. If they look deep and ugly, your structure probably is too.
 
 ---
 
