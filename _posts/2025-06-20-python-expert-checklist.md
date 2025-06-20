@@ -100,11 +100,11 @@ except Exception:
 
 ### ✅ When to Use What:
 
-| Scenario                  | Tool                      | Why                                       |
-|---------------------------|---------------------------|--------------------------------------------|
-| Network I/O, APIs         | `asyncio`                 | Lightweight coroutines, high throughput    |
-| CPU-bound tasks           | `ProcessPoolExecutor`     | Simplifies multicore usage                 |
-| Blocking I/O (e.g. disk)  | `ThreadPoolExecutor`      | Avoids blocking the main thread            |
+| Scenario | Tool | Why |
+|---|---|---|
+| Network I/O, APIs | `asyncio` | Lightweight coroutines, high throughput |
+| CPU-bound tasks | `ProcessPoolExecutor`| Simplifies multicore usage |
+| Blocking I/O (e.g. disk) | `ThreadPoolExecutor` | Avoids blocking the main thread |
 
 > 🧠 Use `concurrent.futures` for both threads and processes. Only reach for `multiprocessing.Process` if you need shared memory, custom IPC, or manual lifecycle control.
 
@@ -308,8 +308,23 @@ except KeyError:
 ```
 
 ```python
-# List comprehension > for-loop
+# Clean and readable list comprehension
 squares = [x * x for x in range(10)]
+
+# Conditional comprehension — ✅ only when it's simple
+signs = ["even" if x % 2 == 0 else "odd" for x in range(5)]
+```
+
+```python
+# ❌ Hard to read: nested conditions or logic
+results = [func(x) for x in data if x > 0 and not is_skipped(x) and (x % 3 == 0 or x in special_set)]
+
+# ✅ Better readability with for-loop
+results = []
+for x in data:
+    if x > 0 and not is_skipped(x) and (x % 3 == 0 or x in special_set):
+        results.append(func(x))
+
 ```
 
 ```python
