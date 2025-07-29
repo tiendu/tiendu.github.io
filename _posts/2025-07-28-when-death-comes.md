@@ -17,7 +17,7 @@ categories: ["Personal Notes & Reflections"]
 >
 > *And the temples of his gods?"*
 >
-> - *Thomas Babington Macaulay*
+> by *Thomas Babington Macaulay*
 
 
 This line always hits me in the gut.
