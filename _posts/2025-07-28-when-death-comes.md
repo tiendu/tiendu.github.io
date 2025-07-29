@@ -20,6 +20,7 @@ I don't think it's about dying in war or glory or any of that.
 To me, it's asking something quieter:
 
 
+
 **What would it take to live in a way that gives your death meaning?**
 
 ---
@@ -29,6 +30,7 @@ Some days, I feel like I'm just reacting.
 Emails. Deadlines. Slack messages.
 
 It's easy to fall into the rhythm of survival — and call it living.
+
 
 
 But when things go still,
@@ -44,6 +46,8 @@ this one question keeps resurfacing:
 I don't have dramatic answers.
 
 But here’s what I've been holding onto lately.
+
+---
 
 ### I want to stand for something - even if it's small.
 
@@ -74,6 +78,7 @@ I've seen how easy it is to drift -
 to get stuck in jobs, roles, dynamics where you feel like a cog with a face.
 
 
+
 I don't want that.
 
 If I go, I want to go **mid-sentence** -
@@ -87,6 +92,7 @@ I guess what I'm saying is:
 I want to be proud of where I am **when the curtain drops.**
 
 
+
 Not for legacy. Not for ego.
 
 Just so that if the lights go out tomorrow,
@@ -94,7 +100,9 @@ Just so that if the lights go out tomorrow,
 I'd think: *"Yeah... that was worth it."*
 
 
+
 That's all.
+
 
 
 Just something I needed to write down today.
