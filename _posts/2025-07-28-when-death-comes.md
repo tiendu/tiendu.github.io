@@ -36,7 +36,7 @@ Some days, I feel like I'm just reacting.
 
 Emails. Deadlines. Slack messages.
 
-It's easy to fall into the rhythm of survival — and call it living.
+It's easy to fall into the rhythm of survival - and call it living.
 
 
 
