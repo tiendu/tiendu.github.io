@@ -5,13 +5,20 @@ date:   2025-07-28
 categories: ["Personal Notes & Reflections"]
 ---
 
-> *"To every man upon this earth
-> Death cometh soon or late.
-> And how can man die better
-> Than facing fearful odds,
-> For the ashes of his fathers,
-> And the temples of his gods?"*
-> — *Thomas Babington Macaulay*
+> *"To every man upon this earth*
+>
+> *Death cometh soon or late.*
+>
+> *And how can man die better*
+>
+> *Than facing fearful odds,*
+>
+> *For the ashes of his fathers,*
+>
+> *And the temples of his gods?"*
+>
+> - *Thomas Babington Macaulay*
+
 
 This line always hits me in the gut.
 
