@@ -1,7 +1,21 @@
 ---
-const { platform, username } = Astro.props
+const { platform, username } = Astro.props;
+
+const hosts = {
+  facebook: "https://facebook.com",
+  github: "https://github.com",
+  linkedin: "https://www.linkedin.com",
+  x: "https://x.com"
+};
+
+const root = hosts[platform] ?? `https://www.${platform}.com`;
+const path = platform === "linkedin" && !username.startsWith("in/")
+  ? `in/${username}`
+  : username;
+
+const href = `${root}/${path}`;
 ---
-<a href={`https://www.${platform}.com/${username}`}>{platform}</a>
+<a href={href} target="_blank" rel="noopener noreferrer me">{platform}</a>
 
 <style>
   a {
@@ -9,5 +23,6 @@ const { platform, username } = Astro.props
     color: white;
     background-color: #4c1d95;
     text-decoration: none;
+    border-radius: .375rem;
   }
 </style>

@@ -2,55 +2,68 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import BlogPost from "../components/BlogPost.astro";
 
-// Set a page title
-const pageTitle = "";
+const pageTitle = "Blog";
 
-// Import and sort posts by publication date (if pubDate is available)
-const allPosts = Object.values(await import.meta.glob('./posts/*.md', { eager: true }));
-allPosts.sort((a, b) => new Date(b.frontmatter.pubDate) - new Date(a.frontmatter.pubDate));
+// Load all posts
+const allPosts = Object.values(
+  await import.meta.glob("./posts/*.md", { eager: true })
+);
+
+// Helpers
+function toDate(p) {
+  const d = p.frontmatter?.pubDate;
+  return d ? new Date(d) : new Date(0);
+}
+function getPinValue(p) {
+  const v = p.frontmatter?.pinned;
+  if (typeof v === "number") return v;     // explicit priority
+  if (v === true) return Number.POSITIVE_INFINITY; // boolean pinned goes after numbered ones
+  return null;
+}
+
+// Split pinned / others
+const pinned = allPosts
+  .filter(p => p.frontmatter?.pinned)
+  // sort numbered first by ascending (1 before 2), then booleans, then date desc
+  .sort((a, b) => {
+    const pa = getPinValue(a);
+    const pb = getPinValue(b);
+    if (pa !== null && pb !== null && pa !== pb) return pa - pb; // 1,2,3…
+    if (pa !== null && pb !== null && pa === pb) return toDate(b) - toDate(a); // same number → newer first
+    if (pa !== null && pb === null) return -1;  // numbers/true before non-pinned
+    if (pa === null && pb !== null) return 1;
+    // both boolean true (Infinity) or fallback: date desc
+    return toDate(b) - toDate(a);
+  });
+
+const unpinned = allPosts
+  .filter(p => !p.frontmatter?.pinned)
+  .sort((a, b) => toDate(b) - toDate(a));
 ---
 
 <BaseLayout pageTitle={pageTitle}>
-  <ul class="blog-post-list">
-    {allPosts.map((post: any) => (
-      <li>
-        <BlogPost url={post.url} title={post.frontmatter.title} />
-      </li>
+  {pinned.length > 0 && (
+    <>
+      <h2>Pinned</h2>
+      <ul class="post-list pinned">
+        {pinned.map((post) => (
+          <BlogPost url={post.url} title={post.frontmatter.title} pinned={post.frontmatter.pinned} />
+        ))}
+      </ul>
+      <hr />
+    </>
+  )}
+
+  <h2>All posts</h2>
+  <ul class="post-list">
+    {unpinned.map((post) => (
+      <BlogPost url={post.url} title={post.frontmatter.title} />
     ))}
   </ul>
-  <style global>
-    /* Increase font size for the list and add spacing */
-    .blog-post-list {
-      font-size: 1.2rem;
-      list-style: none;
-      padding: 0;
-    }
-    .blog-post-list li {
-      margin-bottom: 1.5rem;
-    }
-    /* Optional: style the header if desired */
-    h1 {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-    }
 
-    /* Define default (light mode) link colors */
-    :root {
-      --link-color: #00539f; /* default blue */
-      --visited-link-color: #003f7f; /* darker blue for visited links */
-    }
-    /* Override colors for dark mode */
-    html.dark {
-      --link-color: #a8d1ff; /* brighter blue for better contrast */
-      --visited-link-color: #7caeff; /* adjust visited color accordingly */
-    }
-    /* Apply the variables */
-    a {
-      color: var(--link-color);
-    }
-    a:visited {
-      color: var(--visited-link-color);
-    }
+  <style is:global>
+    .post-list { padding: 0; margin: 0 0 2rem 0; }
+    .post-list li { margin: 0 0 1rem 0; }
+    .post-list.pinned li a { font-weight: 600; }
   </style>
 </BaseLayout>
-

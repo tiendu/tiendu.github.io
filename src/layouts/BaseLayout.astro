@@ -1,25 +1,43 @@
 ---
+// src/layouts/BaseLayout.astro
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import "../styles/global.css";
-const { pageTitle } = Astro.props;
----
 
+const {
+  title = "Tien's notes",
+  description = "",
+} = Astro.props;
+
+const site = Astro.site?.toString() ?? "";
+---
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{pageTitle}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+
+    {description && <meta name="description" content={description} />}
+    {/* Nice-to-have SEO bits */}
+    <link rel="canonical" href={site + Astro.url.pathname} />
+    <slot name="head" />
   </head>
   <body>
+    <a href="#main" class="sr-only sr-only-focusable">Skip to content</a>
     <Header />
-    <h1>{pageTitle}</h1>
-    <slot />
+    <main id="main">
+      <slot />
+    </main>
     <Footer />
-    <script>
-      import "../scripts/menu.js";
-    </script>
   </body>
 </html>
+
+<style>
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(1px, 1px, 1px, 1px);
+  }
+  .sr-only-focusable:focus {
+    position: static; width: auto; height: auto; clip: auto;
+  }
+</style>

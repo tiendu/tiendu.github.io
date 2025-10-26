@@ -3,6 +3,7 @@ layout: ../../layouts/MarkdownPostLayout.astro
 title:  "Guide to Download Datasets from NCBI"
 pubDate: 2022-12-26
 tags: ["guide", "english", "bioinformatics"]
+pinned: true
 ---
 
 **Last updated on 2024-09-26**

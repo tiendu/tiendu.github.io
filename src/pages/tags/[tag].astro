@@ -2,37 +2,59 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import BlogPost from "../../components/BlogPost.astro";
 
+/** Build static paths for every unique tag */
 export async function getStaticPaths() {
   const allPosts = Object.values(
     import.meta.glob("../posts/*.md", { eager: true })
   );
 
-  const uniqueTags = [
-    ...new Set(allPosts.map((post: any) => post.frontmatter.tags).flat()),
-  ];
+  // Collect all tags, skip undefined/null, and flatten
+  const tags = allPosts
+    .map((p) => p.frontmatter?.tags ?? [])
+    .flat()
+    .filter(Boolean);
 
-  return uniqueTags.map((tag) => {
-    const filteredPosts = allPosts.filter((post: any) =>
-      post.frontmatter.tags.includes(tag)
-    );
+  const unique = Array.from(new Set(tags));
+
+  // Create a page for each tag. Use the raw tag for filtering,
+  // but encode it for the URL param.
+  return unique.map((rawTag) => {
+    const taggedPosts = allPosts
+      .filter((p) => (p.frontmatter?.tags ?? []).includes(rawTag))
+      .sort(
+        (a, b) =>
+          new Date(b.frontmatter?.pubDate ?? b.frontmatter?.date ?? 0) -
+          new Date(a.frontmatter?.pubDate ?? a.frontmatter?.date ?? 0)
+      );
+
     return {
-      params: { tag },
-      props: { posts: filteredPosts },
+      params: { tag: encodeURIComponent(rawTag) },
+      props: { rawTag, posts: taggedPosts },
     };
   });
 }
 
-const { tag } = Astro.params;
-const { posts } = Astro.props;
+const { tag } = Astro.params;         // encoded in URL
+const { rawTag, posts } = Astro.props; // original tag value for display
 ---
 
-<BaseLayout pageTitle={tag}>
-  <p>Posts tagged with {tag}</p>
-  <ul>
-    {
-      posts.map((post: any) => (
-        <BlogPost url={post.url} title={post.frontmatter.title} />
-      ))
-    }
-  </ul>
+<BaseLayout title={`#${rawTag}`}>
+  <h1>#{rawTag}</h1>
+
+  {posts.length === 0 ? (
+    <p>No posts for this tag yet.</p>
+  ) : (
+    <ul class="tag-list">
+      {posts.map((post) => (
+        <li>
+          <BlogPost url={post.url} title={post.frontmatter.title} />
+        </li>
+      ))}
+    </ul>
+  )}
 </BaseLayout>
+
+<style>
+  .tag-list { list-style: none; padding: 0; }
+  .tag-list li { margin: 0 0 1rem; }
+</style>

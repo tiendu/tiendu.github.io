@@ -1,4 +1,14 @@
 ---
-const { title, url } = Astro.props
+const { title, url, pinned } = Astro.props;
 ---
-<li><a href={url}>{title}</a></li>
+<li class={`post ${pinned ? 'is-pinned' : ''}`}>
+  <a href={url}>
+    {title}
+    {pinned ? <sup class="pin">📌</sup> : null}
+  </a>
+</li>
+
+<style>
+  .post { list-style: none; }
+  .pin { margin-left: .4rem; font-size: .9em; }
+</style>

@@ -1,51 +1,61 @@
 ---
+// src/layouts/MarkdownPostLayout.astro
 import BaseLayout from "./BaseLayout.astro";
 const { frontmatter } = Astro.props;
 
-// Set default values for safety
-const title = frontmatter.title || "Untitled Post";
-const description = frontmatter.description || "";
-const pubDate = frontmatter.pubDate ? new Date(frontmatter.pubDate).toLocaleDateString() : "";
-const tags = frontmatter.tags || [];
+const title = frontmatter.title ?? "Untitled Post";
+const description = frontmatter.description ?? "";
+const pubDate = frontmatter.pubDate ? new Date(frontmatter.pubDate) : null;
+const tags = frontmatter.tags ?? [];
+
+// friendly date: 26th October 2025
+function formatDate(date) {
+  const day = date.getDate();
+  const suffix =
+    ["th", "st", "nd", "rd"][day % 10 > 3 || Math.floor(day / 10) === 1 ? 0 : day % 10];
+  const month = date.toLocaleString("en-GB", { month: "long" });
+  const year = date.getFullYear();
+  return `${day}${suffix} ${month} ${year}`;
+}
+const formattedDate = pubDate ? formatDate(pubDate) : "";
 ---
+<BaseLayout title={title} description={description}>
+  <article class="post">
+    <header>
+      <h1>{title}</h1>
+      {description && <p class="desc"><em>{description}</em></p>}
+      {formattedDate && <p class="date">{formattedDate}</p>}
 
-<BaseLayout pageTitle={title}>
-  {description && <p><em>{description}</em></p>}
-  {pubDate && <p>{pubDate}</p>}
+      {tags.length > 0 && (
+        <div class="tags">
+          {tags.map((tag) => (
+            <span class="tag">
+              <a href={`${import.meta.env.BASE_URL}tags/${tag}/`}>#{tag}</a>
+            </span>
+          ))}
+        </div>
+      )}
+    </header>
 
-  {tags.length > 0 && (
-    <div class="tags">
-      {tags.map((tag) => (
-        // Using a span for inline display; alternatively, consider a <li> in a <ul> for better semantics
-        <span class="tag">
-          <a href={`/tags/${tag}`}>{tag}</a>
-        </span>
-      ))}
-    </div>
-  )}
-
-  <slot />
+    <section class="content">
+      <slot />
+    </section>
+  </article>
 </BaseLayout>
 
 <style>
-  a {
-    color: #00539f;
-    text-decoration: none;
-  }
-
-  .tags {
-    display: flex;
-    flex-wrap: wrap;
-    margin: 1em 0;
-  }
-
+  .post header { margin-bottom: 2rem; }
+  h1 { font-size: 2.2rem; margin-bottom: 0.5rem; }
+  .desc { margin: 0.25rem 0; color: #555; }
+  .date { color: #666; font-size: 0.95rem; }
+  a { color: #00539f; text-decoration: none; }
+  .tags { display: flex; flex-wrap: wrap; margin: 1em 0; }
   .tag {
     margin: 0.25em;
-    border: dotted 1px #a1a1a1;
-    border-radius: 0.5em;
-    padding: 0.5em 1em;
-    font-size: 1.15em;
-    background-color: #f8fcfd;
+    border: 1px dotted #a1a1a1;
+    border-radius: .5em;
+    padding: .4em .8em;
+    font-size: 0.95em;
+    background: #f8fcfd;
   }
 </style>
-

@@ -1,41 +1,47 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-const allPosts = Object.values(
-  import.meta.glob("../posts/*.md", { eager: true })
+
+// Load all posts at build time
+const posts = Object.values(
+  import.meta.glob('../posts/*.md', { eager: true })
 );
-const tags = [
-  ...new Set(allPosts.map((post: any) => post.frontmatter.tags).flat()),
-];
-const pageTitle = "";
+
+// Build a tag -> count map
+const counts = new Map<string, number>();
+for (const p of posts) {
+  const t = (p.frontmatter?.tags ?? []).filter(Boolean);
+  for (const tag of t) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+}
+
+// Sort tags by count desc, then alphabetically
+const list = [...counts.entries()].sort((a, b) =>
+  b[1] - a[1] || a[0].localeCompare(b[0])
+);
+
+// Use base for GitHub Pages subpath
+const base = import.meta.env.BASE_URL;
 ---
+<BaseLayout title="Tags">
+  <h1>Tags</h1>
 
-<BaseLayout pageTitle={pageTitle}>
-  <div class="tags">
-    {
-      tags.map((tag) => (
-        <p class="tag">
-          <a href={`/tags/${tag}`}>{tag}</a>
-        </p>
-      ))
-    }
-  </div>
+  {list.length === 0 ? (
+    <p>No tags yet.</p>
+  ) : (
+    <ul class="tags">
+      {list.map(([tag, count]) => (
+        <li class="tag">
+          <a href={`${base}tags/${encodeURIComponent(tag)}/`}>#{tag}</a>
+          <span class="count"> {count}</span>
+        </li>
+      ))}
+    </ul>
+  )}
 </BaseLayout>
+
 <style>
-  a {
-    color: #00539f;
-  }
-
-  .tags {
-    display: flex;
-    flex-wrap: wrap;
-  }
-
-  .tag {
-    margin: 0.25em;
-    border: dotted 1px #a1a1a1;
-    border-radius: 0.5em;
-    padding: 0.5em 1em;
-    font-size: 1.15em;
-    background-color: #f8fcfd;
-  }
+  .tags { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 1rem 0; }
+  .tag { margin: 0; border: 1px dotted #a1a1a1; border-radius: .5rem; padding: .5rem 1rem; background: #f8fcfd; }
+  a { color: #00539f; text-decoration: none; }
+  .count { opacity: .7; }
+  html.dark a { color: #a8d1ff; }
 </style>
