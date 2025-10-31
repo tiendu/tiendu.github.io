@@ -2,141 +2,171 @@
 layout: default
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap" rel="stylesheet">
-    <style>
-        /* Frappe Theme applied only to terminal section */
-        .terminal-container {
-            background: #303446;
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 500;
-            color: #c6d0f5;
-            padding: 1rem;
-            border-radius: 10px; /* Rounded corners */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Optional: adds shadow for more depth */
-        }
-        .typeme {
-            display: inline-block;
-            animation: typing 2s steps(24), blink 0.5s step-end infinite alternate;
-            white-space: nowrap;
-            overflow: hidden;
-            border-right: 10px solid #f2d5cf;
-        }
-        .text-secondary {
-            color: #8CAAEE;
-        }
-        .text-background {
-            color: #B5BFE2;
-        }
-        .cursor {
-            color: #f2d5cf;
-        }
-        /* Animation for typing */
-        @keyframes typing {
-            0% { width: 0; }
-            100% { width: 24ch; }
-        }
-        @keyframes blink {
-            50% { border-color: transparent; }
-        }
-        .output {
-            width: 100%;
-            max-width: 80ch;
-            animation: fade 5s;
-        }
-        /* Menu Bar styles */
-        .menu-bar {
-          display: flex;
-          margin: -1rem -1rem 1rem -1rem; /* Cancels the container's top and side padding */
-          align-items: center;
-          padding: 0.5rem 1rem;
-          background-color: #e0e0e0; /* Light gray background */
-          border-top-left-radius: 10px;
-          border-top-right-radius: 10px;
-          margin-bottom: 1rem; /* Space below the menu bar */
-        }
-        .menu-buttons {
-          display: flex;
-          gap: 8px;
-        }
-        .menu-buttons .dot {
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          display: inline-block;
-        }
-        .dot.red {
-          background-color: #ff5f57;
-        }
-        .dot.yellow {
-          background-color: #ffbd2e;
-        }
-        .dot.green {
-          background-color: #28c840;
-        }
-        /* Dynamic resizing */
-        @media (min-width: 600px) {
-            body {
-                font-size: 1.25rem;
-            }
-        }
-        /* Fade animation */
-        @keyframes fade {
-            0% { opacity: 0; }
-            50% { opacity: 0; }
-            100% { opacity: 1; }
-        }
+<style>
+  /* local palette */
+  :root {
+    --bg-terminal:#303446;
+    --fg-primary:#c6d0f5;
+    --fg-secondary:#8CAAEE;
+    --fg-dim:#B5BFE2;
+    --cursor:#f2d5cf;
+    --mono:'IBM Plex Mono', monospace;
+    --radius:10px;
+  }
 
-    /* Greeting */
-    .greeting { color:var(--fg-secondary); font-weight:500; font-size:1.2rem; }
+  /* wrapper to position this landing block nicely within your existing site */
+  .landing-wrapper {
+    font-family: var(--mono);
+    max-width: 700px;
+    margin: 2rem 1rem 3rem 1rem;
+  }
 
-    </style>
-</head>
-<body>
-    <!-- rotating greeting -->
-    <div class="greeting" id="greeting">Xin chào! Cảm ơn bạn đã ghé thăm!</div>
+  @media (min-width: 600px) {
+    .landing-wrapper {
+      margin: 3rem auto 4rem auto;
+      font-size: 1.05rem;
+    }
+  }
 
-    <!-- Terminal-like section with Frappe theme -->
-    <div class="terminal-container">
-        <!-- Menu bar similar to macOS -->
-        <div class="menu-bar">
-            <div class="menu-buttons">
-                <span class="dot red"></span>
-                <span class="dot yellow"></span>
-                <span class="dot green"></span>
-            </div>
-        </div>
-        <div class="typeme">
-            <span class="text-secondary">coffee@fridge</span><span class="text-background"> ~ </span><span class="cursor">$ </span>me -h
-        </div>
-        <section class="output">
-          <p>I'm Tien, a bioinformatics engineer passionate about genomics, coding, and a good cup of coffee ☕.</p>
-          <p>Now looking for contract-based or async collaborations.</p>
-        </section>
-    </div>
+  /* greeting line */
+  .landing-greeting {
+    color: var(--fg-secondary);
+    font-weight: 500;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
 
-  <script>
-    // multilingual greeting rotator
-    const greetings=[
-      "Hallo! Danke, dass du vorbeischaust!",
-      "Hola! ¡Gracias por visitar!",
-      "안녕하세요! 방문해 주셔서 감사합니다!",
-      "こんにちは！ご訪問ありがとうございます！",
-      "你好！感谢你的到访！",
-      "Xin chào! Cảm ơn bạn đã ghé thăm!"
-    ];
-    const greetEl=document.getElementById("greeting");
-    let gi=0;
-    setInterval(()=>{
-      gi=(gi+1)%greetings.length;
-      greetEl.textContent=greetings[gi];
-    },3000);
-  </script>
-</body>
-</html>
+  /* terminal card */
+  .terminal-container {
+    background: var(--bg-terminal);
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--fg-primary);
+    padding: 1rem;
+    border-radius: var(--radius);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    border: 1px solid rgba(0,0,0,0.6);
+  }
+
+  /* macOS menu bar */
+  .terminal-container .menu-bar {
+    display: flex;
+    align-items: center;
+    margin: -1rem -1rem 1rem -1rem;
+    padding: 0.5rem 1rem;
+    background-color: #e0e0e0;
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+    gap: 8px;
+  }
+
+  .terminal-container .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .terminal-container .dot.red { background-color: #ff5f57; }
+  .terminal-container .dot.yellow { background-color: #ffbd2e; }
+  .terminal-container .dot.green { background-color: #28c840; }
+
+  /* prompt line (fake typing look) */
+  .terminal-container .typeme {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    border-right: 10px solid var(--cursor);
+
+    /* NOTE:
+       your original animation assumed fixed width + full typing of both prompt + command.
+       We're leaving animation on, but it's optional.
+    */
+    animation: typing 2s steps(24), blink 0.5s step-end infinite alternate;
+  }
+
+  .terminal-container .text-secondary {
+    color: var(--fg-secondary);
+  }
+  .terminal-container .text-background {
+    color: var(--fg-dim);
+  }
+  .terminal-container .cursor {
+    color: var(--cursor);
+  }
+
+  @keyframes typing {
+    0% { width: 0; }
+    100% { width: 24ch; }
+  }
+  @keyframes blink {
+    50% { border-color: transparent; }
+  }
+
+  /* the output paragraph(s) */
+  .terminal-container .output {
+    width: 100%;
+    max-width: 80ch;
+    animation: fade 5s;
+    margin-top: 1rem;
+    line-height: 1.5;
+    color: var(--fg-primary);
+    font-weight: 400;
+  }
+
+  @keyframes fade {
+    0% { opacity: 0; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+</style>
+
+<!-- CONTENT BLOCK -->
+<div class="landing-wrapper">
+
+  <!-- rotating greeting -->
+  <div class="landing-greeting" id="greeting">
+    Xin chào! Cảm ơn bạn đã ghé thăm!
+  </div>
+
+  <!-- terminal-style card -->
+  <div class="terminal-container">
+    <div class="menu-bar">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+
+    <div class="typeme">
+      <span class="text-secondary">coffee@fridge</span>
+      <span class="text-background"> ~ </span>
+      <span class="cursor">$ </span>me -h
+    </div>
+
+    <section class="output">
+      <p>I'm Tien, a bioinformatics engineer passionate about genomics, coding, and a good cup of coffee ☕.</p>
+      <p>Now looking for contract-based or async collaborations.</p>
+    </section>
+  </div>
+</div>
+
+<!-- SCRIPT BLOCK -->
+<script>
+  // multilingual greeting rotator
+  (function () {
+    const greetings = [
+      "Hallo! Danke, dass du vorbeischaust!",
+      "Hola! ¡Gracias por visitar!",
+      "안녕하세요! 방문해 주셔서 감사합니다!",
+      "こんにちは！ご訪問ありがとうございます！",
+      "你好！感谢你的到访！",
+      "Xin chào! Cảm ơn bạn đã ghé thăm!"
+    ];
+    const greetEl = document.getElementById("greeting");
+    let gi = 0;
+    function rotate() {
+      gi = (gi + 1) % greetings.length;
+      greetEl.textContent = greetings[gi];
+    }
+    setInterval(rotate, 3000);
+  })();
+</script>
