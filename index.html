@@ -137,25 +137,6 @@ layout: default
       gi=(gi+1)%greetings.length;
       greetEl.textContent=greetings[gi];
     },3000);
-
-    // typing animation
-    const cmd="me -h";
-    const speed=300;
-    const typed=document.getElementById("typed");
-    const cursor=document.getElementById("cursor");
-    const out=document.getElementById("output");
-    let i=0;
-    function type(){
-      if(i<cmd.length){
-        typed.textContent+=cmd.charAt(i);
-        i++;
-        setTimeout(type,speed);
-      }else{
-        cursor.style.borderRightColor="transparent";
-        out.classList.add("visible");
-      }
-    }
-    type();
   </script>
 </body>
 </html>
