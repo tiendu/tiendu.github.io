@@ -5,130 +5,140 @@ layout: default
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap" rel="stylesheet">
-    <style>
-        /* Frappe Theme applied only to terminal section */
-        .terminal-container {
-            background: #303446;
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 500;
-            color: #c6d0f5;
-            padding: 1rem;
-            border-radius: 10px; /* Rounded corners */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Optional: adds shadow for more depth */ 
-        }
-        .typeme {
-            display: inline-block;
-            animation: typing 2s steps(24), blink 0.5s step-end infinite alternate;
-            white-space: nowrap;
-            overflow: hidden;
-            border-right: 10px solid #f2d5cf;
-        }
-        .text-secondary {
-            color: #8CAAEE;
-        }
-        .text-background {
-            color: #B5BFE2;
-        }
-        .cursor {
-            color: #f2d5cf;
-        }
-        /* Animation for typing */
-        @keyframes typing {
-            0% { width: 0; }
-            100% { width: 24ch; }
-        }
-        @keyframes blink {
-            50% { border-color: transparent; }
-        }
-        .output {
-            width: 100%;
-            max-width: 80ch;
-            animation: fade 5s;
-        }
-        /* Menu Bar styles */
-        .menu-bar {
-          display: flex;
-          margin: -1rem -1rem 1rem -1rem; /* Cancels the container's top and side padding */
-          align-items: center;
-          padding: 0.5rem 1rem;
-          background-color: #e0e0e0; /* Light gray background */
-          border-top-left-radius: 10px;
-          border-top-right-radius: 10px;
-          margin-bottom: 1rem; /* Space below the menu bar */
-        }
-        .menu-buttons {
-          display: flex;
-          gap: 8px;
-        }
-        .menu-buttons .dot {
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          display: inline-block;
-        }
-        .dot.red {
-          background-color: #ff5f57;
-        }
-        .dot.yellow {
-          background-color: #ffbd2e;
-        }
-        .dot.green {
-          background-color: #28c840;
-        }
-        /* Dynamic resizing */
-        @media (min-width: 600px) {
-            body {
-                font-size: 1.25rem;
-            }
-        }
-        /* Fade animation */
-        @keyframes fade {
-            0% { opacity: 0; }
-            50% { opacity: 0; }
-            100% { opacity: 1; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-terminal:#303446;
+      --fg-primary:#c6d0f5;
+      --fg-secondary:#8CAAEE;
+      --fg-dim:#B5BFE2;
+      --cursor:#f2d5cf;
+      --mono:'IBM Plex Mono',monospace;
+      --radius:10px;
+    }
+
+    body {
+      font-family:var(--mono);
+      background:#0f1117;
+      color:var(--fg-primary);
+      line-height:1.5;
+      padding:2rem;
+      display:flex;
+      flex-direction:column;
+      gap:2rem;
+      justify-content:center;
+      align-items:flex-start;
+      min-height:100vh;
+    }
+
+    /* Greeting */
+    .greeting { color:var(--fg-secondary); font-weight:500; font-size:1.2rem; }
+
+    /* Terminal */
+    .terminal {
+      background:var(--bg-terminal);
+      color:var(--fg-primary);
+      padding:1rem;
+      border-radius:var(--radius);
+      box-shadow:0 4px 6px rgba(0,0,0,0.2);
+      max-width:700px;
+    }
+
+    .menu-bar {
+      display:flex;
+      align-items:center;
+      margin:-1rem -1rem 1rem -1rem;
+      padding:0.5rem 1rem;
+      background:#e0e0e0;
+      border-top-left-radius:var(--radius);
+      border-top-right-radius:var(--radius);
+      gap:8px;
+    }
+
+    .dot { width:12px; height:12px; border-radius:50%; }
+    .red{background:#ff5f57;} .yellow{background:#ffbd2e;} .green{background:#28c840;}
+
+    .prompt {
+      white-space:nowrap;
+      overflow:hidden;
+      font-size:1rem;
+    }
+
+    .text-secondary{color:var(--fg-secondary);}
+    .text-background{color:var(--fg-dim);}
+    .cursor{border-right:10px solid var(--cursor);animation:blink .6s step-end infinite alternate;}
+    @keyframes blink{50%{border-color:transparent;}}
+
+    .output{
+      margin-top:1rem;
+      opacity:0;
+      transition:opacity .6s ease;
+    }
+    .output.visible{opacity:1;}
+  </style>
 </head>
 <body>
-    <!-- Terminal-like section with Frappe theme -->
-    <div class="terminal-container">
-        <!-- Menu bar similar to macOS -->
-        <div class="menu-bar">
-            <div class="menu-buttons">
-                <span class="dot red"></span>
-                <span class="dot yellow"></span>
-                <span class="dot green"></span>
-            </div>
-        </div>
-        <div class="typeme">
-            <span class="text-secondary">coffee@fridge</span><span class="text-background"> ~ </span><span class="cursor">$ </span>me -h
-        </div>
-        <section class="output">
-            <p>> Hey, I'm a domain-bridger — 4 years of med school, a biotech degree, and now I build bioinformatics tools.</p>
-            <p>[+] Not just a dev. Not just a researcher. I thrive where biology meets engineering.</p>
-   
-            <p><strong>>> What I do best:</strong></p>
-            <ul>
-                <li>Workflow automation (Snakemake / Nextflow / WDL)</li>
-                <li>HPC and container infra (Slurm, Podman, Firecracker)</li>
-                <li>Multi-omics pipelines & reproducible data tooling</li>
-                <li>Debugging things no one else wants to touch 😅</li>
-            </ul>
-            
-            <p><strong>>> How I work:</strong></p>
-            <ul>
-                <li>Contract-based or async collaborations</li>
-                <li>Remote-first, outcome-driven mindset</li>
-                <li>I build tools scientists actually want to use</li>
-            </ul>
 
-            <p>=> If you're wrangling complex life science + data problems — let's talk.</p>
-        </section>
+  <!-- rotating greeting -->
+  <div class="greeting" id="greeting">Xin chào! Cảm ơn bạn đã ghé thăm!</div>
+
+  <!-- simple terminal -->
+  <div class="terminal">
+    <div class="menu-bar">
+      <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
     </div>
+
+    <div class="prompt">
+      <span class="text-secondary">coffee@fridge</span>
+      <span class="text-background">&nbsp;~&nbsp;</span>
+      $ <span id="typed"></span><span class="cursor" id="cursor"></span>
+    </div>
+
+    <div class="output" id="output">
+      <p>I am Tien, a Bioinformatics Engineer passionate about genomics, coding, and a good cup of coffee ☕.</p>
+    </div>
+  </div>
+
+  <script>
+    // multilingual greeting rotator
+    const greetings=[
+      "Hallo! Danke, dass du vorbeischaust!",
+      "Hola! ¡Gracias por visitar!",
+      "안녕하세요! 방문해 주셔서 감사합니다!",
+      "こんにちは！ご訪問ありがとうございます！",
+      "你好！感谢你的到访！",
+      "Xin chào! Cảm ơn bạn đã ghé thăm!"
+    ];
+    const greetEl=document.getElementById("greeting");
+    let gi=0;
+    setInterval(()=>{
+      gi=(gi+1)%greetings.length;
+      greetEl.textContent=greetings[gi];
+    },3000);
+
+    // typing animation
+    const cmd="me -h";
+    const speed=300;
+    const typed=document.getElementById("typed");
+    const cursor=document.getElementById("cursor");
+    const out=document.getElementById("output");
+    let i=0;
+    function type(){
+      if(i<cmd.length){
+        typed.textContent+=cmd.charAt(i);
+        i++;
+        setTimeout(type,speed);
+      }else{
+        cursor.style.borderRightColor="transparent";
+        out.classList.add("visible");
+      }
+    }
+    type();
+  </script>
 </body>
 </html>
