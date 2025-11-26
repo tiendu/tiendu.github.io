@@ -7,7 +7,7 @@ categories: []
 
 ## Quotes & Substitution
 
-| Pattern | Meaning (1-liner) | Example → Result |
+| Pattern | Meaning      | Example → Result |
 |--------|--------------------|------------------|
 | `'text'` | literal, no expansion | `'$HOME'` → `$HOME` |
 | `"text"` | expand vars, keep spaces | `"hi $USER"` |
@@ -84,6 +84,40 @@ categories: []
 | `function f {}` | alternative | non‑POSIX |
 | `$1 $2 $@` | arguments | `echo "$1"` |
 | `return n` | exit code | `return 42` |
+
+---
+
+## IFS — Internal Field Separator
+
+| Variable / Pattern | Meaning | Example / Notes |
+|--------------------|---------|------------------|
+| `IFS` | controls word-splitting | default: space, tab, newline |
+| `IFS=$'\n'` | split only on newline | safe for filenames with spaces |
+| `IFS=:` | split on colon | useful for parsing `$PATH` |
+| `IFS= read -r line` | disable splitting | safest way to read raw text |
+
+---
+
+## Common Internal Variables
+
+| Variable | Meaning | Example |
+|---------|---------|---------|
+| `$0` | script name | `echo "$0"` |
+| `$1`..`$9` | positional args | `$1` = first arg |
+| `$#` | number of args | `echo "$#"` |
+| `$@` | all args (quoted safely) | `for a in "$@"; do ...; done` |
+| `$*` | all args (unsafe) | expands as one string |
+| `$$` | PID of the script | useful for temp files |
+| `$!` | PID of last background job | `cmd &; echo $!` |
+| `$?` | exit code of last command | `echo $?` |
+| `$-` | current shell flags | shows states like `himBH` |
+| `$_` | last argument of previous command | REPL convenience |
+| `$PWD` | current directory | same as `pwd` |
+| `$OLDPWD` | previous directory | used by `cd -` |
+| `$RANDOM` | random int 0–32767 | `echo $RANDOM` |
+| `$LINENO` | current line in script | debugging |
+| `${BASH_SOURCE[0]}` | script filename | more reliable than `$0` |
+| `$FUNCNAME` | current function name | used inside functions |
 
 ---
 
