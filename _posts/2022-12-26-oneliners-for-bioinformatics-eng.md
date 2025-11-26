@@ -3,6 +3,7 @@ layout: post
 title:  "Useful Bioinformatics One-liners"
 date:   2022-12-20
 categories: ["Bioinformatics & Scientific Tools"]
+pinned: true
 ---
 
 Some of these one-liners are from Stack Overflow, Stack Exchange, Biostar, etc. I can't thank them, the people on these platforms, enough.

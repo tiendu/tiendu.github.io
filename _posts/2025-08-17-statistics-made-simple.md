@@ -3,6 +3,7 @@ layout: post
 title: "Statistics Made Simple: Easy Mnemonics and Analogies to Remember Key Concepts"
 date: 2025-08-17
 categories: ["Statistics and Probability"]
+pinned: true
 ---
 
 Learning statistics can feel overwhelming. There are formulas, Greek letters, and confusing terminology.
