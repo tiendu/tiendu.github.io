@@ -24,7 +24,7 @@ But money and success don’t add.
 Pareto figured this out more than a hundred years ago: income doesn’t spread evenly.  
 It stretches into a long tail where a tiny group earns 10×, 50×, 100× everyone else.
 
-Not because they work 100 times harder — but because they’re playing a different game.
+Not because they work 100 times harder — but because they’re playing a different game.  
 you work → you get paid  
 you don’t work → nothing happens  
 
