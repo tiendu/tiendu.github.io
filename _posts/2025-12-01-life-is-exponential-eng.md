@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Success Isn’t Linear. Stop Living Like It Is."
-date: 2025-12-07
+date: 2025-12-01
 categories: ["Personal Notes & Reflections"]
 ---
 
