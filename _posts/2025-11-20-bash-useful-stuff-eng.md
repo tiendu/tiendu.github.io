@@ -1,4 +1,4 @@
-
+---
 layout: post
 title: "Bash, But Only the Useful Stuff"
 date: 2025-11-20
