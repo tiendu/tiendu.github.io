@@ -2,7 +2,7 @@
 layout: post
 title: "Git: The Minimal Modern Cheat Sheet"
 date: 2026-01-22
-categories: ["Automation", "Systems & Engineering"]
+categories: ["Automation, Systems & Engineering"]
 pinned: true
 ---
 
