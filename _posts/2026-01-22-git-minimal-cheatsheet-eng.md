@@ -50,6 +50,19 @@ git push                     # publishes branch (auto-upstream if configured)
 
 ---
 
+## Worktree (optional, but very powerful)
+
+`git worktree` lets you have **multiple working directories from the same repo**, each on its own branch or commit.
+
+```bash
+git worktree add ../repo-pr-123 feature/pr-123
+git worktree add -b fix/urgent ../repo-fix origin/main
+git worktree list
+git worktree remove ../repo-pr-123
+```
+
+---
+
 ## Cloning & Creating Repos
 
 | Task | Command |
@@ -187,12 +200,30 @@ git rebase -i origin/main    # or: git rebase -i HEAD~5
 
 ## Emergency Fixes (copy-paste)
 
+> Rule of thumb: if you’re about to stash, use a worktree instead.
+
 ### "I committed to main by mistake"
 
 ```bash
 git switch -c fix/branch
 git switch main
 git reset --hard origin/main
+```
+
+### "I need to hotfix main but I have unfinished work"
+
+```bash
+git fetch
+git worktree add -b hotfix/critical ../repo-hotfix origin/main
+cd ../repo-hotfix
+```
+
+### "I want to review a PR without stashing my work"
+
+```bash
+git fetch
+git worktree add ../repo-pr-123 origin/pr-123
+cd ../repo-pr-123
 ```
 
 ### "Undo last commit, keep changes"
@@ -223,7 +254,7 @@ git push --force-with-lease
 
 ---
 
-## Minimal .gitignore patterns
+## Minimal .gitignore
 
 ```gitignore
 .DS_Store
