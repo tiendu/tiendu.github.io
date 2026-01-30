@@ -221,6 +221,23 @@ This connects directly to the normal curve and hypothesis testing.
 
 ---
 
+## 🛡️ Robust Z-Score (Outlier-friendly)
+
+### Mnemonic: **"Messy data? Trust the middle."**
+
+Classic z-score uses **mean + SD** → outliers can distort both.
+
+Robust z-score swaps in tougher stats:
+- **Median** instead of mean
+- **MAD** (Median Absolute Deviation) instead of SD
+
+**Formula**
+z_robust = (x − median) / MAD
+
+> 🧠 Phrase: **"Classic z assumes normality. Robust z assumes reality."**
+
+---
+
 ## 🔗 Correlation ≠ Causation
 
 ### Analogy: *"Ice cream sales and shark attacks both rise in summer"*
