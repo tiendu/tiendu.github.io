@@ -68,6 +68,24 @@ Nothing was deleted. You just used the fact that the book was **ordered**.
 
 ---
 
+Now imagine the phone book had an index tab for only the **first letter**.
+
+You flip to **N** — and still face thousands of names.
+
+Cheap index. Weak filter.
+
+So instead, the phone book uses more characters.
+
+Not just `N`, but `Ngu`.
+
+Suddenly, most of the book disappears.  
+You’re left with a tiny section.
+
+You didn’t need the full name.  
+Three characters were *enough*.
+
+---
+
 Now swap the phone book for a genome.
 
 A genome is just a very long string made of four letters. Billions of them.
@@ -133,6 +151,17 @@ Most of the genome is never touched.
 
 ---
 
+This is where index length quietly matters.
+
+If the chunks are too short, everything matches everything.  
+If they’re too long, one mutation breaks the match.
+
+So tools pick a length that’s **rare enough to be useful**, but **short enough to survive errors**.
+
+Just like the phone book didn’t need your full name — three characters were enough.
+
+---
+
 That’s why the speedup feels unreal.
 
 Two hundred thousand checks collapse into fewer than twenty decisions. Minutes turn into milliseconds. The hardware didn’t change. The data didn’t shrink.
@@ -163,4 +192,4 @@ By asking a better question:
 
 That shift — from deletion to organization — is the difference between a slow system and a fast one.
 
-And it’s why this work is engineering, not just coding.
+And it’s why this work is engineering, not just coding.And it’s why this work is engineering, not just coding.
