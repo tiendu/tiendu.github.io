@@ -162,11 +162,100 @@ Just like the phone book didn’t need your full name — three characters were 
 
 ---
 
-That’s why the speedup feels unreal.
+There’s another trick some tools use that feels strange at first, but turns out to be incredibly powerful.
 
-Two hundred thousand checks collapse into fewer than twenty decisions. Minutes turn into milliseconds. The hardware didn’t change. The data didn’t shrink.
+Instead of organizing the genome so you search **from the beginning of a sequence**, they organize it so you search **from the end**.
 
-Only the structure did.
+This idea comes from something called the **FM-index**.
+
+---
+
+To understand it, go back to the phone book again.
+
+A normal phone book works because names are ordered from the front. You can narrow your search like this:
+
+```
+N → Ng → Ngu → Nguyen
+```
+
+That’s natural. That’s how humans read.
+
+Now imagine a different kind of phone book — not one meant for people, but for machines.
+
+In this phone book, names are grouped by how they **end**.
+
+Conceptually, it looks more like this:
+
+```
+...son   Anderson
+...yen   Nguyen
+...yen   Nguyen Anh
+...yen   Nguyen Binh
+...ith   Smith
+```
+
+You never scan pages. You only track **ranges**.
+
+---
+
+Searching now works backward:
+
+```
+n → en → yen → uyen → guyen → Nguyen
+```
+
+Each step asks a simple question:
+
+Which names end with this exact suffix?
+
+Every step **shrinks the range**.
+
+Nothing new is added. Nothing random is accessed.
+
+---
+
+This feels backwards to humans, but computers love it.
+
+Instead of saying:
+> “Here are many places to check”
+
+The FM-index says:
+> “Let me eliminate everything that *cannot* match.”
+
+The work is small. The memory access is predictable. The data stays compact.
+
+---
+
+The same idea applies to genomes.
+
+When searching for:
+
+```
+TGACCT
+```
+
+The FM-index doesn’t ask where it starts.
+
+It asks:
+- where something could end with `T`
+- then `CT`
+- then `CCT`
+- then `ACCT`
+
+Each step narrows a continuous interval.
+
+No scanning.  
+No jumping.  
+No brute force.
+
+---
+
+This is why FM-index often beats “normal” indexing at genome scale.
+
+Hash tables jump fast, but jump **randomly**.  
+Suffix arrays narrow well, but touch more memory.
+
+FM-index wins by doing **very little work, very predictably**, on **very compact data**.
 
 ---
 
@@ -192,4 +281,4 @@ By asking a better question:
 
 That shift — from deletion to organization — is the difference between a slow system and a fast one.
 
-And it’s why this work is engineering, not just coding.And it’s why this work is engineering, not just coding.
+And it’s why this work is engineering, not just coding.
