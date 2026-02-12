@@ -151,7 +151,7 @@ This score answers a simple question:
 
 > *How much did the interval fail to contain reality?*
 
--   If the true value lies inside the interval, the score is â¤ 0.
+-   If the true value lies inside the interval, the score is ≤ 0.
 -   If it falls outside, the score becomes positive --- indicating how
     much wider the interval needed to be.
 
