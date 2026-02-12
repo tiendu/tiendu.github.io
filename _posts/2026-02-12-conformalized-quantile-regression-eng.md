@@ -255,4 +255,4 @@ way to express that reality without sacrificing statistical guarantees.
 Instead of forcing fixed error bars onto complex systems, we let
 uncertainty move with the data.
 
-And once you start thinking this way, it becomes hard to go back.> about 90% of the time."
+And once you start thinking this way, it becomes hard to go back.
