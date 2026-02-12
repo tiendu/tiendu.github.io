@@ -5,87 +5,195 @@ title: "Conformalized Quantile Regression (CQR): Prediction Intervals That Breat
 categories: ["Statistics and Probability"]
 ---
 
+## Confidence is local, not global
+
 When we say a model is "confident," what do we actually mean?
 
-In real data, confidence isn't a property of the model --- it's a
-property of the neighborhood the model is standing in.
+In practice, confidence isn't a property of the model itself --- it's a
+property of the *region of the data space* the model is standing in.
 
-Some regions of the input space are calm: measurements are stable,
-patterns repeat, error is small. Other regions are chaotic:
-signal-to-noise collapses, variance explodes, and small shifts in input
-swing the output wildly. If you've worked with single-cell data, you
-already know this feeling: low-to-moderate expression behaves nicely,
-then suddenly the high-expression regime turns into a fog of noise.
+Some regions are calm: measurements are stable, patterns repeat, and
+predictions behave predictably. Other regions are chaotic:
+signal-to-noise collapses, variance explodes, and small perturbations in
+input produce wildly different outputs.
 
-Yet we keep putting the same kind of uncertainty on everything.
-One-size-fits-all error bars. A single global sigma. A clean-looking
-confidence interval that stays the same thickness even when the data is
-screaming "I'm not equally reliable everywhere."
+If you've worked with single-cell data, you've probably felt this
+already. Low-to-moderate expression behaves nicely. Then suddenly,
+high-expression regimes turn into a fog of noise.
 
-That mismatch is expensive. It makes us over-trust predictions in noisy
-regimes and over-cautious in clean regimes. It blurs decision
-boundaries, hides failure modes, and turns downstream analysis into a
-gamble.
+Yet most pipelines still attach uncertainty as if the world were
+uniform.
+
+One global sigma. One fixed-width error bar. One confidence interval
+that looks clean and reassuring --- even when the data itself is
+screaming:
+
+> "I am not equally reliable everywhere."
+
+This mismatch matters. It leads us to over-trust predictions in noisy
+regimes and under-utilize signal where the model is actually stable. It
+hides failure modes and distorts downstream decisions.
 
 What we actually want is simple:
 
-**uncertainty that expands when the world gets messy, and tightens when
-the world is predictable --- while still being statistically honest.**
+**uncertainty that expands when reality becomes messy, and tightens when
+reality becomes predictable --- while remaining statistically honest.**
 
-That's what **Conformalized Quantile Regression (CQR)** gives you:
-intervals that *breathe* with the data, plus a calibration step that
-makes a concrete promise about coverage --- without assuming the noise
-is Gaussian, homoscedastic, or even well-behaved.
+That's where Conformalized Quantile Regression (CQR) enters.
 
 ---
 
-## The problem: fixed-width uncertainty lies (quietly)
+## The hidden assumption behind most error bars
 
-A lot of "uncertainty" in applied ML is either:
+A surprising amount of applied ML still treats uncertainty as one of
+three things:
 
--   global (one number for all examples),
--   heuristic (e.g., bootstrap bands without guarantees), or
--   distribution-assuming (e.g., Gaussian residuals, constant variance).
+-   a global number applied everywhere,
+-   a heuristic visualization,
+-   or a distributional assumption (usually Gaussian with constant
+    variance).
 
-But many real-world problems are **heteroscedastic**: the noise changes
-across the feature space.
+But real-world systems are rarely homoscedastic.
 
-Examples:
+Noise often grows with the signal itself.
 
--   Single-cell gene expression: variance increases with expression
-    level.
--   Forecasting: error grows with horizon.
--   Medical prediction: uncertainty spikes for rare cohorts.
+Examples show up everywhere:
 
-You don't want one interval width. You want intervals that adapt.
+-   Single-cell gene expression: higher counts often mean higher
+    variance.
+-   Forecasting systems: uncertainty grows with time horizon.
+-   Clinical models: rare cohorts behave differently from common ones.
 
----
-
-## The idea: quantiles + conformal calibration
-
-CQR is a two-step pattern:
-
-1.  Learn conditional quantiles.
-2.  Conformalize using a calibration dataset to guarantee coverage.
-
-The quantile model learns where uncertainty should expand or shrink.
-
-Conformal calibration then adjusts the interval to make sure coverage is
-statistically valid.
+A fixed-width interval assumes uncertainty is uniform. Reality
+disagrees.
 
 ---
 
-## Notes and gotchas
+## Stop predicting points. Start predicting boundaries.
 
--   Quantile crossing can happen (lower \> upper). Guard against it.
--   Coverage is marginal, not conditional.
--   Data shift can break guarantees.
+Instead of predicting only a point estimate, we can predict
+*boundaries*.
+
+The idea behind quantile regression is simple:
+
+Rather than estimating:
+
+    y = f(x)
+
+we estimate:
+
+    lower_bound(x)
+    upper_bound(x)
+
+These represent conditional quantiles --- for example, the 5th and 95th
+percentiles.
+
+Because they are learned independently, the width between them can vary
+across the input space. Regions with more noise naturally produce wider
+intervals.
+
+The model begins to express something closer to local uncertainty.
+
+But there's a catch.
+
+Quantile regression alone does not guarantee that a "90% interval"
+actually contains the truth 90% of the time.
+
+That's where conformal prediction comes in.
 
 ---
 
-## Simple Python implementation
+## Calibration is where uncertainty becomes real
 
-```python
+Conformal prediction treats calibration as an empirical correction step.
+
+Instead of assuming the model is perfectly calibrated, we measure its
+mistakes on a held-out dataset.
+
+For each calibration example:
+
+    score = max(q_low(x_i) - y_i, y_i - q_high(x_i))
+
+This measures how far the true value falls outside the predicted
+interval.
+
+We then compute a correction factor `q_hat` and expand the interval:
+
+    [q_low(x) - q_hat, q_high(x) + q_hat]
+
+This single adjustment turns an adaptive but potentially miscalibrated
+interval into one with finite-sample coverage guarantees --- without
+assuming Gaussian noise or any specific distribution.
+
+In other words:
+
+-   quantile regression shapes the interval,
+-   conformal calibration makes it trustworthy.
+
+---
+
+## What adaptive uncertainty actually looks like
+
+Consider a toy dataset where noise increases with signal:
+
+    X = Uniform(0, 10)
+    signal = 2X sin(X) + 10
+    noise_sd = 0.5 + 0.5 * X
+    y = signal + Normal(0, noise_sd)
+
+Low values are stable. High values become increasingly noisy.
+
+When we apply CQR:
+
+-   intervals remain tight where signal is reliable,
+-   and widen into a "trumpet" shape where uncertainty grows.
+
+This behavior isn't just aesthetically pleasing --- it matches how many
+biological measurements behave.
+
+---
+
+## Where this changes real workflows
+
+In single-cell workflows, uncertainty is everywhere:
+
+-   gene expression modeling,
+-   protein abundance prediction,
+-   trajectory inference,
+-   noisy experimental pipelines.
+
+Static confidence intervals ignore biological heterogeneity.
+
+Adaptive conformal intervals:
+
+-   respect local variability,
+-   remain statistically calibrated,
+-   and avoid fragile distributional assumptions.
+
+---
+
+## Things that break if you ignore them
+
+A few implementation realities matter:
+
+-   Quantile models can cross (lower \> upper). Always guard against
+    this.
+-   Conformal guarantees are *marginal*, not conditional.
+-   Distribution shift breaks promises --- recalibration is necessary
+    when environments change.
+
+Despite these caveats, CQR hits a rare engineering sweet spot:
+
+-   simple,
+-   model-agnostic,
+-   theoretically grounded,
+-   and practical to deploy.
+
+---
+
+## Minimal implementation
+
+``` python
 import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.model_selection import train_test_split
@@ -135,13 +243,16 @@ def cqr_fit_predict_intervals(
 
 ---
 
-### Where to go next
+## Uncertainty should follow reality, not convenience
 
--   Use stronger quantile models.
--   Try cross-conformal (CV+) variants.
--   Evaluate coverage across subgroups.
+Most uncertainty estimation tries to make the world look simple.
 
-CQR lets you say:
+CQR does the opposite.
 
-> "On future data drawn like this, my interval will contain the truth
-> about 90% of the time."
+It acknowledges that uncertainty is not uniform --- and then gives us a
+way to express that reality without sacrificing statistical guarantees.
+
+Instead of forcing fixed error bars onto complex systems, we let
+uncertainty move with the data.
+
+And once you start thinking this way, it becomes hard to go back.> about 90% of the time."
