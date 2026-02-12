@@ -105,30 +105,92 @@ That's where conformal prediction comes in.
 
 ## Calibration is where uncertainty becomes real
 
+
+
 Conformal prediction treats calibration as an empirical correction step.
 
-Instead of assuming the model is perfectly calibrated, we measure its
-mistakes on a held-out dataset.
+Instead of assuming the model is perfectly calibrated, we measure how
+its predicted intervals actually behave on data it has not seen before.
 
-For each calibration example:
+But first --- where do the interval bounds come from?
 
-    score = max(q_low(x_i) - y_i, y_i - q_high(x_i))
+We train two regression models:
 
-This measures how far the true value falls outside the predicted
-interval.
+-   `q_low(x)` predicts a lower conditional quantile (for example, the
+    5th percentile).
+-   `q_high(x)` predicts an upper conditional quantile (for example, the
+    95th percentile).
 
-We then compute a correction factor `q_hat` and expand the interval:
+Together they define an adaptive prediction band:
 
-    [q_low(x) - q_hat, q_high(x) + q_hat]
+    [q_low(x), q_high(x)]
 
-This single adjustment turns an adaptive but potentially miscalibrated
-interval into one with finite-sample coverage guarantees --- without
-assuming Gaussian noise or any specific distribution.
+Unlike fixed-width intervals, this band can widen or tighten depending
+on local structure in the data. Regions with higher variability
+naturally produce wider intervals.
 
-In other words:
+However, raw quantile regression does not guarantee that a nominal "90%
+interval" truly contains the target 90% of the time.
+
+Calibration is what turns adaptive uncertainty into *reliable*
+uncertainty.
+
+### Measuring how wrong the interval is
+
+We introduce a held-out calibration dataset that is never used for
+training.
+
+For each calibration example, we compute:
+
+    score_i = max(
+        q_low(x_i) - y_i,
+        y_i - q_high(x_i)
+    )
+
+This score answers a simple question:
+
+> *How much did the interval fail to contain reality?*
+
+-   If the true value lies inside the interval, the score is â¤ 0.
+-   If it falls outside, the score becomes positive --- indicating how
+    much wider the interval needed to be.
+
+The use of `max()` here captures the worst-sided violation, ensuring
+both lower and upper failures are treated symmetrically.
+
+### Computing the correction factor
+
+Collect all calibration scores:
+
+    S = {score_1, score_2, ..., score_n}
+
+Sort the scores in ascending order:
+
+    S_sorted = sort(S)
+
+Define the index:
+
+    k = ceil((n + 1) * (1 - alpha))
+
+Then set:
+
+    q_hat = S_sorted[k]
+
+where:
+
+- `n` is the number of calibration samples,
+- `alpha` is the target miscoverage rate (e.g., 0.1 for a 90% interval).
+
+In words: `q_hat` is the empirical `(1 - alpha)` quantile of the calibration scores, using a finite-sample correction that preserves coverage guarantees.
+
+Finally, we expand every future interval:
+
+    [q_low(x) - q_hat,  q_high(x) + q_hat]
+
+In essence:
 
 -   quantile regression shapes the interval,
--   conformal calibration makes it trustworthy.
+-   conformal calibration makes it honest.
 
 ---
 
