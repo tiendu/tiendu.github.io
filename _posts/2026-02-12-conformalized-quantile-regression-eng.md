@@ -105,8 +105,6 @@ That's where conformal prediction comes in.
 
 ## Calibration is where uncertainty becomes real
 
-
-
 Conformal prediction treats calibration as an empirical correction step.
 
 Instead of assuming the model is perfectly calibrated, we measure how
@@ -207,11 +205,34 @@ Low values are stable. High values become increasingly noisy.
 
 When we apply CQR:
 
--   intervals remain tight where signal is reliable,
--   and widen into a "trumpet" shape where uncertainty grows.
+- intervals remain tight where signal is reliable,
+- and widen into a "trumpet" shape where uncertainty grows.
 
-This behavior isn't just aesthetically pleasing --- it matches how many
+This behavior isn't just aesthetically pleasing — it matches how many
 biological measurements behave.
+
+The animation below shows a sliding window moving across the input space.
+For each region, we compare:
+
+- **CQR prediction intervals** (adaptive width)
+- **fixed-width error bars** (constant width)
+
+Watch what happens:
+
+- in low-noise regions, fixed-width intervals over-cover by being unnecessarily wide,
+- in high-noise regions, fixed-width intervals struggle to maintain coverage,
+- CQR adjusts its width to match local uncertainty.
+
+<p align="center">
+  <img src="/assets/images/local_coverage_cqr_vs_fixed.gif"
+       alt="Sliding-window local coverage: CQR vs fixed-width intervals"
+       width="650">
+</p>
+
+The key takeaway is subtle but important:
+
+> Fixed-width intervals achieve coverage by being globally conservative.  
+> CQR achieves coverage by adapting to where uncertainty actually lives.
 
 ---
 
