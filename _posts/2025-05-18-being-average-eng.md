@@ -5,74 +5,166 @@ date: 2025-05-18
 categories: ["Personal Notes & Reflections"]
 ---
 
-Let me start with this: I've always feared being average. Or more precisely, discovering that I'm nothing more than average.
+Let me start with this: I've always feared being average.  
+Or more precisely, discovering that I'm nothing more than average.
 
-That fear was one of the biggest undercurrents of my childhood. I grew up with the weighty promise that each of us is _special_ - a product, perhaps, of that millennial-era parenting philosophy. During my teenage years, I believed I had to outgrow myself every year. Reinvent, evolve, become someone new - _year after year_.
+That fear was one of the biggest undercurrents of my childhood. I grew up with the weighty promise that each of us is *special*. During my teenage years, I believed I had to outgrow myself every year. Reinvent. Evolve. Become someone new — *year after year*.
 
-The thought of standing still terrified me. I believed that if I ever stopped transforming, I would slip into a kind of quiet irrelevance. I would become ordinary. And to my younger self, there was nothing more tragic.
+The thought of standing still terrified me. I believed that if I ever stopped transforming, I would slip into quiet irrelevance.
 
-It has taken me years to unlearn that belief. To understand that being average is not failure. But let us come back to that in a moment.
+And to my younger self, there was nothing more tragic.
+
+It has taken me years to unlearn that belief.
+
+---
+
+## The Man Who Never Left
+
+There’s a story about Immanuel Kant.
+
+Kant lived his entire life in Königsberg. He rarely traveled more than a few miles from his home. The townspeople supposedly set their clocks by his afternoon walks. From the outside, his life looked almost painfully ordinary: same town, same routines, same streets.
+
+And yet, from that small, repetitive life came ideas that reshaped philosophy for centuries.
+
+He did not chase spectacle.  
+He did not travel the world.  
+He did not reinvent himself every year.
+
+He stayed.
+
+And from staying, he built depth.
+
+That story unsettles me in a good way. Because it suggests something radical:
+
+You do not need a dramatic life to build meaningful ideas.
 
 ---
 
 ## On the Sidelines
 
-Looking back, I think I developed an aversion to competition early on. School already carried the pressure of high performance - and it was never subtle. If you underperformed, you knew. They'd tell your parents, rank you publicly, compare you to the top. You were always being measured.
+Looking back, I think I developed an aversion to competition early on.
 
-Adding more - through sports, games, or extracurriculars - felt unbearable. So, I opted out.
+School already carried the pressure of high performance — and it was never subtle. If you underperformed, you knew. They told your parents. They ranked you publicly. They compared you to the top student.
+
+You were always being measured.
+
+Adding more — sports, games, extracurriculars — felt unbearable. So I opted out.
 
 I stayed on the sidelines.
 
-Sports? I did not join. Online gaming? I watched, but rarely played. Extracurriculars? I avoided them altogether until my twenties.
+Back then, I told myself I just wasn’t interested. But the truth? I was scared.
 
-Back then, I told myself I just wasn't interested. But the truth? **I was scared.** Scared that if I gave it my all and still faded into the crowd, **it would confirm the thing I feared most:**
+Scared that if I tried and still blended into the crowd, it would confirm what I feared most:
 
-**That I was just average.**
+That I was just average.
 
-And that fear didn't stop at school. It followed me into work, too. In a world obsessed with top performers, being average feels risky. Average means replaceable. **Average means first in line when cuts come.** Average means you’re quietly passed over - again and again.
+The fear followed me into adulthood. In a world obsessed with top performers, being average feels dangerous. Average means replaceable. Average means first in line when cuts come.
 
----
-
-## What It Means to Be Average
-
-Over time, I have come to see that average is not the same as meaningless. It is not failure, and it is certainly not something to be ashamed of. But the world has wired us to think otherwise.
-
-Social media has magnified this obsession with exceptionalism. Every scroll is a reminder of someone else's peak moment. You are shown success, brilliance, beauty, and boldness - condensed into bite-sized envy. In a world where "greatness" is constantly paraded in front of us, **being "okay" feels like being invisible.**
-
-**The truth is, most lives are built in the quiet.** They are not viral. They are not groundbreaking. And yet, **they are full of meaning.**
-
-Being average might mean choosing stability over spectacle. It might mean prioritizing consistency over chaos. It might mean building something slowly, quietly, without applause - because it matters to _you_.
+Average means invisible.
 
 ---
 
-## From a Developer's Desk
+## The Myth of Constant Greatness
 
-As a software developer, this realization became even more personal.
+But history is strange.
 
-In tech, we often chase the shiny: new frameworks, cutting-edge stacks, tools that promise 10x results. There is a cultural push to always be learning, always optimizing, always ahead of the curve. If you are not contributing to open-source or shipping side projects at midnight, are you even a _real dev_?
+Marcus Aurelius — emperor of Rome — wrote some of the most enduring reflections on humility and duty. Yet he constantly reminded himself that he was just a man doing his role for a brief moment in time. He did not talk about greatness. He talked about responsibility. About showing up.
 
-But here is the twist - **some of the most "average" tools quietly run the world.**
+The world celebrates the peak moments. The coronations. The keynotes. The viral launches.
 
-Think of `rsync`, `awk`, or `cron`. They are not glamorous. They are not trending. You will not see them topping Hacker News. But they are _solid_. They do one thing well, and they do it without fuss. They have stood the test of time not because they are flashy, but because they are _reliable_.
+But most civilizations were not built by peak moments.
 
-And sometimes, I wonder - what if that is enough for me, too?
+They were built by repetition.
 
-Maybe I will not build the next unicorn startup. Maybe my name will not be in a keynote. But maybe I am the `cron` job of someone's life - **quietly doing good work, showing up every day, and making things a little better.**
+Farmers planting again.  
+Craftsmen refining slowly.  
+Engineers maintaining systems that nobody notices — until they break.
+
+Most lives are not fireworks. They are steady flames.
+
+---
+
+## From a Developer’s Desk
+
+In tech, the pressure to be exceptional is relentless.
+
+New frameworks every month.  
+New paradigms every quarter.  
+The silent expectation that if you’re not shipping a side project at midnight, you’re falling behind.
+
+But think about the tools that quietly run the world:
+
+`rsync`  
+`awk`  
+`cron`
+
+They are not glamorous. They do not trend. You will not see conference talks about how sexy they are.
+
+They just work.
+
+They do one thing well.  
+And they keep doing it.
+
+Day after day.
+
+Sometimes I wonder — what if being that kind of person is enough?
+
+Maybe I won’t build a unicorn startup.  
+Maybe I won’t give a keynote.  
+Maybe my name won’t circulate in the industry.
+
+But maybe I can be the `cron` job in someone’s system —  
+quietly reliable, predictable, steady.
+
+Not flashy.
+
+Just solid.
 
 ---
 
 ## Redefining Growth
 
-I no longer chase reinvention the way I used to. That need to transform every year? **It was born out of fear, not freedom.** These days, growth feels different. It is quieter, steadier, more rooted.
+I used to believe growth meant transformation. That every year required a new version of myself.
 
-I still hear that voice sometimes - the one that whispers, "What if this is all you are?" But more and more, I find myself replying, "**And if it is, maybe that is enough.**"
+Now, growth feels different.
+
+It feels like refinement.  
+Like sanding down rough edges instead of changing shapes entirely.  
+Like deepening roots rather than stretching branches wildly in all directions.
+
+Kant stayed in his hometown.  
+Many monks stay in one monastery their entire lives.  
+Some engineers maintain the same system for a decade — and that system feeds millions.
+
+There is a quiet dignity in consistency.
 
 ---
 
 ## Embracing the Ordinary
 
-If you have ever feared being average, you are not alone. But maybe the goal was never to be exceptional _by the world's definition_. Maybe the real goal is to be **_authentic_ - to live a life that is yours**, not someone else's highlight reel.
+If you have ever feared being average, you are not alone.
 
-To show up, to build, to care. To leave things a little better than you found them.
+But maybe average is not the insult we think it is.
 
-**That is not average. That is extraordinary in its own quiet way.** Just not in the way we were taught to recognize.
+Average can mean stable.  
+It can mean reliable.  
+It can mean grounded.
+
+In a culture addicted to peaks, valleys are treated as failures. But valleys are where rivers form.
+
+Maybe the goal was never to be exceptional by the world's definition.
+
+Maybe the real goal is to be authentic — to live a life that is yours, not someone else’s highlight reel.
+
+To show up.  
+To build.  
+To care.  
+To improve — slowly, quietly, steadily.
+
+That kind of life may not trend.
+
+But it sustains.
+
+And maybe — just maybe —
+
+That is enough.
