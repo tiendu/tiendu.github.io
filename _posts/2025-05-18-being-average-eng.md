@@ -5,166 +5,94 @@ date: 2025-05-18
 categories: ["Personal Notes & Reflections"]
 ---
 
-Let me start with this: I've always feared being average.  
-Or more precisely, discovering that I'm nothing more than average.
+I used to be afraid of being average.
 
-That fear was one of the biggest undercurrents of my childhood. I grew up with the weighty promise that each of us is *special*. During my teenage years, I believed I had to outgrow myself every year. Reinvent. Evolve. Become someone new — *year after year*.
+Not failing. Not collapsing. Just… being ordinary.
 
-The thought of standing still terrified me. I believed that if I ever stopped transforming, I would slip into quiet irrelevance.
+The kind of person who doesn’t stand out. Doesn’t dominate. Doesn’t become exceptional in any obvious way.
 
-And to my younger self, there was nothing more tragic.
+That fear shaped more of my life than I like to admit. As a kid, I absorbed the idea that everyone is special. That potential must be maximized. That standing still is the same as falling behind. So I tried to reinvent myself constantly — new skills, new directions, new ambitions — as if identity were something that needed annual upgrades.
 
-It has taken me years to unlearn that belief.
+Standing still felt dangerous.
 
----
+Because standing still looked like mediocrity.
 
-## The Man Who Never Left
+But over time, I’ve started to wonder whether the real problem was never average itself — but the world we measure ourselves against.
 
-There’s a story about Immanuel Kant.
+In Kant’s case, he never left his hometown. He lived in the same place his entire life, walked the same streets, kept the same routines. From the outside, it looked painfully ordinary. And yet from that repetition came ideas that reshaped philosophy for centuries. He didn’t chase novelty. He stayed long enough for depth to emerge.
 
-Kant lived his entire life in Königsberg. He rarely traveled more than a few miles from his home. The townspeople supposedly set their clocks by his afternoon walks. From the outside, his life looked almost painfully ordinary: same town, same routines, same streets.
+Today, staying looks like stagnation.
 
-And yet, from that small, repetitive life came ideas that reshaped philosophy for centuries.
+We live in an age of exposure. We don’t compare ourselves to our village anymore — we compare ourselves to the most exceptional people on the planet. Founders, prodigies, investors, athletes, polymaths. The brain doesn’t understand statistical rarity. It interprets frequent exposure as normal. So extraordinary begins to look like baseline.
 
-He did not chase spectacle.  
-He did not travel the world.  
-He did not reinvent himself every year.
+And ordinary begins to feel like failure.
 
-He stayed.
+We are drowning in examples of extreme outcomes.
 
-And from staying, he built depth.
+At the same time, we are drowning in information.
 
-That story unsettles me in a good way. Because it suggests something radical:
+Books, podcasts, frameworks, productivity systems, career strategies. We are encouraged to consume endlessly. Reading more is celebrated. Learning more is praised. Knowing more feels like progress.
 
-You do not need a dramatic life to build meaningful ideas.
+But there is a difference between consuming ideas and being shaped by them.
 
----
+Reading fifty books once may expand vocabulary.  
+Reading five books twenty times may reshape how you think.
 
-## On the Sidelines
+The modern world rewards exposure. Depth requires repetition.
 
-Looking back, I think I developed an aversion to competition early on.
+And repetition looks average.
 
-School already carried the pressure of high performance — and it was never subtle. If you underperformed, you knew. They told your parents. They ranked you publicly. They compared you to the top student.
+Sitting with the same problem for years looks average.  
+Maintaining the same system reliably looks average.  
+Refining the same craft quietly looks average.
 
-You were always being measured.
+But that is how mastery compounds.
 
-Adding more — sports, games, extracurriculars — felt unbearable. So I opted out.
+Instead, we skim. We pivot. We sample. We collect intellectual souvenirs from everywhere. And because we never stay long enough in one place — geographically, intellectually, professionally — we never feel deep. We feel broad and thin.
 
-I stayed on the sidelines.
+Which feeds the fear of being average.
 
-Back then, I told myself I just wasn’t interested. But the truth? I was scared.
+There’s another layer to this fear: we are often afraid of futures that almost never happen.
 
-Scared that if I tried and still blended into the crowd, it would confirm what I feared most:
+We imagine irrelevance. Replacement. Collapse. Being left behind by faster, smarter, younger people. We simulate catastrophic timelines in our heads and treat them as probabilities.
 
-That I was just average.
+But most lives do not collapse dramatically.
 
-The fear followed me into adulthood. In a world obsessed with top performers, being average feels dangerous. Average means replaceable. Average means first in line when cuts come.
+They unfold slowly.
 
-Average means invisible.
+Most careers are not destroyed by sudden irrelevance. They drift, adjust, adapt. Most people are not replaced overnight. Most feared outcomes never materialize in the extreme form we imagine.
 
----
+Yet we live reacting to those hypotheticals.
 
-## The Myth of Constant Greatness
+So we chase more knowledge. More reinvention. More proof that we are not average.
 
-But history is strange.
+Maybe the quiet truth is this:
 
-Marcus Aurelius — emperor of Rome — wrote some of the most enduring reflections on humility and duty. Yet he constantly reminded himself that he was just a man doing his role for a brief moment in time. He did not talk about greatness. He talked about responsibility. About showing up.
+What looks average from the outside is often just depth in progress.
 
-The world celebrates the peak moments. The coronations. The keynotes. The viral launches.
+A cron job running reliably every day is not impressive. But systems fail without it.
 
-But most civilizations were not built by peak moments.
+A farmer planting the same field each season is not exceptional. But food appears because of it.
 
-They were built by repetition.
+A philosopher walking the same streets every afternoon is not adventurous. But ideas mature because he stays.
 
-Farmers planting again.  
-Craftsmen refining slowly.  
-Engineers maintaining systems that nobody notices — until they break.
+Maybe the real danger is not being average.
 
-Most lives are not fireworks. They are steady flames.
+Maybe the danger is never staying long enough anywhere — in a place, a discipline, a book, a craft — for something uncommon to grow.
 
----
+I still hear the old fear sometimes: What if this is all I am?
 
-## From a Developer’s Desk
+But now the question feels different.
 
-In tech, the pressure to be exceptional is relentless.
+If I show up.  
+If I go deep instead of wide.  
+If I choose repetition over spectacle.  
+If I build something slowly and keep building it —
 
-New frameworks every month.  
-New paradigms every quarter.  
-The silent expectation that if you’re not shipping a side project at midnight, you’re falling behind.
+And if that life looks ordinary from the outside —
 
-But think about the tools that quietly run the world:
+Maybe that is not mediocrity.
 
-`rsync`  
-`awk`  
-`cron`
+Maybe that is just how depth looks before it is recognized.
 
-They are not glamorous. They do not trend. You will not see conference talks about how sexy they are.
-
-They just work.
-
-They do one thing well.  
-And they keep doing it.
-
-Day after day.
-
-Sometimes I wonder — what if being that kind of person is enough?
-
-Maybe I won’t build a unicorn startup.  
-Maybe I won’t give a keynote.  
-Maybe my name won’t circulate in the industry.
-
-But maybe I can be the `cron` job in someone’s system —  
-quietly reliable, predictable, steady.
-
-Not flashy.
-
-Just solid.
-
----
-
-## Redefining Growth
-
-I used to believe growth meant transformation. That every year required a new version of myself.
-
-Now, growth feels different.
-
-It feels like refinement.  
-Like sanding down rough edges instead of changing shapes entirely.  
-Like deepening roots rather than stretching branches wildly in all directions.
-
-Kant stayed in his hometown.  
-Many monks stay in one monastery their entire lives.  
-Some engineers maintain the same system for a decade — and that system feeds millions.
-
-There is a quiet dignity in consistency.
-
----
-
-## Embracing the Ordinary
-
-If you have ever feared being average, you are not alone.
-
-But maybe average is not the insult we think it is.
-
-Average can mean stable.  
-It can mean reliable.  
-It can mean grounded.
-
-In a culture addicted to peaks, valleys are treated as failures. But valleys are where rivers form.
-
-Maybe the goal was never to be exceptional by the world's definition.
-
-Maybe the real goal is to be authentic — to live a life that is yours, not someone else’s highlight reel.
-
-To show up.  
-To build.  
-To care.  
-To improve — slowly, quietly, steadily.
-
-That kind of life may not trend.
-
-But it sustains.
-
-And maybe — just maybe —
-
-That is enough.
+And maybe that is enough.
