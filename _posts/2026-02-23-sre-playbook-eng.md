@@ -7,9 +7,11 @@ date: 2026-02-23
 
 Intermittent failures are rarely random.
 
-When something fails "sometimes", assume a boundary condition exists.
-Systems change behavior when limits are crossed. The task is to identify
-the constraint.
+Before investigating, ask a more precise question:
+Is this truly intermittent, or deterministic under conditions we have not yet identified?
+
+When something fails "sometimes", a boundary is usually involved.
+Systems change behavior when limits are crossed. The task is to identify the constraint.
 
 ---
 
