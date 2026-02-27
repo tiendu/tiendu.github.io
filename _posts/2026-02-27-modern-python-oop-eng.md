@@ -128,7 +128,11 @@ class User:
     name: str
 ```
 
-It automatically generates: - `__init__` - `__repr__` - `__eq__`
+It automatically generates: 
+
+- `__init__`
+- `__repr__`
+- `__eq__`
 
 Use dataclass when:
 
