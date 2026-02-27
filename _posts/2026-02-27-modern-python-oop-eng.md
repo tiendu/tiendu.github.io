@@ -64,8 +64,12 @@ class SMSNotifier:
 
 No inheritance required.
 
-This gives: - Loose coupling - Easier testing - Clean dependency
-injection - Better SOLID compliance
+This gives: 
+
+- Loose coupling 
+- Easier testing 
+- Clean dependency injection
+- Better SOLID compliance
 
 Modern application code prefers Protocol.
 
@@ -92,8 +96,11 @@ class BaseNotifier(abc.ABC):
 
 Subclasses must implement `send()`.
 
-ABC is useful when: - You want shared default logic - You need runtime
-enforcement - You're building frameworks or internal platforms
+ABC is useful when:
+
+- You want shared default logic
+- You need runtime enforcement
+- You're building frameworks or internal platforms
 
 But it creates tighter coupling.
 
@@ -123,8 +130,11 @@ class User:
 
 It automatically generates: - `__init__` - `__repr__` - `__eq__`
 
-Use dataclass when: - The class mostly stores data - You want readable
-domain models - You want less repetitive code
+Use dataclass when:
+
+- The class mostly stores data
+- You want readable domain models
+- You want less repetitive code
 
 Avoid it for logic-heavy service classes.
 
