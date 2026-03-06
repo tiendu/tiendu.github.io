@@ -11,8 +11,8 @@ Logs, configuration files, command outputs, and pipelines are all text streams.
 
 Two classic tools dominate command-line text processing:
 
--   sed — stream editor for modifying text
--   awk / gawk — pattern processing language for structured text
+- sed — stream editor for modifying text
+- awk / gawk — pattern processing language for structured text
 
 Understanding how these tools think about data makes everyday debugging much easier.
 
@@ -46,9 +46,9 @@ awk '{print $1}'
 
 ---
 
-## sed: The Stream Editor
+## sed Execution Model
 
-sed processes input line by line.
+sed processes input one line at a time.
 
 Conceptually, each line passes through the same loop:
 
@@ -59,20 +59,7 @@ print result
 repeat
 ```
 
-Because sed processes a stream rather than a full dataset, it is:
-
-- fast
-- memory efficient
-- ideal inside pipelines
-
----
-
-## The Two sed Buffers
-
-Many confusing sed one-liners become easier once the two internal buffers are understood.
-
-- Pattern Space
-- Hold Space
+Two internal buffers control sed behaviour.
 
 ---
 
@@ -95,125 +82,70 @@ pattern space = "bar hello"
 output
 ```
 
-Think of pattern space as the active working buffer.
-
 ---
 
 ### Hold Space
 
-The hold space is persistent scratch storage that survives between cycles.
+The hold space is persistent storage between cycles.
 
 Important commands:
 
-- `h` — copy pattern to hold  
-- `H` — append pattern to hold  
-- `g` — copy hold to pattern  
-- `G` — append hold to pattern  
-- `x` — swap pattern and hold  
+- `h` — copy pattern space to hold space
+- `H` — append pattern space to hold space
+- `g` — copy hold space to pattern space
+- `G` — append hold space to pattern space
+- `x` — swap pattern and hold spaces
 
 Mental model:
 
 ```text
-pattern space = current working memory
+pattern space = working memory
 hold space    = persistent memory
 ```
 
 ---
 
-## Visual Model
+## sed Primitives
+
+Most sed scripts rely on a small set of primitive operations.
 
 ```text
-input stream
-      |
-      v
-+----------------+
-| pattern space  |
-+----------------+
-        |
-   apply commands
-        |
-        v
-+----------------+
-| hold space     |
-+----------------+
-        |
-        v
-output stream
+s   substitution
+d   delete pattern space
+p   print pattern space
+N   append next line
+D   delete first line of pattern space
+P   print first line of pattern space
+:   define label
+b   unconditional branch
+t   branch if substitution succeeded
+q   quit early
 ```
 
-Pattern space resets every cycle.  
-Hold space persists.
-
-This mechanism enables:
-
-- reversing files
-- paragraph processing
-- multi-line transformations
+Complex one-liners are usually combinations of these primitives.
 
 ---
 
-## Example: Reversing a File
+## sed Patterns
 
-Classic sed example:
-
-```bash
-sed '1!G;h;$!d'
-```
-
-Example input:
-
-```text
-A
-B
-C
-```
-
-Output:
-
-```text
-C
-B
-A
-```
-
-### How It Works
-
-The script contains three operations:
-
-```text
-1!G   → append hold space to pattern space (except on line 1)
-h     → copy pattern space into hold space
-$!d   → delete pattern space unless this is the last line
-```
-
-Conceptually the hold space accumulates lines in reverse order.
-
-```
-line1 → A
-line2 → B A
-line3 → C B A
-```
-
-Only the final iteration prints the reversed result.
+Certain patterns appear repeatedly in real sed scripts.
 
 ---
 
-## Looping in sed
+### Loop Pattern
 
-sed supports simple control flow.
-
-Example:
+sed supports simple loops using labels and conditional branching.
 
 ```bash
 sed ':a;s/foo/bar/;ta'
 ```
 
-Commands:
+Breakdown:
 
 ```text
 :a         → define label
 s/foo/bar/ → replace first occurrence
-ta         → jump to label if substitution succeeded
+ta         → jump back if substitution succeeded
 ```
 
 Conceptually:
@@ -237,7 +169,130 @@ bar bar bar
 
 ---
 
-## Real Example: FASTQ to FASTA Conversion
+### Reverse Stream Pattern
+
+Classic example:
+
+```bash
+sed '1!G;h;$!d'
+```
+
+Input:
+
+```text
+A
+B
+C
+```
+
+Output:
+
+```text
+C
+B
+A
+```
+
+Conceptually:
+
+```text
+1!G   → append previous lines
+h     → store current state
+$!d   → skip printing until last line
+```
+
+The hold space accumulates lines in reverse order.
+
+---
+
+### Sliding Window Pattern
+
+sed can maintain a rolling buffer.
+
+Example: print everything except the last five lines.
+
+```bash
+sed -n -e ':a; 1,5!{P; N; D}; N; ba' text.txt
+```
+
+Once the pattern space contains five lines:
+
+- print the oldest line
+- append the next input line
+- remove the oldest line
+
+The final five lines remain buffered and are never printed.
+
+---
+
+### Multi-Line Merge Pattern
+
+Example: merge lines ending with a continuation character.
+
+```bash
+sed ':a;/\\$/N;s/\\\n//;ta'
+```
+
+Input:
+
+```text
+hello world \
+continued line
+```
+
+Output:
+
+```text
+hello world continued line
+```
+
+---
+
+## awk Execution Model
+
+awk treats input as structured records.
+
+Each line becomes a record split into fields.
+
+Processing loop:
+
+```text
+read record
+split into fields
+evaluate pattern
+execute action
+```
+
+Important variables:
+
+- `$0` — full record
+- `$1` — first field
+- `$2` — second field
+- `NF` — number of fields
+- `NR` — record number
+- `FS` — field separator
+
+---
+
+## awk Primitives
+
+Core awk operations include:
+
+- field extraction
+- conditional filtering
+- substitution
+- associative arrays
+- record control (`getline`)
+
+Example:
+
+```bash
+awk '{print $1}'
+```
+
+---
+
+## Real Example: FASTQ to FASTA
 
 A FASTQ record contains four lines:
 
@@ -248,18 +303,16 @@ SEQUENCE
 QUALITY
 ```
 
-A FASTA record only needs:
+FASTA requires:
 
 ```text
 >read_id
 SEQUENCE
 ```
 
-So we need to extract the first two lines from every four-line record.
-
 ---
 
-### sed using step addresses
+### sed (step addressing)
 
 ```bash
 sed -n '1~4s/^@/>/p; 2~4p' input.fastq > output.fasta
@@ -267,40 +320,25 @@ sed -n '1~4s/^@/>/p; 2~4p' input.fastq > output.fasta
 
 Explanation:
 
+```text
+1~4 → header lines
+2~4 → sequence lines
 ```
-1~4  → every 4th line starting from line 1
-2~4  → every 4th line starting from line 2
-```
-
-So:
-
-- convert `@` to `>`
-- print header
-- print sequence
-
-Lines 3 and 4 are skipped.
 
 ---
 
-### sed using pattern matching
+### sed (pattern matching)
 
 ```bash
 sed -e '/^@/!d; s//>/; N' input.fastq > output.fasta
 ```
 
-Explanation:
-
-```
-/^@/!d → keep only header lines
-s//>/  → replace @ with >
-N      → append next line (sequence)
-```
-
-Pattern space becomes:
+Logic:
 
 ```text
->read_id
-SEQUENCE
+keep header lines
+replace @ with >
+append next line (sequence)
 ```
 
 ---
@@ -308,143 +346,23 @@ SEQUENCE
 ### awk implementation
 
 ```bash
-awk 'NR%4==1 {sub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta
+awk 'NR%4==1 {sub(/^@/, ">", $0); print; getline; print}' input.fastq
 ```
 
 Explanation:
 
-```
-NR%4==1 → first line of each FASTQ record
-sub()   → convert @ to >
-getline → read sequence line
+```text
+NR%4==1 → header
+getline → read sequence
 ```
 
 awk expresses record structure more directly.
 
 ---
 
-## Sliding Window Processing in sed
+## awk Aggregation
 
-These commands print everything except the last five lines.
-
-### Version 1
-
-```bash
-sed -n -e ':a; 1,5!{P; N; D}; N; ba' text.txt
-```
-
-Pattern space gradually fills with five lines.
-
-Once full:
-
-- print the first line
-- append another line
-- drop the first line
-
-The last five lines remain buffered and are never printed.
-
----
-
-### Version 2
-
-```bash
-sed -e ':a; $d; N; 1,5ba; P; D' text.txt
-```
-
-This implements the same sliding window using a slightly different control flow.
-
----
-
-## Multi-Line Pattern Matching
-
-sed can also merge wrapped lines.
-
-Example input:
-
-```text
-hello world \
-continued line
-```
-
-Command:
-
-```bash
-sed ':a;/\\$/N;s/\\\n//;ta'
-```
-
-Explanation:
-
-```
-:a      → loop label
-/\\$/N  → append next line if line ends with "\"
-s/\\\n// → remove backslash and newline
-ta      → repeat until no continuation remains
-```
-
----
-
-## Extracting Structured Blocks
-
-sed can extract structured blocks of text.
-
-Example:
-
-```bash
-sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' logfile
-```
-
-This prints everything between the two patterns.
-
-Useful for:
-
-- TLS certificates
-- stack traces
-- structured logs
-- configuration blocks
-
----
-
-## awk: Pattern Processing
-
-awk treats input as records containing fields.
-
-Structure:
-
-```text
-pattern { action }
-```
-
-Example:
-
-```bash
-awk '{print $1}'
-```
-
----
-
-## awk Processing Model
-
-Each input line follows this sequence:
-
-```text
-read line
-split into fields
-evaluate rules
-execute actions
-```
-
-Important variables:
-
-- `$0` — full line  
-- `$1` — first field  
-- `$2` — second field  
-- `NF` — number of fields  
-- `NR` — record number  
-- `FS` — field separator  
-
----
-
-## Aggregation with awk
+awk associative arrays allow quick aggregation.
 
 Example input:
 
@@ -467,24 +385,17 @@ user1 500
 user2 150
 ```
 
-awk associative arrays make quick aggregations trivial.
-
 ---
 
 ## Deduplicating While Preserving Order
 
-Unlike `sort | uniq`, awk can remove duplicates while keeping the original order.
+awk can remove duplicates without sorting.
 
 ```bash
 awk '!seen[$0]++' file.txt
 ```
 
-Explanation:
-
-```
-seen[$0] → track whether line has appeared
-!seen    → true only on first occurrence
-```
+This prints only the first occurrence of each line.
 
 ---
 
@@ -512,9 +423,7 @@ awk '$NF > 1000' access.log
 
 ---
 
-## sed and awk in Practice
-
-These tools rarely operate alone.
+## sed and awk Together
 
 Example debugging pipeline:
 
@@ -526,7 +435,7 @@ grep ERROR application.log \
 | sort -nr
 ```
 
-Each stage performs a single transformation.
+Each stage performs a small transformation.
 
 Complex behaviour emerges from chaining simple tools.
 
@@ -548,7 +457,7 @@ Double quotes allow shell expansion.
 
 ### Field separators
 
-CSV parsing requires specifying the delimiter.
+CSV parsing requires specifying delimiters.
 
 ```bash
 awk -F, '{print $2}'
@@ -572,7 +481,7 @@ matches the longest possible sequence.
 
 sed excels at stream transformations.
 
-When scripts become deeply nested, awk or a scripting language may be easier to maintain.
+When scripts become deeply nested, awk or a scripting language is usually easier to maintain.
 
 ---
 
