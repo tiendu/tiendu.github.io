@@ -153,21 +153,57 @@ This mechanism enables:
 
 ---
 
+---
+
 ## Example: Reversing a File
 
 Classic sed example:
 
-``` bash
+```bash
 sed '1!G;h;$!d'
 ```
 
-Conceptually:
+This command reverses the order of lines in a file.
 
-``` text
-store each line
-prepend the next line
-print final result
+Example input:
+
+```text
+A
+B
+C
 ```
+
+Output:
+
+```text
+C
+B
+A
+```
+
+---
+
+### How It Works
+
+The script contains three operations:
+
+```text
+1!G   → append hold space to pattern space (except on line 1)
+h     → copy pattern space into hold space
+$!d   → delete pattern space unless this is the last line
+```
+
+Conceptually the hold space accumulates lines in reverse order.
+
+```
+line1 → A
+line2 → B A
+line3 → C B A
+```
+
+Each iteration prepends the current line to the previously stored lines.
+
+Only the final iteration prints the result, producing the reversed file.
 
 ---
 
@@ -259,17 +295,51 @@ A few additional commands unlock much more complex behaviour:
 -   `:` — label
 -   `q` — quit early
 
-Example loop:
+---
 
-``` bash
+## Example: Looping in sed
+
+Another useful sed idiom uses labels and conditional branching.
+
+```bash
 sed ':a;s/foo/bar/;ta'
 ```
 
-Meaning:
+This script repeatedly applies a substitution until the text no longer changes.
 
-``` text
-repeat substitution until no match remains
+---
+
+### How It Works
+
+The commands are:
+
+```text
+:a         → define label "a"
+s/foo/bar/ → replace first occurrence of foo with bar
+ta         → if substitution succeeded, jump back to label a
 ```
+
+Conceptually this behaves like:
+
+```text
+repeat substitution
+until no more matches exist
+```
+
+Example input:
+
+```text
+foo foo foo
+```
+
+Output:
+
+```text
+bar bar bar
+```
+
+Each loop replaces one occurrence.  
+The `t` command jumps back only when a substitution occurred, so the loop stops automatically once the pattern no longer matches.
 
 ---
 
