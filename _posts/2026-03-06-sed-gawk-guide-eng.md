@@ -153,8 +153,6 @@ This mechanism enables:
 
 ---
 
----
-
 ## Example: Reversing a File
 
 Classic sed example:
