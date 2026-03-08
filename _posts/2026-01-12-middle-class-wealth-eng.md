@@ -5,7 +5,9 @@ date: 2026-01-12
 categories: ["Finance & Wealth"]
 ---
 
-## You Are Not Poor. But You Are Not Free.
+The middle class rarely collapses financially.
+
+But it often spends decades standing still.
 
 The poor fight instability.
 
@@ -170,7 +172,8 @@ Both people saved the same amount.
 
 But the outcomes are completely different.
 
-One lost purchasing power.
+One preserved less than the original purchasing power.
+
 The other multiplied it.
 
 This difference is not created by effort.
@@ -279,7 +282,7 @@ Broad index ETFs allow you to own hundreds or thousands of companies at once.
 Instead of guessing which stock wins,
 you participate in the overall growth of productive businesses.
 
-Over decades, this simple approach beats most active traders — not because it predicts the future, but because it removes emotion and diversification mistakes.
+Over decades, this simple approach beats most active traders — because it removes emotion and mistakes.
 
 For most investors, index funds should form the **foundation of the portfolio**.
 
@@ -452,5 +455,4 @@ By staying disciplined through cycles.
 
 Freedom rarely arrives dramatically.
 
-It emerges slowly — when your assets grow faster than inflation and your expenses,
-and when you are patient enough to let them.
+It emerges slowly — when your assets grow faster than inflation and lifestyle.
