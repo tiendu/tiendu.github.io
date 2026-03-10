@@ -5,18 +5,14 @@ categories: ["Automation, Systems & Engineering"]
 date: 2026-03-08
 ---
 
-When developers first learn software design, they often encounter
-**SOLID**.
+Many software systems begin with a clean inheritance hierarchy.
 
-SOLID teaches useful habits:
+A team starts modeling a domain, identifies a few obvious abstractions,
+and organizes them into a tree of types.
 
--   keep responsibilities small
--   avoid tight coupling
--   design systems that are easier to extend
+Vehicles are a classic example.
 
-Many of the examples used to teach these ideas rely on **inheritance**.
-
-Imagine modeling vehicles.
+At first the model feels natural.
 
 ``` python
 class Vehicle:
@@ -30,67 +26,75 @@ class ElectricCar(Car):
     ...
 ```
 
-At first, this feels clean.
+Nothing appears wrong.
 
 An electric car *is a* car.\
 A car *is a* vehicle.
 
-The hierarchy seems to reflect reality.
+The hierarchy mirrors how we categorize objects in the real world.
 
-For a small system, this works perfectly.
+For small systems, this approach works perfectly well.
 
-But real systems rarely stay small.
+The problems appear later -- once the system begins to grow.
 
 ---
 
-## When the Model Starts Breaking
+## When the Model Stops Scaling
 
-Cars differ in more than one way.
+Vehicles do not vary along a single dimension.
 
-They vary by:
+They differ by several independent factors:
 
 -   vehicle type (car, truck)
 -   energy source (gas, electric, hybrid)
 -   driving capability (manual, autonomous)
 
-Inheritance forces these independent dimensions into a single tree.
-
-Soon the hierarchy grows into something like this:
+A naive inheritance model tries to encode these dimensions into a single
+hierarchy.
 
 ``` text
 Vehicle
 |-- Car
 |   |-- GasCar
 |   |-- ElectricCar
-|   |-- HybridCar
-|   `-- AutonomousCar
+|   `-- HybridCar
 `-- Truck
     |-- GasTruck
     `-- ElectricTruck
 ```
 
-And this is only the beginning.
+The structure still seems manageable.
 
-What about an **autonomous electric truck**?\
-Or a **hybrid delivery van**?
+Then new requirements appear.
+
+What about autonomous vehicles?
+
+``` text
+AutonomousGasCar
+AutonomousElectricCar
+AutonomousHybridTruck
+```
 
 Each new capability multiplies the number of subclasses.
 
-The model becomes fragile.
-
-Small changes in one class ripple across the hierarchy.
-
----
-
-## The Key Insight
+What started as a tidy hierarchy gradually turns into a growing taxonomy
+of types. Small changes ripple through the tree. The model becomes
+fragile.
 
 The problem is not object-oriented programming.
 
 The problem is the model.
 
+The system is trying to represent multiple independent dimensions of
+change using a single inheritance tree.
+
+---
+
+## Real Vehicles Are Assemblies
+
 Real vehicles are not defined by inheritance.
 
-They are **assembled from parts**.
+They are built from components.
 
 A car contains:
 
@@ -99,18 +103,19 @@ A car contains:
 -   braking systems
 -   steering systems
 
-These parts evolve independently.
+Each of these components evolves independently.
 
-An electric motor can power both a car and a truck.
+The same electric motor can power multiple vehicles. An autonomous
+driving system can be installed in different models.
 
-This is where **composition** becomes a better model.
+This structure is better expressed using **composition**.
 
 ---
 
-## Modeling Cars with Composition
+## Modeling the Vehicle as Components
 
-Instead of encoding the engine type into the class name, we make it a
-dependency.
+Instead of encoding the engine type in the class hierarchy, the engine
+becomes a dependency.
 
 ``` python
 class Car:
@@ -121,17 +126,11 @@ class Car:
         self.engine.start()
 ```
 
-Now the car no longer cares whether the engine is gas, electric, or
-hybrid.
+The car no longer cares whether the engine is gas, electric, or hybrid.
 
-It only cares that the engine knows how to **start**.
+It only cares about behavior.
 
----
-
-## Making Capabilities Explicit
-
-To make this clearer, we can define a contract describing what an engine
-must do.
+To make that behavior explicit, we define a contract.
 
 ``` python
 from typing import Protocol
@@ -140,7 +139,7 @@ class Engine(Protocol):
     def start(self) -> None: ...
 ```
 
-Now we can implement different engines.
+Concrete implementations provide the details.
 
 ``` python
 class GasEngine:
@@ -156,15 +155,20 @@ class HybridEngine:
         print("Hybrid system starting")
 ```
 
-The `Car` class works with any of them.
+Now the vehicle logic remains unchanged regardless of the engine used.
+
+``` python
+car = Car(engine=ElectricEngine())
+car.start()
+```
+
+The hierarchy disappears. The system becomes an assembly of components.
 
 ---
 
-## Explicit Dependencies
+## Making Dependencies Explicit
 
-Another benefit appears here.
-
-Poor designs hide dependencies inside classes.
+Poor designs often hide dependencies inside implementation details.
 
 ``` python
 class Car:
@@ -173,31 +177,32 @@ class Car:
         engine.start()
 ```
 
-Now the car is permanently tied to a gas engine.
+In this design the dependency is implicit and fixed.
 
-Modern systems prefer **explicit dependencies**.
+By passing dependencies explicitly, the structure of the system becomes
+clear.
 
 ``` python
 car = Car(engine=ElectricEngine())
-car.start()
 ```
 
-The dependency becomes visible.
+This approach makes systems easier to test, configure, and evolve.
 
-This makes systems easier to:
+It also reflects one of the most important ideas from the SOLID
+principles: **Dependency Inversion**.
 
--   test
--   configure
--   replace
--   understand
+High-level logic should not depend on concrete implementations.\
+Both should depend on abstractions.
+
+The `Car` represents high-level behavior.\
+The engine implementations are replaceable details.
 
 ---
 
 ## Replaceable Components
 
-With composition, adding new technology becomes easy.
-
-Imagine a new hydrogen engine.
+Once dependencies are expressed as abstractions, new technologies can be
+introduced without modifying the existing logic.
 
 ``` python
 class HydrogenEngine:
@@ -205,24 +210,90 @@ class HydrogenEngine:
         print("Hydrogen engine starting")
 ```
 
-Nothing in the `Car` class needs to change.
+Nothing in the vehicle model needs to change.
 
-The car logic stays stable while new components evolve around it.
+``` python
+car = Car(engine=HydrogenEngine())
+```
 
-This is the same principle that modern architectures apply to:
-
--   databases
--   APIs
--   message queues
--   external services
-
-The **core logic stays stable** while infrastructure evolves.
+The system evolves by **adding components**, not rewriting existing
+code.
 
 ---
 
-## A Useful Rule
+## The Same Idea Appears in Architecture
 
-A helpful rule of thumb is:
+The same principle applies beyond classes.
+
+Modern systems rarely depend directly on infrastructure.
+
+Instead they depend on boundaries.
+
+``` text
+Application Logic
+        |
+        v
+   Repository Interface
+        |
+        v
+PostgresRepository / DynamoRepository
+```
+
+Just as a vehicle can switch engines, an application can switch
+databases.
+
+Architectural styles such as:
+
+-   Clean Architecture
+-   Hexagonal Architecture
+-   Ports and Adapters
+
+all follow the same idea.
+
+The core logic depends only on stable abstractions.\
+Volatile technologies live at the edges.
+
+---
+
+## Architecture Is About Managing Change
+
+Most architectural decisions are not about correctness.
+
+They are about **change over time**.
+
+Some parts of a system change frequently:
+
+-   databases
+-   APIs
+-   messaging systems
+-   infrastructure
+
+Other parts change slowly:
+
+-   business rules
+-   domain models
+-   core algorithms
+
+Good architecture separates these two worlds.
+
+``` text
+        Stable Core
+            ^
+       Interfaces / Contracts
+            ^
+     Replaceable Components
+```
+
+The stable parts of the system should not depend on volatile
+infrastructure.
+
+Instead, unstable components attach through clear boundaries.
+
+---
+
+## Composition Over Inheritance
+
+A common guideline in software design is:
 
 ``` text
 Prefer composition over inheritance
@@ -232,37 +303,34 @@ Inheritance models **is-a relationships**.
 
 Composition models **has-a relationships**.
 
-Cars **have engines**.\
-They are not **a type of engine**.
+Cars have engines.\
+They are not types of engines.
 
----
-
-## Why This Matters
-
-Composition leads to systems that are:
-
--   easier to extend
--   easier to test
--   easier to reason about
--   easier to maintain
-
-Instead of growing fragile hierarchies, the system grows by **adding
-components**.
+When systems grow, modeling behavior as a composition of independent
+components tends to produce more adaptable designs.
 
 ---
 
 ## Closing Thoughts
 
-Modern architecture focuses less on designing perfect class hierarchies
-and more on **managing change**.
+Software systems exist in environments that constantly change.
 
-Systems last longer when their core logic is protected from constantly
-evolving infrastructure.
+New databases appear.\
+New frameworks replace old ones.\
+Infrastructure evolves.
 
-Just like real vehicles, software systems become more robust when they
-are built from **replaceable parts**.
+Good architecture does not attempt to eliminate dependencies.
+
+Instead, it places them where change is safest.
+
+Just like real vehicles, resilient software systems are built from
+replaceable parts.
 
 Protect the core.\
-Make dependencies explicit.\
-Compose systems from interchangeable components.
+Define clear boundaries.\
+Let the edges evolve.
+
+The center of the system should change slowly.
+
+Everything else should be free to move.
 > Build software so the center stays stable while the outside keeps moving.
