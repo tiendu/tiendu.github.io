@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "From SOLID to Modern Architecture: Boundaries, Composition, and Replaceable Systems"
+title: "From SOLID to Modern Architecture: Composition and Replaceable Systems"
 categories: ["Automation, Systems & Engineering"]
 date: 2026-03-08
 ---
