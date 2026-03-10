@@ -137,7 +137,7 @@ Certain patterns appear repeatedly in real sed scripts.
 sed supports simple loops using labels and conditional branching.
 
 ```bash
-sed ':a;s/foo/bar/;ta'
+sed ':a; s/foo/bar/; ta'
 ```
 
 Breakdown:
@@ -174,7 +174,7 @@ bar bar bar
 Classic example:
 
 ```bash
-sed '1!G;h;$!d'
+sed '1!G; h; $!d'
 ```
 
 Input:
@@ -230,7 +230,7 @@ The final five lines remain buffered and are never printed.
 Example: merge lines ending with a continuation character.
 
 ```bash
-sed ':a;/\\$/N;s/\\\n//;ta'
+sed ':a; /\\$/N; s/\\\n//; ta'
 ```
 
 Input:
@@ -479,9 +479,61 @@ matches the longest possible sequence.
 
 ### Overly complex sed
 
-sed excels at stream transformations.
+sed excels at simple stream transformations.
 
-When scripts become deeply nested, awk or a scripting language is usually easier to maintain.
+However, once scripts rely heavily on multi-line buffers and control flow, readability drops quickly.
+
+For example, this sed command prints everything except the last five lines of a file:
+
+```bash
+sed -n -e ':a; 1,5!{P; N; D}; N; ba' text.txt
+```
+
+The logic is correct, but difficult to understand at first glance.
+
+The same task expressed in awk is often clearer:
+
+```bash
+awk '
+{
+    buffer[NR % 6] = $0
+    if (NR > 5)
+        print buffer[(NR - 5) % 6]
+}
+' text.txt
+```
+
+Explanation:
+
+```text
+NR % 6      → store lines in a circular buffer
+NR > 5      → wait until at least five lines have been read
+(NR - 5)%6  → print the line that is five lines behind
+```
+
+Why `% 6`?
+
+To print everything except the last five lines, the program must keep five lines of look-ahead.  
+The buffer therefore needs **N + 1 slots**.
+
+```text
+skip last N lines → buffer size = N + 1
+```
+
+So for five lines:
+
+```text
+buffer size = 6
+```
+
+This creates a circular buffer that always holds the most recent lines while printing older ones safely outside the tail.
+
+Both commands solve the same problem.
+
+The sed version relies on pattern space manipulation and cycle control.  
+The awk version expresses the logic directly using state and indexing.
+
+When transformations become stateful or algorithmic, awk is usually easier to read and maintain.
 
 ---
 
