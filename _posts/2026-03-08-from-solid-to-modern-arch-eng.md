@@ -5,38 +5,20 @@ categories: ["Automation, Systems & Engineering"]
 date: 2026-03-08
 ---
 
-When many developers first learn software design, they encounter **SOLID**.
+When developers first learn software design, they often encounter
+**SOLID**.
 
-It is useful. It teaches cleaner object-oriented thinking and helps avoid messy code.
+SOLID teaches useful habits:
 
-But modern systems rarely look like the examples used to teach SOLID.
+-   keep responsibilities small
+-   avoid tight coupling
+-   design systems that are easier to extend
 
-Today, many real systems are built from:
+Many of the examples used to teach these ideas rely on **inheritance**.
 
-- services and APIs
-- queues and databases
-- small components
-- infrastructure that changes often
+Imagine modeling vehicles.
 
-The main architectural problem is no longer:
-
-> How do we design a perfect class hierarchy?
-
-The modern question is:
-
-> How do we keep the core logic clean while everything around it keeps changing?
-
-That shift is the heart of modern architecture.
-
----
-
-## Why Classical Inheritance Became Less Important
-
-Traditional object-oriented design often starts with inheritance.
-
-Example:
-
-```python
+``` python
 class Vehicle:
     def start(self):
         ...
@@ -48,345 +30,239 @@ class ElectricCar(Car):
     ...
 ```
 
-At first, this feels neat and logical.
+At first, this feels clean.
 
-But systems rarely stay small.
+An electric car *is a* car.\
+A car *is a* vehicle.
 
-Soon the model grows into something like this:
+The hierarchy seems to reflect reality.
 
-```text
+For a small system, this works perfectly.
+
+But real systems rarely stay small.
+
+---
+
+## When the Model Starts Breaking
+
+Cars differ in more than one way.
+
+They vary by:
+
+-   vehicle type (car, truck)
+-   energy source (gas, electric, hybrid)
+-   driving capability (manual, autonomous)
+
+Inheritance forces these independent dimensions into a single tree.
+
+Soon the hierarchy grows into something like this:
+
+``` text
 Vehicle
 |-- Car
+|   |-- GasCar
 |   |-- ElectricCar
 |   |-- HybridCar
 |   `-- AutonomousCar
 `-- Truck
-    |-- ElectricTruck
-    `-- HybridTruck
+    |-- GasTruck
+    `-- ElectricTruck
 ```
 
-Now every new feature pushes more pressure into the hierarchy.
+And this is only the beginning.
 
-This creates familiar problems:
+What about an **autonomous electric truck**?\
+Or a **hybrid delivery van**?
 
-- too many layers
-- fragile parent-child relationships
-- changes in one place causing surprises elsewhere
-- hard-to-test objects
-- confusing reuse
+Each new capability multiplies the number of subclasses.
 
-That is why modern design usually prefers a different rule:
+The model becomes fragile.
 
-```text
-Composition over inheritance
-```
-
-Instead of building family trees, we assemble behavior from smaller parts.
+Small changes in one class ripple across the hierarchy.
 
 ---
 
-## The Real Problem in Large Systems
+## The Key Insight
 
-Inheritance is not the main thing that hurts large systems.
+The problem is not object-oriented programming.
 
-The bigger problem is when **business logic becomes tightly coupled to infrastructure**.
+The problem is the model.
 
-Example:
+Real vehicles are not defined by inheritance.
 
-```python
-class PaymentService:
-    def charge(self, user_id: str, amount: int) -> str:
-        db = PostgresDB()
-        gateway = StripeGateway()
-        status = gateway.charge(user_id, amount)
-        db.save_payment(user_id, amount, status)
-        return status
-```
+They are **assembled from parts**.
 
-This works, but the core logic is now tangled with:
+A car contains:
 
-- a specific database
-- a specific payment provider
+-   an engine or motor
+-   a transmission
+-   braking systems
+-   steering systems
 
-If you switch Stripe to another gateway, or Postgres to another store, the service itself must change.
+These parts evolve independently.
 
-That is the architectural smell modern systems try to avoid.
+An electric motor can power both a car and a truck.
+
+This is where **composition** becomes a better model.
 
 ---
 
-## The Modern Mental Model: Core and Edge
+## Modeling Cars with Composition
 
-A much more useful mental model is this:
+Instead of encoding the engine type into the class name, we make it a
+dependency.
 
-```text
-CORE
-business rules
-domain logic
-use cases
-
-EDGE
-database
-HTTP
-filesystem
-queue
-external APIs
-frameworks
-```
-
-The core contains the meaning of the system.
-
-The edge contains the mechanisms used to talk to the outside world.
-
-A healthy architecture tries to protect the core from the edge.
-
-In one sentence:
-
-> The core should not care whether the outside world is Postgres, S3, FastAPI, Kafka, or a shell script.
-
----
-
-## Composition: Building From Parts
-
-Instead of subclassing to add behavior, we pass behavior in.
-
-Example:
-
-```python
+``` python
 class Car:
     def __init__(self, engine):
         self.engine = engine
+
+    def start(self):
+        self.engine.start()
 ```
 
-Now the car does not need a large inheritance tree.
+Now the car no longer cares whether the engine is gas, electric, or
+hybrid.
 
-We can assemble it with different engines:
-
-```python
-Car(ElectricEngine())
-Car(GasEngine())
-Car(HybridEngine())
-```
-
-The car depends on capability, not ancestry.
+It only cares that the engine knows how to **start**.
 
 ---
 
-## Contracts Instead of Parent Classes
+## Making Capabilities Explicit
 
-Modern systems still need structure. They just express it differently.
+To make this clearer, we can define a contract describing what an engine
+must do.
 
-Instead of forcing everything into a base class, we often define a **contract**.
-
-In Python, `Protocol` is a clean way to express that.
-
-```python
+``` python
 from typing import Protocol
 
-class Notifier(Protocol):
-    def send(self, message: str) -> None: ...
+class Engine(Protocol):
+    def start(self) -> None: ...
 ```
 
-Any object with a compatible `send()` method can be used.
+Now we can implement different engines.
 
-Example adapters:
+``` python
+class GasEngine:
+    def start(self):
+        print("Gas engine starting")
 
-```python
-class EmailNotifier:
-    def send(self, message: str) -> None:
-        print("Sending email:", message)
+class ElectricEngine:
+    def start(self):
+        print("Electric motor starting")
 
-class SlackNotifier:
-    def send(self, message: str) -> None:
-        print("Sending Slack message:", message)
+class HybridEngine:
+    def start(self):
+        print("Hybrid system starting")
 ```
 
-The system depends on what an object can do, not what it inherits from.
+The `Car` class works with any of them.
 
 ---
 
-## Dependency Injection
+## Explicit Dependencies
 
-Once contracts exist, dependencies can be passed into the system from the outside.
+Another benefit appears here.
 
-Instead of doing this:
+Poor designs hide dependencies inside classes.
 
-```python
-class SignupUser:
-    def __init__(self):
-        self.notifier = EmailNotifier()
+``` python
+class Car:
+    def start(self):
+        engine = GasEngine()
+        engine.start()
 ```
 
-We do this:
+Now the car is permanently tied to a gas engine.
 
-```python
-class SignupUser:
-    def __init__(self, notifier: Notifier):
-        self.notifier = notifier
+Modern systems prefer **explicit dependencies**.
+
+``` python
+car = Car(engine=ElectricEngine())
+car.start()
 ```
 
-Now the dependency is explicit.
+The dependency becomes visible.
 
-Benefits:
+This makes systems easier to:
 
-- easier testing
-- easier replacement
-- clearer wiring
+-   test
+-   configure
+-   replace
+-   understand
 
 ---
 
-## Ports and Adapters
+## Replaceable Components
 
-A common modern pattern is **Ports and Adapters**.
+With composition, adding new technology becomes easy.
 
-Structure:
+Imagine a new hydrogen engine.
 
-```text
-core logic
-   ^
-ports (interfaces)
-   ^
-adapters (implementations)
+``` python
+class HydrogenEngine:
+    def start(self):
+        print("Hydrogen engine starting")
 ```
 
-Example:
+Nothing in the `Car` class needs to change.
 
-```text
-SignupUser
-   ^
-Notifier
-   ^
-EmailNotifier / SlackNotifier
-```
+The car logic stays stable while new components evolve around it.
 
-The core says what it needs.  
-Adapters implement it.
+This is the same principle that modern architectures apply to:
+
+-   databases
+-   APIs
+-   message queues
+-   external services
+
+The **core logic stays stable** while infrastructure evolves.
 
 ---
 
-## A Small End-to-End Example
+## A Useful Rule
 
-```python
-from dataclasses import dataclass
-from typing import Protocol
+A helpful rule of thumb is:
 
-class Notifier(Protocol):
-    def send(self, message: str) -> None: ...
-
-@dataclass
-class SignupUser:
-    notifier: Notifier
-
-    def execute(self, email: str) -> None:
-        self.notifier.send(f"Welcome {email}")
+``` text
+Prefer composition over inheritance
 ```
 
-Adapter:
+Inheritance models **is-a relationships**.
 
-```python
-class EmailNotifier:
-    def send(self, message: str) -> None:
-        print("Sending email:", message)
-```
+Composition models **has-a relationships**.
 
-Wiring:
-
-```python
-use_case = SignupUser(notifier=EmailNotifier())
-use_case.execute("user@example.com")
-```
+Cars **have engines**.\
+They are not **a type of engine**.
 
 ---
 
-## Functional Core, Imperative Shell
+## Why This Matters
 
-Another modern pattern separates **pure logic from side effects**.
+Composition leads to systems that are:
 
-```text
-functional core
-pure logic
-deterministic
+-   easier to extend
+-   easier to test
+-   easier to reason about
+-   easier to maintain
 
-imperative shell
-database
-network
-filesystem
-framework
-```
-
-Example:
-
-```python
-def calculate_discount(price: float, rate: float) -> float:
-    return price * (1 - rate)
-```
-
-Pure functions are easier to test and reason about.
-
----
-
-## Typical Modern Project Layout
-
-```text
-app/
-|-- domain/
-|-- services/
-|-- ports/
-|-- adapters/
-|-- schemas/
-`-- entrypoints/
-```
-
-The key idea:
-
-- core logic inside
-- infrastructure outside
-- dependencies pointing inward
-
----
-
-## Three Practical Rules
-
-If the theory feels hard to remember, reduce modern architecture to three rules.
-
-### 1. Keep the core small
-
-Business logic should stay simple.
-
-### 2. Separate policy from mechanism
-
-Rules should not depend directly on databases or frameworks.
-
-### 3. Make the edges replaceable
-
-Adapters should be swappable.
-
----
-
-## Easy Way to Remember
-
-A simple memory shortcut:
-
-```text
-Protect the core.
-```
-
-Frameworks, APIs, and infrastructure will change.
-
-Your core logic should survive those changes.
+Instead of growing fragile hierarchies, the system grows by **adding
+components**.
 
 ---
 
 ## Closing Thoughts
 
-Modern architecture focuses less on class hierarchies and more on **managing change**.
+Modern architecture focuses less on designing perfect class hierarchies
+and more on **managing change**.
 
-Good systems are the ones where:
+Systems last longer when their core logic is protected from constantly
+evolving infrastructure.
 
-- business logic stays clear
-- dependencies stay explicit
-- infrastructure stays replaceable
-- edge changes do not break the core
+Just like real vehicles, software systems become more robust when they
+are built from **replaceable parts**.
 
-In short:
-
+Protect the core.\
+Make dependencies explicit.\
+Compose systems from interchangeable components.
 > Build software so the center stays stable while the outside keeps moving.
