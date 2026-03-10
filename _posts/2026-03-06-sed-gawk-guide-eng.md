@@ -425,19 +425,49 @@ awk '$NF > 1000' access.log
 
 ## sed and awk Together
 
-Example debugging pipeline:
+In practice these tools are often chained so that each stage performs a small transformation.
 
-```bash
-grep ERROR application.log \
-| awk '{print $5}' \
-| sort \
-| uniq -c \
-| sort -nr
+Example: count log entries per minute.
+
+Input log lines may look like:
+
+```text
+[2026-03-06 14:12:33] INFO request completed
+[2026-03-06 14:12:40] ERROR timeout
 ```
 
-Each stage performs a small transformation.
+Pipeline:
 
-Complex behaviour emerges from chaining simple tools.
+```bash
+sed 's/^\[\(....-..-.. ..:..\):..]/\1/' application.log \
+| awk '{count[$1" "$2]++} END {for (t in count) print t, count[t]}' \
+| sort
+```
+
+Pipeline logic:
+
+```text
+sed  → remove seconds from timestamp
+awk  → count entries per minute
+sort → order results chronologically
+```
+
+Example output:
+
+```text
+2026-03-06 14:12  34
+2026-03-06 14:13  27
+2026-03-06 14:14  31
+```
+
+Here the roles are clear:
+
+```
+sed  → normalize text structure
+awk  → perform aggregation
+```
+
+Each stage performs a single transformation, making the pipeline easy to reason about.
 
 ---
 
