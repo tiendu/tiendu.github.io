@@ -1306,9 +1306,17 @@ awk -v k=11 'NR%4==1 && /^@/ {getline seq; for (i=1; i<=length(seq)+1-k; i++) {s
 
 * Sort sequences based on length
 
-  * Fasta: `awk 'BEGIN {PROCINFO["sorted_in"]="@ind_num_desc"} /^>/ {getline seq; a[length(seq)][$0 "\n" seq]} END {for (i in a) {for (j in a[i]) print j}}'`
+  * Fasta: 
 
-  * Fastq: `awk 'BEGIN {PROCINFO["sorted_in"]="@ind_num_desc"} NR%4 && /^@/ {getline seq; getline id; getline qual; a[length(seq)][$0 "\n" seq "\n" id "\n" qual]} END {for (i in a) {for (j in a[i]) print j}}'`
+  ```bash
+  awk 'BEGIN {PROCINFO["sorted_in"]="@ind_num_desc"} /^>/ {getline seq; a[length(seq)][$0 "\n" seq]} END {for (i in a) {for (j in a[i]) print j}}'
+  ```
+
+  * Fastq:
+
+  ```bash
+  awk 'BEGIN {PROCINFO["sorted_in"]="@ind_num_desc"} NR%4 && /^@/ {getline seq; getline id; getline qual; a[length(seq)][$0 "\n" seq "\n" id "\n" qual]} END {for (i in a) {for (j in a[i]) print j}}'
+  ```
 
 * [Pebblescout](https://pebblescout.ncbi.nlm.nih.gov/) for quick sequence scan.
 
