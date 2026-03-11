@@ -140,8 +140,9 @@ awk -v n=4 '{split(FILENAME, file, "."); count++} (NR%4==1) {a[count]=$0; for (i
 
 * Convert fastq to unmapped SAM and BAM.
 
-`awk '{ORS=(NR%4==0 ? "\n" : "\t")} 1' <(zcat file.fq.gz) | awk 'BEGIN {FS=OFS="\t"} {match($1, /@(.*)[ |[:alpha:]]/, a); gsub(/^@/, "", $1); print $1, length($2), "*\t0\t0\t*\t*\t0\t0", $2, $4, "RG:Z:" a[1]}' | samtools view -Sb - > file.bam
-`
+```bash
+awk '{ORS=(NR%4==0 ? "\n" : "\t")} 1' <(zcat file.fq.gz) | awk 'BEGIN {FS=OFS="\t"} {match($1, /@(.*)[ |[:alpha:]]/, a); gsub(/^@/, "", $1); print $1, length($2), "*\t0\t0\t*\t*\t0\t0", $2, $4, "RG:Z:" a[1]}' | samtools view -Sb - > file.bam
+```
 
 **Use _xargs_ for parallel processing.**
 
@@ -203,7 +204,9 @@ awk 'BEGIN {OFS="\n"; count=0} /^>/ {getline seq; match($0, />(.+)* /, name); if
 
 * Rename sequence header of fasta with leading power of 10.
 
-`awk '/^>/ {getline seq; a[count++][$0]=seq} END {label=10^length(count); for (i in a) for (j in a[i]) print ">"label+i"\n"a[i][j]}' file.fa` 
+```bash
+awk '/^>/ {getline seq; a[count++][$0]=seq} END {label=10^length(count); for (i in a) for (j in a[i]) print ">"label+i"\n"a[i][j]}' file.fa
+```
 
 * Rename sequence header of fasta with leading power of 10 and create a table of indices.
 
@@ -701,7 +704,19 @@ awk -v id="" -v roll=0 '$0 ~ "^>" id {getline seq; if (roll > length(seq)) {exit
 * Convert csv to tsv.
 
 ```bash
-awk 'BEGIN {FPAT="([^,]*)|(\"[^\"]+\")"; OFS="\t"} {for (i=1; i<=NF; ++i) {if (substr($i, 1, 1)=="\"") {$i=substr($i, 2, length($i)-2)}}; for (i=1; i<=NF; i++) printf "%s%s", $i, (i==NF ? "\n" : OFS)}' file.csv
+awk 'BEGIN {
+  FPAT = "([^,]*)|(\"([^\"]|\"\")*\")"
+  OFS = "\t"
+}
+{
+  for (i = 1; i <= NF; ++i) {
+    if ($i ~ /^"/) {
+      $i = substr($i, 2, length($i) - 2)
+      gsub(/""/, "\"", $i)
+    }
+  }
+  print
+}'
 ```
 
 * Convert tsv to csv.
@@ -1223,6 +1238,10 @@ awk -v k=6 -v cutoff=1 'function quasipalindrome(s) {c["A"]="T"; c["T"]="A"; c["
 awk '{a[i++]=$0} END {while (i--) print a[i]}' file
 ```
 
+```bash
+sed '1!G; h; $!d'
+```
+
 * Find longest non-repeated substring
 
 ```bash
@@ -1279,7 +1298,9 @@ echo "<Google Drive shared link>" | sed 's|/file/d/|/uc?id=|' | sed 's|/view.*||
 
 * Filter sequences using its k-mer profile
 
- `awk -v k=11 'NR%4==1 && /^@/ {getline seq; for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); a[s]++}; getline id;  getline qual; b[seq]=$0 "\n" seq "\n" id "\n" qual} END {for (i in a) {if (a[i]>1) {for (j in b) {if (index(j, i)>0) {print b[j]; delete b[j]}}}}}'`
+```bash
+awk -v k=11 'NR%4==1 && /^@/ {getline seq; for (i=1; i<=length(seq)+1-k; i++) {s=substr(seq, i, k); a[s]++}; getline id;  getline qual; b[seq]=$0 "\n" seq "\n" id "\n" qual} END {for (i in a) {if (a[i]>1) {for (j in b) {if (index(j, i)>0) {print b[j]; delete b[j]}}}}}'
+```
 
 * Sort sequences based on length
 
