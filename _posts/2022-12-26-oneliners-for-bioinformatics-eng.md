@@ -130,7 +130,9 @@ sed -n '1~4s/^@/>/p; 2~4p' input.fastq > output.fasta
 sed -e '/^@/!d; s//>/; N' input.fastq > output.fasta
 ```
 
-`awk 'NR%4==1 {sub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta` 
+```bash
+awk 'NR%4==1 {sub(/^@/, ">", $0); print; getline; print}' input.fastq > output.fasta
+```
 
 * Split a fastq file into multiple files with approximately equal number of sequences. Here, I split the file into 4 files.
 
