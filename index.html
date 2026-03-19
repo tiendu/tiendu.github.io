@@ -4,7 +4,6 @@ layout: default
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playpen+Sans:wght@400;500;600&family=Noto+Sans+Mono:wght@400;500;700&family=Bungee+Shade&display=swap" rel="stylesheet">
-  
 <style>
   :root {
     --bg-terminal: #303446;
@@ -120,3 +119,54 @@ layout: default
     100% { opacity: 1; }
   }
 </style>
+<div class="landing-wrapper">
+  <div class="landing-greeting" id="greeting">
+    Xin chào! Cảm ơn bạn đã ghé thăm!
+  </div>
+
+  <div class="terminal-container">
+    <div class="menu-bar">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+
+    <div class="typeme">
+      <span class="text-secondary">coffee@fridge</span>
+      <span class="text-background"> ~ </span>
+      <span class="cursor">$ </span>me -h
+    </div>
+
+    <section class="output">
+      <p>I'm Tien, a bioinformatics engineer passionate about genomics, coding, and a good cup of coffee ☕.</p>
+      <p>Now looking for contract-based or async collaborations.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const greetings = [
+      "Hey there! Thanks for stopping by!",
+      "Hallo! Danke, dass du vorbeischaust!",
+      "Bonjour ! Merci de votre visite !",
+      "Hola! ¡Gracias por visitar!",
+      "Привет! Спасибо за визит!",
+      "Selamat datang! Terima kasih telah berkunjung!",
+      "안녕하세요! 방문해 주셔서 감사합니다!",
+      "こんにちは！ご訪問ありがとうございます！",
+      "你好！感谢你的到访！",
+      "Xin chào! Cảm ơn bạn đã ghé thăm!"
+    ];
+
+    const greetEl = document.getElementById("greeting");
+    let gi = 0;
+
+    function rotate() {
+      gi = (gi + 1) % greetings.length;
+      greetEl.textContent = greetings[gi];
+    }
+
+    setInterval(rotate, 3000);
+  })();
+</script>
