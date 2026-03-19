@@ -16,6 +16,8 @@ paginate: 5
 
 # Build settings
 theme: minima
+minima:
+  include_custom_head: true
 # remote_theme: pages-themes/midnight@v0.2.0
 plugins:
   - jekyll-feed
