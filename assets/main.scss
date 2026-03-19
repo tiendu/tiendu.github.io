@@ -5,13 +5,14 @@
 ======================================= */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playpen+Sans:wght@400;500;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Bungee+Shade&display=swap');
 @import "minima";
 
 /* =======================================
    Variables
 ======================================= */
-$base-font-family: "Noto Sans", sans-serif;
+$base-font-family: "Playpen Sans", sans-serif;
 $code-font-family: "Noto Sans Mono", monospace;
 $spacing-unit: 28px;
 
@@ -33,9 +34,10 @@ body {
   background-color: $background-color;
   color: $text-color;
   font-family: $base-font-family;
-  font-size: $base-font-size;
+  font-size: 17px;
   font-weight: $base-font-weight;
-  line-height: 1.6;
+  line-height: 1.7;
+  letter-spacing: 0.2px;
   margin: 0;
   padding: 0;
 }
