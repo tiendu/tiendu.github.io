@@ -2,7 +2,7 @@
 layout: post
 title: "Podman Container Builds: Simple vs Multi-Stage"
 date: 2026-04-09
-categories: ["DevOps"]
+categories: ["Automation, Systems & Engineering"]
 ---
 
 # Podman container builds: simple vs multi-stage
