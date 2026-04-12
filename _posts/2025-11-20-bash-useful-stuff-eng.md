@@ -21,18 +21,30 @@ A condensed, practical Bash reference for day-to-day scripting. Bash-specific wh
 
 ## Pipes & Redirection
 
-| Pattern | Meaning | Example |
-|--------|---------|---------|
-| `cmd1 | cmd2` | pipe stdout | `ls | wc -l` |
-| `cmd1 |& cmd2` | pipe stdout+stderr (Bash) | `make |& tee log` |
-| `>` | stdout → file (overwrite) | `echo hi > x` |
-| `>>` | stdout → file (append) | `echo hi >> x` |
-| `<` | stdin ← file | `wc -l < x` |
-| `2>` | stderr → file | `cmd 2> err` |
-| `&>` | stdout+stderr → file (Bash) | `cmd &> all.log` |
-| `2>&1` | stderr → stdout | `cmd 2>&1` |
-| `<<< "s"` | here-string (Bash) | `grep hi <<< "$t"` |
-| `<<EOF` | heredoc | `cat <<EOF` |
+| Pattern | Meaning | Example (command → result) |
+|--------|---------|-----------------------------|
+| `cmd1 | cmd2` | pipe stdout | `echo -e "a\nb" | wc -l` → `2` |
+| `cmd1 |& cmd2` | pipe stdout+stderr (Bash) | `ls ok missing |& wc -l` → counts both output + error lines |
+| `>` | stdout → file (overwrite) | `echo hi > x` → file `x` contains `hi\n` |
+| `>>` | stdout → file (append) | `echo hi >> x` → append `hi\n` to `x` |
+| `1>` | stdout (explicit) | `echo hi 1> x` → same as `>` |
+| `1>>` | stdout append | `echo hi 1>> x` → same as `>>` |
+| `<` | stdin ← file | `wc -l < x` → prints line count of `x` |
+| `0<` | stdin (explicit) | `wc -l 0< x` → same as `<` |
+| `2>` | stderr → file | `ls missing 2> err` → error saved to `err`, nothing on screen |
+| `2>>` | stderr append | `ls missing 2>> err` → append error to `err` |
+| `&>` | stdout+stderr → file (Bash) | `ls ok missing &> all.log` → both output + error in file |
+| `&>>` | stdout+stderr append (Bash) | `cmd &>> all.log` → append both to file |
+| `> file 2>&1` | stdout+stderr → file (portable) | `ls ok missing > all.log 2>&1` → same as `&>` |
+| `2>&1` | stderr → stdout | `ls missing 2>&1` → error printed via stdout |
+| `1>&2` | stdout → stderr | `echo hi 1>&2` → `hi` goes to stderr |
+| `<<< "s"` | here-string (Bash) | `wc -c <<< "abc"` → `4` (includes newline) |
+| `<<EOF` | heredoc | `cat <<EOF` → type lines, end with `EOF`, printed back |
+| `tee` | pipe + write to file | `echo hi | tee x` → prints `hi` + writes to `x` |
+| `tee -a` | append while piping | `echo hi | tee -a x` → append to `x` |
+| `>|` | force overwrite | `echo hi >| x` → overwrite even if noclobber |
+| `<&-` | close stdin | `cmd <&-` → stdin closed (immediate EOF) |
+| `>&-` | close stdout | `echo hi >&-` → error: bad file descriptor |
 
 ---
 
