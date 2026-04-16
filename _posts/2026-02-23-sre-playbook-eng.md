@@ -5,31 +5,33 @@ categories: ["Automation, Systems & Engineering"]
 date: 2026-02-23
 ---
 
+Most production issues described as "flaky" are not truly random. They are systems crossing a boundary that has not been measured yet.
+
 Intermittent failures are rarely random.
 
-Before investigating, ask a more precise question:
+Before investigating, ask a more precise question:  
 Is this truly intermittent, or deterministic under conditions we have not yet identified?
 
-When something fails "sometimes", a boundary is usually involved.
+When something fails "sometimes", a boundary is usually involved.  
 Systems change behavior when limits are crossed. The task is to identify the constraint.
 
 ---
 
-## Core Assumption
+## Working Model
 
 Treat every intermittent failure as a threshold event.
 
 Typical boundaries:
 
--   CPU scheduling
--   Memory limits
--   File descriptor ceilings
--   I/O throughput caps
--   cgroup enforcement
--   Network variability
--   Execution order differences
+- CPU scheduling
+- Memory limits
+- File descriptor ceilings
+- I/O throughput caps
+- cgroup enforcement
+- Network variability
+- Execution-order differences
 
-Do not start with logs. Start with limits.
+Do not start only with logs. Start with limits, then use logs to confirm where the boundary was crossed.
 
 ---
 
@@ -41,14 +43,14 @@ Fails every time.
 
 Common causes:
 
--   Bad configuration
--   Missing shared object
--   Schema mismatch
--   Version drift
+- Bad configuration
+- Missing shared object
+- Schema mismatch
+- Version drift
 
 Basic inspection:
 
-``` bash
+```bash
 ldd binary
 strace -f
 journalctl -xe
@@ -63,20 +65,20 @@ Fails depending on execution order or runtime state.
 
 Common triggers:
 
--   Parallel builds
--   Thread scheduling
--   Race conditions
--   Cold vs warm cache
+- Parallel builds
+- Thread scheduling
+- Race conditions
+- Cold vs warm cache
 
 Remove parallelism:
 
-``` bash
+```bash
 MAKEFLAGS="-j1"
 ```
 
-Test stack boundary:
+Probe the stack boundary:
 
-``` bash
+```bash
 ulimit -s 4096
 ```
 
@@ -86,18 +88,18 @@ If failure frequency changes, timing or stack depth is involved.
 
 ### Resource Pressure
 
-Appears under load or long runtime.
+Appears under load or after long runtime.
 
 Common causes:
 
--   Memory pressure
--   Heap fragmentation
--   File descriptor exhaustion
--   CPU contention
+- Memory pressure
+- Heap fragmentation
+- File descriptor exhaustion
+- CPU contention
 
 Baseline checks:
 
-``` bash
+```bash
 ulimit -n
 lsof | wc -l
 free -m
@@ -107,7 +109,7 @@ top -H
 
 In containers:
 
-``` bash
+```bash
 cat /sys/fs/cgroup/memory.max
 cat /proc/self/limits
 ```
@@ -116,11 +118,36 @@ Always verify cgroup limits separately from host capacity.
 
 ---
 
-## Cloud-Induced Constraints
+### Dependency Instability
+
+Fails when something external becomes slow, unavailable, or inconsistent.
+
+Common causes:
+
+- DNS resolution failure
+- Upstream timeout
+- Rate limiting
+- TLS handshake issues
+- Stale service discovery
+- Partial network partition
+
+Basic checks:
+
+```bash
+dig service.internal
+curl -v https://dependency.example
+ss -tan
+```
+
+If only one dependency path is unstable, the problem is not random. It is conditional.
+
+---
+
+## Platform-Imposed Constraints
 
 ### CPU Steal Time
 
-``` bash
+```bash
 mpstat 1
 ```
 
@@ -132,17 +159,18 @@ If steal time rises during degradation, hypervisor contention is likely.
 
 Check provider metrics:
 
--   CPU credit balance
--   Baseline vs burst usage
+- CPU credit balance
+- Baseline vs burst usage
 
 Sustained usage beyond baseline will degrade performance.
 
-------------------------------------------------------------------------
+---
 
 ### OOM Events
 
-``` bash
-dmesg | grep -i kill
+```bash
+dmesg -T | grep -Ei 'killed process|out of memory'
+journalctl -k | grep -Ei 'oom|killed process'
 ```
 
 Kernel OOM kills indicate memory boundary violations.
@@ -151,7 +179,7 @@ Kernel OOM kills indicate memory boundary violations.
 
 ### Disk Throughput Caps
 
-``` bash
+```bash
 df -h
 iostat -x 1
 ```
@@ -164,13 +192,13 @@ Cloud storage often enforces burst limits or throughput caps.
 
 When only some nodes fail, compare:
 
--   Kernel version
--   Instance type
--   CPU architecture
--   cgroup limits
--   Swap configuration
+- Kernel version
+- Instance type
+- CPU architecture
+- cgroup limits
+- Swap configuration
 
-``` bash
+```bash
 uname -a
 cat /proc/cpuinfo
 ulimit -a
@@ -181,18 +209,39 @@ Assume nodes differ until proven identical.
 
 ---
 
+## What to Measure
+
+Make the boundary visible in metrics, not just symptoms.
+
+Useful signals:
+
+- Latency percentile shifts
+- Error rate by node or instance type
+- Memory high-water mark
+- Open file descriptors over time
+- Queue depth
+- Retry count
+- CPU steal or throttling
+- OOM or cgroup events
+
+A graph that moves with the failure is usually more useful than another page of logs.
+
+---
+
 ## Increasing Reproducibility
 
 Make the boundary visible:
 
--   Lower stack limits
--   Constrain memory
--   Increase concurrency
--   Loop execution paths
+- Lower stack limits
+- Constrain memory
+- Increase concurrency
+- Loop execution paths
 
-``` bash
+```bash
 for i in {1..100}; do run_command; done
 ```
+
+Prefer reproducing in a controlled environment before increasing pressure in production.
 
 Reproducibility is more valuable than log volume.
 
@@ -202,21 +251,24 @@ Reproducibility is more valuable than log volume.
 
 Most intermittent failures reduce to:
 
--   Stack exceeded
--   Memory limit reached
--   File descriptors exhausted
--   CPU credits depleted
--   I/O throttled
--   Thread contention
+- Stack exceeded
+- Memory limit reached
+- File descriptors exhausted
+- CPU credits depleted
+- I/O throttled
+- Thread contention
+- Dependency timeout
+- Network instability
 
-Identify the exact limit. Confirm it under controlled conditions. Adjust
-capacity or design accordingly.
+Identify the exact limit. Confirm it under controlled conditions. Adjust capacity or design accordingly.
 
 ---
 
 ## Operating Principles
 
--   Random usually means unmeasured.
--   Restart resets state; it does not fix root cause.
--   Cloud infrastructure introduces hidden enforcement layers.
--   Stability improves as entropy is removed.
+- Random usually means unmeasured.
+- A restart resets state. It does not explain the failure.
+- Cloud infrastructure introduces hidden enforcement layers.
+- Stability improves as hidden variables are removed.
+
+An intermittent failure becomes solvable the moment you can name the limit it crosses.
