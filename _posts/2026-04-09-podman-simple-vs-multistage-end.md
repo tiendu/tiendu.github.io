@@ -5,8 +5,6 @@ date: 2026-04-09
 categories: ["Automation, Systems & Engineering"]
 ---
 
-# Podman container builds: simple vs multi-stage
-
 A lot of posts frame this as **bad vs good**.  
 That is too simplistic.
 
