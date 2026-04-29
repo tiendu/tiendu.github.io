@@ -1,136 +1,390 @@
 ---
 layout: post
-title: "Running Spark Jobs on Slurm"
+title: "Running Spark on a Slurm Cluster"
 date: 2026-04-29
 categories: ["Automation, Systems & Engineering"]
 ---
 
-Slurm is good at giving you machines.
+This guide shows how to run Apache Spark on top of a small Slurm cluster.
 
-Spark is good at using those machines for distributed data processing.
+The idea is simple.
 
-You do not need to turn your Slurm cluster into Kubernetes. You do not need to run a permanent Spark cluster either.
+Slurm gives us the machines.
 
-The simple way is:
+Spark uses those machines to process data.
+
+We are not building a huge platform here. No Kubernetes. No YARN. No permanent Spark cluster.
+
+Just this:
 
 ```text
-Ask Slurm for nodes.
-Start Spark inside the Slurm job.
-Run the Spark application.
-Stop Spark when the job exits.
+Set up Slurm.
+Make sure multi-node jobs work.
+Install Spark on all nodes.
+Start Spark inside a Slurm job.
+Run a Spark application.
+Clean up.
 ```
 
-That is it.
-
-Slurm still owns scheduling. Spark only runs inside the allocation Slurm gives it.
+That is enough for many internal clusters, research workloads, and batch processing jobs.
 
 ---
 
-## What we are building
+## Cluster layout
 
-This guide shows how to run a temporary Spark standalone cluster inside a Slurm job.
-
-The layout looks like this:
+Example cluster:
 
 ```text
-sbatch
-  |
-  v
-Slurm allocation
-  |
-  |-- node1: Spark master + worker
-  |-- node2: Spark worker
-  |-- node3: Spark worker
-  |
-  v
-spark-submit
+master    Slurm controller
+node1     Slurm compute node
+node2     Slurm compute node
+node3     Slurm compute node
 ```
 
-When the job finishes, Spark goes away.
+The master runs:
 
-No permanent daemon.
+```text
+slurmctld
+```
 
-No extra scheduler.
+The compute nodes run:
 
-No surprise resource usage.
+```text
+slurmd
+```
+
+Spark will not run permanently.
+
+Spark will only start when a Slurm job starts.
 
 ---
 
-## Assumptions
+## Basic requirements
 
-This guide assumes:
+All nodes should have:
 
-- Slurm is already working
-- all nodes can resolve each other by hostname
-- the same user exists on all nodes
-- Java is installed on all nodes
-- Spark is installed in the same path on all nodes
-- the job is submitted with `sbatch`
-- Spark is launched with `srun`
+- Linux
+- the same user accounts
+- the same UID/GID for shared users
+- working hostname resolution
+- SSH access for administration
+- Java installed
+- the same Spark version
+- the same Slurm version
 
-Example nodes:
+The nodes must be able to resolve each other by name.
+
+Example `/etc/hosts`:
 
 ```text
-node1
-node2
-node3
+10.0.0.10 master
+10.0.0.11 node1
+10.0.0.12 node2
+10.0.0.13 node3
 ```
 
-Spark path:
+Test from every node:
 
 ```bash
-/opt/spark
+ping master
+ping node1
+ping node2
+ping node3
 ```
 
-Change the paths and Slurm partition names to match your environment.
+Do not continue until this works.
+
+Bad hostname resolution causes boring problems later.
 
 ---
 
-## Why this model works
+## Install Slurm and Munge
 
-Do not let Spark and Slurm fight over resources.
+On all nodes:
 
-Slurm should decide which nodes belong to the job.
-
-Spark should only use those nodes.
-
-Bad model:
-
-```text
-Spark thinks the whole cluster is available.
-Slurm thinks only some nodes are allocated.
+```bash
+sudo apt update
+sudo apt install -y slurm-wlm munge
 ```
 
-Good model:
+Munge is used by Slurm for authentication.
 
-```text
-Slurm allocates nodes first.
-Spark starts only on those nodes.
+All nodes must share the same Munge key.
+
+---
+
+## Configure Munge
+
+On the master node:
+
+```bash
+sudo create-munge-key
 ```
 
-This keeps the system easier to understand and easier to debug.
+Copy the key to the compute nodes:
+
+```bash
+sudo scp /etc/munge/munge.key node1:/etc/munge/
+sudo scp /etc/munge/munge.key node2:/etc/munge/
+sudo scp /etc/munge/munge.key node3:/etc/munge/
+```
+
+On all nodes:
+
+```bash
+sudo chown munge:munge /etc/munge/munge.key
+sudo chmod 400 /etc/munge/munge.key
+sudo systemctl enable munge
+sudo systemctl restart munge
+```
+
+Test Munge:
+
+```bash
+munge -n | unmunge
+```
+
+Expected result:
+
+```text
+STATUS: Success
+```
+
+If Munge fails, fix it before touching Slurm.
+
+---
+
+## Create Slurm spool directories
+
+On the master node:
+
+```bash
+sudo mkdir -p /var/spool/slurmctld
+sudo chown slurm:slurm /var/spool/slurmctld
+sudo chmod 755 /var/spool/slurmctld
+```
+
+On each compute node:
+
+```bash
+sudo mkdir -p /var/spool/slurmd
+sudo chown slurm:slurm /var/spool/slurmd
+sudo chmod 755 /var/spool/slurmd
+```
+
+Some distributions use a different Slurm user.
+
+Check with:
+
+```bash
+id slurm
+```
+
+If the `slurm` user does not exist, create it or use the correct user for your distribution.
+
+---
+
+## Create a basic Slurm config
+
+Create `/etc/slurm/slurm.conf` on all nodes.
+
+Example:
+
+```text
+ClusterName=spark-slurm
+ControlMachine=master
+
+SlurmUser=slurm
+AuthType=auth/munge
+
+StateSaveLocation=/var/spool/slurmctld
+SlurmdSpoolDir=/var/spool/slurmd
+
+ProctrackType=proctrack/linuxproc
+TaskPlugin=task/none
+
+SchedulerType=sched/backfill
+SelectType=select/cons_tres
+SelectTypeParameters=CR_Core_Memory
+
+SlurmctldLogFile=/var/log/slurmctld.log
+SlurmdLogFile=/var/log/slurmd.log
+
+NodeName=node[1-3] CPUs=16 RealMemory=64000 State=UNKNOWN
+
+PartitionName=compute Nodes=node[1-3] Default=YES MaxTime=INFINITE State=UP
+```
+
+Adjust these values:
+
+```text
+CPUs
+RealMemory
+node names
+partition name
+```
+
+Get CPU count:
+
+```bash
+nproc
+```
+
+Get memory in MB:
+
+```bash
+free -m
+```
+
+Keep the first config boring.
+
+Do not add cgroups, GPUs, accounting, or advanced scheduling yet.
+
+First make the cluster run jobs.
+
+---
+
+## Start Slurm
+
+On the master node:
+
+```bash
+sudo systemctl enable slurmctld
+sudo systemctl restart slurmctld
+```
+
+On each compute node:
+
+```bash
+sudo systemctl enable slurmd
+sudo systemctl restart slurmd
+```
+
+Check the cluster from the master:
+
+```bash
+sinfo
+```
+
+Expected shape:
+
+```text
+PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST
+compute*     up   infinite      3   idle node[1-3]
+```
+
+If nodes are down:
+
+```bash
+scontrol show node node1
+sudo journalctl -u slurmd -n 100
+sudo journalctl -u slurmctld -n 100
+```
+
+Fix Slurm before adding Spark.
+
+Spark will not save a broken Slurm cluster.
+
+---
+
+## Test a multi-node Slurm job
+
+Create `slurm-test.sh`:
+
+```bash
+#!/bin/bash
+#SBATCH --job-name=slurm-test
+#SBATCH --partition=compute
+#SBATCH --nodes=3
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=2G
+#SBATCH --time=00:05:00
+#SBATCH --output=slurm-test-%j.out
+
+set -euo pipefail
+
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node list: $SLURM_JOB_NODELIST"
+
+echo "Expanded nodes:"
+scontrol show hostnames "$SLURM_JOB_NODELIST"
+
+echo "Running hostname on all tasks:"
+srun hostname
+
+echo "CPU check:"
+srun bash -c 'echo "$(hostname): $(nproc) CPUs"'
+
+echo "Memory check:"
+srun bash -c 'echo "$(hostname): $(free -m | awk "/Mem:/ {print \$2}") MB"'
+```
+
+Submit it:
+
+```bash
+sbatch slurm-test.sh
+```
+
+Check output:
+
+```bash
+cat slurm-test-<jobid>.out
+```
+
+You should see all three nodes.
+
+Do not install Spark until this works.
+
+This is the checkpoint.
+
+---
+
+## Install Java
+
+Spark needs Java.
+
+On all nodes:
+
+```bash
+sudo apt install -y openjdk-17-jre-headless
+```
+
+Check:
+
+```bash
+java -version
+```
+
+Use the same Java version on all nodes.
 
 ---
 
 ## Install Spark on all nodes
 
-Install the same Spark version on every node.
+Download Spark once, then install it to the same path on every node.
 
-Example:
+Example path:
+
+```text
+/opt/spark
+```
+
+On all nodes:
 
 ```bash
 cd /opt
 sudo tar -xzf spark-3.5.1-bin-hadoop3.tgz
-sudo ln -s spark-3.5.1-bin-hadoop3 spark
+sudo ln -sfn spark-3.5.1-bin-hadoop3 spark
 ```
 
-Add Spark to the environment:
+Add Spark environment variables:
 
 ```bash
 sudo tee /etc/profile.d/spark.sh >/dev/null <<'EOF'
 export SPARK_HOME=/opt/spark
 export PATH="$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
-export JAVA_HOME=/usr/lib/jvm/default-java
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 EOF
 ```
 
@@ -140,20 +394,19 @@ Reload:
 source /etc/profile.d/spark.sh
 ```
 
-Verify:
+Check:
 
 ```bash
 spark-submit --version
-java -version
 ```
 
-Do this on every node.
+Run this on every node.
 
-If the Spark version is different between nodes, fix that first.
+All nodes should return the same Spark version.
 
 ---
 
-## A small PySpark test
+## Create a small PySpark job
 
 Create `job.py`:
 
@@ -168,6 +421,9 @@ spark = (
 
 sc = spark.sparkContext
 
+print("Spark master:", sc.master)
+print("Default parallelism:", sc.defaultParallelism)
+
 result = (
     sc.parallelize(range(1_000_000), 100)
     .map(lambda x: x * x)
@@ -179,15 +435,15 @@ print("Result:", result)
 spark.stop()
 ```
 
-This job is intentionally boring.
+This job is intentionally simple.
 
-Boring tests are good.
+First prove Spark runs across nodes.
 
-First prove the cluster works. Then run the real workload.
+Then run real workloads.
 
 ---
 
-## Slurm script
+## Run Spark inside a Slurm job
 
 Create `spark-slurm.sh`:
 
@@ -207,16 +463,25 @@ set -euo pipefail
 
 export SPARK_HOME=/opt/spark
 export PATH="$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
+export SPARK_NO_DAEMONIZE=true
 export SPARK_LOG_DIR="$SLURM_SUBMIT_DIR/spark-logs-$SLURM_JOB_ID"
+
 mkdir -p "$SPARK_LOG_DIR"
 
 nodes=($(scontrol show hostnames "$SLURM_JOB_NODELIST"))
 master_node="${nodes[0]}"
 master_url="spark://${master_node}:7077"
 
+echo "Job ID: $SLURM_JOB_ID"
+echo "Allocated nodes:"
+printf '%s\n' "${nodes[@]}"
+echo "Spark master node: $master_node"
+echo "Spark master URL: $master_url"
+
 cleanup() {
-    echo "Cleaning up Spark..."
+    echo "Cleaning up Spark"
 
     for node in "${nodes[@]}"; do
         srun --nodes=1 --ntasks=1 -w "$node" \
@@ -229,14 +494,11 @@ cleanup() {
 
 trap cleanup EXIT
 
-echo "Allocated nodes:"
-printf '%s\n' "${nodes[@]}"
-
-echo "Starting Spark master on $master_node"
+echo "Starting Spark master"
 srun --nodes=1 --ntasks=1 -w "$master_node" \
-    "$SPARK_HOME/sbin/start-master.sh"
+    "$SPARK_HOME/sbin/start-master.sh" &
 
-sleep 5
+sleep 10
 
 echo "Starting Spark workers"
 for node in "${nodes[@]}"; do
@@ -244,7 +506,7 @@ for node in "${nodes[@]}"; do
         "$SPARK_HOME/sbin/start-worker.sh" "$master_url" &
 done
 
-sleep 10
+sleep 15
 
 echo "Submitting Spark job"
 spark-submit \
@@ -255,30 +517,36 @@ spark-submit \
     ./job.py
 ```
 
-Submit it:
+Submit:
 
 ```bash
 sbatch spark-slurm.sh
 ```
 
-Check the job:
-
-```bash
-squeue -u "$USER"
-```
-
-Check the output:
+Check output:
 
 ```bash
 cat spark-<jobid>.out
 cat spark-<jobid>.err
 ```
 
+Check Spark logs:
+
+```bash
+ls spark-logs-<jobid>
+```
+
 ---
 
-## What the script does
+## Why this script works
 
-This gets the nodes Slurm gave to the job:
+Slurm gives the job a node list:
+
+```bash
+$SLURM_JOB_NODELIST
+```
+
+This line expands it:
 
 ```bash
 nodes=($(scontrol show hostnames "$SLURM_JOB_NODELIST"))
@@ -290,34 +558,34 @@ The first node becomes the Spark master:
 master_node="${nodes[0]}"
 ```
 
-The Spark master URL is built from that node:
+The Spark master URL becomes:
 
 ```bash
-master_url="spark://${master_node}:7077"
+spark://node1:7077
 ```
 
-Then Spark workers are started on each allocated node:
+Then the script starts:
 
-```bash
-for node in "${nodes[@]}"; do
-    srun --nodes=1 --ntasks=1 -w "$node" \
-        "$SPARK_HOME/sbin/start-worker.sh" "$master_url" &
-done
+```text
+one Spark master
+one Spark worker per Slurm node
 ```
 
-Finally, the job is submitted to the temporary Spark cluster:
+Finally:
 
 ```bash
 spark-submit --master "$master_url" ./job.py
 ```
 
-When the Slurm job exits, the cleanup function stops the Spark daemons.
+The Spark job runs only inside the nodes Slurm allocated.
+
+That is the clean boundary.
 
 ---
 
 ## Resource mapping
 
-Keep Slurm and Spark aligned.
+Keep the Slurm request and Spark settings aligned.
 
 This Slurm request:
 
@@ -337,38 +605,36 @@ means:
 32 GB memory per node
 ```
 
-So this Spark submit is reasonable:
+So this Spark config makes sense:
 
 ```bash
-spark-submit \
-    --executor-cores 8 \
-    --executor-memory 24G \
-    ./job.py
+--executor-cores 8
+--executor-memory 24G
 ```
 
-Do not ask Spark to use more than Slurm gave you.
-
-Bad:
+Do not do this:
 
 ```bash
 #SBATCH --cpus-per-task=8
 ```
 
-But:
+and then:
 
 ```bash
 --executor-cores 32
 ```
 
-That may run, but it is wrong.
+That asks Spark to use more CPU than Slurm gave the job.
 
-You are oversubscribing the node.
+It may still run.
+
+It is still wrong.
 
 ---
 
 ## Leave memory headroom
 
-If Slurm gives a node 32 GB:
+If Slurm gives each node 32 GB:
 
 ```bash
 #SBATCH --mem=32G
@@ -388,59 +654,192 @@ Use less:
 
 Spark needs overhead.
 
+The JVM needs memory.
+
 Python needs memory.
 
 The OS needs memory.
 
-The JVM needs memory.
-
 A simple rule:
 
 ```text
-Use around 70-80% of the Slurm memory for Spark executor memory.
+executor memory = around 70-80% of Slurm memory
 ```
 
-The rest is breathing room.
-
-Breathing room prevents stupid crashes.
+This avoids many avoidable crashes.
 
 ---
 
-## Avoid SSH startup
+## Do not use SSH startup first
 
-Many Spark guides use SSH-based scripts such as:
+Many Spark guides use:
 
 ```bash
 start-all.sh
 ```
 
-On Slurm, avoid that at first.
+That usually depends on SSH.
 
-Use `srun`.
+For Slurm, start with `srun`.
 
-Good:
+Use this:
 
 ```bash
 srun -w "$node" "$SPARK_HOME/sbin/start-worker.sh" "$master_url"
 ```
 
-Avoid:
+Avoid this:
 
 ```bash
 ssh "$node" "$SPARK_HOME/sbin/start-worker.sh" "$master_url"
 ```
 
-SSH can work.
+`ssh` can work, but it escapes the Slurm mental model.
 
-But `srun` keeps the process inside the Slurm allocation.
+`srun` keeps the process inside the allocation.
 
 That is cleaner.
 
 ---
 
-## Running with GPUs
+## Common problems
 
-Spark can be used on GPU nodes, but Spark does not magically make code GPU-accelerated.
+### Nodes are down in Slurm
+
+Check:
+
+```bash
+sinfo
+scontrol show node node1
+sudo journalctl -u slurmd -n 100
+sudo journalctl -u slurmctld -n 100
+```
+
+Common causes:
+
+- hostname mismatch
+- bad `/etc/hosts`
+- Munge not running
+- wrong Munge key
+- wrong CPU or memory values in `slurm.conf`
+- firewall issues
+
+Fix Slurm first.
+
+---
+
+### Multi-node Slurm test does not show all nodes
+
+Check the job request:
+
+```bash
+#SBATCH --nodes=3
+#SBATCH --ntasks-per-node=1
+```
+
+Check the partition:
+
+```bash
+sinfo
+```
+
+Check that nodes are idle or available.
+
+Spark will not run multi-node if Slurm is only giving one node.
+
+---
+
+### Spark workers do not connect to master
+
+Check that nodes can resolve the master node name:
+
+```bash
+srun getent hosts "$master_node"
+```
+
+Check common Spark ports:
+
+```text
+7077    Spark master
+8080    Spark master web UI
+8081    Spark worker web UI
+```
+
+If the cluster firewall blocks node-to-node traffic, workers may not connect.
+
+---
+
+### Spark only runs locally
+
+Do not use:
+
+```bash
+spark-submit --master local[*] job.py
+```
+
+Use:
+
+```bash
+spark-submit --master "$master_url" job.py
+```
+
+Also check that workers actually started.
+
+Look in:
+
+```bash
+spark-logs-<jobid>
+```
+
+---
+
+### Spark runs out of memory
+
+Reduce:
+
+```bash
+--executor-memory
+```
+
+Also reduce the amount of data per partition or increase partition count.
+
+For PySpark, remember:
+
+```text
+JVM memory + Python memory + overhead
+```
+
+Do not size memory too close to the Slurm limit.
+
+---
+
+### The job hangs during startup
+
+Common causes:
+
+- Spark master not ready yet
+- workers cannot reach the master
+- firewall blocks Spark ports
+- wrong hostname
+- Java missing on one node
+- Spark path differs between nodes
+
+Check:
+
+```bash
+cat spark-<jobid>.err
+ls spark-logs-<jobid>
+```
+
+Then check Slurm logs if needed.
+
+---
+
+## Optional GPU notes
+
+You can run this on GPU nodes too.
+
+But Spark does not magically use GPUs.
 
 Slurm can allocate GPUs:
 
@@ -465,16 +864,9 @@ spark-submit \
     ./gpu_job.py
 ```
 
-But your code must actually use the GPU.
+But the application must actually use CUDA.
 
-Examples:
-
-- RAPIDS Accelerator for Spark
-- PyTorch inside Spark tasks
-- TensorFlow inside Spark tasks
-- custom CUDA-aware processing
-
-Check GPU visibility inside the job:
+Check GPU visibility:
 
 ```bash
 srun nvidia-smi
@@ -489,185 +881,57 @@ print(torch.cuda.is_available())
 print(torch.cuda.device_count())
 ```
 
-If the GPUs are not visible, fix Slurm first.
+If GPUs are not visible, fix Slurm and NVIDIA first.
 
-Spark cannot fix broken GPU allocation.
-
----
-
-## Common issues
-
-### Workers do not start
-
-Check the allocated nodes:
-
-```bash
-scontrol show hostnames "$SLURM_JOB_NODELIST"
-```
-
-Check that `srun` works:
-
-```bash
-srun hostname
-```
-
-If this fails, the problem is Slurm, not Spark.
+Spark is not the first thing to blame.
 
 ---
 
-### Workers cannot connect to the master
+## When this setup is enough
 
-Check hostname resolution between nodes.
-
-Also check firewall rules.
-
-Common Spark ports:
-
-```text
-7077    Spark master
-8080    Spark master web UI
-8081    Spark worker web UI
-```
-
-If ports are blocked between nodes, workers may fail to register.
-
----
-
-### Job only runs on one node
-
-Check that you did not use local mode.
-
-Wrong:
-
-```bash
-spark-submit --master local[*] job.py
-```
-
-Right:
-
-```bash
-spark-submit --master "$master_url" job.py
-```
-
-Also check that the workers actually started.
-
----
-
-### Spark uses too much memory
-
-Reduce:
-
-```bash
---executor-memory
-```
-
-For PySpark, remember that memory is used by both JVM and Python processes.
-
-Do not size memory too tightly.
-
----
-
-### GPUs are allocated but idle
-
-Requesting GPUs is not enough.
-
-This only gives you GPUs:
-
-```bash
-#SBATCH --gpus-per-node=2
-```
-
-Your code still needs to use them.
-
-Check:
-
-```bash
-srun nvidia-smi
-```
-
-Then check your framework:
-
-```python
-import torch
-print(torch.cuda.is_available())
-```
-
-If CUDA is false, Spark is not the main problem.
-
----
-
-## When this is enough
-
-This setup is good for:
+This is enough for:
 
 - batch Spark jobs
+- internal clusters
 - research clusters
-- internal HPC environments
 - genomics processing
+- large file processing
 - large table processing
 - temporary ETL jobs
-- small and medium teams
-- avoiding another scheduler
+- simple multi-node workloads
 
-It is useful when Slurm is already the source of truth.
+It is a good fit when Slurm is already the scheduler.
 
-Do not add more platform layers unless you really need them.
+Use Slurm for allocation.
 
----
+Use Spark for distributed execution.
 
-## When this is not enough
-
-You may need something heavier if you need:
-
-- many interactive users
-- notebooks for everyone
-- long-running shared Spark services
-- autoscaling workers
-- Kubernetes-native workloads
-- strict multi-tenant isolation
-- Spark history server integration
-- complex GPU scheduling
-
-That is fine.
-
-Just do not start there.
-
-Start with the thing you can understand.
-
----
-
-## What about Beam?
-
-Beam is useful when you want a portable pipeline API.
-
-But Beam still needs a runner.
-
-On this kind of cluster, Beam would usually run through Spark or Flink, and Spark or Flink would still need to run inside the Slurm allocation.
-
-So Beam can sit above this setup.
-
-It does not replace it.
-
-For a simple Slurm cluster, start with Spark first.
+Keep the boundary clear.
 
 ---
 
 ## Final shape
 
-The whole system is simple:
+The full flow is:
 
 ```text
+Slurm cluster is configured.
+Multi-node Slurm job works.
+Spark is installed on all nodes.
 Slurm allocates nodes.
-Spark starts inside the allocation.
-The application runs.
-Spark stops.
+Spark master starts on the first node.
+Spark workers start on allocated nodes.
+spark-submit sends work to Spark.
+Spark stops when the Slurm job exits.
 Slurm releases the nodes.
 ```
 
-That is the clean boundary.
+That is the whole idea.
 
-Slurm owns resources.
+Nothing fancy.
 
-Spark does the distributed work.
+No extra scheduler.
 
-Keep that boundary clear and the setup stays manageable.
+No permanent Spark service.
+
+Start with this, make it stable, then add complexity only when you actually need it.
