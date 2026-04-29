@@ -78,18 +78,26 @@ Just Spark data jobs running inside a Slurm allocation.
 
 ## What we are building
 
-We are going to build a small Slurm cluster first, then run Spark inside a Slurm job.
+We are going to build a small Slurm cluster and run Spark inside Slurm jobs.
 
-The flow is:
+The setup:
 
 ```text
-Set up Slurm.
-Make sure multi-node Slurm jobs work.
-Install Spark on all nodes.
-Ask Slurm for nodes.
-Start a temporary Spark cluster inside the Slurm job.
-Run a Spark application.
-Clean up.
+master    Slurm controller + shared storage
+node1     compute node
+node2     compute node
+node3     compute node
+```
+
+The flow:
+
+```text
+Prepare hostnames.
+Install Slurm.
+Test multi-node Slurm jobs.
+Create a shared directory.
+Install Java and Spark.
+Run Spark inside a Slurm allocation.
 ```
 
 The Spark cluster is temporary.
@@ -108,63 +116,11 @@ No extra scheduler.
 
 ---
 
-## Cluster layout
+## Prepare hostnames
 
-Example cluster:
+All nodes must resolve each other by name.
 
-```text
-master    Slurm controller
-node1     Slurm compute node
-node2     Slurm compute node
-node3     Slurm compute node
-```
-
-The master runs:
-
-```text
-slurmctld
-```
-
-The compute nodes run:
-
-```text
-slurmd
-```
-
-When a Spark job runs, one allocated node becomes the Spark master.
-
-The other allocated nodes become Spark workers.
-
-Example:
-
-```text
-Slurm allocation
-  |
-  |-- node1: Spark master + Spark worker
-  |-- node2: Spark worker
-  |-- node3: Spark worker
-```
-
-This is only for the lifetime of the job.
-
----
-
-## Basic requirements
-
-All nodes should have:
-
-- Linux
-- the same user accounts
-- the same UID/GID for shared users
-- working hostname resolution
-- SSH access for administration
-- Java installed
-- the same Spark version
-- the same Slurm version
-
-The nodes must be able to resolve each other by name.
-
-Example `/etc/hosts`:
+Example `/etc/hosts` on every node:
 
 ```text
 10.0.0.10 master
@@ -182,7 +138,7 @@ ping node2
 ping node3
 ```
 
-Do not continue until hostname resolution works.
+Do not continue until this works.
 
 Bad hostnames create boring failures later.
 
@@ -426,9 +382,191 @@ cat slurm-test-<jobid>.out
 
 You should see all three nodes.
 
-This is the checkpoint.
+This is the first checkpoint.
 
-Do not install Spark until this works.
+Do not move on until multi-node Slurm jobs work.
+
+---
+
+## Create a shared directory
+
+Spark workers need to read and write the same paths.
+
+For this small cluster, we will use NFS.
+
+The master exports:
+
+```text
+/shared
+```
+
+The compute nodes mount:
+
+```text
+/shared
+```
+
+Spark will read from:
+
+```text
+/shared/data
+```
+
+Spark will write to:
+
+```text
+/shared/output
+```
+
+This is not the fastest storage design in the world.
+
+It is just simple and good enough for a small cluster tutorial.
+
+---
+
+## Configure NFS on the master
+
+On the master node:
+
+```bash
+sudo apt install -y nfs-kernel-server
+```
+
+Create directories:
+
+```bash
+sudo mkdir -p /shared/data
+sudo mkdir -p /shared/output
+sudo mkdir -p /shared/logs
+```
+
+For a simple lab setup:
+
+```bash
+sudo chown -R nobody:nogroup /shared
+sudo chmod -R 777 /shared
+```
+
+This is loose permissioning.
+
+For a real environment, use proper users and groups.
+
+Edit `/etc/exports`:
+
+```bash
+sudo nano /etc/exports
+```
+
+Add this, adjusted to your subnet:
+
+```text
+/shared 10.0.0.0/24(rw,sync,no_subtree_check)
+```
+
+Apply:
+
+```bash
+sudo exportfs -ra
+sudo systemctl enable nfs-server
+sudo systemctl restart nfs-server
+```
+
+Check:
+
+```bash
+sudo exportfs -v
+```
+
+---
+
+## Mount the shared directory on compute nodes
+
+On each compute node:
+
+```bash
+sudo apt install -y nfs-common
+sudo mkdir -p /shared
+sudo mount master:/shared /shared
+```
+
+Test from each compute node:
+
+```bash
+touch /shared/test-from-$(hostname)
+ls -l /shared
+```
+
+You should see files created by the other nodes.
+
+Make the mount persistent.
+
+Edit `/etc/fstab` on each compute node:
+
+```bash
+sudo nano /etc/fstab
+```
+
+Add:
+
+```text
+master:/shared /shared nfs defaults,_netdev 0 0
+```
+
+Test:
+
+```bash
+sudo umount /shared
+sudo mount -a
+ls /shared
+```
+
+If this fails, fix it before moving on.
+
+Spark workers need the same path on every node.
+
+---
+
+## Test shared storage through Slurm
+
+Create `shared-test.sh`:
+
+```bash
+#!/bin/bash
+#SBATCH --job-name=shared-test
+#SBATCH --partition=compute
+#SBATCH --nodes=3
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=00:05:00
+#SBATCH --output=shared-test-%j.out
+
+set -euo pipefail
+
+srun bash -c 'echo "hello from $(hostname)" > /shared/output/test-$(hostname).txt'
+
+echo "Files written:"
+ls -l /shared/output/test-*.txt
+
+echo "File contents:"
+cat /shared/output/test-*.txt
+```
+
+Submit:
+
+```bash
+sbatch shared-test.sh
+```
+
+Check:
+
+```bash
+cat shared-test-<jobid>.out
+```
+
+You should see one file from each node.
+
+This is the second checkpoint.
+
+Now the cluster has a shared place for Spark input, output, and logs.
 
 ---
 
@@ -504,6 +642,7 @@ Create `job.py`:
 
 ```python
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
 
 spark = (
     SparkSession.builder
@@ -516,22 +655,44 @@ sc = spark.sparkContext
 print("Spark master:", sc.master)
 print("Default parallelism:", sc.defaultParallelism)
 
-result = (
-    sc.parallelize(range(1_000_000), 100)
-    .map(lambda x: x * x)
-    .sum()
+input_path = "/shared/data/events"
+output_path = "/shared/output/events_summary"
+
+data = [(i, "even" if i % 2 == 0 else "odd") for i in range(1_000_000)]
+
+df = spark.createDataFrame(data, ["id", "kind"])
+
+df.write.mode("overwrite").parquet(input_path)
+
+events = spark.read.parquet(input_path)
+
+summary = (
+    events
+    .where(col("id") >= 0)
+    .groupBy("kind")
+    .count()
 )
 
-print("Result:", result)
+summary.show()
+
+summary.write.mode("overwrite").parquet(output_path)
+
+print("Wrote output to:", output_path)
 
 spark.stop()
 ```
 
-This job is intentionally small.
+This job does three things:
 
-First prove Spark can run across nodes.
+```text
+writes Parquet to shared storage
+reads Parquet from shared storage
+runs a small aggregation
+```
 
-Then run the real workload.
+It is intentionally boring.
+
+Boring tests are easier to debug.
 
 ---
 
@@ -558,7 +719,7 @@ export PATH="$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 export SPARK_NO_DAEMONIZE=true
-export SPARK_LOG_DIR="$SLURM_SUBMIT_DIR/spark-logs-$SLURM_JOB_ID"
+export SPARK_LOG_DIR="/shared/logs/spark-$SLURM_JOB_ID"
 
 mkdir -p "$SPARK_LOG_DIR"
 
@@ -571,6 +732,7 @@ echo "Allocated nodes:"
 printf '%s\n' "${nodes[@]}"
 echo "Spark master node: $master_node"
 echo "Spark master URL: $master_url"
+echo "Spark log dir: $SPARK_LOG_DIR"
 
 cleanup() {
     echo "Cleaning up Spark"
@@ -625,12 +787,20 @@ cat spark-<jobid>.err
 Check Spark logs:
 
 ```bash
-ls spark-logs-<jobid>
+ls /shared/logs/spark-<jobid>
 ```
+
+Check output data:
+
+```bash
+ls /shared/output/events_summary
+```
+
+You should see Parquet output.
 
 ---
 
-## Why this script works
+## Why the Spark script works
 
 Slurm gives the job a node list:
 
@@ -671,7 +841,17 @@ spark-submit --master "$master_url" ./job.py
 
 The Spark job runs only inside the nodes Slurm allocated.
 
-That is the boundary we want.
+The data paths are shared:
+
+```text
+/shared/data
+/shared/output
+/shared/logs
+```
+
+That is the key.
+
+Without a shared path, workers may not see the same files.
 
 ---
 
@@ -822,17 +1002,45 @@ That overhead is only worth it when Spark is solving a real data-distribution pr
 
 ---
 
+## When Postgres is still better
+
+Spark is not automatically better than Postgres either.
+
+Use Postgres when the data fits well on one database server and you need:
+
+- indexed SQL queries
+- transactions
+- data integrity
+- frequent interactive queries
+- many small lookups
+- application serving
+- relational constraints
+
+A tuned Postgres box can beat a small Spark cluster for many SQL workloads.
+
+Do not use Spark just because the dataset feels big.
+
+Use Spark when the data already lives as many files on shared storage, or when one job needs to scan, join, aggregate, and transform data across multiple nodes.
+
+Postgres is a database.
+
+Spark is a distributed compute engine.
+
+Different tools.
+
+---
+
 ## When Spark on Slurm is better
 
 Use Spark on Slurm when the workload needs coordinated data processing.
 
 Good examples:
 
+- large Parquet processing
 - large table processing
 - joins across big datasets
 - group-by and aggregation
 - repeated filtering and transformation
-- large parquet or CSV processing
 - distributed feature generation
 - data preparation for ML
 - workloads that benefit from caching
@@ -844,7 +1052,41 @@ Spark gives you the distributed data engine.
 
 Slurm gives you the machines.
 
+Shared storage gives all workers the same data path.
+
 That combination is the point.
+
+---
+
+## NFS limits
+
+NFS is fine for a small tutorial cluster.
+
+But NFS is not magic.
+
+It can become the bottleneck when:
+
+- many nodes read heavily
+- many nodes write heavily
+- there are many small files
+- metadata operations are high
+- shuffle output is large
+- the cluster grows
+
+If storage becomes the bottleneck, move to something built for this:
+
+```text
+Lustre
+BeeGFS
+GPFS
+Ceph
+S3 / MinIO
+HDFS
+```
+
+Start simple.
+
+But do not pretend NFS is the final answer for every cluster.
 
 ---
 
@@ -895,6 +1137,27 @@ Spark will not run multi-node if Slurm is only giving one node.
 
 ---
 
+### NFS mount is missing on one node
+
+Check:
+
+```bash
+srun ls /shared
+```
+
+If one node fails, fix `/etc/fstab` or the NFS mount on that node.
+
+Also check:
+
+```bash
+showmount -e master
+sudo mount -a
+```
+
+Spark workers need the same paths.
+
+---
+
 ### Spark workers do not connect to master
 
 Check that nodes can resolve the master node name:
@@ -934,8 +1197,24 @@ Also check that workers actually started.
 Look in:
 
 ```bash
-spark-logs-<jobid>
+/shared/logs/spark-<jobid>
 ```
+
+---
+
+### Spark cannot read input files
+
+Check that all nodes can see the same input:
+
+```bash
+srun ls /shared/data
+```
+
+If the path exists only on one node, Spark will fail or behave strangely.
+
+Use shared storage.
+
+Keep the path identical on all nodes.
 
 ---
 
@@ -969,12 +1248,13 @@ Common causes:
 - wrong hostname
 - Java missing on one node
 - Spark path differs between nodes
+- `/shared` is not mounted on one node
 
 Check:
 
 ```bash
 cat spark-<jobid>.err
-ls spark-logs-<jobid>
+ls /shared/logs/spark-<jobid>
 ```
 
 Then check Slurm logs if needed.
@@ -1040,9 +1320,11 @@ The whole setup is just this:
 ```text
 Slurm cluster works.
 Multi-node Slurm job works.
+Shared storage works.
 Spark is installed on all nodes.
 Slurm allocates nodes.
 Spark starts inside the allocation.
+Spark reads and writes shared data.
 Spark runs the data job.
 Spark stops.
 Slurm releases the nodes.
@@ -1050,7 +1332,9 @@ Slurm releases the nodes.
 
 Use raw Slurm for independent jobs.
 
-Use Spark on Slurm for coordinated data jobs.
+Use Postgres for database-shaped problems.
+
+Use Spark on Slurm for coordinated data jobs over shared datasets.
 
 That is the practical boundary.
 
