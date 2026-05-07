@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Python for Real Work"
-date: 2026-05-08
+date: 2026-05-07
 categories: ["Automation, Systems & Engineering"]
 ---
 
