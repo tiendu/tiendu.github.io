@@ -204,8 +204,8 @@ Prefer composition.
 
 # Final Mental Model
 
--   Protocol = job description\
--   ABC = company membership\
+-   Protocol = job description
+-   ABC = company membership
 -   Dataclass = pre-built container
 
 Modern Python hires based on skills (Protocol),\
