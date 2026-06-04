@@ -30,37 +30,41 @@ The task of an SRE is not only to restart the service.
 
 The task is to find the condition that makes the failure happen.
 
+This playbook is written as a practical reference manual. It is not a list of random commands. It is a way to think.
+
 ---
 
 ## Table of Contents
 
 1. [Core Operating Model](#1-core-operating-model)
-2. [First Response Checklist](#2-first-response-checklist)
-3. [Classify the Failure](#3-classify-the-failure)
-   - [Hard deterministic failure](#31-hard-deterministic-failure)
-   - [Timing-sensitive failure](#32-timing-sensitive-failure)
-   - [Resource-pressure failure](#33-resource-pressure-failure)
-   - [Dependency instability](#34-dependency-instability)
-4. [Linux Survival Commands for Incidents](#4-linux-survival-commands-for-incidents)
-5. [CPU Investigation](#5-cpu-investigation)
-6. [Memory Investigation](#6-memory-investigation)
-7. [Disk and I/O Investigation](#7-disk-and-io-investigation)
-8. [File Descriptor and Socket Exhaustion](#8-file-descriptor-and-socket-exhaustion)
-9. [Network, DNS, HTTP and TLS Debugging](#9-network-dns-http-and-tls-debugging)
-10. [Systemd and Service Debugging](#10-systemd-and-service-debugging)
-11. [Containers and Docker Debugging](#11-containers-and-docker-debugging)
-12. [Cloud Platform Constraints](#12-cloud-platform-constraints)
-13. [Node Comparison Method](#13-node-comparison-method)
-14. [Reproducibility Engineering](#14-reproducibility-engineering)
-15. [Observability: What to Measure](#15-observability-what-to-measure)
-16. [Alerts and Runbooks](#16-alerts-and-runbooks)
-17. [CI/CD and Deployment-Related Intermittency](#17-cicd-and-deployment-related-intermittency)
-18. [Common Intermittent Failure Patterns](#18-common-intermittent-failure-patterns)
-19. [Practical Investigation Flow](#19-practical-investigation-flow)
-20. [Root Cause Analysis Template](#20-root-cause-analysis-template)
-21. [Prevention Patterns](#21-prevention-patterns)
-22. [Command Appendix](#22-command-appendix)
-23. [Final Principles](#23-final-principles)
+2. [Terminology: Deterministic, Intermittent, and Reproducible](#2-terminology-deterministic-intermittent-and-reproducible)
+3. [First Response Checklist](#3-first-response-checklist)
+4. [Classify the Failure](#4-classify-the-failure)
+   - [Hard deterministic failure](#41-hard-deterministic-failure)
+   - [Timing-sensitive failure](#42-timing-sensitive-failure)
+   - [Resource-pressure failure](#43-resource-pressure-failure)
+   - [Dependency instability](#44-dependency-instability)
+5. [Fast Triage Commands](#5-fast-triage-commands)
+6. [Linux Survival Commands for Incidents](#6-linux-survival-commands-for-incidents)
+7. [CPU Investigation](#7-cpu-investigation)
+8. [Memory Investigation](#8-memory-investigation)
+9. [Disk and I/O Investigation](#9-disk-and-io-investigation)
+10. [File Descriptor and Socket Exhaustion](#10-file-descriptor-and-socket-exhaustion)
+11. [Network, DNS, HTTP and TLS Debugging](#11-network-dns-http-and-tls-debugging)
+12. [Systemd and Service Debugging](#12-systemd-and-service-debugging)
+13. [Containers and Docker Debugging](#13-containers-and-docker-debugging)
+14. [Cloud Platform Constraints](#14-cloud-platform-constraints)
+15. [Node Comparison Method](#15-node-comparison-method)
+16. [Reproducibility Engineering](#16-reproducibility-engineering)
+17. [Observability: What to Measure](#17-observability-what-to-measure)
+18. [Alerts and Runbooks](#18-alerts-and-runbooks)
+19. [CI/CD and Deployment-Related Intermittency](#19-cicd-and-deployment-related-intermittency)
+20. [Common Intermittent Failure Patterns](#20-common-intermittent-failure-patterns)
+21. [Practical Investigation Flow](#21-practical-investigation-flow)
+22. [Root Cause Analysis Template](#22-root-cause-analysis-template)
+23. [Prevention Patterns](#23-prevention-patterns)
+24. [Quick Reference Cheatsheet](#24-quick-reference-cheatsheet)
+25. [Final Principles](#25-final-principles)
 
 ---
 
@@ -122,7 +126,73 @@ Use both.
 
 ---
 
-## 2. First Response Checklist
+## 2. Terminology: Deterministic, Intermittent, and Reproducible
+
+These terms are related, but not the same.
+
+### Deterministic
+
+A deterministic failure gives the same result under the same conditions.
+
+Examples:
+
+- A service always fails to start because a config file is missing.
+- A binary always crashes with the same invalid input.
+- A schema migration always fails on the same version mismatch.
+
+Simple idea:
+
+> Same conditions, same outcome.
+
+### Intermittent
+
+An intermittent failure appears to happen only sometimes.
+
+Examples:
+
+- A job fails only under high concurrency.
+- A request times out only on one node.
+- TLS fails only from one proxy path.
+- A service crashes after running for several hours.
+
+Simple idea:
+
+> The outcome changes because some condition is changing, but the condition is not yet isolated.
+
+### Reproducible
+
+A failure is reproducible when you can make it happen again on demand, or at least raise the failure rate enough to study it.
+
+Examples:
+
+- Running a test 100 times reproduces the failure 8 times.
+- Lowering memory to 1 GiB makes the crash happen consistently.
+- Using `-j16` in a parallel build triggers the issue, while `-j1` does not.
+
+Simple idea:
+
+> You know how to bring the failure back.
+
+### Why this matters
+
+Many failures that look intermittent are deterministic under a hidden condition.
+
+That is why reproducibility matters so much in incident work:
+
+- It helps validate the root cause.
+- It helps test the fix.
+- It helps distinguish coincidence from mechanism.
+
+A good investigation usually moves like this:
+
+1. Start with an intermittent symptom.
+2. Identify the changing condition.
+3. Make the issue reproducible.
+4. Show that the behavior is deterministic under that condition.
+
+---
+
+## 3. First Response Checklist
 
 When an intermittent issue is reported, do not jump straight into random logs.
 
@@ -163,15 +233,29 @@ A retry can hide:
 
 A restart is useful for recovery, but it is not an explanation.
 
+Write the first incident note in one sentence:
+
+```text
+<service/job> fails with <error> when <condition>, affecting <scope> since <time>.
+```
+
+Example:
+
+```text
+The API returns intermittent 504 errors during peak traffic, affecting about 10% of requests since 09:30 UTC.
+```
+
+That one sentence forces the problem to become concrete.
+
 ---
 
-## 3. Classify the Failure
+## 4. Classify the Failure
 
 Classify the failure before going deep.
 
 This avoids wasting time.
 
-### 3.1 Hard deterministic failure
+### 4.1 Hard deterministic failure
 
 Fails every time.
 
@@ -208,7 +292,7 @@ diff -u reference.env current.env
 
 If the failure always happens, focus on configuration, version, permissions, and dependencies.
 
-### 3.2 Timing-sensitive failure
+### 4.2 Timing-sensitive failure
 
 Fails only sometimes, often depending on execution order.
 
@@ -237,7 +321,7 @@ done
 
 If reducing concurrency changes the failure rate, timing matters.
 
-### 3.3 Resource-pressure failure
+### 4.3 Resource-pressure failure
 
 Fails under load, after long runtime, or on smaller nodes.
 
@@ -275,7 +359,7 @@ journalctl -k --no-pager | grep -Ei 'oom|killed process|out of memory'
 
 If the issue appears after long runtime, suspect resource leak first.
 
-### 3.4 Dependency instability
+### 4.4 Dependency instability
 
 Fails because something outside the process is slow, unavailable, or inconsistent.
 
@@ -338,11 +422,45 @@ Interpretation:
 
 ---
 
-## 4. Linux Survival Commands for Incidents
+## 5. Fast Triage Commands
+
+When you need a quick first pass, use a short set of commands before going subsystem by subsystem.
+
+```bash
+hostname
+date
+uptime
+free -m
+df -h
+df -i
+vmstat 1 5
+iostat -x 1 5
+mpstat 1 5
+ss -s
+systemctl status service-name
+journalctl -u service-name -n 100 --no-pager
+```
+
+This set answers:
+
+- Which node am I on?
+- Has the system been up long enough for leak patterns?
+- Is memory tight?
+- Is disk full?
+- Is I/O slow?
+- Is CPU saturated or throttled?
+- Are sockets piling up?
+- Is the service unhealthy right now?
+
+For many incidents, this is enough to decide where to look next.
+
+---
+
+## 6. Linux Survival Commands for Incidents
 
 These commands are the foundation of Linux incident response.
 
-### 4.1 Where am I and what system is this?
+### 6.1 Where am I and what system is this?
 
 ```bash
 hostname
@@ -359,7 +477,7 @@ Use these before copying commands from one node to another.
 
 Different nodes often explain intermittent failures.
 
-### 4.2 Disk usage
+### 6.2 Disk usage
 
 ```bash
 df -h
@@ -378,7 +496,7 @@ This matters when `df -h` shows disk full but `du` does not explain it.
 
 A process may still hold a deleted log file open.
 
-### 4.3 Processes
+### 6.3 Processes
 
 ```bash
 ps aux --sort=-%cpu | head
@@ -403,7 +521,7 @@ Useful fields:
 - `voluntary_ctxt_switches`: voluntary context switches
 - `nonvoluntary_ctxt_switches`: forced context switches
 
-### 4.4 Open files and sockets
+### 6.4 Open files and sockets
 
 ```bash
 lsof -p <PID> | head
@@ -427,7 +545,7 @@ Many `SYN-SENT` sockets can suggest network or upstream connectivity issues.
 
 ---
 
-## 5. CPU Investigation
+## 7. CPU Investigation
 
 CPU problems are not always simple "high CPU".
 
@@ -441,7 +559,7 @@ You need to distinguish:
 - Load caused by runnable tasks
 - Load caused by blocked tasks
 
-### 5.1 Basic CPU view
+### 7.1 Basic CPU view
 
 ```bash
 uptime
@@ -478,7 +596,7 @@ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
 
 This suggests many tasks are blocked on I/O.
 
-### 5.2 Load average
+### 7.2 Load average
 
 Load average is not CPU usage.
 
@@ -501,7 +619,7 @@ ps -eo state,pid,cmd | awk '$1 ~ /D/ {print}'
 
 Processes in `D` state are usually stuck waiting on I/O.
 
-### 5.3 CPU steal time
+### 7.3 CPU steal time
 
 In virtual machines, steal time means the VM wanted CPU but the hypervisor did not give it CPU immediately.
 
@@ -517,7 +635,7 @@ If steal time rises during degradation, the problem may be noisy-neighbor conten
 
 This can explain why the same workload behaves differently on different nodes.
 
-### 5.4 CPU throttling in containers
+### 7.4 CPU throttling in containers
 
 A container can be CPU-throttled even when the host has idle CPU.
 
@@ -538,13 +656,28 @@ Useful fields in `cpu.stat`:
 
 If `nr_throttled` and `throttled_usec` keep increasing during slow periods, the container is CPU-throttled.
 
+### 7.5 Mini example: CPU problem that looked random
+
+A worker pool slows down only during business hours. Overall CPU is not pinned at 100%, so the issue looks unclear.
+
+Investigation shows:
+
+- high load average
+- high `wa`
+- many tasks in `D` state
+- elevated disk `await`
+
+This is not a CPU shortage. It is an I/O problem that shows up through CPU scheduling symptoms.
+
+That is why high load is a clue, not a conclusion.
+
 ---
 
-## 6. Memory Investigation
+## 8. Memory Investigation
 
 Memory failures are often intermittent because memory usage grows over time or spikes during specific requests.
 
-### 6.1 Basic memory checks
+### 8.1 Basic memory checks
 
 ```bash
 free -m
@@ -564,7 +697,7 @@ Focus on:
 - Process RSS growth
 - cgroup memory limits
 
-### 6.2 OOM killer
+### 8.2 OOM killer
 
 Check kernel logs:
 
@@ -583,7 +716,7 @@ Important questions:
 - Did memory grow slowly over time?
 - Did memory spike during a specific operation?
 
-### 6.3 Container memory limits
+### 8.3 Container memory limits
 
 Host memory is not enough.
 
@@ -607,7 +740,7 @@ Important `memory.events` fields:
 
 If `oom_kill` increases, the cgroup killed a process.
 
-### 6.4 Memory leak pattern
+### 8.4 Memory leak pattern
 
 A memory leak often looks like this:
 
@@ -631,9 +764,27 @@ done
 
 If memory grows without dropping after work completes, suspect a leak.
 
+### 8.5 Mini example: intermittent API failures caused by memory limit
+
+Symptoms:
+
+- only some requests fail
+- retries often succeed
+- one pod restarts more than others
+
+Investigation shows:
+
+- `memory.current` rises sharply during large requests
+- `memory.events` shows increasing `oom_kill`
+- the load balancer retries to another healthy pod
+
+The result looks intermittent from the client side.
+
+The mechanism is deterministic: large requests cross the pod memory limit.
+
 ---
 
-## 7. Disk and I/O Investigation
+## 9. Disk and I/O Investigation
 
 Disk issues often look like application issues.
 
@@ -648,7 +799,7 @@ Symptoms:
 - Temporary files fail
 - Package install hangs
 
-### 7.1 Disk space
+### 9.1 Disk space
 
 ```bash
 df -h
@@ -672,7 +823,7 @@ Find large files:
 find /var -type f -size +500M 2>/dev/null -exec ls -lh {} \;
 ```
 
-### 7.2 I/O saturation
+### 9.2 I/O saturation
 
 ```bash
 iostat -x 1
@@ -688,7 +839,7 @@ Useful fields:
 
 If `await` and queue size rise during failures, disk is likely involved.
 
-### 7.3 Cloud disk limits
+### 9.3 Cloud disk limits
 
 Cloud disks often have hidden limits:
 
@@ -696,7 +847,7 @@ Cloud disks often have hidden limits:
 - Throughput limit
 - Burst credit limit
 - Volume type limit
-- Instance-level EBS bandwidth limit
+- Instance-level bandwidth limit
 
 This means the disk can be fast for a while, then slow later.
 
@@ -712,9 +863,24 @@ Check provider metrics when possible:
 - Burst balance
 - Volume throttling
 
+### 9.4 Disk-full patterns worth remembering
+
+A disk incident is not always "filesystem at 100%".
+
+Watch for:
+
+- inode exhaustion
+- deleted files held open
+- temporary directories growing without cleanup
+- one workload writing far more logs than normal
+- object download or extract step filling local disk
+- container writable layer growing unexpectedly
+
+These patterns often explain why a node fails while the rest of the fleet stays healthy.
+
 ---
 
-## 8. File Descriptor and Socket Exhaustion
+## 10. File Descriptor and Socket Exhaustion
 
 File descriptor exhaustion is a classic intermittent failure.
 
@@ -729,7 +895,7 @@ Symptoms:
 - Random accept/connect errors
 - Service works after restart
 
-### 8.1 Check limits
+### 10.1 Check limits
 
 ```bash
 ulimit -n
@@ -742,7 +908,7 @@ Look for:
 Max open files
 ```
 
-### 8.2 Count open file descriptors
+### 10.2 Count open file descriptors
 
 ```bash
 ls /proc/<PID>/fd | wc -l
@@ -761,7 +927,7 @@ done
 
 If the count keeps rising, suspect a leak.
 
-### 8.3 Check socket states
+### 10.3 Check socket states
 
 ```bash
 ss -tan | awk '{print $1}' | sort | uniq -c | sort -nr
@@ -775,9 +941,23 @@ Common meanings:
 - Many `SYN-SENT`: outbound connection problem
 - Many `SYN-RECV`: inbound connection pressure or SYN backlog issue
 
+### 10.4 Connection-pool reality check
+
+Sometimes the problem is not the OS limit itself. It is the application pool design.
+
+Examples:
+
+- too many short-lived outbound connections
+- connection reuse disabled
+- pool size much larger than dependency can handle
+- pool never closing dead sockets
+- retry storm creating bursts of new connections
+
+OS symptoms and application design often need to be read together.
+
 ---
 
-## 9. Network, DNS, HTTP and TLS Debugging
+## 11. Network, DNS, HTTP and TLS Debugging
 
 Network failures are often conditional.
 
@@ -794,8 +974,19 @@ They may depend on:
 - Load balancer target
 - TLS certificate chain
 - Upstream health
+- IPv4 versus IPv6 path
+- Client clock accuracy
 
-### 9.1 Basic network checks
+When debugging network issues, separate the problem into layers:
+
+1. Can the host resolve the name?
+2. Can it reach the destination IP and port?
+3. Can it complete the TLS handshake?
+4. Can it send the HTTP request and get the expected response?
+
+Do not treat "network issue" as one category. DNS, TCP, TLS, proxying, and HTTP all fail differently.
+
+### 11.1 Basic network checks
 
 ```bash
 ip addr
@@ -804,9 +995,19 @@ resolvectl status 2>/dev/null || cat /etc/resolv.conf
 ping -c 4 dependency.example
 traceroute dependency.example 2>/dev/null || tracepath dependency.example
 mtr dependency.example
+ss -tan
 ```
 
-### 9.2 DNS checks
+Check:
+
+- Is the interface up?
+- Is the default route correct?
+- Which resolver is being used?
+- Is packet loss visible?
+- Does the route differ between failing and healthy nodes?
+- Are there many connections stuck in `SYN-SENT`, `TIME-WAIT`, or `CLOSE-WAIT`?
+
+### 11.2 DNS checks
 
 ```bash
 dig dependency.example
@@ -832,13 +1033,36 @@ Intermittent DNS problems may involve:
 - IPv6 AAAA record issues
 - Internal DNS service instability
 
-### 9.3 HTTP methods and common status codes
+Useful questions:
+
+- Does the failing host resolve to the same IP as a healthy host?
+- Does the answer change across resolvers?
+- Is the process using the expected search domain?
+- Is IPv6 preferred even though the IPv6 path is unhealthy?
+
+### 11.3 Plain TCP reachability
+
+Before blaming HTTP or TLS, confirm that the target port is reachable.
+
+```bash
+nc -vz dependency.example 443
+timeout 5 bash -c '</dev/tcp/dependency.example/443' && echo ok || echo failed
+```
+
+This helps separate:
+
+- Name resolution failure
+- TCP connect failure
+- TLS handshake failure
+- HTTP application failure
+
+### 11.4 HTTP methods and common status codes
 
 Know the basic methods:
 
 - `GET`: read
 - `POST`: create or submit action
-- `PUT`: replace/update
+- `PUT`: replace or update
 - `DELETE`: remove
 
 Know common status codes:
@@ -855,19 +1079,22 @@ Know common status codes:
 - `503`: service unavailable
 - `504`: gateway timeout
 
-For SRE work, 502/503/504 are especially important.
+For SRE work, 502, 503, and 504 are especially important.
 
 Simple meanings:
 
-- `502`: proxy/load balancer got a bad response from upstream
+- `502`: proxy or load balancer got a bad response from upstream
 - `503`: service is unavailable or no healthy upstream is available
 - `504`: upstream did not respond before timeout
 
-### 9.4 Curl debugging
+Treat these as path clues, not just status codes.
+
+### 11.5 Curl debugging
 
 ```bash
 curl -v https://service.example
 curl -I https://service.example
+curl -IL https://service.example
 curl -sS -o /dev/null -w '%{http_code} %{time_total}\n' https://service.example
 ```
 
@@ -887,7 +1114,51 @@ EOF_CURL
 curl -w '@curl-format.txt' -o /dev/null -s https://service.example
 ```
 
-### 9.5 TLS checks
+Useful variants:
+
+```bash
+curl -4 -v https://service.example
+curl -6 -v https://service.example
+curl -v --connect-timeout 3 --max-time 10 https://service.example
+curl -v --retry 3 --retry-delay 1 https://service.example
+```
+
+These help answer:
+
+- Does only IPv6 fail?
+- Is the delay in DNS, connect, TLS, or upstream response?
+- Is the failure immediate or timeout-driven?
+- Do retries succeed because the issue is transient or path-dependent?
+
+To bypass DNS and test a known IP directly while preserving the hostname and SNI:
+
+```bash
+curl -v --resolve service.example:443:1.2.3.4 https://service.example
+```
+
+This is one of the most useful ways to separate DNS problems from service or TLS problems.
+
+### 11.6 Proxy checks
+
+A large number of "network" failures are really proxy problems.
+
+Check environment settings:
+
+```bash
+env | grep -i proxy
+```
+
+Common causes:
+
+- `HTTP_PROXY` or `HTTPS_PROXY` set unexpectedly
+- `NO_PROXY` missing internal domains
+- One process using the proxy while another bypasses it
+- Proxy authentication failure
+- Proxy certificate interception
+
+Always confirm whether the failing client is using a proxy.
+
+### 11.7 TLS checks
 
 ```bash
 openssl s_client -connect service.example:443 -servername service.example
@@ -897,19 +1168,98 @@ Check:
 
 - Certificate expiry
 - Certificate chain
+- Hostname match
 - SNI
 - TLS protocol mismatch
 - Handshake delay
 
-TLS failures can look intermittent when different clients or routes use different TLS settings.
+Check certificate metadata directly:
+
+```bash
+openssl s_client -connect service.example:443 -servername service.example </dev/null 2>/dev/null | openssl x509 -noout -dates -issuer -subject
+```
+
+Force a specific TLS version if needed:
+
+```bash
+openssl s_client -connect service.example:443 -servername service.example -tls1_2
+openssl s_client -connect service.example:443 -servername service.example -tls1_3
+```
+
+TLS failures often appear intermittent because different clients, proxies, resolvers, or routes may negotiate different certificates, protocols, or IP paths.
+
+Common TLS-specific causes:
+
+- Expired certificate
+- Not-yet-valid certificate
+- Missing intermediate certificate
+- Wrong certificate served for the hostname
+- SNI mismatch
+- Old client versus new server protocol mismatch
+- Proxy interception
+- Different backend targets serving different chains
+
+### 11.8 Time and certificate validity
+
+TLS depends on correct local time.
+
+Check:
+
+```bash
+date -u
+timedatectl status
+```
+
+If the client clock is wrong, a valid certificate may appear expired or not yet valid.
+
+### 11.9 Practical interpretation
+
+Map symptoms to layers:
+
+- DNS lookup fails -> resolver, search domain, split-horizon DNS, or record issue
+- TCP connect fails -> routing, firewall, security group, NAT, or target port issue
+- TLS handshake fails -> certificate, SNI, protocol, chain, or clock issue
+- HTTP 502 -> upstream returned a bad or invalid response
+- HTTP 503 -> no healthy backend or service intentionally unavailable
+- HTTP 504 -> upstream path is reachable but too slow to respond
+
+This turns vague reports like "the network is flaky" into a narrower and testable hypothesis.
+
+### 11.10 Mini example: one bad resolver
+
+Symptoms:
+
+- service works from most nodes
+- occasional timeouts only from one subset of nodes
+- upstream is healthy
+
+Investigation shows:
+
+- healthy nodes resolve the service quickly
+- failing nodes use a different resolver
+- that resolver sometimes returns slow or inconsistent answers
+
+The service is not flaky. Name resolution is.
+
+### 11.11 Operating rule
+
+Always compare the same request across:
+
+- Healthy node versus failing node
+- IPv4 versus IPv6
+- Default DNS versus known resolver
+- Direct path versus proxy path
+- DNS-based request versus forced IP with `--resolve`
+
+Intermittent network failures usually become clear when one path is isolated from the others.
 
 ---
 
-## 10. Systemd and Service Debugging
+## 12. Systemd and Service Debugging
 
 Many production services are managed by systemd.
 
-### 10.1 Basic service inspection
+### 12.1 Basic service inspection
 
 ```bash
 systemctl status service-name
@@ -918,7 +1268,7 @@ systemctl show service-name
 journalctl -u service-name -n 200 --no-pager
 ```
 
-### 10.2 Restart behavior
+### 12.2 Restart behavior
 
 Check restart policy:
 
@@ -935,14 +1285,14 @@ Useful fields:
 
 A service may appear intermittent because systemd keeps restarting it.
 
-### 10.3 Recent failures
+### 12.3 Recent failures
 
 ```bash
 journalctl -u service-name --since '1 hour ago' --no-pager
 journalctl -p warning..alert --since '1 hour ago' --no-pager
 ```
 
-### 10.4 Kernel and boot logs
+### 12.4 Kernel and boot logs
 
 ```bash
 dmesg -T | tail -100
@@ -959,15 +1309,33 @@ Look for:
 - Kernel warnings
 - Permission denials
 
+### 12.5 Unit-file details worth checking
+
+Intermittent service behavior is often shaped by the unit file itself.
+
+Inspect:
+
+- `ExecStart`
+- `Environment`
+- `EnvironmentFile`
+- `WorkingDirectory`
+- `Restart`
+- `TimeoutStartSec`
+- `TimeoutStopSec`
+- `LimitNOFILE`
+- ordering dependencies such as `After=` and `Requires=`
+
+A service may be healthy in a shell but unhealthy under systemd because the runtime environment is different.
+
 ---
 
-## 11. Containers and Docker Debugging
+## 13. Containers and Docker Debugging
 
 Containers add another layer of limits.
 
 Always check both the container and the host.
 
-### 11.1 Basic Docker checks
+### 13.1 Basic Docker checks
 
 ```bash
 docker ps
@@ -989,7 +1357,7 @@ or:
 docker exec -it container-name bash
 ```
 
-### 11.2 Container exits immediately
+### 13.2 Container exits immediately
 
 Check:
 
@@ -1008,7 +1376,7 @@ Common causes:
 - App crashes at startup
 - Health check kills the container
 
-### 11.3 Container memory and CPU limits
+### 13.3 Container memory and CPU limits
 
 ```bash
 docker inspect container-name | grep -Ei 'Memory|NanoCpus|CpuQuota|CpuPeriod'
@@ -1025,7 +1393,7 @@ cat /sys/fs/cgroup/cpu.max 2>/dev/null
 
 The host may have plenty of resources while the container is constrained.
 
-### 11.4 Docker Compose checks
+### 13.4 Docker Compose checks
 
 ```bash
 docker compose ps
@@ -1049,15 +1417,28 @@ Important point:
 
 A database container may be started but not ready to accept connections.
 
+### 13.5 Kubernetes mindset, even if you are not using Kubernetes
+
+The same ideas still apply in orchestrated environments:
+
+- pod restart count matters
+- readiness and liveness are different
+- resource requests and limits change behavior
+- one unhealthy node can create misleading symptoms
+- rolling updates can mix versions
+- service discovery and DNS are part of the failure path
+
+Even if the local tool here is Docker, think in layers, not containers alone.
+
 ---
 
-## 12. Cloud Platform Constraints
+## 14. Cloud Platform Constraints
 
 Cloud infrastructure adds hidden enforcement layers.
 
 Two machines with the same OS can behave differently because of provider-level limits.
 
-### 12.1 Instance type differences
+### 14.1 Instance type differences
 
 Compare:
 
@@ -1066,7 +1447,7 @@ Compare:
 - Disk type
 - Local SSD vs network disk
 - Network bandwidth
-- EBS bandwidth
+- Instance-level block storage bandwidth
 - CPU architecture
 - Burstable vs fixed performance
 - GPU availability
@@ -1084,7 +1465,7 @@ ip addr
 ip route
 ```
 
-### 12.2 Burstable CPU
+### 14.2 Burstable CPU
 
 Some cloud instances can burst above baseline only while they have CPU credits.
 
@@ -1102,7 +1483,7 @@ Check provider metrics:
 - CPU credit usage
 - CPU utilization
 
-### 12.3 Object storage instability
+### 14.3 Object storage instability
 
 Object storage can fail intermittently due to:
 
@@ -1132,7 +1513,7 @@ Mitigations:
 - Track latency percentiles
 - Avoid infinite hangs
 
-### 12.4 IAM and permission issues
+### 14.4 IAM and permission issues
 
 IAM failures are usually deterministic, but they can appear intermittent when different nodes or roles are used.
 
@@ -1151,9 +1532,24 @@ aws sts get-caller-identity
 aws s3 ls s3://bucket-name
 ```
 
+### 14.5 Provider events and hidden infrastructure drift
+
+Sometimes the issue is outside your service and outside your instance.
+
+Check for:
+
+- provider maintenance events
+- degraded availability zone
+- DNS/control-plane incidents
+- block storage impairment
+- network path instability
+- host retirement or migration
+
+If the timing of the incident lines up with a provider event, treat that as a serious clue.
+
 ---
 
-## 13. Node Comparison Method
+## 15. Node Comparison Method
 
 When only some nodes fail, assume the nodes differ until proven identical.
 
@@ -1233,13 +1629,30 @@ Important differences:
 - Config file
 - Limits
 
+### 15.1 Node comparison checklist for stubborn incidents
+
+If a failure affects only one node, compare at least these:
+
+- OS and kernel
+- application version
+- unit file or startup command
+- environment variables
+- resource limits
+- DNS and proxy settings
+- clock and timezone
+- mounted filesystems
+- disk health and free space
+- recent local errors in `journalctl` and `dmesg`
+
+A real node comparison is boring, but boring comparisons solve real incidents.
+
 ---
 
-## 14. Reproducibility Engineering
+## 16. Reproducibility Engineering
 
 The goal is to turn "sometimes fails" into "fails when X happens".
 
-### 14.1 Run in a loop
+### 16.1 Run in a loop
 
 ```bash
 for i in {1..100}; do
@@ -1254,7 +1667,7 @@ for i in {1..100}; do
 done
 ```
 
-### 14.2 Add timestamps
+### 16.2 Add timestamps
 
 ```bash
 while true; do
@@ -1266,7 +1679,7 @@ done
 
 Timestamps allow you to match symptoms with metrics.
 
-### 14.3 Change one variable at a time
+### 16.3 Change one variable at a time
 
 Examples:
 
@@ -1282,7 +1695,7 @@ Do not change five variables at once.
 
 If the failure disappears, you will not know why.
 
-### 14.4 Increase pressure carefully
+### 16.4 Increase pressure carefully
 
 Memory pressure:
 
@@ -1306,7 +1719,7 @@ Use stress tools only in safe environments unless approved.
 
 Do not run destructive load tests in production.
 
-### 14.5 Reduce limits to expose boundary
+### 16.5 Reduce limits to expose boundary
 
 Lower open file limit:
 
@@ -1326,9 +1739,23 @@ Use this in controlled environments.
 
 If the failure becomes easier to reproduce, you found a boundary.
 
+### 16.6 Failure-rate thinking
+
+Reproducibility does not always mean 100% failure.
+
+Sometimes the right question is:
+
+- does the failure rate increase?
+- does latency get worse sooner?
+- does one condition make the issue much easier to study?
+
+That is still progress.
+
+You do not need perfect reproduction to build confidence in a theory.
+
 ---
 
-## 15. Observability: What to Measure
+## 17. Observability: What to Measure
 
 A useful graph moves with the failure.
 
@@ -1336,7 +1763,7 @@ Do not only collect more logs.
 
 Collect signals that explain system state.
 
-### 15.1 Golden signals
+### 17.1 Golden signals
 
 For services:
 
@@ -1359,7 +1786,7 @@ For infrastructure:
 - Connection states
 - Queue depth
 
-### 15.2 RED method
+### 17.2 RED method
 
 For request-driven services:
 
@@ -1377,7 +1804,7 @@ Useful labels:
 - Availability zone
 - Dependency
 
-### 15.3 USE method
+### 17.3 USE method
 
 For resources:
 
@@ -1395,7 +1822,7 @@ Apply USE to:
 - Thread pools
 - Queues
 
-### 15.4 Useful intermittent-failure dashboards
+### 17.4 Useful intermittent-failure dashboards
 
 Create dashboards that can answer:
 
@@ -1413,9 +1840,28 @@ Create dashboards that can answer:
 
 If you cannot answer these, the system is under-instrumented.
 
+### 17.5 Boundary-oriented metrics
+
+The best metrics for intermittent failures are often near the limit itself.
+
+Examples:
+
+- memory high-water mark
+- open file descriptors as percent of limit
+- queue age, not only queue size
+- retry count by dependency
+- disk await, not only disk throughput
+- connection pool wait time
+- cgroup `oom_kill` count
+- cgroup `nr_throttled`
+- DNS lookup latency
+- TLS handshake latency
+
+Instrument the boundary, not only the symptom.
+
 ---
 
-## 16. Alerts and Runbooks
+## 18. Alerts and Runbooks
 
 A good alert should be actionable.
 
@@ -1443,7 +1889,7 @@ Better alert:
 Root filesystem free space < 10% and predicted to fill within 4 hours
 ```
 
-### 16.1 Good alert properties
+### 18.1 Good alert properties
 
 A good alert is:
 
@@ -1454,7 +1900,7 @@ A good alert is:
 - Linked to a runbook
 - Low-noise
 
-### 16.2 Runbook template
+### 18.2 Runbook template
 
 Use this structure:
 
@@ -1483,7 +1929,7 @@ Who to contact and when.
 What should be improved after the incident.
 ```
 
-### 16.3 Example: disk full runbook
+### 18.3 Example: disk full runbook
 
 Meaning:
 
@@ -1512,7 +1958,7 @@ Prevention:
 - Move temp files to larger volume
 - Reduce noisy logs
 
-### 16.4 Example: memory pressure runbook
+### 18.4 Example: memory pressure runbook
 
 First checks:
 
@@ -1537,7 +1983,7 @@ Prevention:
 - Investigate memory leak
 - Set safer concurrency limits
 
-### 16.5 Example: 502/503/504 runbook
+### 18.5 Example: 502/503/504 runbook
 
 First checks:
 
@@ -1572,9 +2018,26 @@ Prevention:
 - Safer deployment rollout
 - Circuit breaker or backoff
 
+### 18.6 Boundary-aware alerts
+
+The best alerts for this topic are often not "CPU high" or "memory high".
+
+They are alerts that say a boundary is being approached or crossed.
+
+Examples:
+
+- file descriptors above 80% of process limit
+- queue wait time rising faster than throughput
+- disk `await` above baseline for 15 minutes
+- TLS handshake latency p95 suddenly elevated
+- cgroup throttling increasing during latency spikes
+- one node showing much higher error rate than the rest
+
+A runbook should help the responder narrow the boundary, not drown them in commands.
+
 ---
 
-## 17. CI/CD and Deployment-Related Intermittency
+## 19. CI/CD and Deployment-Related Intermittency
 
 Deployments can create intermittent failures when old and new versions run together.
 
@@ -1618,11 +2081,23 @@ Safer deployment practices:
 - Separate deploy and migration steps
 - Monitor error rate during rollout
 
+### 19.1 Mixed-version failures are often misread
+
+A deployment issue may look intermittent because:
+
+- some nodes serve old code
+- some nodes serve new code
+- cache entries are written in different formats
+- one migration has not reached all environments
+- the load balancer keeps hitting a bad subset of nodes
+
+That is not randomness. It is rollout inconsistency.
+
 ---
 
-## 18. Common Intermittent Failure Patterns
+## 20. Common Intermittent Failure Patterns
 
-### 18.1 Works after restart
+### 20.1 Works after restart
 
 Possible causes:
 
@@ -1638,7 +2113,7 @@ Do not stop at "restart fixed it".
 
 Ask what state the restart reset.
 
-### 18.2 Fails only under high concurrency
+### 20.2 Fails only under high concurrency
 
 Possible causes:
 
@@ -1659,7 +2134,7 @@ lsof -p <PID> | wc -l
 ps -p <PID> -o nlwp
 ```
 
-### 18.3 Fails only on one node
+### 20.3 Fails only on one node
 
 Possible causes:
 
@@ -1675,7 +2150,7 @@ Possible causes:
 
 Compare with a good node.
 
-### 18.4 Fails only after long runtime
+### 20.4 Fails only after long runtime
 
 Possible causes:
 
@@ -1690,7 +2165,7 @@ Possible causes:
 
 Track process and filesystem state over time.
 
-### 18.5 Fails only during peak hours
+### 20.5 Fails only during peak hours
 
 Possible causes:
 
@@ -1704,7 +2179,7 @@ Possible causes:
 
 Correlate with traffic and saturation metrics.
 
-### 18.6 Fails only during startup
+### 20.6 Fails only during startup
 
 Possible causes:
 
@@ -1717,7 +2192,7 @@ Possible causes:
 
 Check systemd ordering, container startup, and readiness checks.
 
-### 18.7 Fails only during large jobs
+### 20.7 Fails only during large jobs
 
 Possible causes:
 
@@ -1731,9 +2206,22 @@ Possible causes:
 
 Measure resource high-water marks.
 
+### 20.8 Fails only for one class of user or request
+
+Possible causes:
+
+- payload size difference
+- one auth path
+- one storage bucket or object prefix
+- one feature flag
+- one region-specific dependency
+- one code path with a slower query or larger memory footprint
+
+This is why scope matters. Not all "same endpoint" requests are operationally identical.
+
 ---
 
-## 19. Practical Investigation Flow
+## 21. Practical Investigation Flow
 
 Use this when you are unsure where to start.
 
@@ -1853,9 +2341,21 @@ Add:
 - Better health check
 - Better deployment guardrail
 
+### Step 11: Re-read the story
+
+Before closing the incident, ask:
+
+- Does the proposed root cause explain the timing?
+- Does it explain the blast radius?
+- Does it explain why retry or restart helped?
+- Does it explain why only some nodes or requests failed?
+- Does it match the metrics?
+
+If not, the explanation is probably incomplete.
+
 ---
 
-## 20. Root Cause Analysis Template
+## 22. Root Cause Analysis Template
 
 Use simple language.
 
@@ -1904,11 +2404,30 @@ The service was flaky.
 
 Better root cause names the boundary.
 
+### 22.1 Good RCA language patterns
+
+Prefer:
+
+- "The service exceeded..."
+- "The node used a different..."
+- "The deployment introduced..."
+- "The retry logic amplified..."
+- "The dependency slowed down because..."
+
+Avoid:
+
+- "The system randomly failed"
+- "The network was weird"
+- "We are not sure but maybe..."
+- "The restart fixed it"
+
+The RCA should name the mechanism, not only the symptom.
+
 ---
 
-## 21. Prevention Patterns
+## 23. Prevention Patterns
 
-### 21.1 Timeouts
+### 23.1 Timeouts
 
 Every network call should have a timeout.
 
@@ -1920,7 +2439,7 @@ Use:
 - Read timeout
 - Overall request timeout
 
-### 21.2 Retries with backoff
+### 23.2 Retries with backoff
 
 Retries should not be immediate forever.
 
@@ -1933,7 +2452,7 @@ Use:
 
 Bad retry behavior can create retry storms.
 
-### 21.3 Bulkheads
+### 23.3 Bulkheads
 
 Do not let one dependency consume all resources.
 
@@ -1944,13 +2463,13 @@ Separate:
 - Queues
 - Worker pools
 
-### 21.4 Circuit breakers
+### 23.4 Circuit breakers
 
 If a dependency is failing badly, stop sending unlimited traffic to it for a short time.
 
 This protects both systems.
 
-### 21.5 Backpressure
+### 23.5 Backpressure
 
 When overloaded, reject or slow new work instead of allowing total collapse.
 
@@ -1961,7 +2480,7 @@ Examples:
 - 429 response
 - Worker concurrency limit
 
-### 21.6 Health checks
+### 23.6 Health checks
 
 Health checks should test whether the service can actually serve traffic.
 
@@ -1972,7 +2491,7 @@ Separate:
 - Liveness: should the process be restarted?
 - Readiness: should it receive traffic?
 
-### 21.7 Capacity planning
+### 23.7 Capacity planning
 
 Track trends:
 
@@ -1986,91 +2505,108 @@ Track trends:
 
 Capacity issues become incidents when growth is invisible.
 
+### 23.8 Design for visible boundaries
+
+The best preventive design makes boundaries easier to see.
+
+Examples:
+
+- expose queue depth
+- expose connection pool wait time
+- emit dependency latency by upstream
+- record cgroup throttling and OOM events
+- label metrics by node, region, and version
+- preserve request IDs across retries
+
+If the boundary stays hidden, the incident will return as "flaky" again.
+
 ---
 
-## 22. Command Appendix
+## 24. Quick Reference Cheatsheet
 
-### Linux basics
+### When the incident starts
 
 ```bash
 hostname
-whoami
-id
-pwd
 date
 uptime
-uname -a
-cat /etc/os-release
+free -m
+df -h
+df -i
+vmstat 1 5
+iostat -x 1 5
+mpstat 1 5
+ss -s
+systemctl status service-name
+journalctl -u service-name -n 100 --no-pager
 ```
 
-### CPU
-
-```bash
-top
-ps aux --sort=-%cpu | head
-mpstat 1
-vmstat 1
-```
-
-### Memory
+### When you suspect memory
 
 ```bash
 free -m
 ps aux --sort=-%mem | head
 dmesg -T | grep -Ei 'oom|killed process|out of memory'
+cat /sys/fs/cgroup/memory.max 2>/dev/null
+cat /sys/fs/cgroup/memory.current 2>/dev/null
+cat /sys/fs/cgroup/memory.events 2>/dev/null
 ```
 
-### Disk
+### When you suspect disk or I/O
 
 ```bash
 df -h
 df -i
-du -h --max-depth=1 /var 2>/dev/null | sort -h
 iostat -x 1
+du -h --max-depth=1 /var 2>/dev/null | sort -h
 lsof +L1
 ```
 
-### Network
+### When you suspect file descriptors or sockets
 
 ```bash
-ip addr
-ip route
-ss -tan
+ulimit -n
+cat /proc/<PID>/limits
+ls /proc/<PID>/fd | wc -l
 ss -s
-dig example.com
-curl -v https://example.com
+ss -tan | awk '{print $1}' | sort | uniq -c | sort -nr
 ```
 
-### Systemd
+### When you suspect network or dependency issues
 
 ```bash
-systemctl status service-name
-systemctl cat service-name
-journalctl -u service-name -n 200 --no-pager
-journalctl -k --since '1 hour ago' --no-pager
+dig dependency.example
+curl -v https://dependency.example
+curl -w '@curl-format.txt' -o /dev/null -s https://dependency.example
+env | grep -i proxy
+openssl s_client -connect service.example:443 -servername service.example
 ```
 
-### Docker
+### When you suspect node drift
 
 ```bash
-docker ps
-docker ps -a
-docker logs --tail 200 container-name
-docker inspect container-name
-docker stats
+uname -a
+cat /etc/os-release
+lscpu
+env | sort
+cat /proc/self/limits
+ip route
+resolvectl status 2>/dev/null || cat /etc/resolv.conf
 ```
 
-### AWS basics
+### When you need to force reproduction
 
 ```bash
-aws sts get-caller-identity
-aws ec2 describe-instances
-aws s3 ls s3://bucket-name
+for i in {1..100}; do ./run_command || break; done
+ulimit -n 256
+ulimit -s 4096
+stress-ng --cpu 2 --timeout 60s
+stress-ng --vm 1 --vm-bytes 512M --timeout 60s
 ```
 
 ---
 
-## 23. Final Principles
+## 25. Final Principles
 
 - Random usually means unmeasured.
 - A restart resets state. It does not explain the failure.
