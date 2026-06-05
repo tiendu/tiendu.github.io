@@ -2,7 +2,7 @@
 layout: post
 title: "Git Worktree and Git Subtree: Practical Tools Most Developers Underuse"
 date: 2025-03-01
-categories: ["Automation", "Systems & Engineering"]
+categories: ["Automation, Systems & Engineering"]
 ---
 
 Git has many features that most developers never touch.
