@@ -2,7 +2,7 @@
 layout: post
 title: "Automation à la Carte: Makefile, justfile, or Shell Script?"
 date: 2025-05-29
-categories: ["Automation", "Systems & Engineering"]
+categories: ["Automation, Systems & Engineering"]
 pinned: true
 ---
 
