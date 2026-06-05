@@ -2,7 +2,7 @@
 layout: post
 title: "Designing Reliable APIs: Principles That Survive Scale"
 date: 2025-05-21
-categories: ["Architecture", "Backend", "Systems Design"]
+categories: ["Automation, Systems & Engineering"]
 ---
 
 APIs are contracts.
