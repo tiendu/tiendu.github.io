@@ -1,4 +1,4 @@
-<nav class="toc">
+<nav class="toc" id="toc">
   <strong>Contents</strong>
   <ul id="toc-list"></ul>
 </nav>
@@ -6,9 +6,14 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const headings = document.querySelectorAll(".post-content h2");
+  const toc = document.getElementById("toc");
   const tocList = document.getElementById("toc-list");
 
-  if (!tocList || headings.length === 0) return;
+  if (!toc || !tocList || headings.length === 0) {
+    if (toc) toc.remove();
+    document.body.classList.add("no-toc");
+    return;
+  }
 
   headings.forEach((heading) => {
     if (!heading.id) {
@@ -20,8 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const li = document.createElement("li");
-
     const a = document.createElement("a");
+
     a.href = "#" + heading.id;
     a.textContent = heading.textContent;
 
