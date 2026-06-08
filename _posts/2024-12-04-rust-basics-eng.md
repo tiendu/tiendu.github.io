@@ -31,14 +31,18 @@ But this is also why Rust is powerful. It prevents many memory bugs and race con
 
 This post focuses only on the difficult Rust concepts:
 
-1. Stack vs Heap
-2. Ownership
-3. Borrowing
-4. Mutable Borrowing
-5. Lifetimes
-6. Copy vs Clone
-7. Memory Safety
-8. Race Conditions
+1. [Rust's One Big Idea](#rusts-one-big-idea)
+2. [Stack vs Heap](#stack-vs-heap)
+3. [Ownership](#ownership)
+4. [Borrowing](#borrowing)
+5. [Mutable Borrowing](#mutable-borrowing)
+6. [Lifetimes](#lifetimes)
+7. [Copy vs Clone](#copy-vs-clone)
+8. [Memory Safety](#memory-safety)
+9. [Race Conditions](#race-conditions)
+10. [A Small Mental Model](#a-small-mental-model)
+11. [Practical Rules For Writing Rust Without Fighting It](#practical-rules-for-writing-rust-without-fighting-it)
+12. [The Core Rust Model](#the-core-rust-model)
 
 Everything else in Rust is easier to learn after these ideas make sense.
 
