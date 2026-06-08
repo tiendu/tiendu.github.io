@@ -1,5 +1,5 @@
 ---
-layout: basic
+layout: post
 title: "ETL vs ELT in Bioinformatics: Why Storing Raw Data Can Save Your Project"
 categories: ["Bioinformatics & Scientific Tools"]
 date: 2026-03-28
