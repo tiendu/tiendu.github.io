@@ -1,0 +1,31 @@
+<nav class="toc">
+  <strong>Contents</strong>
+  <ul id="toc-list"></ul>
+</nav>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const headings = document.querySelectorAll(".post-content h2, .post-content h3");
+  const tocList = document.getElementById("toc-list");
+
+  headings.forEach((heading) => {
+    if (!heading.id) {
+      heading.id = heading.textContent
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-");
+    }
+
+    const li = document.createElement("li");
+    li.className = heading.tagName.toLowerCase();
+
+    const a = document.createElement("a");
+    a.href = "#" + heading.id;
+    a.textContent = heading.textContent;
+
+    li.appendChild(a);
+    tocList.appendChild(li);
+  });
+});
+</script>
