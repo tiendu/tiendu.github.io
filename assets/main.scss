@@ -161,3 +161,28 @@ pre code {
   color: inherit;
   font-family: inherit;
 }
+
+#topBtn {
+  display: none;
+  position: fixed;
+
+  bottom: 20px;
+  right: 20px;
+
+  padding: 8px 12px;
+
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 14px;
+
+  border: 1px solid #666;
+  background: #1e1e2e;
+  color: #cdd6f4;
+
+  cursor: pointer;
+  z-index: 9999;
+}
+
+#topBtn:hover {
+  border-color: #89b4fa;
+  color: #89b4fa;
+}
