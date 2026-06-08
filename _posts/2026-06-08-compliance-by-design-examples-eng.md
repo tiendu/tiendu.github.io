@@ -67,24 +67,28 @@ You design the platform so the safer path is the default path.
 
 1. [The core idea](#the-core-idea)
 2. [Compliance is not a checkbox layer](#compliance-is-not-a-checkbox-layer)
-3. [Example 1: filenames and object paths](#example-1-filenames-and-object-paths)
-4. [Example 2: sample sheets and manifests](#example-2-sample-sheets-and-manifests)
-5. [Example 3: workflow logs](#example-3-workflow-logs)
-6. [Example 4: job names and task names](#example-4-job-names-and-task-names)
-7. [Example 5: support access](#example-5-support-access)
-8. [Example 6: notebooks and interactive workspaces](#example-6-notebooks-and-interactive-workspaces)
-9. [Example 7: temporary files and failed jobs](#example-7-temporary-files-and-failed-jobs)
-10. [Example 8: controlled-access research datasets](#example-8-controlled-access-research-datasets)
-11. [Example 9: workflow provenance](#example-9-workflow-provenance)
-12. [Example 10: clinical pipeline change control](#example-10-clinical-pipeline-change-control)
-13. [Example 11: service accounts and automation](#example-11-service-accounts-and-automation)
-14. [Example 12: exports and downloads](#example-12-exports-and-downloads)
-15. [Example 13: cross-region data movement](#example-13-cross-region-data-movement)
-16. [Example 14: container and dependency governance](#example-14-container-and-dependency-governance)
-17. [Example 15: audit logs that are actually useful](#example-15-audit-logs-that-are-actually-useful)
-18. [Design patterns for safer bioinformatics platforms](#design-patterns-for-safer-bioinformatics-platforms)
-19. [Anti-patterns to avoid](#anti-patterns-to-avoid)
-20. [A practical design review checklist](#a-practical-design-review-checklist)
+3. [The recurring gap: what engineers optimize versus what auditors inspect](#the-recurring-gap-what-engineers-optimize-versus-what-auditors-inspect)
+4. [Example 1: filenames and object paths](#example-1-filenames-and-object-paths)
+5. [Example 2: sample sheets and manifests](#example-2-sample-sheets-and-manifests)
+6. [Example 3: workflow logs](#example-3-workflow-logs)
+7. [Example 4: job names and task names](#example-4-job-names-and-task-names)
+8. [Example 5: support access](#example-5-support-access)
+9. [Example 6: notebooks and interactive workspaces](#example-6-notebooks-and-interactive-workspaces)
+10. [Example 7: temporary files and failed jobs](#example-7-temporary-files-and-failed-jobs)
+11. [Example 8: controlled-access research datasets](#example-8-controlled-access-research-datasets)
+12. [Example 9: workflow provenance](#example-9-workflow-provenance)
+13. [Example 10: clinical pipeline change control](#example-10-clinical-pipeline-change-control)
+14. [Example 11: service accounts and automation](#example-11-service-accounts-and-automation)
+15. [Example 12: exports and downloads](#example-12-exports-and-downloads)
+16. [Example 13: cross-region data movement](#example-13-cross-region-data-movement)
+17. [Example 14: container and dependency governance](#example-14-container-and-dependency-governance)
+18. [Example 15: audit logs that are actually useful](#example-15-audit-logs-that-are-actually-useful)
+19. [Example 16: billing, cost reports, and operational exports](#example-16-billing-cost-reports-and-operational-exports)
+20. [Example 17: support tickets, screenshots, and chat messages](#example-17-support-tickets-screenshots-and-chat-messages)
+21. [Example 18: deletion requests and hidden copies](#example-18-deletion-requests-and-hidden-copies)
+22. [Design patterns for safer bioinformatics platforms](#design-patterns-for-safer-bioinformatics-platforms)
+23. [Anti-patterns to avoid](#anti-patterns-to-avoid)
+24. [A practical design review checklist](#a-practical-design-review-checklist)
 
 ---
 
@@ -110,7 +114,7 @@ A well-logged platform can still leak patient details into logs.
 
 A validated pipeline can still become unvalidated after a silent dependency update.
 
-A cloud environment can still violate data residency if logs, backups, or telemetry leave the approved region.
+A cloud environment can still violate data residency if logs, backups, support tickets, telemetry, or crash reports leave the approved region.
 
 The practical question is:
 
@@ -188,12 +192,80 @@ For example:
 | Service accounts | Automation may bypass user-level governance |
 | Backups | Deleted data may persist longer than promised |
 | Metrics | Sensitive metadata may leave the approved environment |
+| Billing reports | Project names and file paths may reveal study details |
+| Support tickets | Screenshots and attachments may become shadow data stores |
 
 This is why compliance needs to appear early in engineering design.
 
 Not because every engineer should become a lawyer.
 
 Because engineers create the paths data will follow.
+
+---
+
+## The recurring gap: what engineers optimize versus what auditors inspect
+
+A lot of compliance failures come from a difference in viewpoint.
+
+The engineer often optimizes for:
+
+- debugging speed
+- user convenience
+- operational visibility
+- reproducibility
+- lower support cost
+- fewer tickets
+- easier search
+- faster development
+
+The auditor, privacy officer, security reviewer, or data governance team looks for:
+
+- unnecessary data exposure
+- unclear access boundaries
+- missing approval records
+- weak evidence
+- uncontrolled copies
+- overbroad permissions
+- poor retention behavior
+- untracked data movement
+- lack of reproducibility
+- lack of change control
+
+Both perspectives are valid.
+
+The problem happens when the engineering system only reflects the first perspective.
+
+A filename is convenient.
+
+A log line is useful.
+
+A screenshot is fast.
+
+An admin role solves tickets.
+
+A notebook export helps collaboration.
+
+A global monitoring tool helps operations.
+
+A retained failed-job directory helps debugging.
+
+But each one can create a new data copy, a new access path, or a new governance obligation.
+
+The most useful mental model is this:
+
+```text
+Every convenience creates a data flow.
+Every data flow needs a boundary.
+Every boundary needs evidence.
+```
+
+The rest of this post uses that lens.
+
+For each example, ask:
+
+1. What did the engineer think they were doing?
+2. What did the auditor or reviewer see?
+3. What better design would reduce the risk without blocking useful work?
 
 ---
 
@@ -230,7 +302,27 @@ The name may appear in:
 
 Even if file contents are protected, the path itself leaks information.
 
-A better design separates internal storage identity from human-facing metadata:
+### What the engineer thought
+
+> This helps users find the right files. Human-readable names make support and debugging easier.
+
+That is true.
+
+Human-readable names are useful.
+
+The problem is that object paths travel farther than people expect.
+
+### What the auditor saw
+
+> Patient identity and disease context are embedded in paths that may propagate into logs, tickets, dashboards, billing exports, and cloud provider consoles.
+
+The auditor is not only looking at whether the BAM is encrypted.
+
+They are looking at where the identifier spreads.
+
+### Better design
+
+Separate internal storage identity from human-facing metadata:
 
 ```text
 /projects/prj_9f31/raw/sample_smp_7a92/readset_rds_001_R1.fastq.gz
@@ -338,7 +430,25 @@ That file may be passed into:
 - debugging sessions
 - temporary directories
 
-A safer design splits operational metadata from sensitive identity metadata.
+### What the engineer thought
+
+> The pipeline needs a sample sheet. It is easier if all metadata is in one CSV.
+
+That is a natural instinct.
+
+A single table is easy to inspect, easy to edit, and easy to pass into a workflow.
+
+### What the auditor saw
+
+> The workflow receives fields it does not need, including names, medical record numbers, dates, and diagnosis labels. Those fields may be copied into logs, work directories, caches, and tickets.
+
+The issue is not the CSV format.
+
+The issue is unnecessary propagation.
+
+### Better design
+
+Split operational metadata from sensitive identity metadata.
 
 Operational manifest:
 
@@ -456,6 +566,24 @@ This might seem helpful during development.
 
 In production, it can turn every job log into a sensitive document.
 
+### What the engineer thought
+
+> These logs make debugging easier. If a user reports a failure, I can immediately see which sample failed.
+
+That is understandable.
+
+Debugging without context is painful.
+
+### What the auditor saw
+
+> Logs now contain identifiers and clinical details. Those logs may be accessible to support teams, infrastructure teams, vendors, monitoring tools, and long-term archives.
+
+The risk is not only who can see the workflow output.
+
+The risk is who can see the logs.
+
+### Better logging
+
 A better version:
 
 ```bash
@@ -549,6 +677,32 @@ Analysis: anl_20260528_001
 Error: FASTQ checksum mismatch
 ```
 
+### Realistic failure mode: logs become a second data lake
+
+A workflow log may start in one place:
+
+```text
+workflow task log
+```
+
+Then flow into:
+
+```text
+CloudWatch
+Splunk
+SIEM
+long-term archive
+support dashboards
+incident reports
+data lake
+```
+
+If the original log contains clinical metadata, the entire logging pipeline becomes a sensitive-data pipeline.
+
+Nobody planned that.
+
+It simply emerged.
+
 ### Logging rule
 
 A good rule:
@@ -584,7 +738,7 @@ Bad job names:
 
 ```text
 John_Smith_lung_cancer_alignment
-Mary_BCRA_failed_variant_calling
+Mary_BRCA_failed_variant_calling
 PEDS_AML_relapse_batch_20260528
 ```
 
@@ -596,22 +750,19 @@ variant_calling_anl_20260528_002
 qc_batch_prj_9f31_20260528
 ```
 
-Even research cohort names can leak meaning.
+### What the engineer thought
 
-For example:
+> The job name helps users and support quickly understand what is running.
 
-```text
-early_onset_parkinsons_family_analysis
-rare_pediatric_neurodegeneration_batch
-```
+True.
 
-Maybe that is acceptable inside a tightly controlled workspace.
+But the job name may appear outside the project boundary.
 
-Maybe not.
+### What the auditor saw
 
-The question is where the name travels.
+> Patient names, disease labels, or cohort details appear in operational systems that may not have the same access restrictions as the original project.
 
-If the job name appears in a lower-sensitivity billing export, cloud monitoring dashboard, or support triage tool, it may expose more than intended.
+A job name can become a metadata leak.
 
 ### Workflow task names
 
@@ -692,6 +843,24 @@ Support engineers may accidentally see:
 - commercial research plans
 - unpublished study results
 
+### What the engineer thought
+
+> Support needs access to solve the ticket. If we slow this down, customers will suffer.
+
+That concern is real.
+
+Bad support processes create real pain.
+
+### What the auditor saw
+
+> Support staff have broad, persistent access to sensitive projects without clear necessity, approval, time limit, or customer-visible audit evidence.
+
+The auditor is not saying support should never help.
+
+They are asking why support gets more access than needed.
+
+### Better design: layered support
+
 The better design is not "support cannot help."
 
 The better design is layered support.
@@ -757,7 +926,7 @@ A redacted diagnostic bundle can include:
 
 Example:
 
-```text
+```yaml
 workflow_id: wf_tumor_normal_v2
 workflow_version: 2.3.1
 analysis_id: anl_20260528_001
@@ -870,6 +1039,22 @@ A notebook user can:
 In research, this flexibility is useful.
 
 In regulated environments, it needs guardrails.
+
+### What the engineer thought
+
+> Researchers need freedom. If we lock down notebooks too much, they cannot do science.
+
+That is a fair concern.
+
+Notebooks are valuable because they allow exploration.
+
+### What the auditor saw
+
+> The notebook environment can become an uncontrolled export path, package installation path, credential storage path, and reporting channel.
+
+The issue is not that notebooks are bad.
+
+The issue is that notebooks collapse many boundaries into one interface.
 
 ### Common notebook leaks
 
@@ -1009,11 +1194,21 @@ Those temporary directories may contain:
 - unencrypted scratch files
 - partial reports
 
-Better default:
+### What the engineer thought
 
-```text
-Preserve only what is needed, for a defined time, with access controls.
-```
+> Failed jobs are hard to debug. Keeping the work directory helps us reproduce the problem.
+
+True.
+
+Deleting everything immediately can make debugging painful.
+
+### What the auditor saw
+
+> Sensitive intermediate data is retained without clear purpose, ownership, access control, expiration, or retention policy.
+
+The question is not whether debugging matters.
+
+The question is whether the retained data is governed.
 
 ### Debug retention tiers
 
@@ -1138,6 +1333,22 @@ This is easy to build.
 
 It is not a good controlled-access model.
 
+### What the engineer thought
+
+> The user is approved, so the platform only needs to give them access to the files.
+
+That is incomplete.
+
+Controlled access often depends on who, where, why, how long, and under what approved purpose.
+
+### What the auditor saw
+
+> The system cannot prove that dataset access, dataset reuse, collaborator access, exports, and derived outputs remained within approved data use limitations.
+
+The issue is not only file permission.
+
+It is purpose-aware governance.
+
 ### Better design
 
 ```text
@@ -1252,6 +1463,20 @@ For each analysis, capture:
 - output checksums
 - QC metrics
 - approval status if applicable
+
+### What the engineer thought
+
+> The result files are there. If we need to rerun, we can probably figure it out.
+
+Maybe.
+
+But "probably" is not evidence.
+
+### What the auditor saw
+
+> The organization cannot prove which workflow, container, reference data, parameters, input checksums, and user actions produced a result.
+
+This matters for regulated research, clinical reporting, incident response, and reproducibility.
 
 ### Weak provenance
 
@@ -1376,6 +1601,20 @@ In research, this may be acceptable if documented.
 
 In clinical reporting, it may require validation.
 
+### What the engineer thought
+
+> The pipeline still passes. The dependency update fixed bugs and improved performance.
+
+Good.
+
+But clinical correctness is not only about whether the job exits with code 0.
+
+### What the auditor saw
+
+> A clinically meaningful system changed without documented impact analysis, validation evidence, release approval, or rollback plan.
+
+That is the difference between research execution and clinical change control.
+
 ### Bad change process
 
 ```text
@@ -1432,6 +1671,18 @@ The point is not that every difference is bad.
 
 The point is that differences should be understood.
 
+### Realistic failure mode: annotation drift
+
+A clinical lab may update an annotation source.
+
+The variant caller produces the same VCF.
+
+But the final report changes because interpretation databases changed.
+
+That is still a pipeline change from the user's perspective.
+
+Clinical workflows need to track not only executable code, but also reference and annotation data.
+
 ### Change control principle
 
 In clinical bioinformatics, "the pipeline still runs" is not the same as "the pipeline is still validated."
@@ -1456,11 +1707,25 @@ This is convenient until something goes wrong.
 
 If the credential leaks, the blast radius is huge.
 
-Better pattern:
+### What the engineer thought
 
-```text
+> Automation needs broad access because it handles many workflows. It is simpler to maintain one powerful service account.
+
+That is true in the short term.
+
+It is dangerous in the long term.
+
+### What the auditor saw
+
+> A non-human identity has excessive privilege, unclear ownership, unclear review, and large blast radius.
+
+Service accounts need the same seriousness as human accounts.
+
+Sometimes more.
+
+### Better pattern
+
 Service accounts are scoped by environment, project, function, and data class.
-```
 
 Examples:
 
@@ -1573,6 +1838,22 @@ It may be copied to:
 - another institution
 
 A platform should treat download/export as a meaningful event.
+
+### What the engineer thought
+
+> Users own their project data. If they have access, they should be able to download it.
+
+Sometimes yes.
+
+But not always.
+
+Access to analyze data is not always the same as permission to export raw data.
+
+### What the auditor saw
+
+> The platform does not distinguish between viewing, computing, downloading, redistributing, and exporting controlled data.
+
+Those are different actions with different risks.
 
 ### Bad pattern
 
@@ -1702,6 +1983,20 @@ The raw FASTQ may stay in Frankfurt.
 
 The sensitive metadata may not.
 
+### What the engineer thought
+
+> Storage and compute are in the right region, so the system is region-compliant.
+
+That is only part of the picture.
+
+### What the auditor saw
+
+> Secondary data flows may leave the approved region, including logs, tickets, monitoring data, backups, support artifacts, and telemetry.
+
+Data residency is not only about primary files.
+
+It is about the whole data path.
+
 ### Data flow inventory
 
 For each data class, know where it goes.
@@ -1801,7 +2096,23 @@ This is convenient.
 
 It is risky in regulated or controlled environments.
 
-Problems:
+### What the engineer thought
+
+> This public image works, and it saves time. The science team needs results quickly.
+
+That can be reasonable for early exploration.
+
+But regulated or controlled workflows need stronger evidence.
+
+### What the auditor saw
+
+> The platform runs unreviewed third-party code against sensitive data, without clear provenance, vulnerability review, reproducibility, or network restrictions.
+
+The problem is not open source.
+
+The problem is uncontrolled execution.
+
+### Problems
 
 - `latest` changes over time
 - image owner may be unknown
@@ -1933,6 +2244,20 @@ Audit logs should help answer real questions:
 - Was access still valid at the time?
 - Did data leave the approved region?
 
+### What the engineer thought
+
+> We already have logs. The system records API calls and errors.
+
+That may be useful operationally.
+
+It may not be enough for governance.
+
+### What the auditor saw
+
+> The logs do not clearly reconstruct security-relevant actions, approval context, actor identity, target resource, or before-and-after state.
+
+Auditability is not the same as having a pile of logs.
+
 ### Events worth logging
 
 For bioinformatics platforms, log:
@@ -1996,9 +2321,272 @@ An audit log should let you reconstruct important actions without becoming a new
 
 ---
 
+## Example 16: billing, cost reports, and operational exports
+
+Compliance problems often appear in boring business operations.
+
+A platform may protect project data correctly, but then export cost reports like this:
+
+```csv
+project_name,owner,total_storage_tb,total_compute_usd
+john_smith_lung_cancer,alice@example.org,18.2,2401.77
+pediatric_aml_relapse_batch,bob@example.org,44.9,9210.12
+rare_disease_family_trio,carol@example.org,7.8,1312.90
+```
+
+No raw data left the platform.
+
+But sensitive context did.
+
+Billing exports, usage reports, and project summaries often travel to people who should not see clinical or study-level details.
+
+They may go to:
+
+- finance
+- sales
+- customer success
+- executives
+- cloud cost tooling
+- spreadsheets
+- BI dashboards
+- external consultants
+
+### What the engineer thought
+
+> Finance needs a cost report. Project names are the easiest way to make the report understandable.
+
+That is practical.
+
+But project names can carry sensitive meaning.
+
+### What the auditor saw
+
+> Sensitive study context is exposed to operational teams through billing metadata, outside the original access model.
+
+The issue is not the report itself.
+
+The issue is the content and audience.
+
+### Better design
+
+Use internal project IDs in broad operational reports:
+
+```csv
+project_id,workspace_type,total_storage_tb,total_compute_usd
+prj_9f31,controlled_research,18.2,2401.77
+prj_7aa2,clinical,44.9,9210.12
+prj_1c90,research,7.8,1312.90
+```
+
+Keep the mapping from project ID to full project name in a restricted metadata system.
+
+For wider audiences, aggregate:
+
+```csv
+customer_id,workspace_type,total_storage_tb,total_compute_usd
+cust_001,controlled_research,81.4,18540.31
+cust_002,research,21.8,4291.84
+```
+
+### Cost report principle
+
+Operational reporting should not become a shortcut around data governance.
+
+---
+
+## Example 17: support tickets, screenshots, and chat messages
+
+Support systems often become shadow data stores.
+
+A customer reports a workflow failure and attaches:
+
+```text
+sample sheet
+error log
+screenshot
+small VCF
+notebook export
+```
+
+The support engineer replies in Slack:
+
+```text
+Looks like sample PEDS_0042 from the AML relapse cohort failed at mark_duplicates.
+```
+
+Now sensitive context exists in:
+
+- ticketing system
+- attachments
+- email notifications
+- Slack or Teams
+- search indexes
+- support analytics
+- AI ticket summarization tools
+- exports used for quality review
+
+### What the engineer thought
+
+> We need context to help the customer. Screenshots and attachments are faster than formal diagnostic packages.
+
+True.
+
+But support artifacts are data copies.
+
+### What the auditor saw
+
+> Sensitive project details and files are now stored in systems that may have different access controls, retention policies, regions, and subprocessors than the analysis platform.
+
+This is why mature organizations build support workflows for regulated data.
+
+### Better design
+
+Use a redacted diagnostic bundle:
+
+```yaml
+ticket_bundle_id: diag_20260608_001
+analysis_id: anl_0042
+workflow: tumor-normal-v2.3.1
+failed_step: mark_duplicates
+error_category: out_of_memory
+resource_summary:
+  requested_memory_gb: 32
+  peak_memory_gb: 31.8
+inputs:
+  total_size_gb: 184
+  file_count: 2
+sensitive_values_redacted: true
+```
+
+Then instruct users not to attach raw patient files or unredacted manifests unless specifically requested through an approved secure channel.
+
+### Screenshot hygiene
+
+Screenshots should avoid:
+
+- patient names
+- MRNs
+- full file paths
+- rare disease labels
+- small-cohort identifiers
+- access tokens
+- signed URLs
+- API keys
+- command lines with sensitive arguments
+
+When screenshots are unavoidable, crop aggressively.
+
+### Support ticket principle
+
+A support ticket should describe the failure, not become a copy of the dataset.
+
+---
+
+## Example 18: deletion requests and hidden copies
+
+Deletion sounds simple.
+
+A customer asks:
+
+```text
+Please delete this dataset.
+```
+
+An engineer deletes:
+
+```text
+s3://bucket/sample.bam
+```
+
+Done?
+
+Not necessarily.
+
+Copies may still exist in:
+
+- object version history
+- backups
+- workflow caches
+- failed-job directories
+- notebook snapshots
+- local downloads
+- support bundles
+- search indexes
+- derived outputs
+- temporary disks
+- analytics exports
+
+Deletion is usually a graph problem, not a file problem.
+
+### What the engineer thought
+
+> I deleted the file from primary storage.
+
+That may be necessary.
+
+It may not be sufficient.
+
+### What the auditor saw
+
+> The organization cannot explain where copies, derivatives, caches, logs, backups, and support artifacts remain after deletion.
+
+The hard part is not deleting one object.
+
+The hard part is knowing the data lineage.
+
+### Better deletion model
+
+A deletion workflow should know:
+
+- primary file IDs
+- derived outputs
+- workflow cache entries
+- notebook copies
+- export history
+- support bundles
+- backup expiration behavior
+- metadata records
+- audit records
+- legal or scientific retention exceptions
+
+A deletion record might look like:
+
+```yaml
+deletion_request_id: del_20260608_001
+requested_by: user_0042
+approved_by: privacy_officer_001
+scope:
+  dataset_id: dset_7788
+primary_objects:
+  status: deleted
+derived_outputs:
+  status: deleted
+workflow_cache:
+  status: expired
+notebook_snapshots:
+  status: reviewed
+support_bundles:
+  status: none_found
+backups:
+  status: expires_after_30_days
+audit_log:
+  status: retained
+completed_at: 2026-06-08T11:40:00Z
+```
+
+Audit logs are often retained even when data is deleted, because they are evidence of what happened.
+
+But they should not contain unnecessary sensitive values.
+
+### Deletion principle
+
+You cannot delete responsibly unless you know where the data went.
+
+---
+
 ## Design patterns for safer bioinformatics platforms
 
-The examples above point toward a set of reusable patterns.
+The examples above point toward reusable patterns.
 
 ### Pattern 1: Separate identity from analysis
 
@@ -2023,6 +2611,8 @@ Also think about:
 - notebook outputs
 - tickets
 - screenshots
+- billing exports
+- metrics labels
 
 ### Pattern 3: Make access purpose-aware
 
@@ -2165,6 +2755,14 @@ Privileged actions are exactly the actions that need strong logging and review.
 ### Anti-pattern 10: "Clinical pipelines are just research pipelines with nicer reports"
 
 Clinical pipelines need validation, traceability, change control, and reproducibility.
+
+### Anti-pattern 11: "Only raw data is sensitive"
+
+Metadata, logs, tickets, project names, screenshots, and billing reports may reveal sensitive context.
+
+### Anti-pattern 12: "Deletion means deleting the main file"
+
+Deletion requires understanding derived outputs, caches, backups, notebooks, support bundles, and export history.
 
 ---
 
