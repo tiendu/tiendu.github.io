@@ -70,7 +70,6 @@ This post explains how genome search became fast, starting from brute force sear
 18. [The Pattern Behind Many Tools](#the-pattern-behind-many-tools)
 19. [Why Deleting Data Is the Wrong Instinct](#why-deleting-data-is-the-wrong-instinct)
 20. [A Practical Mental Model](#a-practical-mental-model)
-21. [Final Thoughts](#final-thoughts)
 
 ---
 
@@ -739,35 +738,3 @@ When looking at any bioinformatics search tool, ask:
 These questions are more useful than memorizing tool names.
 
 They help explain why one tool works well for short reads, another for long reads, another for protein search, and another for whole-genome comparison.
-
----
-
-## Final Thoughts
-
-Genome search did not become fast because computers simply became faster.
-
-It became fast because people learned how to avoid unnecessary work.
-
-The shift is:
-
-```text
-Scan everything
-↓
-Index first
-↓
-Search candidates
-↓
-Verify carefully
-```
-
-That idea appears everywhere in bioinformatics.
-
-K-mers, hash tables, suffix arrays, FM-indexes, minimizers, and sketches are different answers to the same question:
-
-> How should this sequence data be organized so most of the work disappears?
-
-That question is not just biology.
-
-It is engineering.
-
-And once you see it, many bioinformatics tools become much easier to understand.
