@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Functional Annotation in Bioinformatics: KEGG, GO, EggNOG, InterPro, Pfam, CAZy, CARD, and Beyond"
-date: 2026-06-09
+date: 2023-01-22
 categories: ["Bioinformatics & Scientific Tools"]
 pinned: true
 ---
