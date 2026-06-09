@@ -28,17 +28,18 @@ That can feel annoying at first.
 But this is also why Rust is powerful. It prevents many memory bugs and race conditions before the program runs.
 
 This post focuses only on the difficult Rust concepts:
-* [Stack vs Heap](#stack-vs-heap)
-* [Ownership](#ownership)
-* [Borrowing](#borrowing)
-* [Mutable Borrowing](#mutable-borrowing)
-* [Lifetimes](#lifetimes)
-* [Copy vs Clone](#copy-vs-clone)
-* [Memory Safety](#memory-safety)
-* [Race Conditions](#race-conditions)
-* [A Small Mental Model](#a-small-mental-model)
-* [Practical Rules For Writing Rust Without Fighting It](#practical-rules-for-writing-rust-without-fighting-it)
-* [The Core Rust Model](#the-core-rust-model)
+
+1. [Stack vs Heap](#stack-vs-heap)
+2. [Ownership](#ownership)
+3. [Borrowing](#borrowing)
+4. [Mutable Borrowing](#mutable-borrowing)
+5. [Lifetimes](#lifetimes)
+6. [Copy vs Clone](#copy-vs-clone)
+7. [Memory Safety](#memory-safety)
+8. [Race Conditions](#race-conditions)
+9. [A Small Mental Model](#a-small-mental-model)
+10. [Practical Rules For Writing Rust Without Fighting It](#practical-rules-for-writing-rust-without-fighting-it)
+11. [The Core Rust Model](#the-core-rust-model)
 
 Everything else in Rust is easier to learn after these ideas make sense.
 
