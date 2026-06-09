@@ -3,7 +3,6 @@ layout: post
 title: "Functional Annotation in Bioinformatics: KEGG, GO, EggNOG, InterPro, Pfam, CAZy, CARD, and Beyond"
 date: 2023-01-22
 categories: ["Bioinformatics & Scientific Tools"]
-pinned: true
 ---
 
 After assembling a genome, building a metagenome, predicting genes, or receiving a list of proteins, the next question is usually simple:
