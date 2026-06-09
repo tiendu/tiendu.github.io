@@ -24,30 +24,32 @@ This guide explains the major functional annotation databases, how they relate t
 
 ## Table of Contents
 
-1. What Functional Annotation Means
-2. The Functional Annotation Stack
-3. Database Overview
-4. UniProt
-5. KEGG and KEGG Orthology
-6. KEGG BRITE Hierarchies
-7. Gene Ontology
-8. EggNOG and COG Categories
-9. Pfam and Protein Domains
-10. InterPro and InterProScan
-11. CAZy and dbCAN
-12. CARD and Antimicrobial Resistance
-13. VFDB and Virulence Factors
-14. MEROPS and Proteases
-15. TCDB and Transporters
-16. MetaCyc and Reactome
-17. Functional Annotation Workflows
-18. Metagenomes and MAGs
-19. Viral Genomes
-20. Non-model Organisms
-21. Practical KEGG BRITE Mapping Workflow
-22. Choosing the Right Tool
-23. Common Pitfalls
-24. Recommended Output Tables
+1. [What Functional Annotation Means](#what-functional-annotation-means)
+2. [The Functional Annotation Stack](#the-functional-annotation-stack)
+3. [Database Overview](#database-overview)
+4. [UniProt](#uniprot)
+5. [KEGG and KEGG Orthology](#kegg-and-kegg-orthology)
+6. [KEGG BRITE Hierarchies](#kegg-brite-hierarchies)
+7. [Gene Ontology](#gene-ontology)
+8. [eggNOG and COG Categories](#eggnog-and-cog-categories)
+9. [Pfam and Protein Domains](#pfam-and-protein-domains)
+10. [InterPro and InterProScan](#interpro-and-interproscan)
+11. [CAZy and dbCAN](#cazy-and-dbcan)
+12. [CARD and Antimicrobial Resistance](#card-and-antimicrobial-resistance)
+13. [VFDB and Virulence Factors](#vfdb-and-virulence-factors)
+14. [MEROPS and Proteases](#merops-and-proteases)
+15. [TCDB and Transporters](#tcdb-and-transporters)
+16. [MetaCyc and Reactome](#metacyc-and-reactome)
+17. [Functional Annotation Workflows](#functional-annotation-workflows)
+18. [Metagenomes and MAGs](#metagenomes-and-mags)
+19. [Viral Genomes](#viral-genomes)
+20. [Non-model Organisms](#non-model-organisms)
+21. [Practical KEGG BRITE Mapping Workflow](#practical-kegg-brite-mapping-workflow)
+22. [Choosing the Right Tool](#choosing-the-right-tool)
+23. [Common Pitfalls](#common-pitfalls)
+24. [Recommended Output Tables](#recommended-output-tables)
+25. [Example Project Structure](#example-project-structure)
+26. [Practical Interpretation Strategy](#practical-interpretation-strategy)
 
 ---
 
