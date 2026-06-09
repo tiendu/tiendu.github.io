@@ -5,8 +5,6 @@ date: 2024-12-15
 categories: ["Automation, Systems & Engineering"]
 ---
 
-## Rust's One Big Idea
-
 Rust is not hard because of syntax.
 
 Rust is hard because it makes you think about memory.
@@ -30,19 +28,17 @@ That can feel annoying at first.
 But this is also why Rust is powerful. It prevents many memory bugs and race conditions before the program runs.
 
 This post focuses only on the difficult Rust concepts:
-
-1. [Rust's One Big Idea](#rusts-one-big-idea)
-2. [Stack vs Heap](#stack-vs-heap)
-3. [Ownership](#ownership)
-4. [Borrowing](#borrowing)
-5. [Mutable Borrowing](#mutable-borrowing)
-6. [Lifetimes](#lifetimes)
-7. [Copy vs Clone](#copy-vs-clone)
-8. [Memory Safety](#memory-safety)
-9. [Race Conditions](#race-conditions)
-10. [A Small Mental Model](#a-small-mental-model)
-11. [Practical Rules For Writing Rust Without Fighting It](#practical-rules-for-writing-rust-without-fighting-it)
-12. [The Core Rust Model](#the-core-rust-model)
+* [Stack vs Heap](#stack-vs-heap)
+* [Ownership](#ownership)
+* [Borrowing](#borrowing)
+* [Mutable Borrowing](#mutable-borrowing)
+* [Lifetimes](#lifetimes)
+* [Copy vs Clone](#copy-vs-clone)
+* [Memory Safety](#memory-safety)
+* [Race Conditions](#race-conditions)
+* [A Small Mental Model](#a-small-mental-model)
+* [Practical Rules For Writing Rust Without Fighting It](#practical-rules-for-writing-rust-without-fighting-it)
+* [The Core Rust Model](#the-core-rust-model)
 
 Everything else in Rust is easier to learn after these ideas make sense.
 
