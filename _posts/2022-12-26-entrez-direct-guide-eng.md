@@ -3,7 +3,6 @@ layout: post
 title: "The Bioinformatics Dataset Handbook: A Complete Reference Manual"
 date: 2022-12-26
 categories: ["Bioinformatics & Scientific Tools"]
-pinned: true
 ---
 
 Bioinformatics is often taught as a collection of tools.
