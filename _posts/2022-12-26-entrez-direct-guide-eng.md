@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "The Bioinformatics Dataset Handbook: A Complete Reference Manual"
-date: 2026-06-09
+date: 2022-12-26
 categories: ["Bioinformatics & Scientific Tools"]
 pinned: true
 ---
