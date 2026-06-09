@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Useful Bioinformatics One-liners"
-date: 2022-12-20
+date: 2022-12-26
 categories: ["Bioinformatics & Scientific Tools"]
 pinned: true
 ---
