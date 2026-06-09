@@ -22,54 +22,61 @@ This handbook focuses on where biological data comes from, how major repositorie
 
 ### Foundations
 
-- Why Public Datasets Matter
-- The Biological Data Ecosystem
-- Common Accession Types
-- Essential Tools
+1. [Why Public Datasets Matter](#why-public-datasets-matter)
+2. [The Biological Data Ecosystem](#the-biological-data-ecosystem)
+3. [Common Accession Types](#common-accession-types)
+4. [Essential Tools](#essential-tools)
 
 ### NCBI
 
-- The NCBI Ecosystem
-- Searching NCBI Efficiently
-- Entrez Direct Cookbook
-- BioProject → BioSample → SRA → Assembly
-- Downloading Reads
-- Downloading Assemblies
-- Metadata Mining
+5. [The NCBI Ecosystem](#the-ncbi-ecosystem)
+6. [Searching NCBI Efficiently](#searching-ncbi-efficiently)
+7. [Entrez Direct Cookbook](#entrez-direct-cookbook)
+8. [BioProject → BioSample → SRA → Assembly](#bioproject--biosample--sra--assembly)
+9. [Downloading Sequencing Reads](#downloading-sequencing-reads)
+10. [Downloading Assemblies](#downloading-assemblies)
+11. [Metadata Mining](#metadata-mining)
 
 ### Major Repositories
 
-- ENA
-- DDBJ
-- GEO
-- ArrayExpress
-- PRIDE
-- MassIVE
-- CELLxGENE
-- Human Cell Atlas
-- GDC / TCGA
-- GTEx
-- UK Biobank
-- dbGaP
-- EGA
+12. [ENA](#ena)
+13. [GEO](#geo)
+14. [GEOquery (R)](#geoquery-r)
+15. [ArrayExpress](#arrayexpress)
+16. [PRIDE](#pride)
+17. [MassIVE](#massive)
+18. [CELLxGENE](#cellxgene)
+19. [Human Cell Atlas](#human-cell-atlas)
+20. [GTEx](#gtex)
+21. [GDC and TCGA](#gdc-and-tcga)
+22. [UK Biobank](#uk-biobank)
+23. [dbGaP](#dbgap)
+24. [EGA](#ega)
 
-### Practical Guides
+### Domain Guides
 
-- RNA-seq
-- Single Cell
-- GWAS
-- Cancer Genomics
-- Proteomics
-- Metagenomics
-- Virology
-- Aquaculture
+25. [Domain Guide: RNA-seq](#domain-guide-rna-seq)
+26. [Domain Guide: Single Cell](#domain-guide-single-cell)
+27. [Domain Guide: GWAS](#domain-guide-gwas)
+28. [Domain Guide: Cancer Genomics](#domain-guide-cancer-genomics)
+29. [Domain Guide: Proteomics](#domain-guide-proteomics)
+30. [Domain Guide: Metagenomics](#domain-guide-metagenomics)
+31. [Domain Guide: Virology](#domain-guide-virology)
+32. [Domain Guide: Aquaculture](#domain-guide-aquaculture)
 
-### Reference
+### Modern Data Access
 
-- Search Recipes
-- Accession Cheat Sheet
-- Reproducibility Checklist
-- Common Pitfalls
+33. [Cloud-Native Data Access](#cloud-native-data-access)
+
+### Best Practices
+
+34. [Dataset Evaluation Checklist](#dataset-evaluation-checklist)
+35. [Reproducibility Checklist](#reproducibility-checklist)
+36. [Common Pitfalls](#common-pitfalls)
+
+### Appendix
+
+37. [Fifty Useful Search Ideas](#fifty-useful-search-ideas)
 
 ---
 
