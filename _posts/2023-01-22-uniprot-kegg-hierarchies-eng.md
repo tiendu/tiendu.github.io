@@ -1,141 +1,1376 @@
 ---
 layout: post
-title:  "Hierarchical Function Classification using UniProt and KEGG"
-date:   2023-01-22
+title: "Functional Annotation in Bioinformatics: KEGG, GO, EggNOG, InterPro, Pfam, CAZy, CARD, and Beyond"
+date: 2026-06-09
 categories: ["Bioinformatics & Scientific Tools"]
+pinned: true
 ---
 
-When working on metagenomic projects, a common question arises: _"How do we determine which functional group(s) a gene of interest belongs to?"_ In this guide, I will demonstrate an easy and effective way to classify genes using the KEGG and UniProt databases.
+After assembling a genome, building a metagenome, predicting genes, or receiving a list of proteins, the next question is usually simple:
 
-**KEGG** (Kyoto Encyclopedia of Genes and Genomes) is a widely known resource for studying biological pathways. Beyond pathways, KEGG also provides insight into gene functions through a hierarchical classification system called KEGG BRITE, which organizes biological objects such as:
+> What do these genes actually do?
 
-* Genes and proteins
-* Compounds and reactions
-* Drugs
-* Diseases
-* Organisms and viruses
+The answer is not simple.
 
-By combining KEGG BRITE with UniProt, you can categorize genes into their respective functional hierarchies. This tutorial will guide you through the steps to achieve this classification efficiently.
+A gene may encode an enzyme, contain a conserved domain, belong to an orthologous group, participate in a pathway, contribute to virulence, confer antimicrobial resistance, or perform a function that is still unknown.
 
----
+This is why functional annotation is not a single-database problem.
 
-## Step 1: Download Necessary Databases
+KEGG is useful, but it is only one layer. UniProt is useful, but it is not enough. For microbial genomes, metagenomes, MAGs, viral genomes, pangenomes, and non-model organisms, a good annotation workflow usually combines several resources.
 
-First, download the following datasets:
-
-* [UniProt Swiss-Prot](https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz)
-* [KEGG BRITE](https://rest.kegg.jp/get/br:ko00001/json)
-
-After downloading and unzipping the UniProt Swiss-Prot file, you will get a FASTA file containing approximately 568,000 records. This will be used to extract UniProt IDs and map them to KEGG gene IDs, which will help link these genes to functional KO (KEGG Orthology) IDs.
+This guide explains the major functional annotation databases, how they relate to each other, and how to use them in practical workflows.
 
 ---
 
-## Step 2: Map UniProt IDs to KEGG Gene and KO IDs
+## Table of Contents
 
-We will map the UniProt IDs to KEGG gene IDs and KO IDs using the KEGG API. You can use the following command to create a table with UniProt ID, KEGG Gene ID, and KO ID:
+1. What Functional Annotation Means
+2. The Functional Annotation Stack
+3. Database Overview
+4. UniProt
+5. KEGG and KEGG Orthology
+6. KEGG BRITE Hierarchies
+7. Gene Ontology
+8. EggNOG and COG Categories
+9. Pfam and Protein Domains
+10. InterPro and InterProScan
+11. CAZy and dbCAN
+12. CARD and Antimicrobial Resistance
+13. VFDB and Virulence Factors
+14. MEROPS and Proteases
+15. TCDB and Transporters
+16. MetaCyc and Reactome
+17. Functional Annotation Workflows
+18. Metagenomes and MAGs
+19. Viral Genomes
+20. Non-model Organisms
+21. Practical KEGG BRITE Mapping Workflow
+22. Choosing the Right Tool
+23. Common Pitfalls
+24. Recommended Output Tables
 
-```bash
-for i in $(awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta); do
-  curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}';
-done > uniprot_genes_ko.tsv
+---
+
+## What Functional Annotation Means
+
+Functional annotation means assigning biological meaning to sequences.
+
+A sequence may be annotated at several levels:
+
+```text
+Sequence
+↓
+Predicted gene
+↓
+Protein sequence
+↓
+Domain
+↓
+Protein family
+↓
+Ortholog group
+↓
+Enzyme reaction
+↓
+Pathway
+↓
+Biological process
 ```
 
-This command retrieves the gene and KO IDs from KEGG and stores them in a TSV file. Since the process can take a long time, consider limiting the number of simultaneous connections using the xargs command:
+Different databases answer different questions.
 
-```bash
-awk '/^>/ {match($0, /\|(.+)*\|/, a); print a[1]}' uniprot_sprot.fasta | xargs -P 3 -I {} bash -c '
-  awk -v uniprot_id={} '\''BEGIN {FS=OFS="\t"; "curl -s -L https://rest.kegg.jp/conv/genes/uniprot:" uniprot_id | getline conv; split(conv, arr, "\t"); "curl -s -L https://rest.kegg.jp/link/ko/" arr[2] | getline link; if (link!="") print arr[1], link}'\''
-  >> uniprot_genes_ko.tsv'
-```
+For example, given one protein, you may ask:
 
-**⚠️ Note**: Limit the number of parallel connections to 3 to avoid being blocked by the KEGG firewall.
+- What is its likely name?
+- Does it contain a known domain?
+- Is it part of a protein family?
+- Does it belong to an ortholog group?
+- Does it catalyze a reaction?
+- Is it part of a pathway?
+- Is it related to virulence?
+- Is it associated with antimicrobial resistance?
+- Is it a transporter?
+- Is it a carbohydrate-active enzyme?
+- Is it conserved across species?
 
----
-
-## Step 3: Convert KEGG BRITE JSON to TSV Format
-
-Next, convert the KEGG BRITE hierarchical data from JSON to TSV format:
-
-```bash
-sed -E 's/^\t{2}"name"/\t\t"level 1"/g; s/^\t{3}"name"/\t\t\t"level 2"/g; s/^\t{4}"name"/\t\t\t\t"level 3"/g; s/^\t{5}"name"/\t\t\t\t\t"level 4"/g' json | awk '
-BEGIN {OFS="\t"} 
-NR > 4 {match($0, /"([^"]+)": *("[^"]*")/, a)} 
-{tag = a[1]; val = gensub(/^"|"$/, "", "g", a[2]); f[tag] = val; if (tag == "level 4") {print f["level 1"], f["level 2"], f["level 3"], f["level 4"]}}' > brite.tsv
-```
-
-This will generate a hierarchical table in TSV format, which shows the first few rows like this:
-
-|Level 1|Level 2|Level 3|Level 4|
-|:---|:---|:---|:---|
-|09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K00844  HK; hexokinase [EC:2.7.1.1]|
-|09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K12407  GCK; glucokinase [EC:2.7.1.2]|
-|09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K00845  glk; glucokinase [EC:2.7.1.2]|
-|09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K25026  glk; glucokinase [EC:2.7.1.2]|
-|09100 Metabolism|09101 Carbohydrate metabolism|00010 Glycolysis \/ Gluconeogenesis [PATH:ko00010]|K01810  GPI, pgi; glucose-6-phosphate isomerase [EC:5.3.1.9]|
+No single database answers all of these well.
 
 ---
 
-## Step 4: Clean and Reorganize the BRITE Data
-To tidy up the BRITE data, you can run the following command:
+## The Functional Annotation Stack
 
-```bash
-awk -i inplace 'BEGIN {FS=OFS="\t"} {for (i=1; i<=3; i++) {sub(/[0-9]* /, "", $i)}; j=""; n=patsplit($4, a, /[^ ]*/); for (i=3; i<=n; i++) {j=j" "a[i]}; gsub(/^ /, "", j); print a[1], $1, $2, $3, j}' brite.tsv
+Many beginners imagine annotation like this:
+
+```text
+Gene
+↓
+Function
 ```
 
-This will create a cleaner output like:
+In real projects, it is closer to this:
 
-|KO ID|Level 1|Level 2|Level 3|Level 4|
-|:---|:---|:---|:---|:---|
-|K00844|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|HK; hexokinase [EC:2.7.1.1]|
-|K12407|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|GCK; glucokinase [EC:2.7.1.2]|
-|K00845|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|glk; glucokinase [EC:2.7.1.2]|
-|K25026|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|glk; glucokinase [EC:2.7.1.2]|
-|K01810|Metabolism|Carbohydrate metabolism|Glycolysis \/ Gluconeogenesis [PATH:ko00010]|GPI, pgi; glucose-6-phosphate isomerase [EC:5.3.1.9]|
+```text
+DNA sequence
+↓
+Gene prediction
+↓
+Protein sequence
+↓
+Similarity search
+↓
+Domain search
+↓
+Orthology assignment
+↓
+Functional classification
+↓
+Pathway reconstruction
+↓
+Biological interpretation
+```
+
+The distinction matters because different tools operate at different levels.
+
+For example:
+
+- BLAST gives similarity.
+- Pfam gives domains.
+- InterPro integrates multiple signature databases.
+- EggNOG gives orthology and broad functional categories.
+- KEGG gives KO IDs and pathways.
+- GO gives biological vocabulary.
+- CAZy describes carbohydrate-active enzymes.
+- CARD describes antimicrobial resistance genes.
+- VFDB describes virulence factors.
+
+A useful annotation is usually the result of combining these layers.
 
 ---
 
-## Step 5: Merge UniProt and KEGG BRITE Data
+## Database Overview
 
-Now, merge the UniProt and BRITE data:
-
-```bash
-awk 'BEGIN {FS=OFS="\t"} FNR==NR {a[$1][i++]=$2 FS $3 FS $4 FS $5; next} {split($3, b, ":"); split($1, c, ":"); if (b[2] in a) for (i in a[b[2]]) print c[2], b[2], a[b[2]][i]}' brite.tsv uniprot_genes_ko.tsv > uniprot_brite.tsv
-```
-
-The merged data will have rows like:
-
-|UniProt ID|KO ID|Level 1|Level 2|Level 3|Level 4|
-|:---|:---|:---|:---|:---|:---|
-|Q6GZS4|K12408|Metabolism|Lipid metabolism|Primary bile acid biosynthesis [PATH:ko00120]|HSD3B7; cholest-5-ene-3beta,7alpha-diol 3beta-dehydrogenase [EC:1.1.1.181]|
-|P32234|K06944|Not Included in Pathway or Brite|Unclassified: metabolism|Enzymes with EC numbers|DRG, RBG; developmentally-regulated GTP-binding protein [EC:3.6.5.-]|
-|Q92AT0|K21298|Not Included in Pathway or Brite|Unclassified: metabolism|Enzymes with EC numbers|E2.4.1.333; 1,2-beta-oligoglucan phosphorylase [EC:2.4.1.333]|
-|P81928|K23505|Brite Hierarchies|Protein families: genetic information processing|Mitochondrial biogenesis [BR:ko03029]|TIMMDC1; complex I assembly factor TIMMDC1|
-|P48347|K06630|Environmental Information Processing|Signal transduction|MAPK signaling pathway - yeast [PATH:ko04011]|YWHAE; 14-3-3 protein epsilon|
-
----
-
-## Step 6: Updating the Database (Optional)
-
-To update the database, start by downloading the latest UniProt Swiss-Prot version. You can identify new entries by running:
-
-```bash
-awk 'fname!=FILENAME {fname=FILENAME; idx++} idx==1 {if ($0~/^>/) {match($0, /\|(.+)*\|/, id1); a[id1[1]][FILENAME]=b[id1[1]]+=1}} idx==2 {match($0, /:(.+)* /, id2); a[id2[1]][FILENAME]=b[id2[1]]+=1} END {for (i in b) {if (b[i]==1) {for (j in a[i]) {print i, j}} else if (b[i]>1) {j=""; for (k in a[i]) {j=j k " "}; print i, j}}}' uniprot_sprot.fasta uniprot_genes_ko.tsv > temp.tsv
-```
-
-Then, fetch and append the new entries:
-
-```bash
-for i in $(awk -v FS='\t' '{print $1}' temp.tsv); do
-  curl -s -L https://rest.kegg.jp/conv/genes/uniprot:${i} | awk 'BEGIN {FS=OFS="\t"} {"curl -s -L https://rest.kegg.jp/link/ko/" $2 | getline l; if (l!="") print $1, l}';
-done >> uniprot_genes_ko.tsv
-```
+| Resource | Main Use | Typical Output |
+|---|---|---|
+| UniProt | Protein knowledgebase | Protein names, functions, GO, cross-references |
+| KEGG | Pathways and orthology | KO IDs, pathways, modules |
+| KEGG BRITE | Hierarchical classification | Functional hierarchy |
+| GO | Controlled functional vocabulary | GO terms |
+| EggNOG | Orthologous groups | Orthologs, COG categories, GO, KO |
+| COG | Broad evolutionary categories | COG letters |
+| Pfam | Protein domains | Domain families |
+| InterPro | Integrated protein signatures | Domains, families, GO terms |
+| TIGRFAM | Curated protein families | Microbial protein families |
+| CAZy | Carbohydrate-active enzymes | GH, GT, PL, CE, AA, CBM families |
+| dbCAN | Automated CAZy annotation | CAZyme predictions |
+| CARD | Antimicrobial resistance | AMR gene families |
+| ResFinder | Antimicrobial resistance | Resistance genes |
+| VFDB | Virulence factors | Virulence-associated genes |
+| MEROPS | Proteases | Peptidase families |
+| TCDB | Transporters | Transporter classification |
+| MetaCyc | Metabolic pathways | Reactions and pathways |
+| Reactome | Curated pathways | Human and model-organism pathways |
 
 ---
 
-## Conclusion
+## UniProt
 
-By following this guide, you can effectively classify gene functions into hierarchical groups using UniProt and KEGG BRITE. This approach allows you to understand which functional groups genes belong to in a structured and automated way, especially when working with metagenomics or large datasets.
+UniProt is a protein knowledgebase.
 
-[1] [https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/uniprot_genes_ko.tsv](https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/uniprot_genes_ko.tsv)
+It is often the first place people look when they want to know what a protein does.
 
-[2] [https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/brite.tsv](https://raw.githubusercontent.com/tiendu/tiendu.github.io/main/assets/files/brite.tsv)
+UniProt contains:
+
+- Protein names
+- Functional descriptions
+- Domain information
+- Enzyme classification
+- GO terms
+- Cross-references to KEGG, Pfam, InterPro, Reactome, and other resources
+- Literature-supported annotations
+
+UniProt has two major sections:
+
+| Section | Meaning |
+|---|---|
+| Swiss-Prot | Manually curated |
+| TrEMBL | Automatically annotated |
+
+Swiss-Prot is usually more reliable but much smaller. TrEMBL is much larger but noisier.
+
+### When UniProt Is Useful
+
+UniProt is useful when you have proteins that are close to known, curated proteins.
+
+It is especially helpful for:
+
+- Model organisms
+- Well-studied enzymes
+- Human proteins
+- Bacterial proteins with strong homologs
+- Manual review of important genes
+
+### When UniProt Is Not Enough
+
+UniProt is less sufficient for:
+
+- Environmental metagenomes
+- Novel viral proteins
+- Highly divergent proteins
+- MAGs from poorly characterized clades
+- Non-model organisms with sparse annotation
+
+In those cases, domain-based and orthology-based annotation often becomes more useful.
+
+---
+
+## KEGG and KEGG Orthology
+
+KEGG is widely used for pathway and metabolism analysis.
+
+The most important KEGG concept for functional annotation is the KO ID.
+
+KO means KEGG Orthology.
+
+A KO groups genes that perform equivalent biological functions, even if they come from different organisms.
+
+Example:
+
+```text
+Human hexokinase
+Yeast hexokinase
+Bacterial glucokinase
+↓
+K00844
+```
+
+The organisms are different, but the functional role is comparable.
+
+This is why KEGG is powerful in metagenomics and comparative genomics.
+
+### Common KEGG Identifiers
+
+| Identifier | Meaning |
+|---|---|
+| K number | KEGG Orthology |
+| PATH | Pathway |
+| MODULE | Functional module |
+| EC | Enzyme Commission number |
+| BR | BRITE hierarchy |
+
+Example:
+
+```text
+K00844
+HK; hexokinase [EC:2.7.1.1]
+Glycolysis / Gluconeogenesis [PATH:ko00010]
+```
+
+### When KEGG Is Useful
+
+KEGG is useful for:
+
+- Metabolism
+- Pathway reconstruction
+- Microbial genome interpretation
+- Metagenomic functional profiling
+- Comparing pathway potential between samples
+
+### When KEGG Is Limited
+
+KEGG may be less complete for:
+
+- Novel proteins
+- Poorly characterized organisms
+- Some viral proteins
+- Regulatory functions outside curated pathways
+- Specialized databases like AMR or virulence
+
+---
+
+## KEGG BRITE Hierarchies
+
+KEGG BRITE provides hierarchical classification.
+
+Instead of listing thousands of KO IDs, BRITE allows you to summarize them into higher-level categories.
+
+Example:
+
+```text
+Metabolism
+└── Carbohydrate metabolism
+    └── Glycolysis / Gluconeogenesis
+        └── K00844
+            HK; hexokinase
+```
+
+This is useful because raw KO tables are difficult to interpret.
+
+A table like this:
+
+| Gene | KO |
+|---|---|
+| gene_001 | K00844 |
+| gene_002 | K01810 |
+| gene_003 | K01689 |
+
+can be summarized into:
+
+| Level 1 | Level 2 | Count |
+|---|---|---:|
+| Metabolism | Carbohydrate metabolism | 3 |
+
+That is easier to explain in a paper, report, or figure.
+
+---
+
+## Gene Ontology
+
+Gene Ontology, or GO, provides a controlled vocabulary for gene functions.
+
+GO has three branches.
+
+### Biological Process
+
+What larger biological process is involved?
+
+Examples:
+
+```text
+glycolysis
+DNA repair
+cell division
+immune response
+```
+
+### Molecular Function
+
+What does the molecule do?
+
+Examples:
+
+```text
+ATP binding
+kinase activity
+DNA binding
+oxidoreductase activity
+```
+
+### Cellular Component
+
+Where does it act?
+
+Examples:
+
+```text
+ribosome
+cytoplasm
+mitochondrion
+plasma membrane
+```
+
+### Example: Hexokinase
+
+A hexokinase-like protein may have annotations such as:
+
+```text
+GO:0004396    hexokinase activity
+GO:0006096    glycolytic process
+GO:0005737    cytoplasm
+```
+
+Each GO term describes a different aspect of function.
+
+### Why GO Is Useful
+
+GO is useful because it is:
+
+- Structured
+- Searchable
+- Compatible with enrichment analysis
+- Used across many organisms
+- Supported by many annotation tools
+
+GO is often used downstream for:
+
+- Enrichment analysis
+- Functional summaries
+- Gene set interpretation
+- Comparative analyses
+
+---
+
+## EggNOG and COG Categories
+
+EggNOG is one of the most useful resources for microbial and metagenomic annotation.
+
+EggNOG Mapper can annotate proteins with:
+
+- Orthologous groups
+- Functional descriptions
+- GO terms
+- KEGG KO IDs
+- EC numbers
+- COG categories
+- Preferred names
+
+Example command:
+
+```bash
+emapper.py \
+  -i proteins.faa \
+  --itype proteins \
+  --output annotation \
+  --cpu 8
+```
+
+Typical output columns include:
+
+```text
+query
+seed_ortholog
+evalue
+score
+eggNOG_OGs
+max_annot_lvl
+COG_category
+Description
+Preferred_name
+GOs
+EC
+KEGG_ko
+KEGG_Pathway
+```
+
+### COG Categories
+
+COG categories are broad functional classes.
+
+| Code | Category |
+|---|---|
+| J | Translation, ribosomal structure and biogenesis |
+| A | RNA processing and modification |
+| K | Transcription |
+| L | Replication, recombination and repair |
+| B | Chromatin structure and dynamics |
+| D | Cell cycle control |
+| V | Defense mechanisms |
+| T | Signal transduction |
+| M | Cell wall, membrane, envelope biogenesis |
+| N | Cell motility |
+| U | Intracellular trafficking and secretion |
+| O | Post-translational modification |
+| C | Energy production and conversion |
+| G | Carbohydrate transport and metabolism |
+| E | Amino acid transport and metabolism |
+| F | Nucleotide transport and metabolism |
+| H | Coenzyme transport and metabolism |
+| I | Lipid transport and metabolism |
+| P | Inorganic ion transport and metabolism |
+| Q | Secondary metabolite biosynthesis |
+| R | General function prediction only |
+| S | Function unknown |
+
+These categories are common in microbial genome papers.
+
+A common figure is:
+
+```text
+COG category abundance per genome
+```
+
+or:
+
+```text
+COG category abundance per metagenomic bin
+```
+
+---
+
+## Pfam and Protein Domains
+
+Pfam classifies protein domains.
+
+A domain is a reusable functional or structural unit inside a protein.
+
+For example:
+
+```text
+PF00069
+Protein kinase domain
+```
+
+A protein can contain multiple domains.
+
+Example:
+
+```text
+Signal peptide
+↓
+Transmembrane domain
+↓
+Catalytic domain
+↓
+Binding domain
+```
+
+Domain-based annotation is useful when full-length similarity is weak.
+
+This is common in:
+
+- Non-model organisms
+- Environmental metagenomes
+- Viral genomes
+- Fragmented assemblies
+- Distant homologs
+
+Pfam helps answer:
+
+> What does this part of the protein look like?
+
+not always:
+
+> What is the full biological role of this protein?
+
+---
+
+## InterPro and InterProScan
+
+InterPro integrates multiple protein signature databases.
+
+It includes resources such as:
+
+- Pfam
+- SMART
+- PROSITE
+- TIGRFAM
+- Gene3D
+- SUPERFAMILY
+- CDD
+- PIRSF
+
+InterProScan is the tool used to run these searches.
+
+Example:
+
+```bash
+interproscan.sh \
+  -i proteins.faa \
+  -f tsv \
+  -dp \
+  -cpu 8
+```
+
+Typical outputs include:
+
+```text
+Protein ID
+Database
+Signature ID
+Description
+Start
+End
+Score
+InterPro ID
+GO terms
+Pathway annotations
+```
+
+### When InterProScan Is Useful
+
+InterProScan is useful when you want comprehensive domain and family annotation.
+
+It is especially helpful for:
+
+- Non-model organism annotation
+- Genome annotation
+- Protein family discovery
+- GO term assignment
+- Manual investigation of unknown proteins
+
+### Trade-off
+
+InterProScan can be computationally heavy.
+
+For small to moderate protein sets, it is excellent.
+
+For huge metagenomic catalogs, EggNOG Mapper or targeted HMM searches may be more practical.
+
+---
+
+## CAZy and dbCAN
+
+CAZy classifies carbohydrate-active enzymes.
+
+These are enzymes that build, break, or modify carbohydrates.
+
+Major CAZy classes include:
+
+| Class | Meaning |
+|---|---|
+| GH | Glycoside hydrolases |
+| GT | Glycosyltransferases |
+| PL | Polysaccharide lyases |
+| CE | Carbohydrate esterases |
+| AA | Auxiliary activities |
+| CBM | Carbohydrate-binding modules |
+
+Examples:
+
+| Family | Common Function |
+|---|---|
+| GH13 | Alpha-amylases |
+| GH18 | Chitinases |
+| GH5 | Cellulases |
+| GT2 | Cellulose synthases |
+| AA2 | Lignin-modifying enzymes |
+
+CAZy is important in:
+
+- Gut microbiomes
+- Rumen microbiomes
+- Soil microbiology
+- Marine microbiology
+- Plant pathogens
+- Aquaculture systems
+- Biomass degradation
+
+### dbCAN
+
+dbCAN is commonly used for automated CAZyme annotation.
+
+Example:
+
+```bash
+run_dbcan proteins.faa protein \
+  --out_dir dbcan_out
+```
+
+dbCAN is often better than relying on general-purpose annotation for carbohydrate metabolism.
+
+---
+
+## CARD and Antimicrobial Resistance
+
+For antimicrobial resistance, use specialized databases.
+
+KEGG or GO may tell you that something is a beta-lactamase-like enzyme, but AMR interpretation usually needs more detail.
+
+CARD, the Comprehensive Antibiotic Resistance Database, is commonly used.
+
+Common AMR genes include:
+
+```text
+blaTEM
+blaCTX-M
+tetA
+tetM
+vanA
+mecA
+```
+
+Typical tool:
+
+```bash
+rgi main \
+  --input_sequence proteins.faa \
+  --output_file card_annotation \
+  --input_type protein
+```
+
+CARD helps identify:
+
+- Resistance genes
+- Resistance mechanisms
+- Drug classes
+- Homology models
+- SNP-based resistance markers in some cases
+
+### Important Warning
+
+AMR annotation should be interpreted carefully.
+
+A match to a resistance-related protein does not always mean the organism is clinically resistant.
+
+Important factors include:
+
+- Identity
+- Coverage
+- Gene completeness
+- Expression
+- Genomic context
+- Known resistance mechanism
+- Phenotypic validation
+
+---
+
+## VFDB and Virulence Factors
+
+Virulence factors are genes that contribute to pathogenicity.
+
+VFDB is commonly used for virulence annotation.
+
+Examples:
+
+```text
+Type III secretion system
+Type VI secretion system
+hemolysin
+adhesin
+flagellar proteins
+toxins
+capsule biosynthesis genes
+```
+
+VFDB is useful in:
+
+- Clinical microbiology
+- Foodborne pathogen analysis
+- Aquaculture pathogen studies
+- Comparative pathogenomics
+
+### Important Warning
+
+Virulence annotation is context-dependent.
+
+A gene similar to a virulence factor does not automatically mean the organism is pathogenic.
+
+Interpretation depends on:
+
+- Host
+- Organism
+- Gene completeness
+- Expression
+- Genomic island context
+- Known biology
+
+---
+
+## MEROPS and Proteases
+
+MEROPS classifies peptidases and protease inhibitors.
+
+Proteases are important in:
+
+- Host-pathogen interactions
+- Tissue invasion
+- Digestion
+- Immune evasion
+- Protein maturation
+
+MEROPS is useful when protease function matters more than broad pathway annotation.
+
+---
+
+## TCDB and Transporters
+
+The Transporter Classification Database classifies membrane transport proteins.
+
+Transporters are often important but overlooked.
+
+Examples:
+
+```text
+ABC transporters
+MFS transporters
+ion channels
+metal transporters
+drug efflux pumps
+sugar transporters
+```
+
+Transporter annotation matters in:
+
+- Nutrient acquisition
+- Environmental adaptation
+- Antimicrobial resistance
+- Host colonization
+- Metal tolerance
+
+---
+
+## MetaCyc and Reactome
+
+MetaCyc and Reactome are pathway databases.
+
+### MetaCyc
+
+MetaCyc is useful for metabolic pathway reconstruction.
+
+It is especially useful in microbial and plant metabolism.
+
+### Reactome
+
+Reactome is highly curated and strongest for human and model organism pathways.
+
+It is useful for:
+
+- Human biology
+- Signaling pathways
+- Disease biology
+- Systems biology
+
+For non-human metagenomes, KEGG, MetaCyc, and EggNOG are usually more common.
+
+---
+
+## Functional Annotation Workflows
+
+A general genome annotation workflow:
+
+```text
+Assembly
+↓
+Gene prediction
+↓
+Protein FASTA
+↓
+EggNOG Mapper
+↓
+InterProScan
+↓
+KEGG / KofamScan
+↓
+Specialized databases
+↓
+Summary tables
+```
+
+A minimal practical workflow:
+
+```text
+proteins.faa
+↓
+EggNOG Mapper
+↓
+Functional summary
+```
+
+A more complete workflow:
+
+```text
+proteins.faa
+├── EggNOG Mapper
+├── InterProScan
+├── KofamScan
+├── dbCAN
+├── CARD
+└── VFDB
+```
+
+Then merge the results into one annotation table.
+
+---
+
+## Metagenomes and MAGs
+
+Functional annotation is especially important in metagenomics.
+
+A typical metagenomic workflow:
+
+```text
+Raw reads
+↓
+Quality control
+↓
+Assembly
+↓
+Gene prediction
+↓
+Protein FASTA
+↓
+Functional annotation
+↓
+Gene abundance
+↓
+Pathway abundance
+```
+
+For MAGs:
+
+```text
+Assembly
+↓
+Binning
+↓
+MAG quality check
+↓
+Gene prediction
+↓
+Functional annotation
+↓
+Metabolic reconstruction
+```
+
+Common biological questions:
+
+- Can this organism degrade cellulose?
+- Can it metabolize sulfur?
+- Can it fix nitrogen?
+- Can it use methane?
+- Can it produce short-chain fatty acids?
+- Does it carry AMR genes?
+- Does it encode secretion systems?
+- Does it have complete biosynthetic pathways?
+
+### Common MAG Annotation Tools
+
+| Tool | Use |
+|---|---|
+| Prodigal | Gene prediction |
+| Prokka | Prokaryotic annotation |
+| Bakta | Modern bacterial genome annotation |
+| EggNOG Mapper | Orthology and function |
+| DRAM | Metabolic annotation of genomes and MAGs |
+| KofamScan | KEGG KO assignment |
+| dbCAN | CAZyme annotation |
+
+---
+
+## Viral Genomes
+
+Viral annotation is difficult.
+
+Many viral proteins have no known function.
+
+Common issues:
+
+- High sequence diversity
+- Small genomes
+- Many hypothetical proteins
+- Few experimentally validated proteins
+- Weak similarity to known proteins
+
+A practical viral annotation workflow:
+
+```text
+Viral genome
+↓
+ORF prediction
+↓
+Protein FASTA
+↓
+BLAST / DIAMOND
+↓
+HMM search
+↓
+InterProScan
+↓
+VOG / viral protein databases
+↓
+Manual curation
+```
+
+For viral genomes, it is normal for many proteins to remain:
+
+```text
+hypothetical protein
+```
+
+Do not over-annotate weak hits.
+
+---
+
+## Non-model Organisms
+
+Non-model organisms often have sparse annotations.
+
+A direct BLAST hit may produce vague labels such as:
+
+```text
+uncharacterized protein
+hypothetical protein
+predicted protein
+```
+
+In these cases, domain and orthology tools are especially useful.
+
+Better strategy:
+
+```text
+Protein sequence
+↓
+InterPro / Pfam
+↓
+EggNOG
+↓
+KEGG
+↓
+GO
+↓
+Manual review
+```
+
+For non-model organisms, avoid assuming that a weak similarity hit gives a precise function.
+
+---
+
+## Practical KEGG BRITE Mapping Workflow
+
+The original version of this guide focused on using UniProt and KEGG BRITE to classify proteins hierarchically.
+
+That workflow is still useful when you want to map UniProt IDs to KEGG KO IDs and then classify them into BRITE categories.
+
+### Download UniProt Swiss-Prot
+
+```bash
+wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
+
+gunzip uniprot_sprot.fasta.gz
+```
+
+Extract UniProt accessions:
+
+```bash
+awk '/^>/ {
+    match($0, /\|([^|]+)\|/, a)
+    print a[1]
+}' uniprot_sprot.fasta > uniprot_ids.txt
+```
+
+### Map UniProt IDs to KEGG Genes and KO IDs
+
+KEGG API access should be used politely. Avoid excessive parallel requests.
+
+```bash
+cat uniprot_ids.txt \
+| xargs -P 3 -I {} bash -c '
+    uid="{}"
+    conv=$(curl -s -L "https://rest.kegg.jp/conv/genes/uniprot:${uid}")
+    gene=$(printf "%s\n" "$conv" | awk -F "\t" "NR==1 {print \$2}")
+    if [ -n "$gene" ]; then
+        curl -s -L "https://rest.kegg.jp/link/ko/${gene}" \
+        | awk -v uid="$uid" -v gene="$gene" "BEGIN {FS=OFS=\"\t\"} {print uid, gene, \$2}"
+    fi
+' > uniprot_gene_ko.tsv
+```
+
+Expected columns:
+
+```text
+UniProt_ID
+KEGG_Gene_ID
+KO_ID
+```
+
+Example:
+
+```text
+P19367    hsa:3098    ko:K00844
+```
+
+### Download KEGG BRITE KO Hierarchy
+
+```bash
+curl -L https://rest.kegg.jp/get/br:ko00001/json \
+  -o ko00001.json
+```
+
+### Convert KEGG BRITE JSON to a TSV Table
+
+For production use, Python is more maintainable than a long shell one-liner.
+
+Save this as `parse_kegg_brite.py`:
+
+```python
+#!/usr/bin/env python3
+
+import json
+import re
+import sys
+
+def walk(node, path):
+    name = node.get("name", "")
+    children = node.get("children", [])
+
+    new_path = path + [name]
+
+    if not children:
+        if name.startswith("K"):
+            ko = name.split()[0]
+            desc = " ".join(name.split()[1:])
+            levels = path[:3]
+            while len(levels) < 3:
+                levels.append("")
+            print("\t".join([ko] + levels + [desc]))
+        return
+
+    for child in children:
+        walk(child, new_path)
+
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+
+print("KO_ID\tLevel_1\tLevel_2\tLevel_3\tDescription")
+
+for child in data.get("children", []):
+    walk(child, [])
+```
+
+Run:
+
+```bash
+python parse_kegg_brite.py ko00001.json > brite.tsv
+```
+
+Example output:
+
+| KO_ID | Level_1 | Level_2 | Level_3 | Description |
+|---|---|---|---|---|
+| K00844 | 09100 Metabolism | 09101 Carbohydrate metabolism | 00010 Glycolysis / Gluconeogenesis | HK; hexokinase [EC:2.7.1.1] |
+| K01810 | 09100 Metabolism | 09101 Carbohydrate metabolism | 00010 Glycolysis / Gluconeogenesis | GPI, pgi; glucose-6-phosphate isomerase [EC:5.3.1.9] |
+
+### Clean BRITE Labels
+
+```bash
+awk 'BEGIN {FS=OFS="\t"}
+NR==1 {print; next}
+{
+    for (i=2; i<=4; i++) {
+        sub(/^[0-9]+ /, "", $i)
+    }
+    print
+}' brite.tsv > brite.clean.tsv
+```
+
+### Merge UniProt KO Table with BRITE Table
+
+```bash
+awk 'BEGIN {FS=OFS="\t"}
+FNR==NR {
+    brite[$1]=$2 OFS $3 OFS $4 OFS $5
+    next
+}
+{
+    ko=$3
+    sub(/^ko:/, "", ko)
+    if (ko in brite) {
+        print $1, $2, ko, brite[ko]
+    }
+}' brite.clean.tsv uniprot_gene_ko.tsv \
+> uniprot_brite.tsv
+```
+
+Expected output:
+
+| UniProt_ID | KEGG_Gene_ID | KO_ID | Level_1 | Level_2 | Level_3 | Description |
+|---|---|---|---|---|---|---|
+| P19367 | hsa:3098 | K00844 | Metabolism | Carbohydrate metabolism | Glycolysis / Gluconeogenesis | HK; hexokinase [EC:2.7.1.1] |
+
+### When This Workflow Is Useful
+
+This workflow is useful when:
+
+- You already have UniProt IDs
+- You want KO IDs
+- You want hierarchical KEGG BRITE summaries
+- You want a reusable annotation table
+- You are preparing pathway-level summaries
+
+### When This Workflow Is Not Enough
+
+It is not enough when:
+
+- Your proteins do not map well to UniProt
+- You are working with novel metagenomic proteins
+- You need domain-level annotation
+- You need AMR or virulence annotation
+- You need CAZyme annotation
+- You need genome-scale metabolic reconstruction
+
+In those cases, combine KEGG with EggNOG, InterPro, dbCAN, CARD, VFDB, or DRAM.
+
+---
+
+## Choosing the Right Tool
+
+| Goal | Recommended Resource |
+|---|---|
+| General protein annotation | UniProt, EggNOG |
+| Orthology | EggNOG, KEGG KO |
+| Pathways | KEGG, MetaCyc, Reactome |
+| GO terms | UniProt, InterPro, EggNOG |
+| Protein domains | Pfam, InterPro |
+| Microbial genomes | EggNOG, Bakta, DRAM |
+| MAGs | DRAM, EggNOG, KofamScan |
+| CAZymes | dbCAN, CAZy |
+| AMR genes | CARD, ResFinder |
+| Virulence | VFDB |
+| Transporters | TCDB |
+| Proteases | MEROPS |
+| Viral proteins | HMMs, InterPro, viral databases |
+
+---
+
+## Common Pitfalls
+
+### Treating Similarity as Proof of Function
+
+A BLAST hit does not prove function.
+
+Weak similarity may indicate:
+
+- Shared domain
+- Distant homology
+- Partial match
+- Incorrect database annotation
+- Conserved but unknown protein family
+
+Always check identity, coverage, and biological plausibility.
+
+### Over-interpreting Hypothetical Proteins
+
+Many proteins are annotated as:
+
+```text
+hypothetical protein
+uncharacterized protein
+DUF-containing protein
+```
+
+This is not a failure. It is a realistic result, especially for viruses and environmental data.
+
+### Ignoring Coverage
+
+A 95% identity hit across 20% of a protein is not the same as a 95% identity hit across 95% of the protein.
+
+Functional transfer should consider:
+
+- Percent identity
+- Query coverage
+- Subject coverage
+- Domain boundaries
+- Alignment quality
+
+### Mixing Annotation Levels
+
+These are not equivalent:
+
+```text
+PF00069
+K00844
+GO:0004672
+EC:2.7.11.1
+```
+
+They describe different things:
+
+| Identifier | Meaning |
+|---|---|
+| Pfam | Domain |
+| KEGG KO | Orthologous function |
+| GO | Controlled function term |
+| EC | Enzyme reaction |
+| COG | Broad category |
+
+Do not treat them as interchangeable.
+
+### Assuming Human Pathways Apply Everywhere
+
+Reactome and many curated pathway resources are strongest for human biology.
+
+For bacteria, archaea, metagenomes, and MAGs, KEGG, MetaCyc, EggNOG, and DRAM are often more appropriate.
+
+### Ignoring Specialized Databases
+
+General annotation may miss important biology.
+
+For example:
+
+- CAZymes require CAZy/dbCAN.
+- AMR requires CARD/ResFinder.
+- Virulence requires VFDB.
+- Transporters require TCDB.
+- Proteases require MEROPS.
+
+---
+
+## Recommended Output Tables
+
+A useful functional annotation table should have one row per gene or protein.
+
+Suggested columns:
+
+```text
+gene_id
+contig_id
+start
+end
+strand
+protein_id
+product
+preferred_name
+description
+ko_id
+kegg_pathway
+kegg_brite_level_1
+kegg_brite_level_2
+kegg_brite_level_3
+go_terms
+ec_number
+cog_category
+eggnog_og
+pfam
+interpro
+cazy_family
+card_hit
+vfdb_hit
+tcdb_hit
+best_hit
+best_hit_identity
+best_hit_coverage
+annotation_source
+```
+
+For many projects, this table becomes the central annotation file.
+
+---
+
+## Example Project Structure
+
+```text
+annotation_project/
+├── input/
+│   ├── assembly.fna
+│   └── proteins.faa
+├── eggnog/
+│   └── annotation.emapper.annotations
+├── interpro/
+│   └── interproscan.tsv
+├── kegg/
+│   ├── kofamscan.tsv
+│   └── brite.clean.tsv
+├── dbcan/
+│   └── overview.txt
+├── card/
+│   └── card_annotation.txt
+├── vfdb/
+│   └── vfdb_hits.tsv
+├── merged/
+│   └── functional_annotation.tsv
+└── README.md
+```
+
+A clean directory structure prevents annotation projects from turning into a pile of unrelated TSV files.
+
+---
+
+## Practical Interpretation Strategy
+
+When reviewing an important gene, do not rely on only one line of annotation.
+
+Use a layered approach:
+
+```text
+1. What is the best sequence similarity hit?
+2. What domains are present?
+3. Is there a KEGG KO?
+4. Are there GO terms?
+5. Is there an EC number?
+6. Is it part of a pathway?
+7. Is it found in related organisms?
+8. Is the genomic neighborhood informative?
+9. Is the annotation supported by multiple databases?
+10. Is manual curation needed?
+```
+
+The more layers agree, the more confident the annotation becomes.
