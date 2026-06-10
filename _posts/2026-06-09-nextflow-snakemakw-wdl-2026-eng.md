@@ -3,7 +3,6 @@ layout: post
 title: "Nextflow vs Snakemake vs WDL in 2026: Executive Guide to Cloud Cost Control, Compliance, and Audit Readiness"
 date: 2026-06-09
 categories: ["Bioinformatics & Scientific Tools", "Automation, Systems & Engineering"]
-pinned: false
 ---
 
 Workflow engines are often compared by syntax.
@@ -32,9 +31,9 @@ It affects:
 
 This reference compares three common workflow systems:
 
-1. **Nextflow**
-2. **Snakemake**
-3. **WDL**, usually executed through Cromwell, Terra, miniwdl, or platform-specific runners
+- **Nextflow**
+- **Snakemake**
+- **WDL**, usually executed through Cromwell, Terra, miniwdl, or platform-specific runners
 
 The focus is not language preference.
 
@@ -67,22 +66,266 @@ Use **WDL/Cromwell** when the organization already has a strong WDL ecosystem, e
 
 Use **Snakemake** when the primary users are analysts, research groups, or HPC-heavy teams who need a Python-native workflow system that is easy to read, modify, and adopt.
 
-The shortest decision rule is this:
+The shortest decision rule is:
 
-| Situation | Recommended default |
-|---|---|
-| New cloud-native production platform | **Nextflow** |
-| Existing Terra/Cromwell/GATK ecosystem | **WDL/Cromwell** |
-| Python-heavy research teams and HPC labs | **Snakemake** |
-| Strongest standalone cost-control ergonomics | **Nextflow** |
-| Strongest analyst adoption ergonomics | **Snakemake** |
-| Strongest call-caching model in institutional genomics | **WDL/Cromwell** |
-| Easiest formal audit path in an existing managed Terra environment | **WDL/Cromwell/Terra** |
-| Easiest greenfield audit-and-cost-control platform | **Nextflow + governed platform** |
+```text
+New cloud-native production platform
+  ↓
+Nextflow + governed execution layer
+
+Existing Terra / Cromwell / GATK environment
+  ↓
+WDL + Cromwell / Terra
+
+Python-heavy research team or HPC lab
+  ↓
+Snakemake, unless the workflow is expected to become a production cloud service
+```
 
 The workflow language alone does not make a platform compliant.
 
 The managed environment, identity model, storage policy, audit log retention, version control, access governance, and evidence export process matter just as much.
+
+---
+
+## Fast Decision Tree
+
+Use this first.
+
+It gives the management answer before the technical details.
+
+```text
+Are you building a new production cloud platform?
+  ↓
+  Yes
+    ↓
+    Do you need centralized cost policy, run evidence, and audit records?
+      ↓
+      Yes → Choose Nextflow + governed execution platform
+      No  → Nextflow is still a strong default, but governance is the missing work
+
+  No
+    ↓
+    Are you already invested in Terra, Cromwell, GATK, or WDL validation?
+      ↓
+      Yes → Choose WDL / Cromwell / Terra
+      No
+        ↓
+        Are the main users Python-heavy analysts or HPC research groups?
+          ↓
+          Yes → Choose Snakemake
+          No
+            ↓
+            Is long-term production cloud operation the goal?
+              ↓
+              Yes → Choose Nextflow
+              No  → Choose the engine your team can govern consistently
+```
+
+A shorter version:
+
+```text
+Production cloud + cost governance + audit evidence
+  → Nextflow
+
+Existing Terra / Cromwell / GATK institutional environment
+  → WDL / Cromwell
+
+Research lab + Python users + HPC adoption
+  → Snakemake
+
+No governance layer around any of them
+  → The engine choice will not save you
+```
+
+---
+
+## Decision Tree: Cost Optimization
+
+When cloud computing is expensive, the workflow engine should help the organization avoid two opposite failures:
+
+```text
+Request too little compute
+  ↓
+Tasks fail
+  ↓
+Jobs rerun
+  ↓
+Users lose time
+  ↓
+Cloud spend increases anyway
+```
+
+and:
+
+```text
+Request too much compute
+  ↓
+Jobs succeed
+  ↓
+Nobody complains
+  ↓
+Overpayment becomes invisible
+  ↓
+Cloud waste becomes normal
+```
+
+The cost-control decision tree looks like this:
+
+```text
+Do task resource needs vary by input size or sample count?
+  ↓
+  Yes
+    ↓
+    Do you want resource logic close to the workflow?
+      ↓
+      Nextflow → dynamic process directives
+      Snakemake → callable Python resources
+      WDL → runtime expressions / workflow inputs
+
+  No
+    ↓
+    Can one approved profile cover most workloads?
+      ↓
+      Yes → any engine can work with discipline
+      No  → prefer Nextflow or Snakemake for flexible task-level tuning
+```
+
+For failed jobs:
+
+```text
+Task failed
+  ↓
+Was it a resource failure?  Examples: OOM, disk full, timeout
+  ↓
+  Yes
+    ↓
+    Retry with larger memory / disk / time within a cap
+
+  No
+    ↓
+    Was it transient infrastructure failure?  Examples: preemption, network issue
+      ↓
+      Yes → retry with same or adjusted resources
+      No
+        ↓
+        Was it deterministic?  Examples: bad input, missing column, invalid parameter
+          ↓
+          Yes → stop immediately
+          No  → route to manual review
+```
+
+The management rule:
+
+> A retry policy is a financial policy.
+
+A retry can save money when it avoids manual relaunch.
+
+A retry can waste money when it repeats a deterministic failure.
+
+---
+
+## Decision Tree: Compliance and Audit Readiness
+
+Auditors do not usually care whether the workflow was written in Groovy, Python, or WDL.
+
+They care whether the organization can prove:
+
+```text
+Who ran it
+  ↓
+What code ran
+  ↓
+What data was used
+  ↓
+What compute policy applied
+  ↓
+What outputs were produced
+  ↓
+What changed since the last approved run
+```
+
+The audit-readiness decision tree looks like this:
+
+```text
+Are you already operating inside Terra / Cromwell with established controls?
+  ↓
+  Yes
+    ↓
+    WDL / Cromwell / Terra is usually the easiest audit conversation
+
+  No
+    ↓
+    Are you building a new governed cloud workflow platform?
+      ↓
+      Yes
+        ↓
+        Nextflow + Seqera Platform or equivalent internal control layer
+
+      No
+        ↓
+        Are workflows mostly research/HPC and not customer-facing production?
+          ↓
+          Yes → Snakemake can work, but add launch wrappers, profiles, logs, reports, and evidence retention
+          No  → Avoid standalone engine usage until governance is designed
+```
+
+The most important audit rule:
+
+```text
+Workflow language
+  ↓
+does not equal
+  ↓
+compliance boundary
+```
+
+Compliance is a system property.
+
+The workflow engine can help produce evidence.
+
+The organization still owns the controls.
+
+---
+
+## Decision Tree: Migration
+
+Do not migrate just because another workflow engine is fashionable.
+
+Migrations are expensive.
+
+Use this decision tree before proposing one:
+
+```text
+Is the current workflow engine causing measurable cost, reliability, or audit problems?
+  ↓
+  No
+    ↓
+    Do not migrate yet
+    ↓
+    Improve governance, metadata, profiles, and evidence retention first
+
+  Yes
+    ↓
+    Can the problem be solved by better profiles, retry policy, caching policy, or launch controls?
+      ↓
+      Yes
+        ↓
+        Fix the operating model first
+
+      No
+        ↓
+        Is the target workflow expected to become a long-term production cloud service?
+          ↓
+          Yes → migrate or rebuild toward Nextflow or governed WDL/Cromwell
+          No  → consider Snakemake if analyst adoption matters more
+```
+
+The executive warning:
+
+> Bad governance will follow the team into the next workflow engine.
+
+Do not use migration as a substitute for policy.
 
 ---
 
@@ -100,16 +343,25 @@ That is the executive-level question.
 
 A good workflow platform should help leadership answer four questions:
 
-1. **Before execution:** Are jobs allowed to request this much compute?
-2. **During execution:** Are failed jobs retried intelligently or wastefully?
-3. **After execution:** Can completed work be reused safely?
-4. **During an audit:** Can we prove who ran what, on which data, with which code, under which policy?
+```text
+Before execution
+  → Are jobs allowed to request this much compute?
+
+During execution
+  → Are failed jobs retried intelligently or wastefully?
+
+After execution
+  → Can completed work be reused safely?
+
+During an audit
+  → Can we prove who ran what, on which data, with which code, under which policy?
+```
 
 If the answer requires a senior engineer to dig through random shell scripts, cluster logs, object storage paths, and Slack messages, the platform is not mature enough.
 
 ---
 
-## Decision Matrix for Executives
+## Executive Decision Matrix
 
 | Management priority | Nextflow | Snakemake | WDL/Cromwell |
 |---|---:|---:|---:|
@@ -128,9 +380,16 @@ If the answer requires a senior engineer to dig through random shell scripts, cl
 
 The practical conclusion:
 
-- **Nextflow** is the best default when management wants production cloud control.
-- **Snakemake** is the best default when adoption by research analysts matters more than centralized governance.
-- **WDL/Cromwell** is the best default when the organization already operates in a WDL-first institutional environment.
+```text
+Need production cloud control
+  → Nextflow
+
+Need analyst adoption
+  → Snakemake
+
+Need continuity with existing institutional WDL controls
+  → WDL / Cromwell
+```
 
 ---
 
@@ -156,18 +415,23 @@ The workflow engine does not control the entire cloud bill.
 
 But it determines whether cost policy is visible, repeatable, and enforceable.
 
-A mature platform should treat compute resources like financial controls:
+A mature platform should treat compute resources like financial controls.
 
-| Cost-control area | Management expectation |
-|---|---|
-| CPU and memory | Defaults, caps, escalation rules, and exception process |
-| Disk | Explicit sizing, local scratch policy, cleanup policy |
-| Runtime | Timeout limits, retry limits, failure classification |
-| Spot/preemptible compute | Allowed where safe, avoided where wasteful |
-| Caching | Enabled intentionally, monitored, and invalidated safely |
-| Data movement | Minimized, logged, and justified |
-| Observability | Task-level metrics tied to pipeline, dataset, user, and project |
-| Ownership | Someone owns tuning, not just incident response |
+```text
+CPU / memory / disk defaults
+  ↓
+Resource caps
+  ↓
+Retry rules
+  ↓
+Caching policy
+  ↓
+Data movement policy
+  ↓
+Cost attribution
+  ↓
+Monthly review
+```
 
 The best workflow platform is the one that makes this model easy to operate.
 
@@ -197,11 +461,21 @@ It should allow resource requests to adapt based on:
 | Snakemake | Callable resources using `input`, `threads`, and `attempt` | Strong fit for Pythonic, rule-level resource logic |
 | WDL/Cromwell | Runtime attributes and expressions; retry-with-more-memory available when configured | Strong in managed Cromwell/Terra setups, but more backend/config dependent |
 
-Nextflow supports dynamic task resources based on retry attempt and input size, and recent versions also support adjusting requests using previous execution trace metrics. Snakemake supports callable resources and can adjust memory based on retry attempt. Cromwell supports runtime attributes and has retry-with-more-memory behavior, but that behavior depends on Cromwell/backend configuration and error detection.
-
 The management lesson:
 
-> A workflow engine should not make teams choose between overpaying every time and failing unpredictably.
+```text
+Do not overpay every run
+  ↓
+Start with a reasonable default
+  ↓
+Retry only recoverable failures
+  ↓
+Escalate resources within a cap
+  ↓
+Use trace/cost data to tune the next release
+```
+
+A workflow engine should not make teams choose between overpaying every time and failing unpredictably.
 
 ---
 
@@ -223,13 +497,25 @@ Good retry policy distinguishes between:
 | Data policy failure | unauthorized access, restricted file, region mismatch | Stop and escalate |
 | Platform quota failure | insufficient quota, unavailable instance type | Retry with backoff or route to different queue |
 
-A workflow system should make this policy explicit.
+The retry policy should look like this:
 
-| Engine | Retry-policy strength | Risk if unmanaged |
-|---|---|---|
-| Nextflow | Strong; `errorStrategy`, `maxRetries`, dynamic resources, backoff patterns | Bad policies can still retry deterministic bugs |
-| Snakemake | Strong; `--retries`, callable resources, cluster/HPC integration | Many teams keep retry behavior in profiles or launch scripts, which can fragment governance |
-| WDL/Cromwell | Strong in mature Cromwell/Terra setups; runtime `maxRetries`, backend retry behavior, memory retry configuration | Behavior can be misunderstood if teams assume all retries increase memory automatically |
+```text
+Failure detected
+  ↓
+Classify failure
+  ↓
+Resource problem?
+  → retry with larger resource request, within cap
+
+Transient infrastructure problem?
+  → retry with backoff or alternative queue
+
+Deterministic software/data problem?
+  → stop, report, fix input or code
+
+Policy/access problem?
+  → stop, escalate, preserve evidence
+```
 
 The most important policy rule:
 
@@ -247,22 +533,25 @@ But caching is also a governance risk if misunderstood.
 
 It must answer:
 
-- What exactly is being reused?
-- Which inputs were hashed?
-- Which command or task definition was used?
-- Which container image was used?
-- Where are cached outputs stored?
-- Who can read from the cache?
-- When should cache be disabled?
-- When should cache be invalidated?
+```text
+What was reused?
+  ↓
+Why was it safe to reuse?
+  ↓
+Which inputs matched?
+  ↓
+Which command matched?
+  ↓
+Which container/software matched?
+  ↓
+Where is the cache record?
+```
 
 | Engine | Reuse model | Management view |
 |---|---|---|
 | Nextflow | Resume/cache behavior based on task identity and work directory discipline | Very useful for reruns, interrupted workflows, and iterative development |
 | Snakemake | File timestamp/checksum-oriented workflow behavior; rerun control depends on configuration and file targets | Useful, but less enterprise-governed unless surrounded by policy |
 | WDL/Cromwell | Call caching can reuse prior successful calls with matching command and inputs | Very strong in institutional pipelines when configured and trusted |
-
-Cromwell call caching is a major strength because it is designed to detect previously executed jobs and reuse outputs instead of recomputing them when the command and inputs match. That can save both time and money.
 
 The executive warning:
 
@@ -280,25 +569,21 @@ They can also increase costs if workflows are not resilient.
 
 Cheap compute is not cheap if a task restarts from the beginning after running for twelve hours.
 
-Spot/preemptible policy should consider:
+Use this arrow rule:
 
-- task duration,
-- checkpointing behavior,
-- intermediate output size,
-- failure cost,
-- retry cost,
-- data localization cost,
-- queue delay,
-- and deadline sensitivity.
+```text
+Short independent shard
+  → good spot/preemptible candidate
 
-| Workload type | Good spot/preemptible candidate? |
-|---|---|
-| Short independent shards | Yes |
-| Stateless QC tasks | Usually yes |
-| Long non-checkpointed jobs | Risky |
-| High-memory rare tasks | Depends on availability and failure rate |
-| Final aggregation steps | Usually avoid unless rerun cost is low |
-| Regulated production with strict SLA | Use carefully with documented policy |
+Long non-checkpointed job
+  → risky spot/preemptible candidate
+
+Final aggregation step
+  → usually avoid unless rerun cost is low
+
+Strict regulated production SLA
+  → use only with documented exception policy
+```
 
 Workflow engines do not make spot/preemptible compute safe by themselves.
 
@@ -325,12 +610,17 @@ Management should ask:
 
 A cost-aware workflow platform should preserve enough metadata to answer:
 
-- which task read which large inputs,
-- which task created which large outputs,
-- which intermediate files were retained,
-- which files were staged locally,
-- which files crossed region/project/account boundaries,
-- and which outputs were published.
+```text
+Which task read which large input?
+  ↓
+Which task created which large output?
+  ↓
+Which intermediates were retained?
+  ↓
+Which files crossed region, project, account, or workspace boundaries?
+  ↓
+Which outputs were published as final results?
+```
 
 This is where observability and compliance overlap.
 
@@ -384,7 +674,16 @@ The ranking depends heavily on whether the engine is used standalone or through 
 
 The practical conclusion:
 
-> If the organization already lives inside Terra/Cromwell, WDL is often the easiest audit conversation. If the organization is building a new governed cloud platform, Nextflow with a managed control plane is usually the stronger default. Snakemake can be audit-ready, but it needs more policy scaffolding around it.
+```text
+Already in Terra / Cromwell
+  → WDL is usually the easier audit conversation
+
+Building a new governed cloud platform
+  → Nextflow + managed control layer is usually cleaner
+
+Running research/HPC workflows
+  → Snakemake can pass audits, but only with added policy scaffolding
+```
 
 ---
 
@@ -393,6 +692,24 @@ The practical conclusion:
 None of these tools makes an organization HIPAA-compliant, GDPR-compliant, ISO 27001-aligned, GxP-ready, or audit-safe by itself.
 
 The workflow engine is only one layer.
+
+```text
+Workflow engine
+  ↓
+Execution platform
+  ↓
+Identity and access management
+  ↓
+Storage and data residency policy
+  ↓
+Logging and monitoring
+  ↓
+Change control
+  ↓
+Evidence retention
+  ↓
+Audit response process
+```
 
 The compliance boundary also includes:
 
@@ -452,24 +769,39 @@ For every important production workflow run, the platform should retain an evide
 
 At minimum, that bundle should include:
 
-| Evidence item | Why it matters |
-|---|---|
-| Run ID | Stable reference for investigation |
-| User or service account | Attribution and access review |
-| Project/workspace | Organizational boundary |
-| Workflow name and version | Change control and reproducibility |
-| Git commit or release tag | Code provenance |
-| Container image digests | Software provenance |
-| Input dataset references | Data lineage |
-| Parameter file | Scientific and operational reproducibility |
-| Runtime profile | CPU, memory, disk, queue, retry, cloud region |
-| Task-level status | Success, failure, retry, cache hit, skipped |
-| Logs | Debugging and audit support |
-| Resource metrics | Cost analysis and capacity planning |
-| Output manifest | Result provenance |
-| Cache decisions | Explains reused computation |
-| Approval or launch record | Governance evidence |
-| Retention policy | Proves records were not ad hoc |
+```text
+Run ID
+  ↓
+User or service account
+  ↓
+Project / workspace
+  ↓
+Workflow name and version
+  ↓
+Git commit or release tag
+  ↓
+Container image digests
+  ↓
+Input dataset references
+  ↓
+Parameter file
+  ↓
+Runtime profile
+  ↓
+Task-level status
+  ↓
+Logs and reports
+  ↓
+Resource metrics
+  ↓
+Output manifest
+  ↓
+Cache decisions
+  ↓
+Approval or launch record
+  ↓
+Retention policy
+```
 
 A platform is audit-friendly when this bundle is generated automatically.
 
@@ -499,9 +831,9 @@ For executive management, Nextflow is attractive because it separates:
 
 ```text
 Pipeline logic
-  from
+  ↓
 Execution policy
-  from
+  ↓
 Cloud environment
 ```
 
@@ -524,7 +856,7 @@ Nextflow is strong when the organization needs:
 
 Nextflow supports dynamic resources through process directives.
 
-For example, a task can request more memory on the second attempt than on the first attempt. It can also estimate memory from input file size. Newer Nextflow versions support adjusting resources using previous execution trace metrics.
+For example, a task can request more memory on the second attempt than on the first attempt. It can also estimate memory from input file size. Recent Nextflow versions also expose previous task attempt information such as `task.previousTrace`, which can support trace-aware retry tuning.
 
 This matters because a mature workflow should not run every sample on the largest possible machine.
 
@@ -532,15 +864,14 @@ A better pattern is:
 
 ```text
 Start with a reasonable default
-  |
-  v
+  ↓
 Retry only recognized resource failures
-  |
-  v
-Increase memory/time/disk within a cap
-  |
-  v
+  ↓
+Increase memory / time / disk within a cap
+  ↓
 Stop if failure is deterministic or policy-related
+  ↓
+Use metrics to improve the next workflow version
 ```
 
 Nextflow makes that pattern relatively natural.
@@ -589,7 +920,19 @@ Poorly managed Nextflow can still create problems:
 
 The management response should not be “avoid Nextflow.”
 
-The response should be “standardize how Nextflow is operated.”
+The response should be:
+
+```text
+Standardize how Nextflow is operated
+  ↓
+Control profiles
+  ↓
+Retain evidence
+  ↓
+Review cost metrics
+  ↓
+Tune workflows continuously
+```
 
 ### Minimum Governance Policy for Nextflow
 
@@ -651,13 +994,21 @@ A rule can compute memory from input size, thread count, or retry attempt.
 
 This is powerful because many bioinformatics tasks scale with input size:
 
-- FASTQ size,
-- BAM/CRAM size,
-- number of samples,
-- number of variants,
-- number of genes,
-- number of shards,
-- or number of cells.
+```text
+FASTQ size
+  ↓
+BAM / CRAM size
+  ↓
+number of samples
+  ↓
+number of variants
+  ↓
+number of genes
+  ↓
+number of shards
+  ↓
+number of cells
+```
 
 Snakemake also supports profiles, which can define defaults and execution behavior for specific environments.
 
@@ -762,13 +1113,13 @@ WDL tasks can define runtime attributes such as CPU, memory, disks, Docker image
 
 Cromwell call caching is a major cost-control feature because it can reuse previous successful calls when command and inputs match.
 
-Cromwell also supports retry-with-more-memory behavior when configured. Terra documents out-of-memory retry behavior where failed tasks can be retried with increased memory when configured and when recognized error strings are detected.
+Cromwell also supports retry-with-more-memory behavior when configured.
 
 The important nuance:
 
 > Basic `maxRetries` is not the same thing as automatic memory escalation.
 
-In Cromwell, ordinary retry behavior is primarily for failed tasks. Memory escalation requires the retry-with-more-memory feature and the correct configuration/workflow options.
+In Cromwell, ordinary retry behavior is primarily for failed tasks. Memory escalation requires retry-with-more-memory settings, matching error keys, and workflow options such as `memory_retry_multiplier`.
 
 This makes WDL/Cromwell powerful, but more dependent on platform configuration than Nextflow or Snakemake resource expressions.
 
@@ -804,7 +1155,11 @@ Common risks include:
 
 The management response should be:
 
-> Use WDL where the institutional platform is already strong. Do not choose WDL alone and assume the operating model comes for free.
+```text
+Use WDL where the institutional platform is already strong
+  ↓
+Do not choose WDL alone and assume the operating model comes for free
+```
 
 ### Minimum Governance Policy for WDL/Cromwell
 
@@ -831,8 +1186,6 @@ A realistic organization may use more than one.
 
 The key is to define where each one is allowed.
 
-### Recommended Pattern
-
 | Workflow category | Recommended engine | Reason |
 |---|---|---|
 | Production cloud pipelines | Nextflow | Strong central policy and operational observability |
@@ -848,12 +1201,19 @@ The danger is using multiple engines with no policy boundaries.
 
 Management should define:
 
-- which engines are approved,
-- where each engine is allowed,
-- what metadata must be retained,
-- what cost controls are mandatory,
-- who can approve production workflows,
-- and how exceptions are handled.
+```text
+Approved engines
+  ↓
+Allowed use cases
+  ↓
+Required metadata
+  ↓
+Cost controls
+  ↓
+Evidence retention
+  ↓
+Exception process
+```
 
 ---
 
@@ -865,16 +1225,21 @@ Choose **Nextflow**.
 
 Add a governed execution layer.
 
-Require:
+Required path:
 
-- approved profiles,
-- resource caps,
-- labels,
-- trace/report retention,
-- run metadata export,
-- container pinning,
-- output manifest generation,
-- and lifecycle rules for work directories.
+```text
+Nextflow workflow
+  ↓
+Approved profile
+  ↓
+Controlled launcher / Seqera / internal platform
+  ↓
+Cloud execution environment
+  ↓
+Trace, report, logs, output manifest
+  ↓
+Evidence bundle
+```
 
 Why:
 
@@ -884,16 +1249,23 @@ Nextflow gives the best balance of cost control, production operations, ecosyste
 
 Keep **WDL/Cromwell** as the default.
 
-Do not migrate just because Nextflow is more popular in some communities.
+Do not migrate just because Nextflow is popular in some communities.
 
-Instead, improve:
+Improve:
 
-- runtime defaults,
-- memory retry configuration,
-- call caching governance,
-- metadata retention,
-- workspace permission review,
-- and workflow release discipline.
+```text
+Runtime defaults
+  ↓
+Memory retry configuration
+  ↓
+Call caching governance
+  ↓
+Metadata retention
+  ↓
+Workspace permission review
+  ↓
+Workflow release discipline
+```
 
 Why:
 
@@ -903,18 +1275,13 @@ The cheapest and safest platform is often the one already validated, staffed, an
 
 Choose **Snakemake** or **Nextflow**, depending on future direction.
 
-Choose Snakemake if:
+```text
+Mostly Python users + HPC + local research workflows
+  → Snakemake
 
-- the users are Python-heavy,
-- the workflows are lab-local,
-- HPC is the main environment,
-- and analyst adoption is the largest risk.
-
-Choose Nextflow if:
-
-- the workflow is expected to become a production service,
-- cloud execution is likely,
-- or management wants central policy from the beginning.
+Likely future production service + cloud execution + central policy
+  → Nextflow
+```
 
 ### Scenario 4: Regulated Customer-Facing Pipeline Service
 
@@ -947,6 +1314,18 @@ Management should ask engineering to produce:
 The goal is not to redesign everything.
 
 The goal is to identify where money and evidence are leaking.
+
+```text
+Inventory
+  ↓
+Cost baseline
+  ↓
+Failure baseline
+  ↓
+Evidence baseline
+  ↓
+Policy gaps
+```
 
 ### Days 31-60: Standardize Policy
 
@@ -1051,20 +1430,29 @@ A strong answer sounds like this:
 
 > Production workflows are launched only through approved profiles. Each run records the workflow version, parameters, container images, input dataset references, user or service account, compute environment, task statuses, retries, cache decisions, logs, reports, and output manifest. Runtime resources are controlled by policy, with caps and documented retry behavior. Audit logs and run metadata are retained according to the organization’s retention policy.
 
-Then show the evidence bundle.
+Then show the evidence path:
 
-The auditor should see:
-
-1. workflow release record,
-2. approved launch configuration,
-3. run metadata,
-4. task-level execution report,
-5. logs,
-6. input/output manifest,
-7. access record,
-8. cache record,
-9. resource/cost report,
-10. and change history.
+```text
+Workflow release record
+  ↓
+Approved launch configuration
+  ↓
+Run metadata
+  ↓
+Task-level execution report
+  ↓
+Logs
+  ↓
+Input/output manifest
+  ↓
+Access record
+  ↓
+Cache record
+  ↓
+Resource/cost report
+  ↓
+Change history
+```
 
 If the organization can produce this quickly, the workflow platform is audit-friendly.
 
@@ -1080,11 +1468,17 @@ It also destroys scheduling efficiency.
 
 Better:
 
-- use task classes,
-- use dynamic resources,
-- cap escalation,
-- tune from trace metrics,
-- and review high-cost outliers.
+```text
+Task labels
+  ↓
+Dynamic resources
+  ↓
+Escalation caps
+  ↓
+Trace review
+  ↓
+High-cost outlier review
+```
 
 ### Anti-Pattern 2: “Retry Everything Three Times”
 
@@ -1094,11 +1488,17 @@ It is automated waste.
 
 Better:
 
-- classify failures,
-- retry transient and resource-related failures,
-- stop deterministic failures,
-- escalate policy failures,
-- and record retry reason.
+```text
+Classify failure
+  ↓
+Retry transient/resource failures
+  ↓
+Stop deterministic failures
+  ↓
+Escalate policy failures
+  ↓
+Record retry reason
+```
 
 ### Anti-Pattern 3: “The Pipeline Is Versioned, So We Are Reproducible”
 
@@ -1106,13 +1506,23 @@ Code versioning is not enough.
 
 Reproducibility also needs:
 
-- input references,
-- parameters,
-- software environment,
-- container image,
-- runtime settings,
-- reference data versions,
-- and output manifest.
+```text
+Code version
+  ↓
+Input references
+  ↓
+Parameters
+  ↓
+Software environment
+  ↓
+Container image
+  ↓
+Runtime settings
+  ↓
+Reference data versions
+  ↓
+Output manifest
+```
 
 ### Anti-Pattern 4: “The Cloud Provider Has Logs, So We Are Audit-Ready”
 
@@ -1122,10 +1532,19 @@ Auditors need workflow-level evidence, not only infrastructure events.
 
 Better:
 
-- connect cloud logs to workflow run IDs,
-- retain workflow reports,
-- export task metadata,
-- and preserve launch context.
+```text
+Cloud logs
+  ↓
+Workflow run ID
+  ↓
+Task metadata
+  ↓
+Launch context
+  ↓
+Pipeline version
+  ↓
+Input/output manifest
+```
 
 ### Anti-Pattern 5: “Snakemake/Nextflow/WDL Is Compliant”
 
@@ -1163,14 +1582,23 @@ But the bigger management decision is the control model around it.
 
 A good workflow platform should make the following things boring:
 
-- knowing who ran the workflow,
-- knowing what version ran,
-- knowing what data was used,
-- knowing how much compute was requested,
-- knowing why a task retried,
-- knowing whether cache was used,
-- knowing where outputs went,
-- and knowing what evidence to show an auditor.
+```text
+Who ran the workflow?
+  ↓
+What version ran?
+  ↓
+What data was used?
+  ↓
+How much compute was requested?
+  ↓
+Why did a task retry?
+  ↓
+Was cache used?
+  ↓
+Where did outputs go?
+  ↓
+What evidence can we show an auditor?
+```
 
 When those answers are boring, the platform is mature.
 
@@ -1549,7 +1977,8 @@ This article summarizes current behavior and documentation patterns as of June 2
 
 Useful official references:
 
-- Nextflow process documentation, including dynamic task resources and previous execution trace: [https://docs.seqera.io/nextflow/process](https://docs.seqera.io/nextflow/process)
+- Nextflow process documentation, including processes and dynamic process behavior: [https://docs.seqera.io/nextflow/process](https://docs.seqera.io/nextflow/process)
+- Nextflow process reference, including `task.attempt` and `task.previousTrace`: [https://docs.seqera.io/nextflow/reference/process](https://docs.seqera.io/nextflow/reference/process)
 - Nextflow reports, trace, timeline, execution log, and DAG documentation: [https://docs.seqera.io/nextflow/reports](https://docs.seqera.io/nextflow/reports)
 - Seqera Platform audit logs: [https://docs.seqera.io/platform-enterprise/monitoring/audit-logs](https://docs.seqera.io/platform-enterprise/monitoring/audit-logs)
 - Seqera Platform pipeline versioning: [https://docs.seqera.io/platform-cloud/pipelines/versioning](https://docs.seqera.io/platform-cloud/pipelines/versioning)
@@ -1560,3 +1989,4 @@ Useful official references:
 - Cromwell retry with more memory: [https://cromwell.readthedocs.io/en/latest/cromwell_features/RetryWithMoreMemory/](https://cromwell.readthedocs.io/en/latest/cromwell_features/RetryWithMoreMemory/)
 - Terra default runtime attributes: [https://support.terra.bio/hc/en-us/articles/360046944671-Default-runtime-attributes-for-workflow-submissions](https://support.terra.bio/hc/en-us/articles/360046944671-Default-runtime-attributes-for-workflow-submissions)
 - Terra out-of-memory retry: [https://support.terra.bio/hc/en-us/articles/4403215299355-Out-of-Memory-Retry](https://support.terra.bio/hc/en-us/articles/4403215299355-Out-of-Memory-Retry)
+
