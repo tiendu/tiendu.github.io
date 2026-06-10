@@ -1,0 +1,70 @@
+---
+layout: page
+title: posts
+---
+
+{%- assign pinned = site.posts | where: "pinned", true -%}
+
+{%- if paginator.page == 1 and pinned.size > 0 -%}
+  <section style="
+      background:#f5f5f5;
+      padding:1.5em;
+      border-radius:12px;
+      margin-bottom:2.5em;
+      border:1px solid #e0e0e0;
+  ">
+    {% for post in pinned %}
+      {% assign words = post.content | number_of_words %}
+      {% assign minutes = words | divided_by:200 %}
+
+      <article style="margin-bottom:2em; padding-bottom:1em; border-bottom:1px solid #ccc;">
+        <h2><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h2>
+        <small>
+          {{ post.date | date: "%B %-d, %Y" }} — {{ minutes | ceil }} min read
+        </small>
+      </article>
+    {% endfor %}
+  </section>
+{%- endif -%}
+
+{% for post in paginator.posts %}
+  {% unless post.pinned %}
+    {% assign words = post.content | number_of_words %}
+    {% assign minutes = words | divided_by:200 %}
+
+    <article style="margin-bottom:2em; padding-bottom:1em; border-bottom:1px solid #ccc;">
+      <h2><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h2>
+      <small>
+        {{ post.date | date: "%B %-d, %Y" }} — {{ minutes | ceil }} min read
+      </small>
+    </article>
+  {% endunless %}
+{% endfor %}
+
+{% if paginator.total_pages > 1 %}
+  <nav class="pagination" style="margin-top:2.5em; display:flex; gap:0.75em; flex-wrap:wrap; align-items:center;">
+
+    {% if paginator.previous_page %}
+      <a href="{{ paginator.previous_page_path | relative_url }}">&laquo; Prev</a>
+    {% else %}
+      <span style="opacity:0.4;">&laquo; Prev</span>
+    {% endif %}
+
+    {% for page in (1..paginator.total_pages) %}
+      {% if page == paginator.page %}
+        <strong>{{ page }}</strong>
+      {% elsif page == 1 %}
+        <a href="{{ '/posts/' | relative_url }}">{{ page }}</a>
+      {% else %}
+        <a href="{{ site.paginate_path | replace: ':num', page | relative_url }}">{{ page }}</a>
+      {% endif %}
+    {% endfor %}
+
+    {% if paginator.next_page %}
+      <a href="{{ paginator.next_page_path | relative_url }}">Next &raquo;</a>
+    {% else %}
+      <span style="opacity:0.4;">Next &raquo;</span>
+    {% endif %}
+
+  </nav>
+{% endif %}
