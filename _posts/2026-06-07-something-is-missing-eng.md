@@ -179,17 +179,51 @@ I certainly do.
 
 Sometimes I'll see somebody doing something impressive and immediately feel the impulse to measure myself against them. Not because I want to. It just happens automatically.
 
-The machine has become internalized.
+And that's the part that bothers me.
 
-Maybe that's what people mean when they talk about systems. The most powerful systems aren't the ones imposed from the outside. They're the ones that eventually move inside your head and start speaking in your own voice.
+Nobody taught me to do that directly.
 
-You don't need anyone forcing you to be productive if you've learned to do it to yourself.
+Nobody sat me down and said, "Your value depends on how much you produce."
 
-You don't need anyone judging you if you've become your own judge.
+Nobody said, "Every hobby should eventually make money."
 
-You don't need anyone monitoring your performance if you've already turned your life into a permanent performance review.
+Nobody said, "A day that isn't productive is a day that doesn't count."
 
-And perhaps that's why silence has become uncomfortable.
+And yet somehow those ideas ended up in my head anyway.
+
+You can hear them in the way people talk now.
+
+A hobby becomes a side hustle.
+
+Rest becomes recovery.
+
+Sleep becomes something to optimize.
+
+Even relationships start sounding strangely corporate. People talk about compatibility the way managers talk about hiring decisions. They talk about red flags, green flags, long-term potential, emotional investment, and whether somebody fits into the future they're trying to build.
+
+None of this is necessarily wrong.
+
+That's what makes it so difficult to talk about.
+
+Each individual thing makes sense.
+
+The strange part is seeing all of them together.
+
+It's realizing that eventually you start treating yourself the same way.
+
+You begin managing your own life like a business.
+
+Tracking progress.
+
+Monitoring performance.
+
+Auditing your choices.
+
+Wondering whether you're making good use of your time.
+
+And after enough years, the voice in your head starts sounding less like you and more like a performance review.
+
+Maybe that's why silence has become uncomfortable.
 
 Real silence.
 
