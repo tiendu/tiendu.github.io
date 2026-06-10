@@ -23,7 +23,7 @@ Not empty exactly. There were still a few people outside. Some couples maybe, co
 
 But inside the car it felt lonely.
 
-I did not turn on music. I usually do, but that night I didn't. There was only the engine noise from my old car, the kind of sound you stop noticing after a while because it becomes part of the machine, part of the routine, part of the night itself.
+I did not turn on music. I usually do, but that night I didn't. There was only the engine noise from my old 1999 Toyota, the kind of sound you stop noticing after a while because it becomes part of the machine, part of the routine, part of the night itself.
 
 I lowered the window a little.
 
