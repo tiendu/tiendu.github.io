@@ -3,7 +3,7 @@ layout: post
 title: "The Office Building Guide to Web Development: A Plain-English Reference Manual"
 date: 2025-05-25
 categories: ["Web Development"]
-pinned: false
+pinned: true
 ---
 
 Web development has too many terms.
