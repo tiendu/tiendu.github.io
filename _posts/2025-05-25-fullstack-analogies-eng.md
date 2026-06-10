@@ -4,6 +4,7 @@ title: "The Office Building Guide to Web Development: A Plain-English Reference 
 date: 2025-05-25
 categories: ["Web Development"]
 pinned: true
+hidden: true
 ---
 
 Web development has too many terms.

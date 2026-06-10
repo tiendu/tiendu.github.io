@@ -4,6 +4,7 @@ title: "Compliance for Bioinformatics Engineers: HIPAA, GDPR, NIH GDS, ISO 27001
 categories: ["Bioinformatics & Scientific Tools"]
 date: 2026-05-21
 pinned: true
+hidden: true
 ---
 
 There is a strange moment that happens in bioinformatics once the work moves out of a personal laptop, a university server, or a friendly research group.

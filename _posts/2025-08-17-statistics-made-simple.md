@@ -4,6 +4,7 @@ title: "Statistics Made Simple: Mnemonics, Analogies, and Practical Notes"
 date: 2025-08-17
 categories: ["Statistics and Probability"]
 pinned: true
+hidden: true
 ---
 
 Statistics looks scary because it has formulas, Greek letters, and words that sound more complicated than they are.

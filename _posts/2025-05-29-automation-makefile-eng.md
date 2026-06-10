@@ -4,6 +4,7 @@ title: "Automation à la Carte: Makefile, justfile, or Shell Script?"
 date: 2025-05-29
 categories: ["Automation, Systems & Engineering"]
 pinned: true
+hidden: true
 ---
 
 Every software project eventually grows a small layer of automation.
