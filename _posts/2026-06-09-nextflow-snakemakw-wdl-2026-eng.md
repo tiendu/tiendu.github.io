@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Nextflow vs Snakemake vs WDL in 2026: Executive Guide to Cloud Cost Control, Compliance, and Audit Readiness"
-date: 2026-06-10
+date: 2026-06-09
 categories: ["Bioinformatics & Scientific Tools", "Automation, Systems & Engineering"]
 pinned: false
 ---
