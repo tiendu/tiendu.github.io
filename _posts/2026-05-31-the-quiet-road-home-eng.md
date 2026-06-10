@@ -9,7 +9,7 @@ It was around 11 PM when I was driving home.
 
 The party was over.
 
-There had been food, noise, people, jokes, the kind of small weekend gathering that makes the day feel less empty for a while. Then everyone went back to their own direction.
+There had been food, noise, people, jokes, the kind of small weekend gathering that makes the day feel less empty for a while. Then everyone went their own way.
 
 A Sunday night.
 
@@ -45,7 +45,7 @@ I know that.
 
 This is Vietnam.
 
-People were still on motorcycles at that hour. Some carrying food. Some carrying groceries. Some carrying another person behind them, half-asleep, helmet tilted forward. Some probably riding home after ten or twelve hours of work. Some probably still had another delivery to make before they could go home.
+People were still on motorcycles at that hour. Some carrying food. Some carrying groceries. Some had another person behind them, half-asleep, helmet tilted forward. Some probably riding home after ten or twelve hours of work. Some probably still had another delivery to make before they could go home.
 
 And there I was, inside a car, dry, protected, separated from the road by glass and metal, feeling strangely alone.
 
@@ -56,6 +56,28 @@ Or maybe not unfair.
 Maybe just complicated.
 
 Because comfort does not automatically cancel loneliness. It only changes the shape of it.
+
+As I got closer to the building, I drove past the small playground near the entrance.
+
+It was dark.
+
+The lights were off. The swings and benches were barely visible. A few people were sitting there quietly, their phone screens lighting up their faces.
+
+No one looked like they were waiting for anything.
+
+Or maybe everyone was.
+
+Then I turned down toward the underground parking lot.
+
+At the entrance, I slowed down and scanned my card.
+
+The barrier lifted.
+
+The woman at the security booth was there, like she usually is at that hour. She greeted me as I drove in. Nothing big. Just a familiar voice, a small hello, part of the building's routine.
+
+I nodded back and drove down into the parking lot.
+
+Only later did I realize that might have been the last human interaction I had that day.
 
 I parked the car and walked toward the elevator.
 
