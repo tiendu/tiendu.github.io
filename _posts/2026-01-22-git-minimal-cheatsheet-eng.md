@@ -4,7 +4,6 @@ title: "Git: The Minimal Modern Cheat Sheet"
 date: 2026-01-22
 categories: ["Automation, Systems & Engineering"]
 pinned: true
-hidden: true
 ---
 
 A condensed, practical Git reference for day-to-day work. Focus: modern defaults (`main`, `switch`/`restore`, rebase-on-pull).

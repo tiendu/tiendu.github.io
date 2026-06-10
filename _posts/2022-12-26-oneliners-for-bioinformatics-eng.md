@@ -4,7 +4,6 @@ title: "Useful Bioinformatics One-liners"
 date: 2022-12-26
 categories: ["Bioinformatics & Scientific Tools"]
 pinned: true
-hidden: true
 ---
 
 Bioinformatics work often involves small file transformations: counting reads, checking sequence lengths, converting between FASTQ and FASTA, joining tables, filtering BLAST output, or extracting a region from a sequence.

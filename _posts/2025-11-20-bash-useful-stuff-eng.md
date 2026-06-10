@@ -4,7 +4,6 @@ title: "Bash, But Only the Useful Stuff"
 date: 2025-11-20
 categories: ["Automation, Systems & Engineering"]
 pinned: true
-hidden: true
 ---
 
 A condensed, practical Bash reference for day-to-day scripting.
