@@ -73,13 +73,15 @@ From up there, everything looked tiny. Motorbikes moved like insects. People bec
 
 I watched the block opposite mine for a while.
 
-Some windows were still bright. Some were blue from television screens. Some had that warm yellow light that makes you wonder what kind of evening is happening inside. Dinner maybe. Someone cleaning up. Someone lying on the sofa. Someone scrolling in bed with one hand. Someone arguing quietly. Someone already asleep.
+From my balcony, I could not really see whole lives. Just pieces of them. Each flat had a couple of bedroom windows and a balcony. Enough to suggest something, not enough to know anything.
+
+Some windows were still bright. Some were blue from television screens. Some had that warm yellow light that makes you wonder what kind of evening is happening inside. Maybe dinner. Maybe someone cleaning up. Maybe someone lying on the sofa. Maybe someone scrolling in bed with one hand. Maybe someone arguing quietly. Maybe someone already asleep.
 
 Then the lights started going off.
 
 One by one.
 
-Not all at once. Slowly. Randomly. A bedroom here. A kitchen there. A balcony light. A living room. Each window disappearing into darkness like a small ending.
+Not all at once. Slowly. Randomly. A balcony light here. A bedroom there. A living room fading into darkness. Each small square of light disappearing like someone had finally decided the day was over.
 
 It felt like the building was wrapping up the day.
 
