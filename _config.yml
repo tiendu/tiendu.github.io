@@ -10,10 +10,6 @@ facebook_username: tiendu107
 linkedin_username: tienhdu
 github_username: tiendu
 
-# Configure the plugin here
-paginate_path: "/page:num/"
-paginate: 5
-
 # Build settings
 theme: minima
 # remote_theme: pages-themes/midnight@v0.2.0
