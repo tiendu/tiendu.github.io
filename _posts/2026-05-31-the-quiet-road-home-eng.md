@@ -7,6 +7,10 @@ categories: ["Personal Notes & Reflections"]
 
 It was around 11 PM when I was driving home.
 
+The party was over.
+
+There had been food, noise, people, jokes, the kind of small weekend gathering that makes the day feel less empty for a while. Then everyone went back to their own direction.
+
 A Sunday night.
 
 One hour before midnight.
