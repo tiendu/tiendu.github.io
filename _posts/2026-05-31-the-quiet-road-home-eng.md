@@ -41,9 +41,9 @@ I know that.
 
 This is Vietnam.
 
-A lot of people were still on motorcycles at that hour. Some carrying food. Some carrying groceries. Some carrying another person behind them, half-asleep, helmet tilted forward. Some probably driving home after ten or twelve hours of work. Some probably still had another delivery to make before they could go home.
+A lot of people were still on motorcycles at that hour. Some carrying food. Some carrying groceries. Some carrying another person behind them, half-asleep, helmet tilted forward. Some probably riding home after ten or twelve hours of work. Some probably still had another delivery to make before they could go home.
 
-And there I was, inside a car, dry, protected, separated from the road by glass and metal, thinking about loneliness.
+And there I was, inside a car, dry, protected, separated from the road by glass and metal, feeling strangely alone.
 
 That felt a little unfair.
 
@@ -164,6 +164,16 @@ At 34, single, my routine is basically the same most nights. Drive home. Shower.
 Weekends are a little different.
 
 But not that different.
+
+My parents live about 15 kilometers away.
+
+Not far, really. Close enough that once every week or two, they visit on the weekend. Sometimes they bring food. Sometimes they sit for a while. Sometimes the flat feels warmer just because someone else is moving inside it.
+
+Then they leave.
+
+And the place becomes quiet again.
+
+Not empty exactly. Just quiet in that familiar way.
 
 The inner circle gets smaller every year.
 
