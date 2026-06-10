@@ -293,13 +293,13 @@ Maybe I'm romanticizing the past.
 
 Maybe none of these observations mean anything at all.
 
-I don't know.
+I don’t know.
 
-But I do know that there is something revealing about lying awake at 2:30 in the morning, watching a kitchen renovation in a house you'll never own, and suddenly realizing that the thing you're searching for was never going to be found on the screen.
+But I do know that there is something revealing about lying awake at 2:30 in the morning, watching a kitchen renovation in a house you’ll never own, and suddenly realizing that the thing you’re searching for was never going to be found on the screen.
 
 It was hiding in the silence you were trying to avoid.
 
-And maybe that's the last thing we forgot how to do.
+And maybe that’s the last thing we forgot how to do.
 
 Not work.
 
@@ -319,8 +319,76 @@ Notice the people while they are still here.
 
 Notice your own life before it becomes a memory.
 
-I'm not sure that's wisdom.
+Because memory is strange. Most of life disappears without announcing itself. You don’t know you’re seeing a place for the last time. You don’t know a conversation is the final one until much later. Entire years vanish into routines while you’re busy looking ahead to whatever comes next.
 
-I'm not even sure it's useful.
+One day the apartment you complained about becomes the apartment you miss. The job you couldn’t wait to leave becomes a story you tell. The people you assumed would always be around slowly drift away, move away, grow older, or simply become part of a chapter that ended without anyone noticing.
 
-But at two-thirty in the morning, lying awake in the dark, it feels closer to the truth than most things I hear during the day.
+Maybe that’s why the obsession with the future feels so dangerous sometimes.
+
+We’re always preparing for life.
+
+Preparing to be happier.
+
+Preparing to be more successful.
+
+Preparing to have enough money.
+
+Preparing to become the version of ourselves we imagine exists somewhere over the horizon.
+
+And maybe that version never arrives.
+
+Maybe life isn’t waiting at the next milestone.
+
+Maybe life is mostly this.
+
+A Tuesday afternoon.
+
+A quiet dinner.
+
+A phone call from someone you love.
+
+Rain against a window.
+
+A walk with nowhere particular to go.
+
+A kitchen that doesn’t need renovating.
+
+A life that doesn’t need optimizing.
+
+Just this.
+
+Which sounds disappointingly ordinary until you remember that ordinary things are what life is mostly made of.
+
+Maybe that’s what keeps bothering me about the way we live now. We spend so much time documenting experiences, improving experiences, comparing experiences, and preparing for future experiences that we sometimes forget to actually have them.
+
+And I know how cliché that sounds.
+
+Trust me, I hear it too.
+
+Maybe every generation eventually discovers some version of this thought and mistakes it for wisdom.
+
+Maybe I’m doing the exact same thing right now.
+
+But at least at this moment, lying awake in the dark while the rest of the world sleeps, it feels true.
+
+Not permanently true.
+
+Not universally true.
+
+Just true enough.
+
+True enough that I’ll probably put the phone down for a while.
+
+True enough that the silence feels a little less uncomfortable than it did an hour ago.
+
+And maybe that’s all a person can really hope for.
+
+Not certainty.
+
+Not enlightenment.
+
+Just the occasional moment where the noise falls away and you can hear your own life happening.
+
+For a second.
+
+Before it passes.
