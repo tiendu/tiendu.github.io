@@ -7,7 +7,11 @@ categories: ["Personal Notes & Reflections"]
 
 It was around 11 PM when I was driving home.
 
+A Sunday night.
+
 One hour before midnight.
+
+One hour before Monday.
 
 The road was quiet. Really quiet.
 
@@ -155,7 +159,7 @@ Drank some water.
 
 Walked around the flat for no real reason.
 
-At 34 years old, single, my routine is basically the same most nights. Drive home. Shower. Drink water. Check the phone. Maybe eat something small. Maybe look outside for a while. Maybe think too much. Then sleep later than I should.
+At 34, single, my routine is basically the same most nights. Drive home. Shower. Drink water. Check the phone. Maybe eat something small. Maybe look outside for a while. Maybe think too much. Then sleep later than I should.
 
 Weekends are a little different.
 
