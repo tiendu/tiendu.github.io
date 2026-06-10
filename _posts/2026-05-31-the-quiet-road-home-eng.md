@@ -45,7 +45,7 @@ I know that.
 
 This is Vietnam.
 
-A lot of people were still on motorcycles at that hour. Some carrying food. Some carrying groceries. Some carrying another person behind them, half-asleep, helmet tilted forward. Some probably riding home after ten or twelve hours of work. Some probably still had another delivery to make before they could go home.
+People were still on motorcycles at that hour. Some carrying food. Some carrying groceries. Some carrying another person behind them, half-asleep, helmet tilted forward. Some probably riding home after ten or twelve hours of work. Some probably still had another delivery to make before they could go home.
 
 And there I was, inside a car, dry, protected, separated from the road by glass and metal, feeling strangely alone.
 
