@@ -5,7 +5,7 @@ date: 2026-06-07
 categories: ["Personal Notes & Reflections"]
 ---
 
-It's around 2:30 in the morning and I'm watching a kitchen renovation video in a house I'll never own.
+It's around 2:30 AM and I'm watching a kitchen renovation video in a house I'll never own.
 
 I don't know how I got here. Well, that's not true. I know exactly how I got here. One recommendation became another recommendation, then another one after that. The algorithm didn't trick me. I walked here willingly. Still, there's always this strange moment when I look up from the screen and wonder what exactly I thought I was going to find. Not in the video. Beyond the video.
 
@@ -27,7 +27,7 @@ Almost enough meaning.
 
 And maybe that's why so many people seem tired in a way that sleep doesn't fix.
 
-The strange part is that objectively speaking, this should be one of the best times in history to be alive. Most of us carry devices in our pockets that contain more information than entire civilizations once possessed. Food is abundant. Entertainment is abundant. Convenience is abundant. If somebody from a thousand years ago could see how we live, they would probably think we had solved existence.
+The strange part is that, for many of us, this should be one of the best times in history to be alive. We carry devices in our pockets that contain more information than entire civilizations once possessed. Entertainment is abundant. Convenience is abundant. If somebody from a thousand years ago could see how many options we have, they might think we had solved existence.
 
 Yet something about the atmosphere feels different.
 
@@ -69,7 +69,7 @@ Or mountain villages.
 
 Or sailboats.
 
-The cabin fantasy fascinates me because it appears everywhere. People with successful careers dream about it. People with ordinary careers dream about it. Rich people dream about it. Poor people dream about it.
+The cabin fantasy fascinates me because it appears everywhere. People with successful careers dream about it. People with ordinary careers dream about it. People who seem to have everything still dream about disappearing somewhere quiet.
 
 I don't think the cabin itself is the point.
 
@@ -91,13 +91,13 @@ There is something psychologically satisfying about reality being tangible.
 
 Modern life increasingly isn't.
 
-Money is abstract. 
+Money is abstract.
 
-Work is abstract. 
+Work is abstract.
 
-Communities are abstract. 
+Communities are abstract.
 
-Friendships are partially abstract, kept alive through messages, reactions, and the occasional promise to meet up soon. 
+Friendships are partially abstract, kept alive through messages, reactions, and the occasional promise to meet up soon.
 
 Even identity has become strangely abstract, split between who you are and who you appear to be.
 
