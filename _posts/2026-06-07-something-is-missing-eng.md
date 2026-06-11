@@ -27,7 +27,7 @@ Almost enough meaning.
 
 And maybe that's why so many people seem tired in a way that sleep doesn't fix.
 
-The strange part is that, for many of us, this should be one of the best times in history to be alive. We carry devices in our pockets that contain more information than entire civilizations once possessed. Entertainment is abundant. Convenience is abundant. If somebody from a thousand years ago could see how many options we have, they might think we had solved existence.
+The strange part is that objectively speaking, this should be one of the best times in history to be alive. Most of us carry devices in our pockets that contain more information than entire civilizations once possessed. Food is abundant. Entertainment is abundant. Convenience is abundant. If somebody from a thousand years ago could see how we live, they would probably think we had solved existence.
 
 Yet something about the atmosphere feels different.
 
@@ -69,7 +69,7 @@ Or mountain villages.
 
 Or sailboats.
 
-The cabin fantasy fascinates me because it appears everywhere. People with successful careers dream about it. People with ordinary careers dream about it. People who seem to have everything still dream about disappearing somewhere quiet.
+The cabin fantasy fascinates me because it appears everywhere. People with successful careers dream about it. People with ordinary careers dream about it. Rich people dream about it. Poor people dream about it.
 
 I don't think the cabin itself is the point.
 
@@ -91,13 +91,13 @@ There is something psychologically satisfying about reality being tangible.
 
 Modern life increasingly isn't.
 
-Money is abstract.
+Money is abstract. 
 
-Work is abstract.
+Work is abstract. 
 
-Communities are abstract.
+Communities are abstract. 
 
-Friendships are partially abstract, kept alive through messages, reactions, and the occasional promise to meet up soon.
+Friendships are partially abstract, kept alive through messages, reactions, and the occasional promise to meet up soon. 
 
 Even identity has become strangely abstract, split between who you are and who you appear to be.
 
@@ -271,7 +271,7 @@ I don't have answers for them.
 
 Most people probably don't.
 
-Maybe that's why the phone comes out the second there's a pause in conversation. Maybe that's why the television stays on. Maybe that's why two in the morning finds people watching kitchen renovation videos with their thumb still moving across the screen.
+Maybe that's why the phone comes out the second there's a pause in conversation. Maybe that's why the television stays on. Maybe that's why 2 AM finds people watching kitchen renovation videos with their thumb still moving across the screen.
 
 Not because the kitchen matters.
 
