@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "The Strange Feeling That Something Is Missing"
+title: "That Strange Feeling That Something Is Missing"
 date: 2026-06-07
 categories: ["Personal Notes & Reflections"]
 ---
