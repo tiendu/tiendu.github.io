@@ -1,185 +1,163 @@
 ---
 layout: post
-title: "A Painkiller for Reality"
+title: "A Small Opening in the Week"
 date: 2026-06-11
 categories: ["Personal Notes & Reflections"]
 ---
 
+It was 4 PM at a Wednesday company Happy Hour.
+
+Not really the drinking kind of Happy Hour yet.
+
+More like the waiting part before the food.
+
+Everyone was gathered there, but the event had not fully loosened up. We still had to go through the announcements first. People were standing around, half in work mode, half pretending the workday was already over. Small conversations. Polite laughter. That strange office atmosphere where everyone is supposed to relax, but nobody is completely relaxed yet.
+
+Before the food, there was an appreciation session.
+
+People were recognized. Names were mentioned. Everyone clapped. The usual thing. Not bad. Not fake exactly. Just part of the rhythm of office life.
+
+Then, after the appreciation part ended, a colleague went up and announced another event.
+
+"Ăn ngủ cùng World Cup."
+
+Eat and sleep with the World Cup.
+
+The idea was simple. People would guess the finalists, the champion, and the winner of each match. Whoever guessed correctly the most would receive a gift.
+
+I stood there listening.
+
+Not excited exactly.
+
 I don't even watch the World Cup.
 
-That is probably the first thing I should say.
-
-I do not follow the teams. I do not know the groups. I do not check fixtures. I do not care who is injured, who is favored, who has the easier path, or which country has the better chance this year.
+I do not follow the teams. I do not know the groups. I do not check fixtures. I do not know who is injured, who is favored, who has the easier path, or which country people are supposed to be afraid of this year.
 
 To me, football is mostly background noise.
 
-But yesterday, my company announced that there would be an event for the World Cup.
-
-And somehow that made sense immediately.
+But somehow, the announcement made sense immediately.
 
 Because this is Vietnam.
 
 Football is probably the closest thing this country has to a shared public emotion. Even people who do not follow it can feel when a big tournament is near. Cafes prepare their screens. Group chats wake up. People start talking about matches before the first ball is kicked.
 
-The World Cup has not started yet.
+The World Cup had not even started yet.
 
-It kicks off tomorrow.
+It would kick off the next day.
 
-But the atmosphere is already here.
+But the atmosphere was already there.
 
-That is the part I keep thinking about.
+The next day, it became more visible.
 
-Not the teams.
+On the company screen, people had started placing their choices for the matches.
 
-Not the players.
+Finalists.
 
-Not the trophy.
+Champion.
 
-The atmosphere.
+Winner for each match.
 
-The way people start preparing to care about something together before anything has even happened.
+A simple office game. Nothing dramatic. Names, choices, guesses. Probably some quiet confidence from people who actually follow football, and random guesses from people who do not.
 
-The economy still feels bad.
+I looked at it for a bit.
 
-Rent is still rent.
+In an IT company where most people are men, maybe this is just normal. Maybe a World Cup guessing game is the most predictable office activity in the world. Maybe there is nothing deep about it at all.
 
-Debt is still debt.
+But still, I noticed something.
 
-Groceries still cost more than people want to admit.
+The workday felt a little less bad.
 
-Work is still work.
+Not good exactly.
 
-People are tired in that quiet way where they do not always have the energy to explain what exactly is wrong.
+Not transformed.
 
-And then football arrives.
+Just less flat.
 
-Not as a solution.
+There was something else in the room besides tickets, meetings, deadlines, code, customer issues, and the usual silent pressure of work.
 
-More like a painkiller.
+There was a small game sitting on top of the day.
 
-Not the kind that heals the injury.
+A little harmless thing people could look at.
 
-The kind that lets you move for a while without feeling the whole weight of it.
+A thing people could talk about without having to talk about themselves.
 
-Maybe that sounds cynical.
+That was the part I kept thinking about later.
 
-Maybe it is.
+Not the event itself.
 
-But I do not mean it as an insult.
+Not the guessing game.
 
-Sometimes people need painkillers.
+Not the gift.
 
-Sometimes a society does too.
+Just the small change in the room.
 
-There are problems you cannot solve in one evening. There are bills that will still be there tomorrow. There are salaries that still feel too small. There are futures that still feel unstable. There are family problems, job problems, health problems, money problems, private problems that nobody at work knows about.
+People are tired.
 
-And most of the time, people carry those things quietly.
+Not always dramatically tired. Not the kind of tired where someone breaks down in public and says everything clearly.
 
-They go to work.
+More like the quiet kind.
 
-They reply to messages.
+The kind where you still answer emails.
 
-They attend meetings.
+Still join meetings.
 
-They send polite emails.
+Still say "yeah, all good."
 
-They eat lunch.
+Still clap during the appreciation session.
 
-They scroll.
+Still stand around at Happy Hour at 4 PM.
 
-They act normal.
+Still act normal because acting normal is part of the job.
 
-Then one day the company announces a World Cup event, and suddenly there is something else in the air.
+Then someone announces a World Cup event, and suddenly there is a small opening in the week.
 
-Something lighter.
+A harmless thing.
 
-Something easier to talk about.
+A loud thing.
 
-Something that does not ask people to explain their lives.
+A thing that does not ask anyone to explain what is wrong.
 
-That is why I do not want to mock it.
+Maybe that is what I mean by painkiller.
 
-It would be easy to say people are distracted. It would be easy to say football is just entertainment. It would be easy to say this is just another corporate event, another reason for people to gather around a screen and pretend things are fine.
+Not some grand escape.
 
-Maybe all of that is partly true.
+Not some stupid illusion.
 
-But it is not the whole truth.
+Just a small thing that makes the day easier to pass through.
 
-Most people already know things are not fine.
+A match prediction.
 
-They do not need another explanation of how hard life is. They know. They feel it in rent, in groceries, in traffic, in work, in the way the month feels long and the salary feels short, in the way tomorrow keeps arriving before they are ready.
+A name on a screen.
 
-Awareness is not the problem.
+A colleague arguing about a team.
 
-People are aware.
+Someone pretending to know who will win.
 
-Sometimes too aware.
+Someone guessing randomly and still joining anyway.
 
-Sometimes awareness itself becomes heavy.
+It does not fix anything.
 
-You can be aware of the economy.
+But maybe it lightens the room a little.
 
-Aware of layoffs.
+And sometimes that is already something.
 
-Aware of corruption.
+So maybe this is not really about football.
 
-Aware of climate anxiety.
+It is about how heavy ordinary reality has become.
 
-Aware of war.
+Most days, everyone carries their own separate version of the world. Their own feed. Their own anxiety. Their own bad news. Their own private algorithmic weather.
 
-Aware of your own aging parents.
+Even when people sit in the same office, they are often not in the same world.
 
-Aware of your own tired body.
+One person is thinking about work.
 
-Aware of the fact that your life is moving faster than you expected.
+Another is thinking about money.
 
-But awareness does not automatically become action.
+Another is checking the news.
 
-Sometimes it just becomes weight.
+Another is scrolling through someone else's life.
 
-And under enough weight, people look for something that lets them breathe.
-
-A match can do that.
-
-A song can do that.
-
-A festival can do that.
-
-A bowl of noodles at midnight can do that.
-
-A stupid joke in a group chat can do that.
-
-None of it fixes the structure.
-
-But not every human need is a structural solution.
-
-Some things are just ways to remain human inside the structure.
-
-So maybe this post is not really about football.
-
-It is about what happens when reality becomes too fragmented, too heavy, too private, and too tiring to hold directly.
-
-Most days, everyone carries their own separate version of the world.
-
-Their own feed.
-
-Their own anxiety.
-
-Their own bad news.
-
-Their own private algorithmic weather.
-
-Even when people sit in the same room, they are often not in the same world.
-
-One person is reading about layoffs.
-
-Another is watching war footage.
-
-Another is looking at luxury apartments.
-
-Another is checking football news.
-
-Another is scrolling through someone else's perfect life and quietly feeling worse.
+Another is pretending to be fine.
 
 The room is shared.
 
@@ -191,17 +169,7 @@ We are connected all the time, but not necessarily together.
 
 We see more than ever, but feel less grounded.
 
-We talk more, react more, know more, scroll more, compare more, but somehow the world can still feel thinner than before.
-
-Sometimes it feels like life is happening slightly behind glass.
-
-You are there.
-
-You know you are there.
-
-You can feel the chair. You can hear the voice. You know what city you are in. You know what meeting you are attending. You know what face you are supposed to make.
-
-But some part of you feels half a step behind the scene.
+Sometimes it feels like life is happening slightly behind glass. You are there. You know you are there. You know what face to make and what sentence to say. But some part of you feels half a step behind the scene.
 
 Not sad exactly.
 
@@ -211,73 +179,23 @@ Just distant.
 
 Like the feeling has to load.
 
-I notice this in small ways.
+Maybe that is why something as simple as a World Cup prediction screen can feel noticeable.
 
-Someone tells you something serious and your face reacts before the rest of you does. You say the right thing. You look concerned. You understand that the moment matters. But the feeling itself arrives late, or arrives thin, or does not arrive with the weight you expected.
+It gives people a shared object.
 
-Then you wonder if something is wrong with you.
+A ball.
 
-Maybe something is.
+A field.
 
-Or maybe something has been happening to everyone for a while, slowly enough that we learned to call it being tired.
+A whistle.
 
-People talk about terrible things now in a tone that sounds almost normal.
+A match.
 
-Another crisis.
+A result.
 
-Another layoff.
+A reason to say something small to someone else.
 
-Another war.
-
-Another scandal.
-
-Another flood.
-
-Another price increase.
-
-Another reminder that the future is not as solid as people promised it would be.
-
-The reaction is often correct.
-
-Concerned enough.
-
-Informed enough.
-
-Briefly emotional enough.
-
-Then the feed moves on.
-
-Then the next thing arrives.
-
-Then the next.
-
-At some point, the nervous system stops reacting to events as events. Everything becomes atmosphere. A constant background pressure. A low-level fog that follows you through the day.
-
-And when the fog is always there, clarity starts to feel strange.
-
-That is why the World Cup interests me even though I do not watch it.
-
-Because it creates clarity.
-
-Temporary clarity, yes.
-
-Artificial clarity, definitely.
-
-But clarity.
-
-There is a field.
-
-There is a ball.
-
-There is a clock.
-
-There is a whistle.
-
-There is a score.
-
-There is a result.
-
-Modern life has almost none of that.
+Modern life has almost none of that clarity.
 
 The economy has no final whistle.
 
@@ -289,41 +207,35 @@ Adulthood has no referee.
 
 You can do everything right and still lose. You can make careful choices and still end up behind. You can work hard for years and still feel like you are standing at the edge of something uncertain. There is no official who stops the game and explains what happened. There is no stadium screen showing whether you are winning or losing at life.
 
-So maybe it makes sense that people love games.
+But a match begins.
 
-Games are merciful because they have boundaries.
-
-Life leaks everywhere.
-
-A football match begins.
-
-A football match ends.
+A match ends.
 
 In between, something happens.
 
-That alone is almost comforting.
+Someone wins.
 
-I do not think people need football because football is important.
+Someone loses.
 
-I think people need moments where life becomes simple enough to feel.
+Someone guesses correctly.
 
-A ball crosses a line.
+Someone gets it completely wrong.
 
-People shout.
+Someone complains.
 
-Someone complains about the referee.
+Someone laughs.
 
-Someone laughs too loudly.
+Someone checks the ranking.
 
-Someone says the game is boring and keeps watching anyway.
+Someone thinks they know better than everyone else.
 
-Someone who has been quiet all day suddenly becomes alive for ten seconds.
+It is simple.
 
-It is ridiculous.
+Maybe too simple.
 
-It is also understandable.
+But maybe that is why it works.
 
-Because for a few seconds, the world is not abstract.
+For a few seconds, the world is not abstract.
 
 Not economic trends.
 
@@ -335,103 +247,17 @@ Not private failure.
 
 Not endless comparison.
 
-Just a ball.
+Just a match.
 
-A line.
+A guess.
 
-A room.
+A name on a screen.
 
-A sound.
+A small shared reaction.
 
-A shared reaction.
+I do not want to romanticize it too much.
 
-Maybe that is the real painkiller.
-
-Not the match itself.
-
-The shared reaction.
-
-The fact that people who have been living inside separate invisible rooms suddenly point their attention in the same direction.
-
-That is rare now.
-
-Most days, my phone is not your phone. My feed is not your feed. My fear is not your fear. My outrage is not your outrage. My little tunnel of reality is different from yours, even if we are sitting at the same table.
-
-We do not just have different opinions anymore.
-
-We have different atmospheres.
-
-Different anxieties.
-
-Different villains.
-
-Different emergencies.
-
-Different versions of what is happening.
-
-Then something like the World Cup comes along and gives people one shared object.
-
-A ball.
-
-A field.
-
-A whistle.
-
-A screen.
-
-A reason to shout at the same time.
-
-That does not fix reality.
-
-But for a while, it gives the fog a shape.
-
-Maybe that is why even people who complain about football still look at the screen when everyone else is watching. Not because they suddenly care about tactics, but because it is hard not to be pulled into collective attention. It is hard not to turn your head when an entire cafe goes quiet. It is hard not to feel something when everyone around you is waiting for the same thing to happen.
-
-I have noticed that during football season, people become temporarily easier to talk to.
-
-Not deeply.
-
-Not honestly, maybe.
-
-But easily.
-
-"Who is playing tomorrow?"
-
-"Are you watching the opening match?"
-
-"Who do you think will win?"
-
-"The referee will probably be blind."
-
-Small talk, yes.
-
-But small talk is not nothing.
-
-Sometimes small talk is how people remind each other that they are still in the same world.
-
-That is the part I used to underestimate.
-
-I used to think small talk was empty. Weather, sports, traffic, food, little complaints about work. The kind of conversation that seems to go nowhere.
-
-But maybe small talk has a purpose.
-
-Maybe it is not supposed to go somewhere.
-
-Maybe it is just a bridge.
-
-A small temporary bridge between two people who do not have the energy, trust, or time to say anything deeper.
-
-Football works like that.
-
-It gives people a bridge.
-
-You do not need to know someone's politics. You do not need to know their private worries. You do not need to know what they are carrying. You can just stand next to them, look at the same screen, and say something stupid about the goalkeeper.
-
-For a moment, that is enough.
-
-I do not want to romanticize football too much.
-
-The money is absurd. The gambling around it is ugly. The nationalism can get strange. The whole thing is branded, sponsored, packaged, and sold back to people as emotion.
+The money around football is absurd. The gambling is ugly. The nationalism can get strange. The whole thing is branded, sponsored, packaged, and sold back to people as emotion.
 
 So yes, there is a cynical version of this.
 
@@ -440,14 +266,6 @@ Bread and circuses.
 Give people spectacle and maybe they will stop looking too closely at the structure around them.
 
 Maybe there is some truth in that.
-
-Maybe more than some.
-
-A bad economy becomes easier to tolerate when there is a match tomorrow. A broken system becomes easier to ignore when people have something else to argue about. A population that is tired and anxious can be given a screen, a tournament, a song, a flag, and ninety minutes of borrowed meaning.
-
-That is the cynical version.
-
-And I understand it.
 
 But I do not think it is the whole truth.
 
@@ -465,7 +283,7 @@ Tired people do not always need truth thrown at them like a brick.
 
 Sometimes they already know the truth.
 
-Sometimes they just need one evening where truth is not pressing on their chest.
+Sometimes they just need one afternoon where truth is not pressing on their chest.
 
 This is why calling it distraction feels too simple.
 
@@ -473,31 +291,19 @@ It is distraction, yes.
 
 But so is almost everything.
 
-Some people use sports.
+Scrolling is distraction.
 
-Some people use work.
+Shopping is distraction.
 
-Some people use shopping.
+Ambition can be distraction.
 
-Some people use politics.
+Doomscrolling can be distraction disguised as being informed.
 
-Some people use self-improvement.
-
-Some people use doomscrolling and call it being informed.
-
-Some people use ambition.
-
-Some people use nostalgia.
-
-Some people use romance.
-
-Some people use the fantasy of a future life where everything finally makes sense.
+Even self-improvement can become distraction if you use it to avoid sitting with yourself.
 
 At least football admits that it is a game.
 
-A lot of other distractions pretend to be destiny.
-
-Maybe that is why the honesty of sport has a strange appeal. It is artificial, yes, but openly artificial. The lines are painted. The uniforms are chosen. The rules are invented. The tournament is organized. Everyone knows it is made up.
+The lines are painted. The uniforms are chosen. The rules are invented. The tournament is organized. Everyone knows it is made up.
 
 And yet, when the ball hits the net, the emotion is real.
 
@@ -505,49 +311,17 @@ That is the strange thing about humans.
 
 We can create a game and then care about it sincerely.
 
-We can invent a ritual and then cry inside it.
+We can invent a ritual and then feel something inside it.
 
 We can know something is temporary and still let it matter.
 
 Maybe that is not foolish.
 
-Maybe that is culture.
+Maybe that is just what people do when ordinary life becomes too heavy.
 
-Maybe that is what culture has always been.
+I might not watch the matches.
 
-A shared agreement to care about something together for a while.
-
-I think about that when I imagine the tournament beginning tomorrow.
-
-The plastic chairs will come out.
-
-The small tables.
-
-The half-finished drinks.
-
-The motorbikes parked too close together outside.
-
-The blue light from the screen on people's faces.
-
-Someone smoking.
-
-Someone eating sunflower seeds.
-
-Someone pretending not to care until the ball gets near the goal.
-
-Someone checking their phone during the slow parts.
-
-Someone explaining tactics with the confidence of a man who has never coached anything except his own frustration.
-
-Someone laughing.
-
-Someone cursing.
-
-Someone shouting like the players can hear him.
-
-I might not be there.
-
-I might not watch.
+I might not join the guessing game seriously.
 
 I might just hear about it from the side, through company messages, office chatter, cafe noise, and people talking in elevators.
 
@@ -623,20 +397,16 @@ Not awakened.
 
 Not saved from anything.
 
-Just synchronized.
+Just gathered around the same small thing.
 
 Then the match will end.
 
-The screen will go back to advertisements. The tables will need clearing. The bills will still need paying. The motorbikes will start one by one outside the cafe. People will ride home into the same economy, the same jobs, the same private worries they had before kickoff.
+The screen will go back to ordinary announcements. The tables will need clearing. The workday will return. The economy will still feel bad. People will still carry the same private worries they had before kickoff.
 
-But for ninety minutes, the fog will have a shape.
+But for a little while, the day will have felt less heavy.
 
-A ball.
+Maybe that is all the event was.
 
-A field.
+A small opening in the week.
 
-A crowd.
-
-A reason to shout at the same time.
-
-Maybe that is why people are already feeling it before it starts.
+A painkiller people could take together.
