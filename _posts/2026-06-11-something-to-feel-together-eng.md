@@ -1,27 +1,43 @@
 ---
 layout: post
-title: "Something to Feel Together"
+title: "A Painkiller for Reality"
 date: 2026-06-11
 categories: ["Personal Notes & Reflections"]
 ---
 
-I don't even like football.
+I don't even watch the World Cup.
 
 That is probably the first thing I should say.
 
-I do not follow clubs. I do not know formations. I do not care who has better possession, who presses higher, who should have been substituted earlier, or which young player is supposedly the future of the sport. When people talk about football seriously, I mostly just nod and wait for the conversation to move somewhere else.
+I do not follow the teams. I do not know the groups. I do not check fixtures. I do not care who is injured, who is favored, who has the easier path, or which country has the better chance this year.
 
-The World Cup has not even started yet.
+To me, football is mostly background noise.
+
+But yesterday, my company announced that there would be an event for the World Cup.
+
+And somehow that made sense immediately.
+
+Because this is Vietnam.
+
+Football is probably the closest thing this country has to a shared public emotion. Even people who do not follow it can feel when a big tournament is near. Cafes prepare their screens. Group chats wake up. People start talking about matches before the first ball is kicked.
+
+The World Cup has not started yet.
 
 It kicks off tomorrow.
 
-But somehow you can already feel it arriving.
+But the atmosphere is already here.
 
-The atmosphere changes before the first whistle.
+That is the part I keep thinking about.
 
-Cafes are getting ready. People are talking about fixtures, groups, favorites, injuries, chances, destiny. Group chats are waking up. Someone who has been complaining about money all week suddenly has enough emotional energy to argue about a tournament that has not even begun. Delivery riders will probably slow down near open screens. Men will sit on plastic chairs outside coffee shops, leaning forward like the fate of the world has been placed inside a small white ball.
+Not the teams.
 
-And maybe that is the strange part.
+Not the players.
+
+Not the trophy.
+
+The atmosphere.
+
+The way people start preparing to care about something together before anything has even happened.
 
 The economy still feels bad.
 
@@ -33,25 +49,127 @@ Groceries still cost more than people want to admit.
 
 Work is still work.
 
-The future still has that unstable feeling, like a chair with one loose leg.
+People are tired in that quiet way where they do not always have the energy to explain what exactly is wrong.
 
-But tomorrow, for ninety minutes, nobody will really want to talk about that.
+And then football arrives.
 
-There will be a ball moving across a field.
+Not as a solution.
 
-There will be a whistle.
+More like a painkiller.
 
-There will be a screen.
+Not the kind that heals the injury.
 
-There will be a crowd.
+The kind that lets you move for a while without feeling the whole weight of it.
 
-There will be something to feel together.
+Maybe that sounds cynical.
 
-But maybe that is not really about football.
+Maybe it is.
 
-Maybe football is just the easiest place to notice it.
+But I do not mean it as an insult.
 
-Most days, reality feels strangely private now. Everyone has their own feed, their own panic, their own villain, their own explanation for why things are bad. Even when people sit in the same cafe, they are often living inside different invisible rooms.
+Sometimes people need painkillers.
+
+Sometimes a society does too.
+
+There are problems you cannot solve in one evening. There are bills that will still be there tomorrow. There are salaries that still feel too small. There are futures that still feel unstable. There are family problems, job problems, health problems, money problems, private problems that nobody at work knows about.
+
+And most of the time, people carry those things quietly.
+
+They go to work.
+
+They reply to messages.
+
+They attend meetings.
+
+They send polite emails.
+
+They eat lunch.
+
+They scroll.
+
+They act normal.
+
+Then one day the company announces a World Cup event, and suddenly there is something else in the air.
+
+Something lighter.
+
+Something easier to talk about.
+
+Something that does not ask people to explain their lives.
+
+That is why I do not want to mock it.
+
+It would be easy to say people are distracted. It would be easy to say football is just entertainment. It would be easy to say this is just another corporate event, another reason for people to gather around a screen and pretend things are fine.
+
+Maybe all of that is partly true.
+
+But it is not the whole truth.
+
+Most people already know things are not fine.
+
+They do not need another explanation of how hard life is. They know. They feel it in rent, in groceries, in traffic, in work, in the way the month feels long and the salary feels short, in the way tomorrow keeps arriving before they are ready.
+
+Awareness is not the problem.
+
+People are aware.
+
+Sometimes too aware.
+
+Sometimes awareness itself becomes heavy.
+
+You can be aware of the economy.
+
+Aware of layoffs.
+
+Aware of corruption.
+
+Aware of climate anxiety.
+
+Aware of war.
+
+Aware of your own aging parents.
+
+Aware of your own tired body.
+
+Aware of the fact that your life is moving faster than you expected.
+
+But awareness does not automatically become action.
+
+Sometimes it just becomes weight.
+
+And under enough weight, people look for something that lets them breathe.
+
+A match can do that.
+
+A song can do that.
+
+A festival can do that.
+
+A bowl of noodles at midnight can do that.
+
+A stupid joke in a group chat can do that.
+
+None of it fixes the structure.
+
+But not every human need is a structural solution.
+
+Some things are just ways to remain human inside the structure.
+
+So maybe this post is not really about football.
+
+It is about what happens when reality becomes too fragmented, too heavy, too private, and too tiring to hold directly.
+
+Most days, everyone carries their own separate version of the world.
+
+Their own feed.
+
+Their own anxiety.
+
+Their own bad news.
+
+Their own private algorithmic weather.
+
+Even when people sit in the same room, they are often not in the same world.
 
 One person is reading about layoffs.
 
@@ -67,17 +185,21 @@ The room is shared.
 
 The reality is not.
 
-That is the part that keeps bothering me.
+That is what feels strange about modern life.
 
-We are physically near each other more often than we are mentally near each other. We sit beside people while disappearing into private screens. We nod through conversations while part of us is still somewhere else. We walk through streets, offices, elevators, cafes, apartments, family dinners, and sometimes the moment does not fully arrive.
+We are connected all the time, but not necessarily together.
 
-It happens, but slightly behind glass.
+We see more than ever, but feel less grounded.
+
+We talk more, react more, know more, scroll more, compare more, but somehow the world can still feel thinner than before.
+
+Sometimes it feels like life is happening slightly behind glass.
 
 You are there.
 
 You know you are there.
 
-You can feel the chair. You can hear the voice. You know what city you are in. You know what face you are supposed to make.
+You can feel the chair. You can hear the voice. You know what city you are in. You know what meeting you are attending. You know what face you are supposed to make.
 
 But some part of you feels half a step behind the scene.
 
@@ -99,7 +221,21 @@ Maybe something is.
 
 Or maybe something has been happening to everyone for a while, slowly enough that we learned to call it being tired.
 
-People talk about terrible things now in a tone that sounds almost normal. Another crisis. Another layoff. Another war. Another scandal. Another flood. Another price increase. Another reminder that the future is not as solid as people promised it would be.
+People talk about terrible things now in a tone that sounds almost normal.
+
+Another crisis.
+
+Another layoff.
+
+Another war.
+
+Another scandal.
+
+Another flood.
+
+Another price increase.
+
+Another reminder that the future is not as solid as people promised it would be.
 
 The reaction is often correct.
 
@@ -119,7 +255,7 @@ At some point, the nervous system stops reacting to events as events. Everything
 
 And when the fog is always there, clarity starts to feel strange.
 
-That is why the World Cup interests me even though I do not like football.
+That is why the World Cup interests me even though I do not watch it.
 
 Because it creates clarity.
 
@@ -129,59 +265,19 @@ Artificial clarity, definitely.
 
 But clarity.
 
-For once, the event is not completely private. Everyone sees the same miss. Everyone sees the same goal. Everyone hears the same whistle. Everyone argues about the same thing. Even the disagreement happens on common ground.
-
-That sounds small.
-
-But I am not sure it is small anymore.
-
-A shared thing is harder to find than it used to be.
-
-There was a time when people could at least pretend they were standing on the same floor. Maybe that was never fully true. Maybe every generation imagines the past was more coherent than it actually was. Still, something feels different now. Reality has become more personalized, more fragmented, more optimized for whatever keeps us looking.
-
-The feed gives each person a private weather system.
-
-One person wakes up angry.
-
-Another wakes up afraid.
-
-Another wakes up convinced that everything is collapsing.
-
-Another wakes up watching a kitchen renovation in a house they will never own.
-
-And everyone carries that weather into the day.
-
-Then World Cup season arrives, and suddenly a different kind of weather moves through the city.
-
-The funny thing is that I do not even think most people are fooled by it.
-
-People know their problems did not disappear.
-
-They know the match will end.
-
-They know the next bill is still coming.
-
-They know Monday will still arrive.
-
-They know the job will still be there, the rent will still be there, the family issue will still be there, the thing they have been avoiding will still be there.
-
-But maybe people do not watch because they think football fixes anything.
-
-Maybe they watch because, for a little while, life becomes simple enough to feel.
-
-There are rules.
-
 There is a field.
+
+There is a ball.
 
 There is a clock.
 
-There is a score.
+There is a whistle.
 
-There is a line.
+There is a score.
 
 There is a result.
 
-Modern life has almost none of that clarity.
+Modern life has almost none of that.
 
 The economy has no final whistle.
 
@@ -206,6 +302,88 @@ A football match ends.
 In between, something happens.
 
 That alone is almost comforting.
+
+I do not think people need football because football is important.
+
+I think people need moments where life becomes simple enough to feel.
+
+A ball crosses a line.
+
+People shout.
+
+Someone complains about the referee.
+
+Someone laughs too loudly.
+
+Someone says the game is boring and keeps watching anyway.
+
+Someone who has been quiet all day suddenly becomes alive for ten seconds.
+
+It is ridiculous.
+
+It is also understandable.
+
+Because for a few seconds, the world is not abstract.
+
+Not economic trends.
+
+Not career anxiety.
+
+Not bad news.
+
+Not private failure.
+
+Not endless comparison.
+
+Just a ball.
+
+A line.
+
+A room.
+
+A sound.
+
+A shared reaction.
+
+Maybe that is the real painkiller.
+
+Not the match itself.
+
+The shared reaction.
+
+The fact that people who have been living inside separate invisible rooms suddenly point their attention in the same direction.
+
+That is rare now.
+
+Most days, my phone is not your phone. My feed is not your feed. My fear is not your fear. My outrage is not your outrage. My little tunnel of reality is different from yours, even if we are sitting at the same table.
+
+We do not just have different opinions anymore.
+
+We have different atmospheres.
+
+Different anxieties.
+
+Different villains.
+
+Different emergencies.
+
+Different versions of what is happening.
+
+Then something like the World Cup comes along and gives people one shared object.
+
+A ball.
+
+A field.
+
+A whistle.
+
+A screen.
+
+A reason to shout at the same time.
+
+That does not fix reality.
+
+But for a while, it gives the fog a shape.
 
 Maybe that is why even people who complain about football still look at the screen when everyone else is watching. Not because they suddenly care about tactics, but because it is hard not to be pulled into collective attention. It is hard not to turn your head when an entire cafe goes quiet. It is hard not to feel something when everyone around you is waiting for the same thing to happen.
 
@@ -283,33 +461,37 @@ They are tired.
 
 That is different.
 
-Tired people do not always need another explanation of how bad things are. Sometimes they know already. Sometimes they know too well. Sometimes the problem is not awareness. Sometimes the problem is that awareness has nowhere to go.
+Tired people do not always need truth thrown at them like a brick.
 
-Awareness does not automatically become action.
+Sometimes they already know the truth.
 
-Sometimes it just becomes weight.
+Sometimes they just need one evening where truth is not pressing on their chest.
 
-And under enough weight, people look for anything that lets them breathe.
+This is why calling it distraction feels too simple.
 
-A match can do that.
+It is distraction, yes.
 
-A song can do that.
+But so is almost everything.
 
-A festival can do that.
+Some people use sports.
 
-A bowl of noodles at midnight can do that.
+Some people use work.
 
-A stupid joke in a group chat can do that.
+Some people use shopping.
 
-None of it solves the structure.
+Some people use politics.
 
-But not every human need is a structural solution.
+Some people use self-improvement.
 
-Some things are just ways to remain human inside the structure.
+Some people use doomscrolling and call it being informed.
 
-That is where the easy criticism becomes unfair.
+Some people use ambition.
 
-It is easy to look at people watching football and think they are distracted. Maybe they are. But everyone is distracted by something. Some people use sports. Some people use work. Some people use shopping. Some people use politics. Some people use self-improvement. Some people use doomscrolling and call it being informed. Some people use ambition. Some people use nostalgia. Some people use romance. Some people use the fantasy of a future life where everything finally makes sense.
+Some people use nostalgia.
+
+Some people use romance.
+
+Some people use the fantasy of a future life where everything finally makes sense.
 
 At least football admits that it is a game.
 
@@ -335,7 +517,7 @@ Maybe that is what culture has always been.
 
 A shared agreement to care about something together for a while.
 
-I think about that when I see people waiting for the tournament to begin.
+I think about that when I imagine the tournament beginning tomorrow.
 
 The plastic chairs will come out.
 
@@ -363,221 +545,65 @@ Someone cursing.
 
 Someone shouting like the players can hear him.
 
-It is ridiculous.
+I might not be there.
 
-It is also kind of beautiful.
+I might not watch.
 
-Not beautiful in a clean way.
+I might just hear about it from the side, through company messages, office chatter, cafe noise, and people talking in elevators.
 
-Beautiful in a messy, sweaty, noisy, ordinary way.
+But even from the outside, I can understand what is happening.
 
-The kind of beauty that disappears if you try too hard to explain it.
+People are not only waiting for football.
 
-And maybe that is why I do not want to be too cynical about it.
+They are waiting for an excuse to gather around something that is not their own private worry.
 
-Because in a world where everything feels abstract, there is something concrete about a room full of people reacting at once. It is not profound. It is not enlightened. It is not a solution. But it is real in a way many things are not.
+They are waiting for a painkiller that can be taken together.
 
-A goal happens.
+That is an important difference.
 
-People shout.
+Most modern painkillers are private.
 
-Someone slaps the table.
+Scrolling is private.
 
-Someone spills a drink.
+Shopping is private.
 
-Someone outside asks what happened.
+Achievement is private.
 
-For a few seconds, nobody has to wonder whether the moment counts.
+Comparison is private.
 
-It counts because everyone felt it.
+Even loneliness has become private.
 
-That is rare now.
+But the World Cup is public.
 
-So much of life now seems to require proof.
+Noisy.
 
-You went somewhere, so you need a photo.
+Shared.
 
-You ate something, so you need a story.
+A little stupid.
 
-You had a good day, so some part of you wonders whether it should be documented.
+A little beautiful.
 
-You read something, watched something, bought something, achieved something, changed something, optimized something. Everything becomes evidence. Evidence that you are living correctly. Evidence that you are interesting. Evidence that your time is being used well. Evidence that you are not falling behind.
+The kind of thing that can pull people out of their own heads for a while.
 
-Football, at least in its best moments, does not need much proof.
+Not because it is deep.
 
-The proof is the room.
+Because it is common.
 
-The proof is the noise.
+Maybe that is what people miss.
 
-The proof is the old man who suddenly stands up too fast.
+Common things.
 
-The proof is the person next to you who does not know your name but turns toward you anyway because something almost happened.
+Common rooms.
 
-Maybe this is what I mean by shared reality.
+Common jokes.
 
-Not some grand philosophical agreement.
+Common disappointment.
 
-Not everyone believing the same things.
+Common hope.
 
-Just enough common ground for a group of people to react to the same event at the same time.
+Common noise.
 
-A shared gasp.
-
-A shared groan.
-
-A shared argument.
-
-A shared disappointment.
-
-A shared stupid hope.
-
-Maybe civilization needs more of that than we admit.
-
-Not necessarily football.
-
-But something.
-
-Something that gets people out of their private tunnels for a while.
-
-Something that brings bodies into rooms.
-
-Something that makes strangers speak.
-
-Something that cannot be fully personalized.
-
-Something that has a physical location, a time, a crowd, a sound.
-
-The internet is good at giving people contact without closeness.
-
-Football, for all its flaws, sometimes gives people closeness without requiring intimacy.
-
-That distinction matters.
-
-You do not have to confess anything.
-
-You do not have to explain your childhood.
-
-You do not have to reveal your loneliness.
-
-You do not have to talk about the economy, your job, your future, your debt, your parents, your health, your fear that life is becoming smaller than you imagined.
-
-You can just sit there.
-
-Watch the match.
-
-React when everyone reacts.
-
-For once, that is enough.
-
-Maybe that is why people get so emotional about it.
-
-Not because the game itself deserves all that emotion.
-
-But because it becomes a safe container for emotions that have nowhere else to go.
-
-Anger becomes anger at the referee.
-
-Hope becomes hope for a late goal.
-
-Disappointment becomes disappointment at a missed chance.
-
-Belonging becomes wearing the same shirt as thousands of strangers.
-
-Grief, stress, boredom, worry, pride, frustration, love for your country, resentment toward your job, fear about the future, all of it can briefly disguise itself as football.
-
-And because it is football, nobody has to explain too much.
-
-That may be healthier than pretending we do not need containers.
-
-People need places to put feelings.
-
-If they do not find good places, they will find worse ones.
-
-The feed is one of the worse ones.
-
-The feed takes feeling and sharpens it.
-
-It turns boredom into envy.
-
-Fear into outrage.
-
-Loneliness into comparison.
-
-Confusion into conspiracy.
-
-A football match can do ugly things too, of course. Crowds can become cruel. National pride can turn stupid quickly. People can gamble away money they cannot afford to lose. A game can become an excuse for all kinds of nonsense.
-
-But at its simplest, before the money and branding and tribalism swallow it, sport offers something ancient.
-
-People gathered around uncertainty.
-
-People watching skill, chance, failure, effort, timing, luck.
-
-People waiting to see what will happen.
-
-That is a very old human shape.
-
-Maybe we miss that shape.
-
-Maybe we miss gathering around something that is not an argument about the end of the world.
-
-Maybe we miss caring about something where the stakes are fake enough to be safe but real enough to feel.
-
-A match is not life.
-
-That is exactly why people need it.
-
-Life is too large.
-
-Too unclear.
-
-Too unresolved.
-
-Too full of problems that do not end after ninety minutes.
-
-A match gives people a smaller world for a while.
-
-A world with edges.
-
-A world where the pain is temporary, the joy is temporary, the argument is temporary, and the whole thing eventually ends with someone saying, "See you next match."
-
-There is mercy in that.
-
-And still, the match will end.
-
-That matters too.
-
-The screen will go back to advertisements.
-
-Someone will stack chairs.
-
-Someone will wipe the table.
-
-Someone will check the highlights even though they just watched the whole thing.
-
-Someone will pay the bill.
-
-Someone will start the motorbike.
-
-Someone will say they have to wake up early tomorrow.
-
-The street will return to normal.
-
-The economy will still be bad.
-
-Work will still be waiting.
-
-The future will still be uncertain.
-
-The group chat will slowly go quiet again.
-
-That is probably the most honest part.
-
-The gathering does not save anyone from returning to life.
-
-It only makes the return a little less lonely.
-
-Maybe that is enough for one night.
+A reason to look up from the private screen and react to the same thing as everyone else.
 
 Tomorrow, the first whistle will blow.
 
