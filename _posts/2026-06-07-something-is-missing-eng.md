@@ -415,6 +415,44 @@ True enough that I'll probably put the phone down for a while.
 
 True enough that the silence feels a little less uncomfortable than it did an hour ago.
 
+Sometimes, when the noise gets too loud, I imagine a smaller life.
+
+Not a perfect life.
+
+Just a simpler one.
+
+A small cabin near the beach. Coconut trees nearby. Sand on the floor no matter how often you sweep it. A fan turning slowly in the afternoon heat. The sound of waves somewhere behind the house.
+
+There would still be work.
+
+Of course there would.
+
+Maybe fixing a broken door. Maybe cleaning the motorbike. Maybe patching something on the roof before the rain comes. Maybe building a small wooden table badly the first time, then a little better the second time. Maybe learning how to cook fish properly instead of pretending I already know.
+
+Nothing grand.
+
+Just the kind of work where your hands know what happened by the end of the day.
+
+In the morning, maybe I ride a motorbike to buy fish from someone who came back from the sea before sunrise. Nothing fancy. Fish, rice, vegetables, maybe soup if there is time.
+
+Then the day moves slowly.
+
+Swim a little.
+
+Dive a little.
+
+Sit somewhere without checking the time.
+
+Maybe take a kayak out toward a quiet bay and let the water decide the pace for once.
+
+No grand plan.
+
+No optimized routine.
+
+No version of myself to become.
+
+Just small repairs, simple food, salt on the skin, tired arms, and enough silence to remember that being alive was never supposed to feel this complicated.
+
 And maybe that's all a person can really hope for.
 
 Not certainty.
