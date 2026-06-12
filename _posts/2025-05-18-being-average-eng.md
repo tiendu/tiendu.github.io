@@ -79,45 +79,243 @@ A ghost, I would say.
 
 Disappearing into the crowd.
 
-And maybe that is why the fear of being average hit me so hard later.
+And then, somehow, I got into medical school.
 
-Because it did not feel like a possible future.
+Pham Ngoc Thach University of Medicine.
 
-It felt like evidence.
+I remember I was the only student from my high school who got into medical school that year.
 
-School gave me more evidence.
+That should have felt like proof.
 
-I did not become some outstanding student with a clean heroic arc. I did not do well in med school. I dropped out before moving to Singapore for my bachelor's degree.
+Maybe for a while, it did.
 
-That sentence still feels strange to write because there is no elegant way to make it sound impressive.
+It looked like the kind of thing that could correct the old story. The kid who was bad at đá cầu. The kid who disappeared into Võ Lâm Truyền Kỳ. The ghost in the crowd. Suddenly there was a new sentence attached to him.
 
-I dropped out.
+He got into med school.
 
-Then I moved.
+That sounds like a main character moment.
 
-Then I continued.
+But life is very good at ruining main character moments.
 
-That is all.
+I did not do well in med school.
 
-Not a perfect story.
+In the second year, I failed.
 
-Not a straight line.
+I had to redo it because my performance was bad.
 
-Not a motivational poster.
+There is no elegant way to write that sentence either.
 
-Just a life making another turn because the previous road did not work.
+It is just what happened.
 
-Even in Singapore, things were not suddenly cinematic. I did not become a genius overnight. I did not transform into some extraordinary version of myself just because the country changed. I studied. I adjusted. I survived. I did some things well. I did some things badly. I kept going.
+Then I continued into the third year, but only halfway.
+
+By that point, something had already broken.
+
+Maybe it was motivation.
+
+Maybe it was fit.
+
+Maybe it was the quiet realization that I was forcing myself through a life that no longer felt like mine.
+
+Eventually, I dropped out completely.
+
+I can dress it up with context. I can explain that the path was not right, that things changed, that life moved in another direction.
+
+All of that may be true.
+
+But the simple version is still there.
+
+I failed the second year.
+
+I redid it.
+
+I reached halfway through the third year.
+
+Then I left.
+
+Then I moved to Singapore for my bachelor's degree.
+
+That was another turn.
+
+A new country.
+
+A new school.
+
+A new version of myself, or at least I hoped so.
+
+But even in Singapore, things were not suddenly cinematic. I did not become a genius overnight. I did not transform into some extraordinary version of myself just because the country changed. I studied. I adjusted. I survived. I did some things well. I did some things badly. I kept going.
 
 It was somewhat ordinary.
 
 Average.
 
-And for a long time, I hated that word.
+Later, I went to Ireland for my master's degree.
+
+That sounds like another impressive sentence.
+
+A master's degree in Ireland.
+
+A clean line on a CV.
+
+The kind of detail that looks better from far away than it feels when you are actually living inside it.
+
+I finished my master's before COVID.
+
+Then I could not find a job in Ireland.
+
+I came back to Vietnam on 1 November 2019.
+
+I still remember the date because it felt like a line being drawn under a chapter I had hoped would continue.
+
+And even after coming back, things were not suddenly easy either.
+
+I could not find a job immediately in Vietnam.
+
+That was humbling.
+
+Not the motivational kind of humbling people talk about after the success is already secured.
+
+Just plain humbling.
+
+The kind where you have a degree, a story, a few hopes, maybe even a little pride, and then the world looks at all of that and says nothing.
+
+No music.
+
+No montage.
+
+No dramatic comeback scene.
+
+Just silence.
+
+Just waiting.
+
+Just sending applications.
+
+Just realizing that life does not care how the story is supposed to feel.
+
+Life will make you humble in every possible way.
+
+It will keep reminding you that you are not the main character in a movie.
+
+Not the chosen one in an anime.
+
+Not the person the universe is secretly preparing for a dramatic arc.
+
+Just a person.
+
+One ordinary person among many.
+
+Trying to make something work.
+
+Then in 2022, I tried to get back into academia again.
+
+This time in Korea.
+
+Kyung Hee University.
+
+Research assistant.
+
+Microbiome analysis.
+
+QIIME2.
+
+Kraken2.
+
+Sequencing reads.
+
+The kind of thing that, again, can look clean on a CV.
+
+And maybe part of me wanted it to mean that the academic door had not fully closed.
+
+Maybe I wanted the story to become neat again.
+
+Med school did not work.
+
+Singapore worked enough.
+
+Ireland worked academically but not professionally.
+
+Vietnam was difficult.
+
+Maybe Korea would make the line straight again.
+
+But life did not become straight.
+
+After about a year, I quit.
+
+My mom's health was declining then.
+
+She got better later.
+
+She is fine now.
+
+But at the time, it changed the weight of things.
+
+Suddenly the question was not only career.
+
+Not only academia.
+
+Not only whether I could still build some impressive path.
+
+There was family.
+
+There was distance.
+
+There was worry.
+
+There was the quiet realization that no plan survives contact with real life for very long.
+
+So I left.
+
+Again.
+
+Another unfinished thing.
+
+Another turn.
+
+Another line on the CV that says one thing, while the real life behind it says something else.
+
+For a long time, I hated that.
+
+I hated the unevenness.
+
+I hated how my life refused to become a clean story.
+
+Medical school, then failing the second year, redoing it, reaching halfway through the third year, then dropping out.
+
+Singapore, then bachelor's.
+
+Ireland, then no job.
+
+Vietnam, then uncertainty.
+
+Korea, then leaving academia again.
+
+Every time I thought the plot was starting to make sense, life reminded me that there was no plot.
+
+Just decisions.
+
+Constraints.
+
+Family.
+
+Health.
+
+Money.
+
+Timing.
+
+Luck.
+
+Fear.
+
+Duty.
+
+And the next thing that had to be done.
 
 Average.
 
-It sounded like a verdict.
+For a long time, that word sounded like a verdict.
 
 It sounded like being placed in the middle of a crowd and being told, "This is where you belong."
 
@@ -351,17 +549,25 @@ Maybe because I am tired of constant reinvention.
 
 Maybe because I have reinvented myself enough to know that reinvention does not always solve the deeper fear.
 
+You can get into medical school.
+
+You can drop out.
+
 You can change country.
 
-Change major.
+You can change major.
 
-Change job.
+You can collect degrees.
 
-Change skills.
+You can move from Vietnam to Singapore.
 
-Change style.
+You can move from Singapore to Ireland.
 
-Change identity.
+You can come back home again.
+
+You can try Korea.
+
+You can leave again because family suddenly matters more than the path you were trying to build.
 
 And still carry the same question underneath everything.
 
@@ -387,9 +593,27 @@ The almost failed shuttlecock exam.
 
 The years disappearing into an online game without being good at it.
 
+The med school admission.
+
+Failing the second year.
+
+Redoing it.
+
+Reaching halfway through the third year.
+
 The med school dropout.
 
 The move to Singapore.
+
+The master's degree in Ireland.
+
+The flight back to Vietnam on 1 November 2019.
+
+The job search that did not become easy just because I had another line on my CV.
+
+The attempt to return to academia in Korea.
+
+The decision to leave again when my mom's health declined.
 
 The ordinary attempts.
 
@@ -450,6 +674,10 @@ A child who almost fails đá cầu wants someone to see that he is trying.
 A student who drops out wants the story to not end there.
 
 A person moving to another country wants the move to mean something.
+
+A graduate coming home without a job wants the degree to still count.
+
+A son leaving a path because his mother is unwell wants that decision to make sense too.
 
 A worker doing quiet work wants someone to know it took effort.
 
@@ -583,11 +811,25 @@ I do not need to pretend the shuttlecock exam taught me greatness.
 
 I do not need to pretend Võ Lâm Truyền Kỳ shaped my destiny.
 
-I do not need to turn dropping out of med school into a cinematic comeback.
+I do not need to turn getting into med school into proof that I was chosen.
+
+I do not need to hide that I failed the second year.
+
+I do not need to pretend redoing it was just a minor detail.
+
+I do not need to turn dropping out halfway through the third year into a cinematic comeback.
+
+I do not need to turn Ireland into a heroic chapter.
+
+I do not need to pretend coming back to Vietnam without a job was secretly glamorous.
+
+I do not need to turn Korea into another unfinished failure.
 
 Some things are just what happened.
 
 Some things are embarrassing.
+
+Some things are humbling.
 
 Some things are average.
 
