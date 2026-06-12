@@ -211,21 +211,7 @@ Then in 2022, I tried to get back into academia again.
 
 This time in Korea.
 
-Kyung Hee University.
-
-Research assistant.
-
-Microbiome analysis.
-
-QIIME2.
-
-Kraken2.
-
-Sequencing reads.
-
-The kind of thing that, again, can look clean on a CV.
-
-And maybe part of me wanted it to mean that the academic door had not fully closed.
+Maybe part of me wanted it to mean that the academic door had not fully closed.
 
 Maybe I wanted the story to become neat again.
 
@@ -241,7 +227,7 @@ Maybe Korea would make the line straight again.
 
 But life did not become straight.
 
-After about a year, I quit.
+After about a year, I left.
 
 My mom's health was declining then.
 
