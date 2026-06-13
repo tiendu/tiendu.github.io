@@ -5,13 +5,15 @@ date: 2026-06-13
 categories: ["Personal Notes & Reflections"]
 ---
 
-The headline today was that Elon Musk became the world's first trillionaire.
+I saw a headline today about someone becoming one of the richest human beings in history.
+
+I do not really want to make this about his name.
+
+What stayed with me was the scale.
 
 A number so large it barely feels like money anymore.
 
-One trillion dollars.
-
-At some point, the number stops looking like rent, food, medicine, school fees, debt, or years of work. It becomes weather. It becomes mythology. It becomes something people point at from very far away and pretend to understand.
+At some point, money stops looking like rent, food, medicine, school fees, debt, or years of work. It becomes weather. It becomes mythology. It becomes something people point at from far away and pretend to understand.
 
 And today is Saturday.
 
@@ -19,7 +21,7 @@ I am on call.
 
 Tomorrow too.
 
-So while the internet was trying to process one man crossing into trillionaire territory, I was also thinking about alerts, weekend coverage, Monday first response, and the strange feeling of being available when the week is supposed to belong to me.
+So while the internet was trying to process a headline about historic wealth, I was also thinking about alerts, weekend coverage, Monday first response, and the strange feeling of being available when the week is supposed to belong to me.
 
 That contrast stayed with me.
 
@@ -27,13 +29,67 @@ Not because my life is tragic.
 
 It is not.
 
-Not because being on call is the same as being a farmer under the sun or a fisherman at sea.
+I earn enough to make life a bit easier than it is for many people around me.
+
+Not rich.
+
+Not free.
+
+Not immune from anxiety.
+
+But still, easier.
+
+I know that.
+
+I sit at a computer.
+
+I work with software, systems, tickets, customers, workflows, and platforms.
+
+My work can be stressful, but I do not want to pretend it is the same kind of hardship as a cleaner's work, a factory worker's work, a farmer's work, or a fisherman's work.
 
 It is not.
 
-But because all of it circles around the same uncomfortable question:
+I do not work physically harder than them.
 
-What does effort become after you give it away?
+Most days, I probably do not work harder than them at all.
+
+And yet I earn more than many people who use their bodies much more than I do.
+
+That fact humbles me.
+
+Not because I want to degrade my own work.
+
+My work has value.
+
+Skill matters.
+
+Experience matters.
+
+Responsibility matters.
+
+But I cannot honestly say that everything I have is purely because I worked harder.
+
+Part of it was luck.
+
+Maybe a large part.
+
+Luck of education.
+
+Luck of timing.
+
+Luck of language.
+
+Luck of being able to move.
+
+Luck of working with computers instead of carrying things under the sun.
+
+Luck of entering a field where the market pays better.
+
+Luck of having a path that, even when messy, still gave me some options.
+
+I do not say this to perform humility.
+
+I say it because it feels dishonest not to say it.
 
 There is a French saying I have been thinking about:
 
@@ -131,8 +187,6 @@ You still lose time.
 
 But nothing stays with you.
 
-That is the part people do not talk about enough.
-
 Not all hard work accumulates.
 
 Some hard work only proves that you can be used for longer.
@@ -203,19 +257,19 @@ Many people work brutally hard.
 
 The problem is where the effort goes.
 
-That is why the Elon Musk 100-hour work week story stayed in my head for a long time.
+That is why stories about 100-hour work weeks stayed in my head for a long time.
 
-I remember hearing about it and thinking about it again and again.
+I remember hearing them and thinking about them again and again.
 
 Why?
 
 Just why?
 
-Part of me admired it.
+Part of me admired them.
 
 I think many people do.
 
-There is something seductive about the image of someone working 100 hours a week, sleeping on the floor, pushing through exhaustion, building something huge.
+There is something seductive about the image of someone working all the time, sleeping on the floor, pushing through exhaustion, building something huge.
 
 It makes effort look clean.
 
@@ -231,9 +285,9 @@ Work enough, and reality bends.
 
 But that story hides something important.
 
-Elon Musk working 100 hours a week is not the same as an ordinary employee working 100 hours a week.
+A founder working insane hours is not the same as an ordinary employee working insane hours.
 
-A founder working insane hours may be building ownership.
+A founder may be building ownership.
 
 Equity.
 
@@ -276,18 +330,6 @@ But the farm still belongs to someone else.
 That is the part I cannot unsee.
 
 And this weekend, I feel it in a smaller way.
-
-Again, I do not want to exaggerate my own situation.
-
-I sit at a computer.
-
-I work with software, systems, tickets, customers, workflows, and platforms.
-
-Different kind of tired.
-
-Different kind of risk.
-
-But the pattern is familiar enough.
 
 Once a month, I have to stay on call during the weekend.
 
@@ -383,20 +425,6 @@ You keep saying yes because saying no feels dangerous.
 
 You keep telling yourself that later, somehow, the reward will come.
 
-That promise is everywhere.
-
-Endure now.
-
-Learn now.
-
-Work now.
-
-Sacrifice now.
-
-Take the bad period now.
-
-The reward will come later.
-
 Sometimes it does.
 
 Sometimes the hard season is necessary.
@@ -421,10 +449,6 @@ Sometimes extra responsibility does not make you more valuable.
 
 It only makes you more available.
 
-Sometimes doing more does not increase your freedom.
-
-It only increases what people expect from you.
-
 This is why "work harder" is such incomplete advice.
 
 Work harder at what?
@@ -437,19 +461,9 @@ With what upside?
 
 What do you keep after the work is done?
 
-If you work harder and gain skill, maybe that matters.
+If the answer is skill, leverage, trust, ownership, reputation, or a way out, then maybe the effort matters.
 
-If you work harder and gain ownership, maybe that matters.
-
-If you work harder and gain trust, options, reputation, leverage, or a way out, maybe that matters.
-
-But if you work harder and only gain more work, something is wrong.
-
-If you work harder and the only proof is that people now know they can call you anytime, something is wrong.
-
-If you work harder and the reward is just being trusted with more unpaid responsibility, something is wrong.
-
-If nothing stays with you except exhaustion, then maybe the effort is not investment.
+But if the answer is only more work, more availability, more unpaid responsibility, and more exhaustion, then maybe the effort is not investment.
 
 Maybe it is drainage.
 
@@ -517,6 +531,10 @@ The fisherman brings back the catch.
 
 But who controls the market?
 
+The cleaner keeps the room usable.
+
+But who gets respect?
+
 The worker keeps the system running.
 
 But who owns the system?
@@ -577,6 +595,8 @@ The farmer is not foolish for working.
 
 The fisherman is not foolish for going to sea.
 
+The cleaner is not foolish for cleaning.
+
 The worker is not foolish for trying.
 
 A person staying on call is not foolish for being responsible.
@@ -621,7 +641,7 @@ But still not the owner of the farm.
 
 That is the uncomfortable question.
 
-And maybe it is the question everyone should ask before worshipping 100-hour work weeks.
+And maybe it is the question everyone should ask before worshipping extreme work weeks.
 
 Not:
 
