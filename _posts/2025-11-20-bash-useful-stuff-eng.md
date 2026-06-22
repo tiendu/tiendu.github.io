@@ -635,6 +635,75 @@ Keep these simple. If parsing becomes complex, switch to Python.
 | `rsync -av src/ dst/` | sync directory |
 | `rsync -av --dry-run src/ dst/` | preview sync |
 
+### Inspect before extracting
+
+List the archive first:
+
+```bash
+tar -tzf archive.tar.gz | less
+```
+
+Then extract into a dedicated directory:
+
+```bash
+mkdir -p extracted
+tar -xzf archive.tar.gz -C extracted
+```
+
+`-v` only adds verbose output. Compression flags:
+
+| Archive | Flag |
+|---|---|
+| `.tar.gz` | `z` |
+| `.tar.xz` | `J` |
+| `.tar.bz2` | `j` |
+| `.tar` | none |
+
+### Undo extraction into the wrong directory
+
+`tar` has no real undo. The archive can identify extracted paths, but it cannot restore files that were overwritten.
+
+For a `.tar.gz` extracted into the current directory:
+
+```bash
+archive="archive.tar.gz"
+target="$PWD"
+
+# Remove extracted files and symlinks
+tar -tzf "$archive" |
+  sed 's#^\./##' |
+  while IFS= read -r item; do
+    case "$item" in
+      ""|/*|../*|*/../*|*/..) continue ;;
+    esac
+
+    path="$target/$item"
+
+    if [[ -f "$path" || -L "$path" ]]; then
+      rm -v -- "$path"
+    fi
+  done
+
+# Remove extracted directories only when empty
+tar -tzf "$archive" |
+  sed 's#^\./##' |
+  awk '/\/$/ {
+    sub(/\/$/, "")
+    print length($0) "\t" $0
+  }' |
+  sort -rn |
+  cut -f2- |
+  while IFS= read -r item; do
+    case "$item" in
+      ""|/*|../*|*/../*|*/..) continue ;;
+    esac
+
+    rmdir "$target/$item" 2>/dev/null || true
+  done
+```
+
+This preserves unrelated files and non-empty directories. Use `tar -tJf` for `.tar.xz`, or `tar -tf` for an uncompressed `.tar`.
+
 Examples:
 
 ```bash
