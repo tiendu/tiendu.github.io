@@ -55,7 +55,7 @@ Everyone means well.
 
 The system is still risky.
 
-Compliance by design means you do not wait until the audit, security review, enterprise sales call, hospital onboarding, or customer escalation to discover these problems.
+Compliance by design means you do not wait until the audit, security review, hospital onboarding, customer escalation, or enterprise review to discover these problems.
 
 You design the platform so the safer path is the default path.
 
@@ -67,7 +67,7 @@ You design the platform so the safer path is the default path.
 
 1. [The core idea](#the-core-idea)
 2. [Compliance is not a checkbox layer](#compliance-is-not-a-checkbox-layer)
-3. [The recurring gap: what engineers optimize versus what auditors inspect](#the-recurring-gap-what-engineers-optimize-versus-what-auditors-inspect)
+3. [The recurring gap: what engineers optimize versus what reviewers inspect](#the-recurring-gap-what-engineers-optimize-versus-what-reviewers-inspect)
 4. [Example 1: filenames and object paths](#example-1-filenames-and-object-paths)
 5. [Example 2: sample sheets and manifests](#example-2-sample-sheets-and-manifests)
 6. [Example 3: workflow logs](#example-3-workflow-logs)
@@ -89,6 +89,7 @@ You design the platform so the safer path is the default path.
 22. [Design patterns for safer bioinformatics platforms](#design-patterns-for-safer-bioinformatics-platforms)
 23. [Anti-patterns to avoid](#anti-patterns-to-avoid)
 24. [A practical design review checklist](#a-practical-design-review-checklist)
+25. [References](#references)
 
 ---
 
@@ -176,8 +177,6 @@ Not without redesigning important parts of the system.
 
 Because compliance touches architecture.
 
-For example:
-
 | Design area | Compliance concern |
 |---|---|
 | Object storage paths | Identifiers may leak into URLs, logs, tickets, and dashboards |
@@ -203,7 +202,7 @@ Because engineers create the paths data will follow.
 
 ---
 
-## The recurring gap: what engineers optimize versus what auditors inspect
+## The recurring gap: what engineers optimize versus what reviewers inspect
 
 A lot of compliance failures come from a difference in viewpoint.
 
@@ -264,7 +263,7 @@ The rest of this post uses that lens.
 For each example, ask:
 
 1. What did the engineer think they were doing?
-2. What did the auditor or reviewer see?
+2. What did the reviewer see?
 3. What better design would reduce the risk without blocking useful work?
 
 ---
@@ -312,11 +311,11 @@ Human-readable names are useful.
 
 The problem is that object paths travel farther than people expect.
 
-### What the auditor saw
+### What the reviewer saw
 
 > Patient identity and disease context are embedded in paths that may propagate into logs, tickets, dashboards, billing exports, and cloud provider consoles.
 
-The auditor is not only looking at whether the BAM is encrypted.
+The reviewer is not only looking at whether the BAM is encrypted.
 
 They are looking at where the identifier spreads.
 
@@ -438,7 +437,7 @@ That is a natural instinct.
 
 A single table is easy to inspect, easy to edit, and easy to pass into a workflow.
 
-### What the auditor saw
+### What the reviewer saw
 
 > The workflow receives fields it does not need, including names, medical record numbers, dates, and diagnosis labels. Those fields may be copied into logs, work directories, caches, and tickets.
 
@@ -574,7 +573,7 @@ That is understandable.
 
 Debugging without context is painful.
 
-### What the auditor saw
+### What the reviewer saw
 
 > Logs now contain identifiers and clinical details. Those logs may be accessible to support teams, infrastructure teams, vendors, monitoring tools, and long-term archives.
 
@@ -758,7 +757,7 @@ True.
 
 But the job name may appear outside the project boundary.
 
-### What the auditor saw
+### What the reviewer saw
 
 > Patient names, disease labels, or cohort details appear in operational systems that may not have the same access restrictions as the original project.
 
@@ -851,11 +850,11 @@ That concern is real.
 
 Bad support processes create real pain.
 
-### What the auditor saw
+### What the reviewer saw
 
 > Support staff have broad, persistent access to sensitive projects without clear necessity, approval, time limit, or customer-visible audit evidence.
 
-The auditor is not saying support should never help.
+The reviewer is not saying support should never help.
 
 They are asking why support gets more access than needed.
 
@@ -1048,7 +1047,7 @@ That is a fair concern.
 
 Notebooks are valuable because they allow exploration.
 
-### What the auditor saw
+### What the reviewer saw
 
 > The notebook environment can become an uncontrolled export path, package installation path, credential storage path, and reporting channel.
 
@@ -1202,7 +1201,7 @@ True.
 
 Deleting everything immediately can make debugging painful.
 
-### What the auditor saw
+### What the reviewer saw
 
 > Sensitive intermediate data is retained without clear purpose, ownership, access control, expiration, or retention policy.
 
@@ -1341,7 +1340,7 @@ That is incomplete.
 
 Controlled access often depends on who, where, why, how long, and under what approved purpose.
 
-### What the auditor saw
+### What the reviewer saw
 
 > The system cannot prove that dataset access, dataset reuse, collaborator access, exports, and derived outputs remained within approved data use limitations.
 
@@ -1472,7 +1471,7 @@ Maybe.
 
 But "probably" is not evidence.
 
-### What the auditor saw
+### What the reviewer saw
 
 > The organization cannot prove which workflow, container, reference data, parameters, input checksums, and user actions produced a result.
 
@@ -1609,7 +1608,7 @@ Good.
 
 But clinical correctness is not only about whether the job exits with code 0.
 
-### What the auditor saw
+### What the reviewer saw
 
 > A clinically meaningful system changed without documented impact analysis, validation evidence, release approval, or rollback plan.
 
@@ -1715,7 +1714,7 @@ That is true in the short term.
 
 It is dangerous in the long term.
 
-### What the auditor saw
+### What the reviewer saw
 
 > A non-human identity has excessive privilege, unclear ownership, unclear review, and large blast radius.
 
@@ -1849,7 +1848,7 @@ But not always.
 
 Access to analyze data is not always the same as permission to export raw data.
 
-### What the auditor saw
+### What the reviewer saw
 
 > The platform does not distinguish between viewing, computing, downloading, redistributing, and exporting controlled data.
 
@@ -1989,7 +1988,7 @@ The sensitive metadata may not.
 
 That is only part of the picture.
 
-### What the auditor saw
+### What the reviewer saw
 
 > Secondary data flows may leave the approved region, including logs, tickets, monitoring data, backups, support artifacts, and telemetry.
 
@@ -2104,7 +2103,7 @@ That can be reasonable for early exploration.
 
 But regulated or controlled workflows need stronger evidence.
 
-### What the auditor saw
+### What the reviewer saw
 
 > The platform runs unreviewed third-party code against sensitive data, without clear provenance, vulnerability review, reproducibility, or network restrictions.
 
@@ -2252,7 +2251,7 @@ That may be useful operationally.
 
 It may not be enough for governance.
 
-### What the auditor saw
+### What the reviewer saw
 
 > The logs do not clearly reconstruct security-relevant actions, approval context, actor identity, target resource, or before-and-after state.
 
@@ -2359,7 +2358,7 @@ That is practical.
 
 But project names can carry sensitive meaning.
 
-### What the auditor saw
+### What the reviewer saw
 
 > Sensitive study context is exposed to operational teams through billing metadata, outside the original access model.
 
@@ -2433,7 +2432,7 @@ True.
 
 But support artifacts are data copies.
 
-### What the auditor saw
+### What the reviewer saw
 
 > Sensitive project details and files are now stored in systems that may have different access controls, retention policies, regions, and subprocessors than the analysis platform.
 
@@ -2526,7 +2525,7 @@ That may be necessary.
 
 It may not be sufficient.
 
-### What the auditor saw
+### What the reviewer saw
 
 > The organization cannot explain where copies, derivatives, caches, logs, backups, and support artifacts remain after deletion.
 
@@ -2886,3 +2885,20 @@ Ask:
 A design is not mature just because someone says the right policy exists.
 
 A design is mature when the system produces evidence naturally.
+
+---
+
+## References
+
+Official and primary references useful for this manual:
+
+- HHS. Summary of the HIPAA Security Rule. <https://www.hhs.gov/hipaa/for-professionals/security/laws-regulations/index.html>
+- HHS. Guidance on de-identification of protected health information. <https://www.hhs.gov/hipaa/for-professionals/privacy/special-topics/de-identification/index.html>
+- European Commission. Rules for business and organisations on data protection. <https://commission.europa.eu/law/law-topic/data-protection/rules-business-and-organisations_en>
+- European Data Protection Board. Guidelines, recommendations, best practices. <https://www.edpb.europa.eu/our-work-tools/general-guidance/guidelines-recommendations-best-practices_en>
+- NIH. Genomic Data Sharing Policy overview. <https://sharing.nih.gov/genomic-data-sharing-policy>
+- NIH. Data Management and Sharing Policy. <https://sharing.nih.gov/data-management-and-sharing-policy>
+- NIST. SP 800-53 Rev. 5, Security and Privacy Controls for Information Systems and Organizations. <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>
+- NIST. Risk Management Framework. <https://csrc.nist.gov/projects/risk-management>
+- FDA. Clinical Decision Support Software guidance. <https://www.fda.gov/regulatory-information/search-fda-guidance-documents/clinical-decision-support-software>
+- FDA. Clinical Decision Support Software FAQ. <https://www.fda.gov/medical-devices/software-medical-device-samd/clinical-decision-support-software-frequently-asked-questions-faqs>
