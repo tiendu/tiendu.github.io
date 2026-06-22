@@ -24,8 +24,6 @@ The room changes when those questions appear.
 
 The bottleneck is no longer just Python, Nextflow, Kubernetes, or cloud storage. The bottleneck becomes governance: who is allowed to do what, with which data, under which rules, and with what evidence afterward.
 
-That is where many technical people lose leverage. They either panic and say, "ask legal," or they treat compliance as boring paperwork. Both reactions are understandable. Both are limiting.
-
 For a bioinformatics engineer, the useful position is not to pretend to be a lawyer, auditor, privacy officer, security officer, or regulatory affairs specialist.
 
 The useful position is to understand enough of the rules to build better systems, ask sharper questions, and avoid naive designs that collapse when real biomedical data enters the platform.
@@ -64,12 +62,8 @@ The point is to learn how each framework changes engineering decisions.
 12. [Practical controls bioinformatics engineers should recognize](#practical-controls-bioinformatics-engineers-should-recognize)
 13. [Engineering checklists](#engineering-checklists)
 14. [What to learn first](#what-to-learn-first)
-15. [Certifications and career positioning](#certifications-and-career-positioning)
-16. [How to put this on a CV without sounding fake](#how-to-put-this-on-a-cv-without-sounding-fake)
-17. [Interview talking points](#interview-talking-points)
-18. [A four-week study plan](#a-four-week-study-plan)
-19. [Final thoughts](#final-thoughts)
-20. [References](#references)
+15. [Reference glossary](#reference-glossary)
+16. [References](#references)
 
 ---
 
@@ -206,11 +200,11 @@ The frameworks in this manual are often mentioned together, but they do not do t
 |---|---|---|
 | HIPAA | Are we protecting US patient health information? | Access control, audit logs, encryption, BAAs, support workflows, breach handling |
 | GDPR | Are we handling EU personal or sensitive data correctly? | Data residency, lawful basis, minimization, deletion, cross-border transfer, processor obligations |
-| NIH Genomic Data Sharing | Are controlled research datasets used according to their approved purpose? | dbGaP, DUOS, data use limitations, access approvals, dataset governance, controlled workspaces |
+| NIH Genomic Data Sharing | Are controlled research datasets used according to approved purpose and access rules? | dbGaP, controlled-access repositories, data use limitations, access approvals, dataset governance, controlled workspaces |
 | ISO 27001 | Does the organization manage information security systematically? | Risk management, asset inventory, access reviews, incident response, supplier management, audit culture |
-| FISMA | Are federal information and systems protected through a formal security program? | system categorization, security plans, authorization, continuous monitoring, federal reporting |
-| NIST SP 800-53 | Which security and privacy controls should be selected and implemented? | control families such as AC, AU, CM, IA, IR, SC, SI, CP, RA, PL, SA |
-| FDA software guidance | Does the software influence clinical care or behave like a medical device? | intended use, validation, traceability, change control, reproducibility, risk management |
+| FISMA | Are federal information and systems protected through a formal security program? | System categorization, security plans, authorization, continuous monitoring, federal reporting |
+| NIST SP 800-53 | Which security and privacy controls should be selected and implemented? | Control families such as AC, AU, CM, IA, IR, SC, SI, CP, RA, PL, SA, SR |
+| FDA software guidance | Does the software influence clinical care or behave like a medical device? | Intended use, validation, traceability, change control, reproducibility, risk management |
 
 A common mistake is to flatten all of these into one vague word: compliance.
 
@@ -230,7 +224,7 @@ NIST SP 800-53 is a catalog of security and privacy controls used heavily in US 
 
 FDA software guidance becomes important when software affects diagnosis, treatment, or patient management.
 
-If you are interviewing for bioinformatics platform, cloud genomics, clinical genomics, secure research workspace, or research infrastructure roles, being able to separate these cleanly makes you sound much more mature.
+Keep the frameworks separate. Then learn how they stack.
 
 ---
 
@@ -308,7 +302,7 @@ It usually implies expectations around:
 - support access boundaries
 - operational documentation
 
-If your system cannot technically support those expectations, the contract alone will not save you.
+If the system cannot technically support those expectations, the contract alone will not save it.
 
 ### Privacy Rule, Security Rule, and Breach Notification Rule
 
@@ -737,18 +731,6 @@ We delete primary data, derived outputs, metadata records, cached workflow inter
 
 That second answer requires actual engineering.
 
-### GDPR in interviews
-
-For a bioinformatics engineer, you do not need to sound like a privacy lawyer.
-
-You should sound like someone who knows the engineering consequences.
-
-A good interview answer might be:
-
-> For EU genomic data, I would first clarify whether the data is personal or special category data, whether it is pseudonymized or truly anonymized, and what the permitted processing purpose is. From the platform side, I would pay attention to region selection, access control, audit logs, support access, metadata leakage, backup location, and retention. I would not treat de-identification as a magic switch, especially for genomic data.
-
-That is enough to signal maturity.
-
 ---
 
 ## NIH Genomic Data Sharing: controlled research access
@@ -785,7 +767,7 @@ It is a governance problem.
 
 A user may have an account and still not be allowed to access a particular dataset.
 
-### dbGaP, DUOS, and access systems
+### dbGaP, repositories, and access systems
 
 In the NIH ecosystem, engineers may encounter systems and concepts such as:
 
@@ -796,6 +778,7 @@ In the NIH ecosystem, engineers may encounter systems and concepts such as:
 - Data Use Limitations
 - DUOS-style access workflows
 - research use statements
+- NIH Data Management and Sharing Plans
 
 You do not need to become an NIH policy specialist.
 
@@ -904,19 +887,13 @@ This pushes platform design toward:
 
 Research governance creates infrastructure requirements.
 
-### NIH policy in career positioning
+### Policy movement to watch
 
-This knowledge is especially useful for roles around:
+NIH data-sharing requirements are not frozen forever.
 
-- research cloud platforms
-- biobank infrastructure
-- national-scale genomics projects
-- pharma research environments
-- academic medical center platforms
-- secure data enclaves
-- controlled-access analysis workspaces
+NIH’s 2023 Data Management and Sharing Policy already expects researchers to plan for responsible sharing, and GDS-specific considerations may still apply when a project falls under the GDS Policy.
 
-It helps you sound less like a pipeline-only engineer and more like someone who understands how real human-subject genomics research operates.
+NIH has also proposed revisions to harmonize participant-data policies and controlled-access expectations. Treat NIH policy as something to verify from official sources during project design, not something to memorize once and ignore.
 
 ---
 
@@ -1151,24 +1128,6 @@ Some data may be reproducible from raw input. Some raw input may be impossible t
 
 So backup strategy should understand scientific value, cost, and governance.
 
-### Why ISO 27001 helps your CV
-
-For a bioinformatics engineer, ISO 27001 knowledge signals that you understand enterprise operations.
-
-It tells employers you can think beyond scripts and pipelines:
-
-- asset ownership
-- access review
-- risk management
-- audit evidence
-- incident response
-- change control
-- vendor trust
-
-You do not need to become an auditor.
-
-But ISO 27001 Foundation-level knowledge is a useful way to learn the language.
-
 ---
 
 ## FISMA: federal information security expectations
@@ -1343,14 +1302,6 @@ A public container registry may be blocked.
 A support engineer may need different access procedures.
 
 A pipeline may need all dependencies mirrored into approved storage.
-
-### FISMA in interviews
-
-A credible engineer answer:
-
-> FISMA is not a bioinformatics workflow standard, but it becomes relevant when bioinformatics platforms support US federal systems or federal data. From an engineering perspective, I would expect stronger requirements around system boundaries, access control, audit logging, vulnerability management, change control, incident response, evidence collection, and continuous monitoring. I would also expect NIST 800-53 controls and the NIST Risk Management Framework to shape how the system is built and operated.
-
-That is enough for most hands-on roles.
 
 ---
 
@@ -1828,16 +1779,6 @@ Example:
 
 Without traceability, it becomes hard to prove that the system did what it was supposed to do.
 
-### FDA knowledge in interviews
-
-You do not need to overclaim.
-
-A solid answer is:
-
-> I have not worked as a regulatory affairs specialist, but I understand that once bioinformatics software influences clinical decisions, engineering expectations change. I would pay attention to intended use, validation, reproducibility, version control, traceability, change management, and whether the system falls into SaMD or clinical decision support territory.
-
-That is credible and useful.
-
 ---
 
 ## How these frameworks collide in real work
@@ -2247,9 +2188,9 @@ Ask:
 
 ## What to learn first
 
-If you are a bioinformatics engineer trying to use this for career leverage, do not start with the hardest certification.
+Do not start by trying to memorize everything.
 
-Start with literacy.
+Start with the parts that change engineering decisions.
 
 ### First: GDPR basics
 
@@ -2294,6 +2235,7 @@ Learn:
 - data access approvals
 - approved research use
 - dataset governance
+- Data Management and Sharing Plans
 
 Focus on research infrastructure and secure workspaces.
 
@@ -2310,7 +2252,7 @@ Learn:
 - supplier management
 - audit evidence
 
-This helps with enterprise platform roles.
+This helps with enterprise platform work.
 
 ### Fifth: FISMA and NIST 800-53 basics
 
@@ -2325,11 +2267,11 @@ Learn:
 - continuous monitoring
 - NIST 800-53 control families
 
-This is especially useful for government, federal contractor, public health, national research infrastructure, and secure cloud platform roles.
+This is especially useful for government, federal contractor, public health, national research infrastructure, and secure cloud platform work.
 
 ### Sixth: FDA software guidance
 
-Learn lightly unless you are targeting clinical or diagnostic software roles.
+Learn lightly unless you are working on clinical or diagnostic software.
 
 Focus on:
 
@@ -2348,236 +2290,71 @@ Understand the shape of the problem.
 
 ---
 
-## Certifications and career positioning
+## Reference glossary
 
-Certifications can help, but only if they support a credible story.
+### PHI
 
-A certificate without practical understanding sounds thin.
+Protected Health Information. Individually identifiable health information in a HIPAA-covered context.
 
-Practical understanding without any external signal can be harder for recruiters to notice.
+### ePHI
 
-The best route is to combine both.
+Electronic Protected Health Information. PHI created, received, maintained, or transmitted electronically.
 
-### ISO 27001 Foundation
+### Covered entity
 
-This is probably the cleanest first certification for many engineers.
+An organization directly covered by HIPAA, such as many healthcare providers, health plans, and healthcare clearinghouses.
 
-It is broad, recognizable, and not too legal-heavy.
+### Business associate
 
-It helps you understand:
+A vendor or partner that creates, receives, maintains, or transmits PHI for a covered entity or another business associate.
 
-- risk management
-- security controls
-- audit culture
-- management systems
-- information security governance
+### BAA
 
-For platform, infrastructure, and enterprise bioinformatics roles, this is a sensible starting point.
+Business Associate Agreement. A HIPAA-related contract defining responsibilities between covered entities and business associates.
 
-### Security+
+### Personal data
 
-Security+ is broader and more technical than ISO 27001 Foundation.
+Under GDPR, information relating to an identified or identifiable natural person.
 
-It can help if you want to move toward security-aware platform engineering, cloud operations, or SRE.
+### Special category data
 
-It is not bioinformatics-specific, but the fundamentals transfer well:
+GDPR-sensitive categories of personal data, including health data and genetic data.
 
-- IAM
-- network security
-- incident response
-- vulnerability management
-- cryptography basics
-- risk concepts
+### Controller
 
-### NIST / RMF training
+The party that decides why and how personal data is processed.
 
-Formal NIST RMF or NIST 800-53 training is useful if you target:
+### Processor
 
-- US federal projects
-- government contractors
-- FedRAMP cloud environments
-- public health infrastructure
-- secure research enclaves
+The party that processes personal data on behalf of a controller.
 
-It may be less useful for ordinary research bioinformatics roles.
+### Pseudonymization
 
-### IAPP CIPP
+Replacing direct identifiers with codes or pseudonyms. Useful, but not the same as full anonymization.
 
-CIPP can be valuable if you want to move deeper into privacy, data governance, or regulated data strategy.
+### Data Use Limitation
 
-It is more legal and policy-heavy than ISO 27001 Foundation.
+A restriction that describes what a controlled-access dataset may or may not be used for.
 
-For a bioinformatics engineer, it can be useful later, especially if you target roles involving global health data, privacy engineering, or data governance leadership.
+### ISMS
 
-But it may not be the best first step if your main selling point is still technical engineering.
+Information Security Management System. The systematic management structure behind ISO 27001.
 
-### CISA
+### Authorization boundary
 
-CISA is more audit-oriented.
+The defined set of system components, services, data flows, and dependencies included in a formal security authorization scope.
 
-It can be useful for governance, risk, audit, and enterprise control roles.
+### ATO
 
-For a hands-on bioinformatics engineer, it is usually not the highest-return first certification.
+Authorization to Operate. A formal authorization decision, common in federal and FedRAMP-style environments.
 
-Learn the concepts if interested, but do not rush into it unless you are intentionally moving toward audit or GRC work.
+### SaMD
 
----
+Software as a Medical Device. Software intended for medical purposes without being part of a hardware medical device.
 
-## How to put this on a CV without sounding fake
+### Workflow provenance
 
-Do not write:
-
-```text
-Expert in HIPAA, GDPR, FDA, ISO 27001, FISMA, and NIST 800-53.
-```
-
-That sounds inflated unless you have real legal, audit, security, or regulatory ownership.
-
-Better wording:
-
-```text
-Experience working with sensitive biomedical and genomic data in access-controlled cloud environments, with practical awareness of HIPAA, GDPR, NIH controlled-access data governance, NIST-style security controls, and auditability requirements.
-```
-
-Or:
-
-```text
-Built and supported bioinformatics workflows in secure research environments, including attention to access control, audit logs, data movement, workflow reproducibility, and regulated-data handling.
-```
-
-Or:
-
-```text
-Familiar with governance considerations for human genomic data, including PHI handling, data residency, controlled-access datasets, support access, workflow provenance, and security control evidence.
-```
-
-Or, for platform/SRE roles:
-
-```text
-Supported cloud-based genomics platforms with emphasis on least privilege access, auditability, incident triage, workflow provenance, secure data movement, and operational controls aligned with regulated research environments.
-```
-
-The tone matters.
-
-You want to signal maturity, not pretend to be a compliance officer.
-
----
-
-## Interview talking points
-
-Good talking points:
-
-- I think about where sensitive identifiers can leak, including logs, filenames, object paths, support tickets, and notebooks.
-- I understand that genomic data can remain identifying even when direct identifiers are removed.
-- I know support access needs careful design in healthcare and genomics platforms.
-- I understand the difference between HIPAA, GDPR, NIH controlled-access governance, ISO 27001, FISMA, NIST 800-53, and FDA software concerns.
-- I care about workflow provenance because it supports reproducibility, debugging, validation, and auditability.
-- I know clinical workflows require stronger validation and change control than research workflows.
-- I understand that federal or FedRAMP-style environments may restrict tooling, support access, dependencies, regions, and data flows.
-- I do not make legal decisions alone, but I know enough to identify risk early and bring the right people into the conversation.
-
-A strong interview answer:
-
-> I do not treat compliance as paperwork added after the pipeline is built. In bioinformatics, governance affects architecture: region selection, access control, logging, support workflows, retention, workflow provenance, and change control. I am not a lawyer or auditor, but I try to understand enough of HIPAA, GDPR, NIH controlled-access rules, ISO 27001, FISMA/NIST controls, and FDA software concepts to design safer systems and ask the right questions early.
-
----
-
-## A four-week study plan
-
-Here is a practical four-week plan.
-
-### Week 1: privacy basics for health and genomic data
-
-Read about:
-
-- PHI
-- ePHI
-- personal data
-- special category data
-- genetic data
-- de-identification versus pseudonymization
-
-Then write one page answering:
-
-```text
-Why is genomic data hard to anonymize?
-```
-
-### Week 2: access and audit controls
-
-Study:
-
-- least privilege
-- role-based access control
-- audit logs
-- temporary access
-- support access
-- access review
-- service account ownership
-
-Then design a support workflow for a failed clinical sequencing job without giving engineers permanent access to patient data.
-
-### Week 3: research governance and NIST controls
-
-Study:
-
-- controlled-access datasets
-- dbGaP
-- Data Use Limitations
-- approved research use
-- dataset mixing
-- NIST 800-53 control families
-- FISMA/RMF basics
-
-Then write a short design note for a secure research workspace that supports controlled-access genomic data.
-
-### Week 4: regulated software and operational maturity
-
-Study:
-
-- ISO 27001 basics
-- incident response
-- change management
-- validation
-- workflow provenance
-- SaMD basics
-- clinical decision support basics
-
-Then write a release checklist for a clinical variant-calling pipeline.
-
-This kind of learning gives you examples to discuss in interviews.
-
----
-
-## Final thoughts
-
-Bioinformatics is becoming more than pipeline execution.
-
-The field now sits between science, software, cloud infrastructure, healthcare, privacy, security, and regulation.
-
-That is uncomfortable, but it is also an opportunity.
-
-Many engineers can run workflows.
-
-Fewer can design systems for sensitive human genomic data.
-
-Fewer still can explain why a support workflow, logging strategy, access model, cloud region, container policy, or pipeline release process may create governance risk.
-
-That gap is career leverage.
-
-You do not need to become a lawyer.
-
-You do not need to become an auditor.
-
-You do not need to become a regulatory affairs specialist.
-
-But if you can speak their language well enough to build better systems, you become much more useful.
-
-The strongest bioinformatics engineers of the next decade will not only know how to process data.
-
-They will understand when the data is allowed to move, who is allowed to see it, how the work can be reproduced, and what evidence is needed when someone asks what happened.
-
-That is the practical value of learning HIPAA, GDPR, NIH Genomic Data Sharing, ISO 27001, FISMA, NIST SP 800-53, and FDA software guidance.
+Recorded evidence of what workflow ran, with which inputs, versions, containers, parameters, references, environment, and outputs.
 
 ---
 
@@ -2586,11 +2363,19 @@ That is the practical value of learning HIPAA, GDPR, NIH Genomic Data Sharing, I
 Official and primary sources used to sanity-check this manual:
 
 - HHS. Summary of the HIPAA Security Rule. <https://www.hhs.gov/hipaa/for-professionals/security/laws-regulations/index.html>
-- European Commission. What personal data is considered sensitive? <https://commission.europa.eu/law/law-topic/data-protection/rules-business-and-organisations/legal-grounds-processing-data/sensitive-data/what-personal-data-considered-sensitive_en>
-- NIH. Genomic Data Sharing Policy Overview. <https://grants.nih.gov/policy-and-compliance/policy-topics/sharing-policies/gds/overview>
+- HHS. Summary of the HIPAA Privacy Rule. <https://www.hhs.gov/hipaa/for-professionals/privacy/laws-regulations/index.html>
+- HHS. Guidance on HIPAA Risk Analysis. <https://www.hhs.gov/hipaa/for-professionals/security/guidance/guidance-risk-analysis/index.html>
+- European Data Protection Board. Data protection basics. <https://www.edpb.europa.eu/sme-data-protection-guide/data-protection-basics_en>
+- European Data Protection Board. Guidelines 1/2026 on processing personal data for scientific research purposes. <https://www.edpb.europa.eu/system/files/2026-04/edpb_guidelines_202601_scientificresearch_en.pdf>
+- NIH. Data Management and Sharing Policy Overview. <https://grants.nih.gov/policy-and-compliance/policy-topics/sharing-policies/dms/policy-overview>
+- NIH. Writing a Data Management and Sharing Plan. <https://grants.nih.gov/policy-and-compliance/policy-topics/sharing-policies/dms/writing-dms-plan>
+- NIH. Where to Submit Genomic Data. <https://grants.nih.gov/policy-and-compliance/policy-topics/sharing-policies/gds/where-to-submit>
+- NIH. Request for Information on Draft Proposal to Harmonize NIH Research Participant Data Policies. <https://grants.nih.gov/grants/guide/notice-files/NOT-OD-26-023.html>
+- ISO. ISO/IEC 27001 Information Security Management Systems. <https://www.iso.org/standard/27001>
 - NIST. FISMA Background. <https://csrc.nist.gov/projects/risk-management/fisma-background>
 - NIST. Risk Management Framework. <https://csrc.nist.gov/projects/risk-management>
+- NIST. SP 800-37 Rev. 2, Risk Management Framework for Information Systems and Organizations. <https://csrc.nist.gov/pubs/sp/800/37/r2/final>
 - NIST. SP 800-53 Rev. 5, Security and Privacy Controls for Information Systems and Organizations. <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>
 - FDA. Clinical Decision Support Software Guidance. <https://www.fda.gov/regulatory-information/search-fda-guidance-documents/clinical-decision-support-software>
 - FDA. Clinical Decision Support Software FAQ. <https://www.fda.gov/medical-devices/software-medical-device-samd/clinical-decision-support-software-frequently-asked-questions-faqs>
-- ISO. International Organization for Standardization. <https://www.iso.org/home.html>
+- FDA. Global Approach to Software as a Medical Device. <https://www.fda.gov/medical-devices/software-medical-device-samd/global-approach-software-medical-device>
