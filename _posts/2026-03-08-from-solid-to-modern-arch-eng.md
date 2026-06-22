@@ -568,7 +568,7 @@ Checkout Service
 Payment Processor
         |
         v
-Stripe
+      Stripe
 ```
 
 Later:
@@ -580,7 +580,7 @@ Checkout Service
 Payment Processor
         |
         v
-PayPal
+      PayPal
 ```
 
 Only the edge changed.
