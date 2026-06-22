@@ -33,8 +33,6 @@ Just in a very ordinary way.
 
 At school, there was this thing we had to do in physical education.
 
-Thể dục.
-
 Shuttlecock kicking.
 
 Đá cầu.
