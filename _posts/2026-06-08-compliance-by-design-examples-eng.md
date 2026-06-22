@@ -1,2904 +1,2119 @@
 ---
 layout: post
-title: "Compliance by Design in Bioinformatics Platforms: Practical Patterns, Bad Examples, and Better Architecture"
+title: "Compliance by Design in Bioinformatics Platforms: An Implementation Manual"
 categories: ["Bioinformatics & Scientific Tools"]
 date: 2026-06-08
 pinned: false
 ---
 
-Framework names are useful, but they do not tell you what to do when you are designing a real system.
+Compliance frameworks tell you what matters.
 
-They do not automatically answer questions like:
+They do not always tell you how to build the system.
 
-- Should sample names appear in object storage paths?
-- Should support engineers be able to open failed-job logs?
-- Should workflows print command-line arguments?
-- Should users be allowed to export all intermediate files?
-- Should temporary directories be preserved after failed jobs?
-- Should a notebook be able to reach the public internet?
-- Should controlled-access datasets be copied into ordinary projects?
-- Should old workflow versions remain executable?
-- Should the same service account access every customer workspace?
+Assume you already understand the basic ideas: least privilege, auditability, data minimization, retention, provenance, controlled access, and clinical change control.
 
-These are not theoretical details.
-
-These are the small engineering choices where compliance either becomes real or stays as a slide deck.
-
-A lot of teams say they care about regulated data. Then their platform stores files like this:
+Now the question is simpler:
 
 ```text
-s3://company-prod-analysis/patient-data/john_smith_tumor_R1.fastq.gz
-s3://company-prod-analysis/results/mary_nguyen_brca_final.vcf
-s3://company-prod-analysis/logs/failed_job_patient_3321_relapsed_AML.txt
+Okay, but how do I implement this in a bioinformatics platform?
 ```
 
-Or their workflow logs print this:
+The answer is not one magical product or one compliance checkbox.
 
-```text
-Running tumor-normal pipeline for patient: Jane Doe
-MRN: 0093821
-Diagnosis: metastatic lung cancer
-Input file: /mnt/data/Jane_Doe_tumor_R1.fastq.gz
-```
+It is a set of boring engineering decisions:
 
-Or their support process works like this:
+- safer identifiers
+- safer manifests
+- safer logs
+- scoped roles
+- structured audit events
+- workflow provenance
+- controlled exports
+- support bundles
+- retention labels
+- region-aware data flows
+- pinned containers
+- CI checks
+- deletion workflows
 
-```text
-Customer reports failure.
-Support engineer requests project admin access.
-Support engineer browses files directly.
-Support engineer downloads a small example file locally.
-Support engineer reproduces issue on laptop.
-```
+None of this requires a giant enterprise platform on day one.
 
-Everyone means well.
+You can start small.
 
-The system is still risky.
+You can build the habits into your scripts, workflow engines, internal tools, and cloud projects before the system becomes impossible to clean up.
 
-Compliance by design means you do not wait until the audit, security review, hospital onboarding, customer escalation, or enterprise review to discover these problems.
-
-You design the platform so the safer path is the default path.
-
-> Disclaimer: this is an engineering reference, not legal advice. In real projects, legal, privacy, security, compliance, data governance, and regulatory affairs teams should make final policy decisions.
+> Disclaimer: this is an engineering reference, not legal advice. Final policy decisions should involve legal, privacy, security, compliance, regulatory affairs, and data governance teams.
 
 ---
 
 ## Table of contents
 
-1. [The core idea](#the-core-idea)
-2. [Compliance is not a checkbox layer](#compliance-is-not-a-checkbox-layer)
-3. [The recurring gap: what engineers optimize versus what reviewers inspect](#the-recurring-gap-what-engineers-optimize-versus-what-reviewers-inspect)
-4. [Example 1: filenames and object paths](#example-1-filenames-and-object-paths)
-5. [Example 2: sample sheets and manifests](#example-2-sample-sheets-and-manifests)
-6. [Example 3: workflow logs](#example-3-workflow-logs)
-7. [Example 4: job names and task names](#example-4-job-names-and-task-names)
-8. [Example 5: support access](#example-5-support-access)
-9. [Example 6: notebooks and interactive workspaces](#example-6-notebooks-and-interactive-workspaces)
-10. [Example 7: temporary files and failed jobs](#example-7-temporary-files-and-failed-jobs)
-11. [Example 8: controlled-access research datasets](#example-8-controlled-access-research-datasets)
-12. [Example 9: workflow provenance](#example-9-workflow-provenance)
-13. [Example 10: clinical pipeline change control](#example-10-clinical-pipeline-change-control)
-14. [Example 11: service accounts and automation](#example-11-service-accounts-and-automation)
-15. [Example 12: exports and downloads](#example-12-exports-and-downloads)
-16. [Example 13: cross-region data movement](#example-13-cross-region-data-movement)
-17. [Example 14: container and dependency governance](#example-14-container-and-dependency-governance)
-18. [Example 15: audit logs that are actually useful](#example-15-audit-logs-that-are-actually-useful)
-19. [Example 16: billing, cost reports, and operational exports](#example-16-billing-cost-reports-and-operational-exports)
-20. [Example 17: support tickets, screenshots, and chat messages](#example-17-support-tickets-screenshots-and-chat-messages)
-21. [Example 18: deletion requests and hidden copies](#example-18-deletion-requests-and-hidden-copies)
-22. [Design patterns for safer bioinformatics platforms](#design-patterns-for-safer-bioinformatics-platforms)
-23. [Anti-patterns to avoid](#anti-patterns-to-avoid)
-24. [A practical design review checklist](#a-practical-design-review-checklist)
-25. [References](#references)
+1. [The target architecture](#the-target-architecture)
+2. [Step 1: classify the data before building the workflow](#step-1-classify-the-data-before-building-the-workflow)
+3. [Step 2: stop using patient identifiers as system identifiers](#step-2-stop-using-patient-identifiers-as-system-identifiers)
+4. [Step 3: split manifests into operational and restricted metadata](#step-3-split-manifests-into-operational-and-restricted-metadata)
+5. [Step 4: design storage paths that do not leak meaning](#step-4-design-storage-paths-that-do-not-leak-meaning)
+6. [Step 5: define roles as actions, not job titles](#step-5-define-roles-as-actions-not-job-titles)
+7. [Step 6: separate view, run, download, administer, and support](#step-6-separate-view-run-download-administer-and-support)
+8. [Step 7: make audit logs structured from the beginning](#step-7-make-audit-logs-structured-from-the-beginning)
+9. [Step 8: make workflow logs safe by default](#step-8-make-workflow-logs-safe-by-default)
+10. [Step 9: capture workflow provenance automatically](#step-9-capture-workflow-provenance-automatically)
+11. [Step 10: pin containers, references, and dependencies](#step-10-pin-containers-references-and-dependencies)
+12. [Step 11: build redacted diagnostic bundles for support](#step-11-build-redacted-diagnostic-bundles-for-support)
+13. [Step 12: implement temporary support access](#step-12-implement-temporary-support-access)
+14. [Step 13: make exports explicit events](#step-13-make-exports-explicit-events)
+15. [Step 14: tag data with retention rules](#step-14-tag-data-with-retention-rules)
+16. [Step 15: track derived data lineage](#step-15-track-derived-data-lineage)
+17. [Step 16: control notebooks without killing research](#step-16-control-notebooks-without-killing-research)
+18. [Step 17: make region boundaries visible](#step-17-make-region-boundaries-visible)
+19. [Step 18: add CI checks for compliance mistakes](#step-18-add-ci-checks-for-compliance-mistakes)
+20. [Step 19: handle deletion as a workflow, not a button](#step-19-handle-deletion-as-a-workflow-not-a-button)
+21. [Step 20: add clinical change control when outputs affect patients](#step-20-add-clinical-change-control-when-outputs-affect-patients)
+22. [Minimal implementation roadmap](#minimal-implementation-roadmap)
+23. [Final checklist](#final-checklist)
+24. [References](#references)
 
 ---
 
-## The core idea
+## The target architecture
 
-Compliance by design means building systems where regulated-data handling is part of the architecture.
+A compliance-aware bioinformatics platform does not need to be complicated at first.
 
-It is not enough to say:
+The minimal shape looks like this:
 
 ```text
-We encrypt the data.
+Users
+  |
+  v
+Identity / SSO / MFA
+  |
+  v
+Projects / Workspaces
+  |
+  +--> Operational metadata
+  +--> Restricted metadata
+  +--> Object storage
+  +--> Workflow execution
+  +--> Notebook environment
+  +--> Audit log
+  +--> Export service
+  +--> Support diagnostic service
+  +--> Retention / deletion workflow
 ```
 
-Encryption matters, but it does not solve everything.
+The important design principle is separation.
 
-An encrypted bucket can still have terrible access control.
+Do not let every part of the system see everything.
 
-A secure database can still contain unnecessary identifiers.
+The workflow runner usually needs file IDs, sample IDs, references, containers, and parameters.
 
-An authenticated user can still download data they should not export.
+It usually does not need names, MRNs, addresses, exact birth dates, or free-text clinical notes.
 
-A well-logged platform can still leak patient details into logs.
+Support usually needs job state, resource usage, versions, and sanitized errors.
 
-A validated pipeline can still become unvalidated after a silent dependency update.
+Support usually does not need raw FASTQ, BAM, CRAM, VCF, or phenotype tables.
 
-A cloud environment can still violate data residency if logs, backups, support tickets, telemetry, or crash reports leave the approved region.
+Finance usually needs cost and usage summaries.
 
-The practical question is:
+Finance usually does not need project names like `pediatric_AML_relapse_cases`.
 
-> What does the system make easy, and what does the system make hard?
+A safer platform starts with one rule:
 
-A weak platform makes risky actions easy:
+```text
+Give each subsystem the least sensitive view that still lets it do its job.
+```
 
-- putting patient names in filenames
-- granting broad admin access
-- copying data across projects casually
-- downloading raw files without review
-- running unpinned containers
-- preserving failed-job working directories forever
-- printing full command lines with identifiers
-- giving support staff permanent access to customer data
-
-A stronger platform makes safer actions easy:
-
-- using non-human-readable internal IDs
-- separating identity from analysis metadata
-- using least-privilege roles
-- generating redacted diagnostic bundles
-- recording workflow provenance automatically
-- expiring access by default
-- logging security-relevant events
-- enforcing approved regions
-- preserving reproducibility evidence
-- requiring review before clinical pipeline changes
-
-Compliance by design is not about making engineers afraid.
-
-It is about making the safe path boring.
+Everything below is a way to implement that rule.
 
 ---
 
-## Compliance is not a checkbox layer
+## Step 1: classify the data before building the workflow
 
-Many teams treat compliance as a final review step.
+Do not start by writing the Nextflow pipeline.
 
-The product is built first.
+Start by classifying what the workflow will touch.
 
-Then someone asks:
+Create a small data classification table.
 
-```text
-Can we make this HIPAA compliant?
-Can we make this GDPR compliant?
-Can we make this suitable for controlled-access genomic data?
-Can we make this acceptable for a hospital?
-Can we pass a security review?
+```yaml
+project_id: prj_9f31
+data_classes:
+  raw_sequence:
+    examples: [FASTQ, BAM, CRAM]
+    sensitivity: high
+    contains_human_genomic_data: true
+    export_policy: restricted
+  variants:
+    examples: [VCF, gVCF]
+    sensitivity: high
+    contains_human_genomic_data: true
+    export_policy: restricted
+  phenotype:
+    examples: [diagnosis, age, medication, survival]
+    sensitivity: high
+    contains_health_data: true
+    export_policy: restricted
+  operational_metadata:
+    examples: [file_id, sample_id, workflow_id]
+    sensitivity: medium
+    export_policy: internal_only
+  aggregate_results:
+    examples: [cohort QC summary, runtime stats]
+    sensitivity: depends_on_cell_size
+    export_policy: review
 ```
 
-Sometimes the answer is yes.
+This can live in a project metadata table.
 
-Often the real answer is:
+Example SQL:
 
-```text
-Not without redesigning important parts of the system.
+```sql
+create table project_data_classification (
+    project_id text not null,
+    data_class text not null,
+    sensitivity text not null check (sensitivity in ('low', 'medium', 'high')),
+    contains_human_genomic_data boolean not null default false,
+    contains_health_data boolean not null default false,
+    export_policy text not null,
+    retention_policy text not null,
+    region_policy text not null,
+    created_at timestamptz not null default now(),
+    primary key (project_id, data_class)
+);
 ```
 
-Because compliance touches architecture.
+Minimum useful policies:
 
-| Design area | Compliance concern |
-|---|---|
-| Object storage paths | Identifiers may leak into URLs, logs, tickets, and dashboards |
-| Workflow logs | PHI, genetic metadata, and sample details may be printed |
-| Job names | Patient or study information may appear in operational systems |
-| Support tooling | Staff may get unnecessary access to sensitive data |
-| Notebook environments | Users may copy, export, or expose data accidentally |
-| Containers | Third-party images may exfiltrate data or change behavior |
-| Data movement | Region, consent, and data use restrictions may be violated |
-| Audit logs | Events may be incomplete, mutable, or too noisy to investigate |
-| Workflow releases | Clinical output may change without validation |
-| Service accounts | Automation may bypass user-level governance |
-| Backups | Deleted data may persist longer than promised |
-| Metrics | Sensitive metadata may leave the approved environment |
-| Billing reports | Project names and file paths may reveal study details |
-| Support tickets | Screenshots and attachments may become shadow data stores |
+```text
+export_policy:
+  unrestricted
+  internal_only
+  review_required
+  raw_download_disabled
 
-This is why compliance needs to appear early in engineering design.
+retention_policy:
+  delete_after_30_days
+  delete_after_90_days
+  project_lifetime
+  clinical_record_retention
+  legal_hold
 
-Not because every engineer should become a lawyer.
+region_policy:
+  any
+  eu_only
+  us_only
+  customer_region_only
+```
 
-Because engineers create the paths data will follow.
+This table does not make you compliant by itself.
+
+It gives the system something to enforce.
+
+Without classification, every later decision becomes guesswork.
 
 ---
 
-## The recurring gap: what engineers optimize versus what reviewers inspect
+## Step 2: stop using patient identifiers as system identifiers
 
-A lot of compliance failures come from a difference in viewpoint.
+A system identifier should not be a patient name, MRN, email address, or diagnosis.
 
-The engineer often optimizes for:
-
-- debugging speed
-- user convenience
-- operational visibility
-- reproducibility
-- lower support cost
-- fewer tickets
-- easier search
-- faster development
-
-The auditor, privacy officer, security reviewer, or data governance team looks for:
-
-- unnecessary data exposure
-- unclear access boundaries
-- missing approval records
-- weak evidence
-- uncontrolled copies
-- overbroad permissions
-- poor retention behavior
-- untracked data movement
-- lack of reproducibility
-- lack of change control
-
-Both perspectives are valid.
-
-The problem happens when the engineering system only reflects the first perspective.
-
-A filename is convenient.
-
-A log line is useful.
-
-A screenshot is fast.
-
-An admin role solves tickets.
-
-A notebook export helps collaboration.
-
-A global monitoring tool helps operations.
-
-A retained failed-job directory helps debugging.
-
-But each one can create a new data copy, a new access path, or a new governance obligation.
-
-The most useful mental model is this:
+Bad:
 
 ```text
-Every convenience creates a data flow.
-Every data flow needs a boundary.
-Every boundary needs evidence.
+John_Smith_lung_tumor_R1.fastq.gz
+MRN0093821_normal.bam
+Mary_Nguyen_BRCA_final.vcf
 ```
 
-The rest of this post uses that lens.
+Better:
 
-For each example, ask:
+```text
+rds_000912_R1.fastq.gz
+smp_000481.cram
+anl_20260608_001.vcf.gz
+```
 
-1. What did the engineer think they were doing?
-2. What did the reviewer see?
-3. What better design would reduce the risk without blocking useful work?
+Use different ID prefixes for different entities.
+
+```text
+prj_  project
+sub_  subject
+spc_  specimen
+smp_  sample
+rds_  readset
+fil_  file
+wf_   workflow
+run_  workflow run
+anl_  analysis
+exp_  export
+usr_  user
+svc_  service account
+```
+
+Example generator in Python:
+
+```python
+import secrets
+
+PREFIXES = {
+    "project": "prj",
+    "subject": "sub",
+    "specimen": "spc",
+    "sample": "smp",
+    "readset": "rds",
+    "file": "fil",
+    "workflow_run": "run",
+    "analysis": "anl",
+    "export": "exp",
+}
+
+
+def new_id(kind: str) -> str:
+    if kind not in PREFIXES:
+        raise ValueError(f"unknown id kind: {kind}")
+    return f"{PREFIXES[kind]}_{secrets.token_hex(6)}"
+
+
+print(new_id("sample"))
+# smp_6f31a9c0e2b1
+```
+
+Do not encode meaning into the ID.
+
+Avoid:
+
+```text
+smp_lung_cancer_0042
+smp_vietnam_site3_child_rare_disease
+```
+
+Use neutral IDs and store meaning in metadata with access control.
 
 ---
 
-## Example 1: filenames and object paths
+## Step 3: split manifests into operational and restricted metadata
 
-Filenames look harmless until they start carrying meaning.
+A common mistake is passing one giant CSV into the workflow.
 
-A weak design uses human-readable names everywhere:
-
-```text
-/projects/lung_cancer_study/raw/Nguyen_Van_A_tumor_R1.fastq.gz
-/projects/lung_cancer_study/raw/Nguyen_Van_A_normal_R1.fastq.gz
-/projects/lung_cancer_study/results/Nguyen_Van_A_somatic_variants.vcf
-/projects/lung_cancer_study/reports/Nguyen_Van_A_final_report.pdf
-```
-
-This is convenient.
-
-It is also dangerous.
-
-The name may appear in:
-
-- object storage browser
-- workflow logs
-- command-line arguments
-- monitoring tools
-- billing records
-- screenshots
-- error messages
-- support tickets
-- audit exports
-- URLs
-- cache directories
-
-Even if file contents are protected, the path itself leaks information.
-
-### What the engineer thought
-
-> This helps users find the right files. Human-readable names make support and debugging easier.
-
-That is true.
-
-Human-readable names are useful.
-
-The problem is that object paths travel farther than people expect.
-
-### What the reviewer saw
-
-> Patient identity and disease context are embedded in paths that may propagate into logs, tickets, dashboards, billing exports, and cloud provider consoles.
-
-The reviewer is not only looking at whether the BAM is encrypted.
-
-They are looking at where the identifier spreads.
-
-### Better design
-
-Separate internal storage identity from human-facing metadata:
-
-```text
-/projects/prj_9f31/raw/sample_smp_7a92/readset_rds_001_R1.fastq.gz
-/projects/prj_9f31/raw/sample_smp_7a92/readset_rds_001_R2.fastq.gz
-/projects/prj_9f31/derived/alignment/sample_smp_7a92/run_20260501.cram
-/projects/prj_9f31/derived/variants/sample_smp_7a92/run_20260501.vcf.gz
-```
-
-The human-readable information lives in a controlled metadata table:
-
-```text
-sample_id,subject_label,specimen_type,disease_group,collection_site
-smp_7a92,SUBJ-0042,tumor,lung_cancer,site_03
-smp_1c44,SUBJ-0043,normal,lung_cancer,site_03
-```
-
-The most sensitive linking information lives somewhere even more restricted:
-
-```text
-subject_label,patient_record_id,patient_name,date_of_birth
-SUBJ-0042,MRN-882913,Nguyen Van A,1978-04-12
-```
-
-Not every platform needs exactly this structure.
-
-The principle matters:
-
-> Do not make storage paths carry more meaning than they need.
-
-### Bad pattern
-
-```text
-john_smith_tumor.bam
-patient_123_normal.fastq.gz
-final_results_mary_brca.csv
-```
-
-### Better pattern
-
-```text
-sample_smp_000481.cram
-readset_rds_000912_R1.fastq.gz
-analysis_anl_20260528_001.vcf.gz
-```
-
-### Even better pattern
-
-Use stable internal identifiers and keep the mapping in access-controlled metadata:
-
-```text
-/project/prj_001/raw/readsets/rds_000912/R1.fastq.gz
-/project/prj_001/raw/readsets/rds_000912/R2.fastq.gz
-/project/prj_001/analysis/anl_00341/sample_smp_000481/output.cram
-```
-
-Then store display names separately:
-
-```text
-internal_id,display_label
-smp_000481,case_042_tumor
-rds_000912,case_042_tumor_readset_1
-```
-
-This gives humans enough usability without spreading identifiers everywhere.
-
-### Practical rule
-
-When naming files, ask:
-
-```text
-Would I be comfortable if this filename appeared in a support ticket, browser URL, job log, or audit export?
-```
-
-If the answer is no, the filename is doing too much.
-
----
-
-## Example 2: sample sheets and manifests
-
-Sample sheets are one of the most common places where sensitive metadata leaks.
-
-A simple sample sheet may look like this:
+Bad manifest:
 
 ```csv
-sample_id,fastq_1,fastq_2,patient_name,mrn,diagnosis,collection_date
-S001,s3://bucket/John_Smith_R1.fastq.gz,s3://bucket/John_Smith_R2.fastq.gz,John Smith,MRN00192,AML relapse,2026-04-03
-S002,s3://bucket/Mary_Jones_R1.fastq.gz,s3://bucket/Mary_Jones_R2.fastq.gz,Mary Jones,MRN00481,breast cancer,2026-04-04
+sample_id,fastq_1,fastq_2,patient_name,mrn,dob,diagnosis,collection_site
+S001,s3://bucket/John_R1.fastq.gz,s3://bucket/John_R2.fastq.gz,John Smith,MRN00192,1972-02-14,AML relapse,site_03
 ```
 
-This is convenient for humans.
+The pipeline probably does not need most of that.
 
-It is terrible for system design.
-
-That file may be passed into:
-
-- Nextflow
-- WDL
-- Snakemake
-- Cromwell
-- cloud batch jobs
-- notebooks
-- support tickets
-- Git repositories
-- Slack messages
-- debugging sessions
-- temporary directories
-
-### What the engineer thought
-
-> The pipeline needs a sample sheet. It is easier if all metadata is in one CSV.
-
-That is a natural instinct.
-
-A single table is easy to inspect, easy to edit, and easy to pass into a workflow.
-
-### What the reviewer saw
-
-> The workflow receives fields it does not need, including names, medical record numbers, dates, and diagnosis labels. Those fields may be copied into logs, work directories, caches, and tickets.
-
-The issue is not the CSV format.
-
-The issue is unnecessary propagation.
-
-### Better design
-
-Split operational metadata from sensitive identity metadata.
+Split it.
 
 Operational manifest:
 
 ```csv
 sample_id,readset_id,fastq_1,fastq_2,specimen_type
-smp_001,rds_001,s3://safe-bucket/raw/rds_001/R1.fastq.gz,s3://safe-bucket/raw/rds_001/R2.fastq.gz,tumor
-smp_002,rds_002,s3://safe-bucket/raw/rds_002/R1.fastq.gz,s3://safe-bucket/raw/rds_002/R2.fastq.gz,normal
-```
-
-Restricted identity mapping:
-
-```csv
-sample_id,patient_record_id,patient_name,date_of_birth
-smp_001,MRN00192,John Smith,1972-02-14
-smp_002,MRN00481,Mary Jones,1968-09-22
+smp_0001,rds_0001,raw/rds_0001/R1.fastq.gz,raw/rds_0001/R2.fastq.gz,tumor
+smp_0002,rds_0002,raw/rds_0002/R1.fastq.gz,raw/rds_0002/R2.fastq.gz,normal
 ```
 
 Analysis metadata:
 
 ```csv
-sample_id,disease_group,assay,library_strategy
-smp_001,AML,WGS,paired_end
-smp_002,breast_cancer,WGS,paired_end
+sample_id,disease_group,assay,reference_build
+smp_0001,lung_cancer,WGS,GRCh38
+smp_0002,lung_cancer,WGS,GRCh38
 ```
 
-Now most workflows only need the operational manifest.
-
-They do not need names, MRNs, or dates of birth.
-
-### Minimum necessary design
-
-A pipeline usually needs:
-
-- sample ID
-- input files
-- pairing information
-- assay type
-- reference genome
-- output prefix
-- analysis parameters
-
-A pipeline usually does not need:
-
-- patient name
-- street address
-- phone number
-- exact date of birth
-- medical record number
-- free-text clinical notes
-- hospital billing information
-
-If the workflow does not need a field, do not pass it through the workflow.
-
-This is data minimization in engineering form.
-
-### Dangerous field names
-
-Watch for columns like:
-
-```text
-name
-patient_name
-mrn
-dob
-birth_date
-address
-phone
-email
-diagnosis_notes
-free_text
-doctor
-ward
-hospital_number
-```
-
-Sometimes these fields are necessary in upstream clinical systems.
-
-They rarely belong inside a general-purpose computational workflow.
-
-### Better manifest pattern
+Restricted identity mapping:
 
 ```csv
-sample_id,subject_id,specimen_id,readset_id,lane,fastq_1,fastq_2
-smp_0001,sub_0001,spc_0001,rds_0001,L001,raw/rds_0001/L001_R1.fastq.gz,raw/rds_0001/L001_R2.fastq.gz
-smp_0001,sub_0001,spc_0001,rds_0002,L002,raw/rds_0002/L002_R1.fastq.gz,raw/rds_0002/L002_R2.fastq.gz
+subject_id,sample_id,patient_record_id,patient_name,date_of_birth
+sub_0001,smp_0001,MRN00192,John Smith,1972-02-14
+sub_0002,smp_0002,MRN00481,Mary Jones,1968-09-22
 ```
 
-This is boring.
+Most workflows should receive only the operational manifest.
 
-Boring is good.
+If a workflow does not need a column, do not pass it.
+
+A simple manifest validator:
+
+```python
+import csv
+import re
+import sys
+
+FORBIDDEN_COLUMNS = {
+    "patient_name", "name", "mrn", "medical_record_number",
+    "dob", "date_of_birth", "address", "phone", "email",
+    "doctor", "ward", "free_text", "clinical_notes",
+}
+
+FORBIDDEN_VALUE_PATTERNS = [
+    re.compile(r"\bMRN[-_ ]?\d+\b", re.I),
+    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),
+    re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
+]
+
+
+def validate_manifest(path: str) -> int:
+    errors = []
+    with open(path, newline="") as f:
+        reader = csv.DictReader(f)
+        columns = {c.strip().lower() for c in reader.fieldnames or []}
+
+        bad_columns = columns & FORBIDDEN_COLUMNS
+        if bad_columns:
+            errors.append(f"forbidden columns: {sorted(bad_columns)}")
+
+        for row_number, row in enumerate(reader, start=2):
+            for col, value in row.items():
+                value = value or ""
+                for pattern in FORBIDDEN_VALUE_PATTERNS:
+                    if pattern.search(value):
+                        errors.append(f"row {row_number}, column {col}: sensitive-looking value")
+
+    for error in errors:
+        print(f"ERROR: {error}", file=sys.stderr)
+
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(validate_manifest(sys.argv[1]))
+```
+
+Run it before workflow submission:
+
+```bash
+python validate_manifest.py analysis_manifest.csv
+```
+
+This is not perfect.
+
+It catches common mistakes early.
+
+That is already valuable.
 
 ---
 
-## Example 3: workflow logs
+## Step 4: design storage paths that do not leak meaning
 
-Logs are where compliance dreams go to die.
+Object paths travel everywhere.
 
-Engineers need logs.
+They appear in logs, dashboards, URLs, cache keys, billing reports, and support tickets.
 
-Without logs, debugging is painful.
+Use neutral paths.
 
-But logs are also one of the easiest places to leak sensitive information.
+Bad:
 
-Consider this script:
+```text
+s3://prod/patient-data/John_Smith_lung_tumor_R1.fastq.gz
+s3://prod/results/Mary_BRCA_final_report.pdf
+```
+
+Better:
+
+```text
+s3://prod/projects/prj_9f31/raw/readsets/rds_000912/R1.fastq.gz
+s3://prod/projects/prj_9f31/analysis/anl_00341/outputs/somatic.vcf.gz
+```
+
+A practical layout:
+
+```text
+projects/{project_id}/
+  raw/
+    readsets/{readset_id}/
+      R1.fastq.gz
+      R2.fastq.gz
+  references/
+    {reference_id}/
+  manifests/
+    operational_manifest.csv
+  analysis/
+    {analysis_id}/
+      inputs/
+      work/
+      outputs/
+      logs/
+      provenance.json
+  exports/
+    {export_id}/
+      manifest.yaml
+      files/
+```
+
+Avoid putting these in paths:
+
+```text
+patient names
+MRNs
+full dates of birth
+rare disease names
+free-text diagnosis
+hospital ward
+doctor name
+family name
+exact location
+```
+
+Safe-ish path elements:
+
+```text
+project IDs
+sample IDs
+readset IDs
+analysis IDs
+workflow IDs
+generic step names
+version numbers
+```
+
+Add a storage path linter:
+
+```python
+import re
+import sys
+
+BAD_PATTERNS = [
+    re.compile(r"\bMRN[-_ ]?\d+\b", re.I),
+    re.compile(r"\b(patient|dob|birth|diagnosis|relapse|metastatic)\b", re.I),
+    re.compile(r"\b[A-Z][a-z]+_[A-Z][a-z]+\b"),
+]
+
+
+def check_path(path: str) -> list[str]:
+    return [p.pattern for p in BAD_PATTERNS if p.search(path)]
+
+
+failed = False
+for path in sys.stdin:
+    path = path.strip()
+    matches = check_path(path)
+    if matches:
+        failed = True
+        print(f"BAD PATH: {path}")
+        for match in matches:
+            print(f"  matched: {match}")
+
+raise SystemExit(1 if failed else 0)
+```
+
+Use it in CI or upload validation:
 
 ```bash
-echo "Running pipeline for patient $PATIENT_NAME"
+find planned_uploads -type f | python lint_paths.py
+```
+
+Again, not perfect.
+
+But it prevents the obvious disasters.
+
+---
+
+## Step 5: define roles as actions, not job titles
+
+Do not start with job titles like:
+
+```text
+researcher
+admin
+support
+manager
+```
+
+Start with actions.
+
+Example action list:
+
+```yaml
+actions:
+  project.view_metadata
+  project.view_members
+  project.manage_members
+  file.view_metadata
+  file.preview
+  file.download
+  file.upload
+  workflow.run
+  workflow.cancel
+  workflow.view_logs
+  notebook.start
+  notebook.download_file
+  export.request
+  export.approve
+  export.download
+  support.view_diagnostics
+  support.request_access
+  support.break_glass
+  audit.view
+  retention.change_policy
+  deletion.request
+  deletion.approve
+```
+
+Then build roles from actions.
+
+```yaml
+roles:
+  viewer:
+    - project.view_metadata
+    - file.view_metadata
+
+  analyst:
+    - project.view_metadata
+    - file.view_metadata
+    - workflow.run
+    - workflow.cancel
+    - workflow.view_logs
+    - notebook.start
+
+  data_exporter:
+    - project.view_metadata
+    - file.view_metadata
+    - file.download
+    - export.request
+    - export.download
+
+  project_admin:
+    - project.view_metadata
+    - project.view_members
+    - project.manage_members
+    - file.view_metadata
+    - workflow.run
+    - workflow.cancel
+
+  support_observer:
+    - support.view_diagnostics
+
+  support_temporary_reader:
+    - support.view_diagnostics
+    - workflow.view_logs
+    - file.view_metadata
+
+  audit_reviewer:
+    - audit.view
+```
+
+Notice that `project_admin` does not automatically get `file.download`.
+
+That is intentional.
+
+Administering a project is not the same as exporting raw data.
+
+A simple permission check:
+
+```python
+ROLE_ACTIONS = {
+    "viewer": {"project.view_metadata", "file.view_metadata"},
+    "analyst": {
+        "project.view_metadata", "file.view_metadata",
+        "workflow.run", "workflow.cancel", "workflow.view_logs",
+        "notebook.start",
+    },
+    "data_exporter": {
+        "project.view_metadata", "file.view_metadata",
+        "file.download", "export.request", "export.download",
+    },
+    "support_observer": {"support.view_diagnostics"},
+}
+
+
+def can(user_roles: list[str], action: str) -> bool:
+    allowed = set()
+    for role in user_roles:
+        allowed |= ROLE_ACTIONS.get(role, set())
+    return action in allowed
+```
+
+The point is not the code.
+
+The point is the model.
+
+Permissions should describe what a user can actually do.
+
+---
+
+## Step 6: separate view, run, download, administer, and support
+
+A common weak model:
+
+```text
+read
+write
+admin
+```
+
+This is too coarse for regulated biomedical data.
+
+Separate these actions:
+
+```text
+view metadata
+preview file
+run workflow
+download raw data
+manage users
+approve exports
+view audit logs
+support debug
+break glass
+```
+
+Example policy table:
+
+| Action | Viewer | Analyst | Exporter | Project Admin | Support Observer |
+|---|---:|---:|---:|---:|---:|
+| View project metadata | Yes | Yes | Yes | Yes | Limited |
+| Run workflows | No | Yes | Yes | Yes | No |
+| View workflow logs | No | Yes | Yes | Yes | Sanitized only |
+| Download raw data | No | No | Yes | Optional | No |
+| Manage users | No | No | No | Yes | No |
+| View diagnostics | No | No | No | Yes | Yes |
+| Approve export | No | No | No | Optional | No |
+| Break glass | No | No | No | No | No by default |
+
+This prevents a bad default:
+
+```text
+Anyone who can analyze data can also download everything.
+```
+
+For controlled-access datasets, analysis and download should often be different privileges.
+
+Implementation rule:
+
+```text
+Do not check only whether the user belongs to the project.
+Check whether the user can perform this specific action on this specific resource.
+```
+
+Pseudo-code:
+
+```python
+def authorize(user, action, resource):
+    project_role = get_project_role(user.id, resource.project_id)
+    dataset_policy = get_dataset_policy(resource.dataset_id)
+
+    if action == "file.download" and dataset_policy.download_policy == "restricted":
+        return user_has_action(user, "export.download") and has_export_approval(user, resource)
+
+    if action == "support.view_diagnostics":
+        return user_has_active_support_grant(user, resource.project_id)
+
+    return role_allows(project_role, action)
+```
+
+This is the beginning of real governance.
+
+---
+
+## Step 7: make audit logs structured from the beginning
+
+Do not treat audit logs as random text.
+
+Use structured events.
+
+Minimal audit event schema:
+
+```sql
+create table audit_events (
+    event_id text primary key,
+    event_type text not null,
+    actor_type text not null,
+    actor_id text not null,
+    on_behalf_of text,
+    project_id text,
+    resource_type text,
+    resource_id text,
+    action text not null,
+    result text not null check (result in ('success', 'failure', 'denied')),
+    reason text,
+    source_ip inet,
+    user_agent text,
+    request_id text,
+    created_at timestamptz not null default now(),
+    details jsonb not null default '{}'::jsonb
+);
+```
+
+Example event:
+
+```json
+{
+  "event_id": "evt_01hxyz",
+  "event_type": "file_downloaded",
+  "actor_type": "user",
+  "actor_id": "usr_0042",
+  "project_id": "prj_9f31",
+  "resource_type": "file",
+  "resource_id": "fil_7788",
+  "action": "file.download",
+  "result": "success",
+  "source_ip": "203.0.113.42",
+  "request_id": "req_abc123",
+  "details": {
+    "export_id": "exp_20260608_001",
+    "dataset_id": "dset_0042",
+    "file_size_gb": 12.4
+  }
+}
+```
+
+Events worth logging:
+
+```text
+login
+failed_login
+mfa_changed
+token_created
+token_used
+project_created
+permission_changed
+file_uploaded
+file_downloaded
+file_previewed
+workflow_started
+workflow_completed
+workflow_failed
+workflow_cancelled
+notebook_started
+notebook_exported
+support_access_requested
+support_access_granted
+support_access_revoked
+export_requested
+export_approved
+export_downloaded
+deletion_requested
+deletion_completed
+retention_policy_changed
+clinical_release_approved
+```
+
+Do not put secrets or unnecessary PHI in audit logs.
+
+Audit logs should answer:
+
+```text
+Who did what, to which resource, when, from where, under which approval, and did it succeed?
+```
+
+They should not become another sensitive data lake.
+
+---
+
+## Step 8: make workflow logs safe by default
+
+Workflow logs are useful.
+
+They are also dangerous.
+
+Bad logging:
+
+```bash
+echo "Running sample: $PATIENT_NAME"
 echo "MRN: $MRN"
 echo "Diagnosis: $DIAGNOSIS"
-echo "Input FASTQ: $FASTQ_1"
-echo "Output report: $PATIENT_NAME.final.pdf"
+echo "Input: $INPUT_FASTQ"
 ```
 
-This might seem helpful during development.
-
-In production, it can turn every job log into a sensitive document.
-
-### What the engineer thought
-
-> These logs make debugging easier. If a user reports a failure, I can immediately see which sample failed.
-
-That is understandable.
-
-Debugging without context is painful.
-
-### What the reviewer saw
-
-> Logs now contain identifiers and clinical details. Those logs may be accessible to support teams, infrastructure teams, vendors, monitoring tools, and long-term archives.
-
-The risk is not only who can see the workflow output.
-
-The risk is who can see the logs.
-
-### Better logging
-
-A better version:
+Better logging:
 
 ```bash
-echo "Running pipeline"
-echo "Sample ID: $SAMPLE_ID"
-echo "Readset ID: $READSET_ID"
+echo "Workflow: $WORKFLOW_NAME"
+echo "Workflow version: $WORKFLOW_VERSION"
 echo "Analysis ID: $ANALYSIS_ID"
-echo "Input FASTQ registered"
-echo "Output prefix: $OUTPUT_PREFIX"
+echo "Sample ID: $SAMPLE_ID"
+echo "Input readsets registered: $READSET_COUNT"
+echo "Reference: $REFERENCE_ID"
 ```
 
-Even better, avoid printing full paths unless needed:
+A logging wrapper helps.
 
-```bash
-echo "Input FASTQ count: 2"
-echo "Reference genome: GRCh38"
-echo "Workflow version: tumor-normal-v2.3.1"
-echo "Analysis ID: anl_20260528_001"
+```python
+import logging
+import re
+
+SENSITIVE_PATTERNS = [
+    re.compile(r"\bMRN[-_ ]?\d+\b", re.I),
+    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),
+    re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
+]
+
+
+def redact(value: object) -> str:
+    text = str(value)
+    for pattern in SENSITIVE_PATTERNS:
+        text = pattern.sub("[REDACTED]", text)
+    return text
+
+
+class SafeLogger:
+    def __init__(self, name: str):
+        self.logger = logging.getLogger(name)
+
+    def info(self, message: str, **fields):
+        safe_fields = {k: redact(v) for k, v in fields.items()}
+        self.logger.info("%s %s", message, safe_fields)
+
+
+log = SafeLogger("workflow")
+log.info(
+    "workflow_started",
+    analysis_id="anl_20260608_001",
+    sample_id="smp_000481",
+    reference="GRCh38",
+)
 ```
 
-### Command-line arguments can leak too
-
-Many workflow engines log full commands.
-
-This is risky if arguments contain identifiers.
+Also avoid full command echoing when arguments may contain sensitive values.
 
 Bad:
 
 ```bash
-run_pipeline \
-  --patient-name "Jane Doe" \
-  --mrn "MRN-009381" \
-  --diagnosis "metastatic lung cancer" \
-  --tumor-fastq /data/Jane_Doe_tumor_R1.fastq.gz
+set -x
+run_pipeline --patient-name "$PATIENT_NAME" --mrn "$MRN" --fastq "$FASTQ"
 ```
 
 Better:
 
 ```bash
-run_pipeline \
-  --sample-id smp_7a92 \
-  --tumor-readset rds_001 \
-  --normal-readset rds_002 \
-  --manifest /inputs/analysis_manifest.csv
+set +x
+run_pipeline --manifest operational_manifest.csv --analysis-id "$ANALYSIS_ID"
 ```
 
-The manifest should also avoid unnecessary sensitive fields.
+If the workflow engine logs commands automatically, keep sensitive values out of command-line arguments.
 
-### Stack traces can leak paths
-
-A Python exception might show:
-
-```text
-FileNotFoundError: [Errno 2] No such file or directory: '/mnt/patient_data/John_Smith_BRCA_tumor_R1.fastq.gz'
-```
-
-A Java tool might print:
-
-```text
-Failed to open /analysis/rare_disease_children/site_04/family_Lee_child_proband.bam
-```
-
-A Nextflow log might show full process inputs.
-
-A notebook cell might display a dataframe with patient identifiers.
-
-This does not mean we should hide all errors.
-
-It means production logging should be intentional.
-
-### Redaction strategy
-
-A practical log redaction strategy can include:
-
-- avoid sensitive values at source
-- use safe internal IDs
-- redact known identifier patterns
-- avoid full paths by default
-- restrict access to detailed logs
-- create separate user-facing and internal logs
-- set retention periods
-- mark logs as potentially sensitive
-- include a sanitized diagnostic bundle option
-
-Example redaction:
-
-```text
-Input path: /project/prj_9f31/raw/[REDACTED]/R1.fastq.gz
-Sample: smp_7a92
-Analysis: anl_20260528_001
-Error: FASTQ checksum mismatch
-```
-
-### Realistic failure mode: logs become a second data lake
-
-A workflow log may start in one place:
-
-```text
-workflow task log
-```
-
-Then flow into:
-
-```text
-CloudWatch
-Splunk
-SIEM
-long-term archive
-support dashboards
-incident reports
-data lake
-```
-
-If the original log contains clinical metadata, the entire logging pipeline becomes a sensitive-data pipeline.
-
-Nobody planned that.
-
-It simply emerged.
-
-### Logging rule
-
-A good rule:
-
-```text
-Logs should explain system behavior without unnecessarily revealing participant identity.
-```
-
-If an engineer needs sensitive details for an exceptional case, make that access explicit, approved, and logged.
-
-Do not make it the default.
+Use IDs and manifests instead.
 
 ---
 
-## Example 4: job names and task names
+## Step 9: capture workflow provenance automatically
 
-Job names feel harmless.
+Provenance should not depend on a user remembering to write a README.
 
-They are not.
+Generate `provenance.json` for every workflow run.
 
-A platform may show job names in:
-
-- dashboards
-- billing views
-- metrics
-- admin tools
-- support queues
-- email notifications
-- audit logs
-- cloud provider consoles
-
-Bad job names:
-
-```text
-John_Smith_lung_cancer_alignment
-Mary_BRCA_failed_variant_calling
-PEDS_AML_relapse_batch_20260528
-```
-
-Better job names:
-
-```text
-alignment_anl_20260528_001
-variant_calling_anl_20260528_002
-qc_batch_prj_9f31_20260528
-```
-
-### What the engineer thought
-
-> The job name helps users and support quickly understand what is running.
-
-True.
-
-But the job name may appear outside the project boundary.
-
-### What the reviewer saw
-
-> Patient names, disease labels, or cohort details appear in operational systems that may not have the same access restrictions as the original project.
-
-A job name can become a metadata leak.
-
-### Workflow task names
-
-Task names are often static:
-
-```text
-align_bwa
-mark_duplicates
-call_variants
-annotate_vep
-```
-
-That is usually fine.
-
-But dynamic task names can become risky:
-
-```text
-align_John_Smith_tumor
-call_variants_MRN009381
-annotate_metastatic_lung_case
-```
-
-Prefer dynamic IDs over dynamic clinical descriptions:
-
-```text
-align_smp_7a92
-call_variants_anl_0042
-annotate_batch_003
-```
-
-### Notification subjects
-
-Email and Slack notifications are another leak path.
-
-Bad:
-
-```text
-Subject: Pipeline failed for Jane Doe metastatic tumor sample
-```
-
-Better:
-
-```text
-Subject: Pipeline failed for analysis anl_20260528_001
-```
-
-The body can link to a controlled workspace where authorized users can inspect details.
-
-Do not push sensitive context into notification systems unnecessarily.
-
----
-
-## Example 5: support access
-
-Support access is one of the hardest areas to design well.
-
-The naive version is simple:
-
-```text
-Customer reports issue.
-Support gets admin access.
-Support inspects everything.
-Support fixes issue.
-```
-
-This works in small teams.
-
-It does not scale well for regulated biomedical data.
-
-Support engineers may accidentally see:
-
-- patient identifiers
-- genomic files
-- phenotype tables
-- clinical notes
-- controlled-access datasets
-- data use restrictions
-- commercial research plans
-- unpublished study results
-
-### What the engineer thought
-
-> Support needs access to solve the ticket. If we slow this down, customers will suffer.
-
-That concern is real.
-
-Bad support processes create real pain.
-
-### What the reviewer saw
-
-> Support staff have broad, persistent access to sensitive projects without clear necessity, approval, time limit, or customer-visible audit evidence.
-
-The reviewer is not saying support should never help.
-
-They are asking why support gets more access than needed.
-
-### Better design: layered support
-
-The better design is not "support cannot help."
-
-The better design is layered support.
-
-### Layer 1: metadata-only debugging
-
-Many issues can be debugged without file contents.
-
-Support may need:
-
-- job state
-- exit code
-- resource usage
-- workflow version
-- app version
-- instance type
-- input file sizes
-- file object IDs
-- checksum status
-- dependency versions
-- truncated logs
-- error category
-
-Support does not always need:
-
-- raw FASTQ contents
-- BAM contents
-- VCF contents
-- patient names
-- phenotype table values
-- full project browsing access
-
-A metadata-only view might show:
-
-```text
-Analysis ID: anl_20260528_001
-Workflow: tumor-normal-v2.3.1
-Step: mark_duplicates
-Exit code: 137
-Instance type: mem1_ssd1_x4
-Peak memory: 31.8 GB / 32 GB
-Input file count: 2
-Input total size: 184 GB
-Last error: process killed by memory limit
-```
-
-That is enough to diagnose many problems.
-
-### Layer 2: redacted diagnostic bundle
-
-A redacted diagnostic bundle can include:
-
-- workflow version
-- tool versions
-- command template with sensitive values removed
-- resource usage
-- selected logs with identifiers redacted
-- input file metadata
-- checksums
-- environment summary
-- task retry history
-- error messages
-
-Example:
-
-```yaml
-workflow_id: wf_tumor_normal_v2
-workflow_version: 2.3.1
-analysis_id: anl_20260528_001
-failed_step: mark_duplicates
-container_digest: sha256:...
-reference: GRCh38_v1
-input_files:
-  - file_id: file_abc123
-    role: tumor_bam
-    size_gb: 92.4
-  - file_id: file_def456
-    role: normal_bam
-    size_gb: 89.1
-error:
-  category: out_of_memory
-  exit_code: 137
-  sensitive_values_redacted: true
-```
-
-This gives support useful information without exposing unnecessary data.
-
-### Layer 3: customer-approved temporary access
-
-Sometimes support needs deeper access.
-
-Make it explicit.
-
-A better workflow:
-
-```text
-1. Customer opens support request.
-2. Support explains what access is needed and why.
-3. Customer grants time-limited read-only access to a specific project or diagnostic bundle.
-4. Access is automatically revoked after a defined period.
-5. All support actions are logged.
-6. Customer can review access history.
-```
-
-This is much better than permanent hidden support access.
-
-### Layer 4: break-glass access
-
-For severe incidents, a break-glass path may be necessary.
-
-But break-glass access should be exceptional.
-
-It should have:
-
-- strong approval
-- reason capture
-- time limit
-- individual identity
-- MFA
-- detailed logging
-- post-access review
-- customer or internal notification where appropriate
-
-Bad break-glass:
-
-```text
-Shared admin password in a password manager.
-```
-
-Better break-glass:
-
-```text
-Privileged access request tied to a specific person, specific incident, specific duration, with automatic revocation and audit review.
-```
-
-### Support access design principle
-
-Support should be able to answer:
-
-```text
-What happened?
-```
-
-without automatically being able to answer:
-
-```text
-Who is the patient?
-What is their diagnosis?
-What variants do they have?
-Can I download their data?
-```
-
-Those are different privileges.
-
----
-
-## Example 6: notebooks and interactive workspaces
-
-Notebooks are powerful because they are flexible.
-
-That is also why they are risky.
-
-A notebook user can:
-
-- inspect data
-- print tables
-- download files
-- install packages
-- call external APIs
-- create plots
-- export HTML
-- copy data into hidden directories
-- save outputs with embedded metadata
-- accidentally commit notebooks to Git
-
-In research, this flexibility is useful.
-
-In regulated environments, it needs guardrails.
-
-### What the engineer thought
-
-> Researchers need freedom. If we lock down notebooks too much, they cannot do science.
-
-That is a fair concern.
-
-Notebooks are valuable because they allow exploration.
-
-### What the reviewer saw
-
-> The notebook environment can become an uncontrolled export path, package installation path, credential storage path, and reporting channel.
-
-The issue is not that notebooks are bad.
-
-The issue is that notebooks collapse many boundaries into one interface.
-
-### Common notebook leaks
-
-A notebook may contain:
-
-```python
-df.head()
-```
-
-And the output may show:
-
-```text
-patient_name    mrn       diagnosis       variant
-Jane Doe        928331    lung cancer     EGFR L858R
-Mary Smith      193884    breast cancer   BRCA1 frameshift
-```
-
-Then the notebook is exported to HTML and emailed.
-
-Or saved in a shared project.
-
-Or attached to a ticket.
-
-Or committed to GitHub.
-
-The leak did not come from a hacker.
-
-It came from normal work.
-
-### Safer notebook defaults
-
-A regulated notebook environment can help by defaulting to:
-
-- project-scoped access
-- no broad cross-project access
-- no long-lived credentials in notebook files
-- restricted internet egress for sensitive workspaces
-- controlled package installation
-- automatic session timeout
-- explicit download controls
-- notebook output clearing before sharing
-- warnings for sensitive columns
-- audit logs for file access and export
-- separate environments for raw data and aggregate results
-
-### Output hygiene
-
-Users should learn habits like:
-
-```python
-df[["sample_id", "qc_status", "coverage_mean"]].head()
-```
-
-instead of:
-
-```python
-df.head()
-```
-
-They should avoid printing full phenotype tables.
-
-They should avoid saving notebooks with raw outputs.
-
-They should clear outputs before sharing:
-
-```bash
-jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace analysis.ipynb
-```
-
-Or use tools that strip outputs automatically before commit.
-
-### Internet access
-
-Internet egress is convenient.
-
-It also creates a path for data exfiltration.
-
-A notebook with sensitive data and unrestricted internet access can upload data anywhere if credentials or code are misused.
-
-Some environments may allow:
-
-- package downloads from approved mirrors
-- access to internal artifact repositories
-- no arbitrary outbound network
-- explicit approval for external endpoints
-- logging of egress attempts
-
-This is not always necessary for every research workspace.
-
-But for controlled-access or clinical data, it becomes important.
-
-### Notebook design principle
-
-Notebooks should support exploration without becoming uncontrolled data export machines.
-
----
-
-## Example 7: temporary files and failed jobs
-
-Bioinformatics workflows create a lot of intermediate data.
-
-For example:
-
-- split FASTQs
-- aligned BAMs
-- sorted BAMs
-- duplicate-marked BAMs
-- recalibration tables
-- temporary VCFs
-- annotation intermediates
-- QC files
-- logs
-- caches
-- index files
-
-A workflow may fail halfway through.
-
-What happens to the working directory?
-
-Bad default:
-
-```text
-Preserve everything forever because debugging might need it.
-```
-
-This is easy for engineers.
-
-It is risky for governance.
-
-Those temporary directories may contain:
-
-- raw reads
-- identifiers
-- intermediate genomic data
-- copied manifests
-- command logs
-- unencrypted scratch files
-- partial reports
-
-### What the engineer thought
-
-> Failed jobs are hard to debug. Keeping the work directory helps us reproduce the problem.
-
-True.
-
-Deleting everything immediately can make debugging painful.
-
-### What the reviewer saw
-
-> Sensitive intermediate data is retained without clear purpose, ownership, access control, expiration, or retention policy.
-
-The question is not whether debugging matters.
-
-The question is whether the retained data is governed.
-
-### Debug retention tiers
-
-A platform can define tiers.
-
-#### Successful job
-
-Keep:
-
-- final outputs
-- workflow provenance
-- QC summary
-- selected logs
-- checksums
-
-Delete:
-
-- temporary working directory
-- raw copied intermediates
-- cache files not needed for reproducibility
-
-#### Failed job
-
-Keep temporarily:
-
-- error logs
-- resource usage
-- task metadata
-- selected diagnostic files
-- redacted command summary
-
-Delete or expire:
-
-- full working directory after defined period
-- large intermediate files unless explicitly preserved
-- sensitive temporary files not needed for debugging
-
-#### Clinical or validated workflow
-
-Keep according to policy:
-
-- final report
-- pipeline version
-- reference version
-- input checksums
-- QC metrics
-- approval records
-- audit trail
-
-Avoid casual retention of uncontrolled scratch files.
-
-### Retry systems
-
-Retries are useful.
-
-But retries can multiply data.
-
-A failed task retried five times may leave five working directories.
-
-A scatter-gather workflow may create thousands of temporary shards.
-
-A good platform asks:
-
-- Are failed attempts cleaned up?
-- Are logs deduplicated?
-- Are temporary files encrypted?
-- Are retry directories access-controlled?
-- Are retry artifacts included in retention policy?
-
-### Cache directories
-
-Workflow caches are tricky.
-
-Nextflow, Cromwell, Snakemake, and custom systems may keep cached outputs for resumability.
-
-Caching improves efficiency.
-
-But caches may contain sensitive data.
-
-Do not forget them in retention and access-control design.
-
-### Temporary file principle
-
-Temporary does not mean harmless.
-
-If it contains sensitive data, it needs governance even if nobody planned to keep it.
-
----
-
-## Example 8: controlled-access research datasets
-
-Controlled-access datasets are not ordinary files with a login screen.
-
-They come with rules.
-
-A researcher may be approved to use a dataset for a specific purpose.
-
-A dataset may prohibit:
-
-- commercial use
-- redistribution
-- re-identification
-- certain disease areas
-- ancestry analysis
-- combining with incompatible datasets
-- access by unapproved collaborators
-
-The platform should not treat this as a simple storage problem.
-
-### Bad design
-
-```text
-Approved user imports dbGaP dataset into a normal project.
-Project admin invites five collaborators.
-Any collaborator can download files.
-Dataset is copied into a second project for another analysis.
-Derived outputs are exported without review.
-No one tracks which approval covered which use.
-```
-
-This is easy to build.
-
-It is not a good controlled-access model.
-
-### What the engineer thought
-
-> The user is approved, so the platform only needs to give them access to the files.
-
-That is incomplete.
-
-Controlled access often depends on who, where, why, how long, and under what approved purpose.
-
-### What the reviewer saw
-
-> The system cannot prove that dataset access, dataset reuse, collaborator access, exports, and derived outputs remained within approved data use limitations.
-
-The issue is not only file permission.
-
-It is purpose-aware governance.
-
-### Better design
-
-```text
-Dataset access is tied to an approved research purpose.
-Only approved users can access the workspace.
-Access expires.
-Raw downloads may be restricted.
-Dataset use is logged.
-Derived outputs inherit restrictions.
-Export requires review or policy checks.
-Dataset mixing is tracked.
-```
-
-### Data use labels
-
-A platform can attach data use labels to datasets.
-
-Example:
-
-```yaml
-dataset_id: dset_0042
-access_type: controlled
-allowed_use:
-  - health_research
-  - disease_specific_cancer
-prohibited_use:
-  - commercial_use
-  - reidentification
-  - redistribution
-access_expiration: 2027-05-01
-download_policy: restricted
-derived_data_policy: inherits_parent_restrictions
-```
-
-This does not solve every governance problem automatically.
-
-But it gives the platform something to enforce and audit.
-
-### Dataset mixing
-
-Suppose two datasets have different restrictions.
-
-Dataset A:
-
-```yaml
-allowed_use:
-  - general_biomedical_research
-prohibited_use:
-  - reidentification
-```
-
-Dataset B:
-
-```yaml
-allowed_use:
-  - cancer_research
-prohibited_use:
-  - commercial_use
-  - redistribution
-```
-
-If a workflow combines A and B, the derived dataset may need the stricter combined restrictions.
-
-A simple rule:
-
-```text
-Derived data should not have fewer restrictions than its controlled inputs.
-```
-
-In practice, legal or governance teams may need to define exact policy.
-
-Engineers should at least preserve lineage so the question can be answered.
-
-### Controlled-access principle
-
-Access is not only about who you are.
-
-It is also about what you are allowed to do.
-
----
-
-## Example 9: workflow provenance
-
-Workflow provenance is often described as a reproducibility feature.
-
-It is also a compliance feature.
-
-If someone asks:
-
-```text
-How was this result produced?
-```
-
-A mature platform should answer.
-
-For each analysis, capture:
-
-- workflow name
-- workflow version
-- workflow source revision
-- container image digest
-- tool versions
-- reference genome
-- annotation database versions
-- input file IDs
-- input checksums
-- parameters
-- runtime environment
-- user identity
-- execution timestamp
-- output file IDs
-- output checksums
-- QC metrics
-- approval status if applicable
-
-### What the engineer thought
-
-> The result files are there. If we need to rerun, we can probably figure it out.
-
-Maybe.
-
-But "probably" is not evidence.
-
-### What the reviewer saw
-
-> The organization cannot prove which workflow, container, reference data, parameters, input checksums, and user actions produced a result.
-
-This matters for regulated research, clinical reporting, incident response, and reproducibility.
-
-### Weak provenance
-
-```text
-Ran the pipeline last month with the latest Docker image.
-```
-
-This is not enough.
-
-"Latest" is not reproducible.
-
-### Better provenance
-
-```yaml
-analysis_id: anl_20260528_001
-workflow:
-  name: tumor-normal
-  version: 2.3.1
-  git_commit: 9f31ab2
-runtime:
-  engine: nextflow
-  engine_version: 24.10.1
-container:
-  image: registry.example.com/tumor-normal@sha256:abc123...
-reference:
-  genome: GRCh38
-  build_id: ref_grch38_2024_01
-annotation:
-  vep_cache: v110
-inputs:
-  tumor_fastq_1:
-    file_id: file_001
-    checksum: sha256:...
-  tumor_fastq_2:
-    file_id: file_002
-    checksum: sha256:...
-parameters:
-  min_mapping_quality: 20
-  caller: mutect2
-outputs:
-  somatic_vcf:
-    file_id: file_991
-    checksum: sha256:...
-```
-
-This helps with:
-
-- debugging
-- reproducibility
-- validation
-- audits
-- incident investigation
-- customer trust
-- clinical traceability
-
-### Provenance and clinical use
-
-For clinical workflows, provenance becomes even more important.
-
-If a patient report was generated using annotation database version X, and version Y later changes interpretation, the lab must know what happened at the time.
-
-A report should not silently depend on whatever database is current today.
-
-### Provenance and support
-
-Support can debug faster when provenance is captured automatically.
-
-Instead of asking the customer:
-
-```text
-Which version did you run?
-Which reference did you use?
-What parameters did you pass?
-Which container was used?
-```
-
-The platform already knows.
-
-### Provenance principle
-
-If the result matters, the method needs a receipt.
-
----
-
-## Example 10: clinical pipeline change control
-
-Research pipelines change often.
-
-Clinical pipelines should change carefully.
-
-Imagine a variant-calling pipeline used for clinical reporting.
-
-A developer updates a container:
-
-```text
-bwa 0.7.17 -> bwa 0.7.18
-samtools 1.15 -> samtools 1.20
-mutect2 4.3 -> mutect2 4.5
-VEP cache 105 -> VEP cache 110
-```
-
-The pipeline still runs.
-
-But does it produce the same results?
-
-Maybe.
-
-Maybe not.
-
-Differences may appear in:
-
-- alignment
-- duplicate marking
-- variant calling
-- filtering
-- annotation
-- pathogenicity classification
-- report text
-- QC metrics
-
-In research, this may be acceptable if documented.
-
-In clinical reporting, it may require validation.
-
-### What the engineer thought
-
-> The pipeline still passes. The dependency update fixed bugs and improved performance.
-
-Good.
-
-But clinical correctness is not only about whether the job exits with code 0.
-
-### What the reviewer saw
-
-> A clinically meaningful system changed without documented impact analysis, validation evidence, release approval, or rollback plan.
-
-That is the difference between research execution and clinical change control.
-
-### Bad change process
-
-```text
-Update Dockerfile.
-Push latest tag.
-Production uses latest automatically.
-No validation.
-No release notes.
-No rollback plan.
-```
-
-### Better change process
-
-```text
-1. Create candidate release.
-2. Pin all dependency versions.
-3. Run validation dataset.
-4. Compare outputs to previous approved version.
-5. Review differences.
-6. Update documentation.
-7. Approve release.
-8. Deploy with versioned tag.
-9. Preserve old version for reproducibility.
-10. Monitor first production runs.
-```
-
-### Output comparison
-
-A practical comparison might include:
-
-- number of reads aligned
-- coverage metrics
-- variant counts
-- clinically reportable variants
-- annotation differences
-- QC pass/fail changes
-- runtime changes
-- memory changes
-- known positive controls
-- known negative controls
-
-Example comparison table:
-
-| Metric | Previous version | Candidate version | Acceptable? |
-|---|---:|---:|---|
-| Mean coverage | 96.2x | 96.1x | Yes |
-| SNV count | 4,218 | 4,220 | Review |
-| Indel count | 381 | 379 | Review |
-| Reportable variants | 3 | 3 | Yes |
-| QC status | Pass | Pass | Yes |
-| Runtime | 7h 12m | 6h 48m | Yes |
-
-The point is not that every difference is bad.
-
-The point is that differences should be understood.
-
-### Realistic failure mode: annotation drift
-
-A clinical lab may update an annotation source.
-
-The variant caller produces the same VCF.
-
-But the final report changes because interpretation databases changed.
-
-That is still a pipeline change from the user's perspective.
-
-Clinical workflows need to track not only executable code, but also reference and annotation data.
-
-### Change control principle
-
-In clinical bioinformatics, "the pipeline still runs" is not the same as "the pipeline is still validated."
-
----
-
-## Example 11: service accounts and automation
-
-Service accounts are necessary.
-
-They run workflows, move files, refresh metadata, generate reports, and connect systems.
-
-They are also dangerous when too broad.
-
-Bad pattern:
-
-```text
-svc-bioinformatics-admin has access to every project, every bucket, every dataset, and every environment.
-```
-
-This is convenient until something goes wrong.
-
-If the credential leaks, the blast radius is huge.
-
-### What the engineer thought
-
-> Automation needs broad access because it handles many workflows. It is simpler to maintain one powerful service account.
-
-That is true in the short term.
-
-It is dangerous in the long term.
-
-### What the reviewer saw
-
-> A non-human identity has excessive privilege, unclear ownership, unclear review, and large blast radius.
-
-Service accounts need the same seriousness as human accounts.
-
-Sometimes more.
-
-### Better pattern
-
-Service accounts are scoped by environment, project, function, and data class.
-
-Examples:
-
-```text
-svc-prod-workflow-runner
-svc-prod-metadata-reader
-svc-prod-report-writer
-svc-research-importer
-svc-controlled-dataset-exporter
-```
-
-Each account should have only the permissions it needs.
-
-### Service account ownership
-
-Every service account should have:
-
-- owner
-- purpose
-- environment
-- permissions
-- credential rotation policy
-- last-used tracking
-- expiration or review date
-- incident contact
-
-Without ownership, service accounts become ghosts.
-
-### Avoid user impersonation confusion
-
-Automation should be clear about whether an action was:
-
-- performed by a user
-- performed by a service on behalf of a user
-- performed by a scheduled system job
-- performed by support
-- performed by an admin
-
-Audit logs should show this distinction.
-
-Example:
+Minimum schema:
 
 ```json
 {
-  "event": "file_exported",
-  "actor_type": "service_account",
-  "actor_id": "svc-report-writer",
-  "on_behalf_of": "user_0042",
+  "analysis_id": "anl_20260608_001",
   "project_id": "prj_9f31",
-  "file_id": "file_7788",
-  "timestamp": "2026-05-28T09:41:12Z"
+  "workflow": {
+    "name": "tumor-normal",
+    "version": "2.3.1",
+    "source_revision": "9f31ab2"
+  },
+  "engine": {
+    "name": "nextflow",
+    "version": "24.10.1"
+  },
+  "containers": [
+    {
+      "name": "variant-caller",
+      "image": "registry.example.com/variant-caller",
+      "digest": "sha256:abc123"
+    }
+  ],
+  "references": [
+    {
+      "name": "GRCh38",
+      "reference_id": "ref_grch38_2024_01",
+      "checksum": "sha256:..."
+    }
+  ],
+  "inputs": [
+    {
+      "role": "tumor_fastq_1",
+      "file_id": "fil_001",
+      "checksum": "sha256:..."
+    }
+  ],
+  "parameters": {
+    "min_mapping_quality": 20
+  },
+  "outputs": [
+    {
+      "role": "somatic_vcf",
+      "file_id": "fil_991",
+      "checksum": "sha256:..."
+    }
+  ],
+  "created_by": "usr_0042",
+  "created_at": "2026-06-08T10:12:00Z"
 }
 ```
 
-This is much better than:
-
-```text
-file exported by system
-```
-
-### Long-lived credentials
-
-A common notebook anti-pattern:
-
-```python
-AWS_ACCESS_KEY_ID = "..."
-AWS_SECRET_ACCESS_KEY = "..."
-```
-
-Or:
+Generate checksums:
 
 ```bash
-export TOKEN=...
+sha256sum output.vcf.gz > output.vcf.gz.sha256
 ```
 
-Then the notebook is copied, shared, committed, or forgotten.
-
-Prefer:
-
-- short-lived tokens
-- workload identity
-- managed identities
-- scoped credentials
-- secret managers
-- automatic rotation
-- no secrets stored in notebooks
-
-### Service account principle
-
-Automation should reduce human error, not create invisible superusers.
-
----
-
-## Example 12: exports and downloads
-
-Downloads are a major governance boundary.
-
-Viewing data inside a controlled workspace is different from exporting it to a laptop.
-
-Once downloaded, data may leave platform controls.
-
-It may be copied to:
-
-- local disk
-- external drive
-- personal cloud storage
-- email attachment
-- unmanaged server
-- another region
-- another institution
-
-A platform should treat download/export as a meaningful event.
-
-### What the engineer thought
-
-> Users own their project data. If they have access, they should be able to download it.
-
-Sometimes yes.
-
-But not always.
-
-Access to analyze data is not always the same as permission to export raw data.
-
-### What the reviewer saw
-
-> The platform does not distinguish between viewing, computing, downloading, redistributing, and exporting controlled data.
-
-Those are different actions with different risks.
-
-### Bad pattern
-
-```text
-Any project member can download all files by default.
-No approval.
-No reason required.
-No audit review.
-```
-
-### Better pattern
-
-```text
-Download permissions are separate from view/run permissions.
-Large exports require confirmation or approval.
-Controlled datasets may disable raw downloads.
-All exports are logged.
-Export reason is captured for sensitive data.
-```
-
-### Role separation
-
-Example roles:
-
-| Role | Can view metadata | Can run workflows | Can download raw data | Can manage users |
-|---|---:|---:|---:|---:|
-| Viewer | Yes | No | No | No |
-| Analyst | Yes | Yes | No | No |
-| Data Exporter | Yes | Yes | Yes | No |
-| Project Admin | Yes | Yes | Optional | Yes |
-| Support Observer | Limited | No | No | No |
-
-This is more nuanced than:
-
-```text
-read / write / admin
-```
-
-### Export packaging
-
-For approved exports, generate a package with:
-
-- file manifest
-- checksums
-- export timestamp
-- exporting user
-- project ID
-- dataset restrictions
-- destination if known
-- approval ID if applicable
-
-Example:
-
-```yaml
-export_id: exp_20260528_001
-project_id: prj_9f31
-requested_by: user_0042
-approved_by: user_0099
-approval_id: appr_7788
-files:
-  - file_id: file_001
-    name: sample_smp_001.vcf.gz
-    checksum: sha256:...
-  - file_id: file_002
-    name: sample_smp_002.vcf.gz
-    checksum: sha256:...
-restrictions:
-  - no_redistribution
-  - disease_specific_research_only
-created_at: 2026-05-28T10:12:11Z
-```
-
-This helps downstream accountability.
-
-### Aggregated results
-
-Sometimes raw data should stay controlled, but aggregate results can leave.
-
-For example:
-
-- summary statistics
-- QC summaries
-- cohort-level counts
-- de-identified plots
-- model metrics
-
-But even aggregate data can be sensitive for small cohorts or rare diseases.
-
-A table like this may still be revealing:
-
-```text
-site,disease,count
-site_03,ultra_rare_childhood_disorder,1
-```
-
-Export review should consider small-cell counts and re-identification risk.
-
-### Export principle
-
-Running analysis inside a platform and removing data from the platform are different risk events.
-
-Design them differently.
-
----
-
-## Example 13: cross-region data movement
-
-Data residency problems often hide in secondary systems.
-
-A team may say:
-
-```text
-The genomic data stays in the EU.
-```
-
-But then:
-
-- logs go to a US logging provider
-- support tickets contain screenshots
-- backups replicate globally
-- metrics include project names
-- crash reports include command-line arguments
-- file metadata goes to a global search index
-- developers copy test data into another region
-
-The raw FASTQ may stay in Frankfurt.
-
-The sensitive metadata may not.
-
-### What the engineer thought
-
-> Storage and compute are in the right region, so the system is region-compliant.
-
-That is only part of the picture.
-
-### What the reviewer saw
-
-> Secondary data flows may leave the approved region, including logs, tickets, monitoring data, backups, support artifacts, and telemetry.
-
-Data residency is not only about primary files.
-
-It is about the whole data path.
-
-### Data flow inventory
-
-For each data class, know where it goes.
-
-| Data type | Example | Region concern |
-|---|---|---|
-| Raw data | FASTQ, BAM, CRAM, VCF | High |
-| Phenotype data | diagnosis, age, medication | High |
-| Metadata | sample ID, project name, file path | Medium to high |
-| Logs | command output, errors | Medium to high |
-| Metrics | runtime, memory, project labels | Low to medium |
-| Tickets | screenshots, user descriptions | Medium to high |
-| Backups | database snapshots | High |
-| Telemetry | crash reports | Depends on content |
-
-### Bad design
-
-```text
-Compute and storage are regional.
-Everything else is global.
-```
-
-This is common.
-
-It is also incomplete.
-
-### Better design
-
-```text
-Primary data, metadata, logs, backups, and support artifacts follow documented regional controls.
-Telemetry is minimized and redacted.
-Cross-region transfer requires approval.
-```
-
-### Hidden transfer example
-
-A workflow fails and sends a crash report:
-
-```json
-{
-  "error": "File not found",
-  "command": "run --input /data/Nguyen_Van_A_lung_tumor_R1.fastq.gz",
-  "project": "EU_Lung_Cancer_Study",
-  "region": "eu-west-1"
-}
-```
-
-If that crash report goes to a US SaaS service, you may have a problem.
-
-Better crash report:
-
-```json
-{
-  "error_code": "INPUT_FILE_NOT_FOUND",
-  "workflow": "tumor-normal-v2.3.1",
-  "analysis_id": "anl_20260528_001",
-  "region": "eu-west-1",
-  "sensitive_values_redacted": true
-}
-```
-
-### Cross-region principle
-
-Do not only track where files live.
-
-Track where metadata, logs, backups, tickets, and telemetry go.
-
----
-
-## Example 14: container and dependency governance
-
-Bioinformatics depends heavily on open-source tools.
-
-That is good.
-
-It also creates supply-chain risk.
-
-A workflow may use:
-
-- Docker images from public registries
-- Conda packages
-- PyPI packages
-- Bioconductor packages
-- GitHub repositories
-- reference genomes
-- annotation databases
-- shell scripts
-- workflow modules
-
-A typical research command:
+Capture container digests:
 
 ```bash
-docker run someuser/genomics-tool:latest run-analysis
+docker inspect --format='{{index .RepoDigests 0}}' registry.example.com/tool:1.2.3
 ```
 
-This is convenient.
+For Nextflow, capture run metadata:
 
-It is risky in regulated or controlled environments.
+```bash
+nextflow run main.nf \
+  -with-report report.html \
+  -with-trace trace.tsv \
+  -with-timeline timeline.html \
+  -with-dag dag.html
+```
 
-### What the engineer thought
-
-> This public image works, and it saves time. The science team needs results quickly.
-
-That can be reasonable for early exploration.
-
-But regulated or controlled workflows need stronger evidence.
-
-### What the reviewer saw
-
-> The platform runs unreviewed third-party code against sensitive data, without clear provenance, vulnerability review, reproducibility, or network restrictions.
-
-The problem is not open source.
-
-The problem is uncontrolled execution.
-
-### Problems
-
-- `latest` changes over time
-- image owner may be unknown
-- vulnerabilities may be present
-- image may include telemetry
-- script may download extra code at runtime
-- output may not be reproducible
-- container may have broad network access
-- dependency provenance may be unclear
-
-### Better container pattern
-
-Use pinned digests:
+Then store those files next to `provenance.json`.
 
 ```text
-registry.example.com/bwa@sha256:2f1c...
-registry.example.com/gatk@sha256:8a9e...
-registry.example.com/vep@sha256:dd42...
+analysis/anl_20260608_001/
+  outputs/
+  logs/
+  provenance.json
+  trace.tsv
+  report.html
+  timeline.html
 ```
 
-Maintain an approved registry.
+The goal:
 
-Scan images.
+```text
+Every important result should have a receipt.
+```
 
-Record image digests in provenance.
+---
 
-Restrict network egress when appropriate.
+## Step 10: pin containers, references, and dependencies
 
-Mirror critical dependencies internally.
-
-### Conda and package versions
+Do not use `latest` for important workflows.
 
 Bad:
 
+```bash
+docker run someuser/genomics-tool:latest
+```
+
+Better:
+
+```bash
+docker run registry.example.com/genomics-tool@sha256:2f1c...
+```
+
+Bad Conda environment:
+
 ```yaml
+channels:
+  - bioconda
+  - conda-forge
 dependencies:
   - bwa
   - samtools
-  - gatk
+  - gatk4
 ```
 
 Better:
 
 ```yaml
+channels:
+  - bioconda
+  - conda-forge
 dependencies:
   - bwa=0.7.17
   - samtools=1.20
   - gatk4=4.5.0.0
 ```
 
-Even better, use a lockfile when possible.
+Even better, use a lockfile where possible.
 
-For clinical or validated workflows, dependency updates should trigger review.
+For references, do not download random files at runtime.
 
-### Runtime downloads
-
-Many scripts download reference files at runtime:
+Bad:
 
 ```bash
 wget https://example.com/reference.fa
 ```
 
-This can be risky.
-
-Questions:
-
-- Is the URL stable?
-- Is the file versioned?
-- Is the checksum verified?
-- Is the source approved?
-- Is internet access allowed?
-- Will the file still exist later?
-- Could the file change silently?
-
 Better:
 
-```bash
-REF=/refs/grch38/ref_grch38_2024_01.fa
-sha256sum -c ref_grch38_2024_01.sha256
+```text
+/refs/ref_grch38_2024_01/reference.fa
+/refs/ref_grch38_2024_01/reference.fa.sha256
 ```
 
-### Container principle
+Verify before use:
 
-A container is part of the scientific and security boundary.
+```bash
+sha256sum -c /refs/ref_grch38_2024_01/reference.fa.sha256
+```
 
-Treat it as evidence, not just packaging.
+Reference registry table:
+
+```sql
+create table reference_assets (
+    reference_id text primary key,
+    name text not null,
+    version text not null,
+    uri text not null,
+    checksum text not null,
+    approved_for text not null,
+    created_at timestamptz not null default now()
+);
+```
+
+Example:
+
+```sql
+insert into reference_assets
+(reference_id, name, version, uri, checksum, approved_for)
+values
+('ref_grch38_2024_01', 'GRCh38', '2024_01', 's3://refs/grch38/2024_01/reference.fa', 'sha256:...', 'research');
+```
+
+For clinical workflows, dependency updates should go through change control.
+
+For research workflows, at least record what was used.
 
 ---
 
-## Example 15: audit logs that are actually useful
+## Step 11: build redacted diagnostic bundles for support
 
-Many systems technically have audit logs.
+Support should not need raw data by default.
 
-Fewer have useful audit logs.
+Build a diagnostic bundle generator.
 
-A weak audit log says:
+Bundle contents:
 
 ```text
-user performed action
+analysis ID
+project ID
+workflow name and version
+failed step
+exit code
+resource usage
+instance type
+container digest
+reference ID
+input file sizes
+input file checksums
+sanitized error message
+truncated sanitized logs
+retry history
 ```
 
-A useful audit log says:
+Example bundle:
+
+```yaml
+diagnostic_bundle_id: diag_20260608_001
+analysis_id: anl_20260608_001
+project_id: prj_9f31
+workflow:
+  name: tumor-normal
+  version: 2.3.1
+failed_step: mark_duplicates
+runtime:
+  instance_type: mem1_ssd1_x4
+  requested_memory_gb: 32
+  peak_memory_gb: 31.8
+  exit_code: 137
+inputs:
+  file_count: 2
+  total_size_gb: 184.2
+  file_ids:
+    - fil_001
+    - fil_002
+error:
+  category: out_of_memory
+  message: "process killed by memory limit"
+redaction:
+  sensitive_values_redacted: true
+  raw_file_contents_included: false
+created_at: 2026-06-08T10:30:00Z
+```
+
+A tiny generator:
+
+```python
+import json
+from datetime import datetime, timezone
+
+
+def make_diagnostic_bundle(run: dict) -> dict:
+    return {
+        "diagnostic_bundle_id": run["diagnostic_bundle_id"],
+        "analysis_id": run["analysis_id"],
+        "project_id": run["project_id"],
+        "workflow": {
+            "name": run["workflow_name"],
+            "version": run["workflow_version"],
+        },
+        "failed_step": run.get("failed_step"),
+        "runtime": {
+            "instance_type": run.get("instance_type"),
+            "requested_memory_gb": run.get("requested_memory_gb"),
+            "peak_memory_gb": run.get("peak_memory_gb"),
+            "exit_code": run.get("exit_code"),
+        },
+        "inputs": {
+            "file_count": len(run.get("input_files", [])),
+            "total_size_gb": sum(f["size_gb"] for f in run.get("input_files", [])),
+            "file_ids": [f["file_id"] for f in run.get("input_files", [])],
+        },
+        "error": {
+            "category": run.get("error_category"),
+            "message": run.get("safe_error_message"),
+        },
+        "redaction": {
+            "sensitive_values_redacted": True,
+            "raw_file_contents_included": False,
+        },
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+bundle = make_diagnostic_bundle(run_metadata)
+print(json.dumps(bundle, indent=2))
+```
+
+Support workflow:
+
+```text
+1. Customer reports failure.
+2. Platform generates diagnostic bundle.
+3. Support reviews bundle first.
+4. If insufficient, support requests temporary access.
+5. Temporary access is approved, scoped, logged, and revoked.
+```
+
+This reduces unnecessary exposure and speeds up common support cases.
+
+---
+
+## Step 12: implement temporary support access
+
+Do not give support permanent broad access.
+
+Create support grants.
+
+SQL table:
+
+```sql
+create table support_access_grants (
+    grant_id text primary key,
+    project_id text not null,
+    support_user_id text not null,
+    requested_by text not null,
+    approved_by text not null,
+    reason text not null,
+    access_level text not null check (access_level in ('diagnostics', 'metadata_read', 'log_read', 'read_only')),
+    starts_at timestamptz not null,
+    expires_at timestamptz not null,
+    revoked_at timestamptz,
+    created_at timestamptz not null default now()
+);
+```
+
+Authorization check:
+
+```sql
+select 1
+from support_access_grants
+where project_id = :project_id
+  and support_user_id = :user_id
+  and starts_at <= now()
+  and expires_at > now()
+  and revoked_at is null;
+```
+
+Access request record:
+
+```yaml
+grant_id: grant_20260608_001
+project_id: prj_9f31
+support_user_id: usr_support_003
+requested_by: usr_support_003
+approved_by: usr_customer_admin_001
+reason: "Investigate failed tumor-normal workflow anl_20260608_001"
+access_level: log_read
+starts_at: 2026-06-08T10:00:00Z
+expires_at: 2026-06-09T10:00:00Z
+```
+
+Log every support action:
 
 ```json
 {
-  "event": "project_permission_changed",
-  "actor_id": "user_123",
-  "actor_role": "project_admin",
-  "target_user": "user_789",
+  "event_type": "support_log_viewed",
+  "actor_id": "usr_support_003",
   "project_id": "prj_9f31",
-  "permission_before": "viewer",
-  "permission_after": "data_exporter",
-  "timestamp": "2026-05-28T11:22:03Z",
-  "source_ip": "203.0.113.42",
-  "request_id": "req_abc123"
+  "resource_type": "workflow_run",
+  "resource_id": "anl_20260608_001",
+  "action": "workflow.view_logs",
+  "result": "success",
+  "details": {
+    "grant_id": "grant_20260608_001"
+  }
 }
 ```
 
-Audit logs should help answer real questions:
+Support access should answer:
 
-- Who accessed the dataset?
-- Who downloaded files?
-- Who changed permissions?
-- Who created a token?
-- Who used the token?
-- Who approved support access?
-- Who exported data?
-- Which workflow generated this output?
-- Was access still valid at the time?
-- Did data leave the approved region?
-
-### What the engineer thought
-
-> We already have logs. The system records API calls and errors.
-
-That may be useful operationally.
-
-It may not be enough for governance.
-
-### What the reviewer saw
-
-> The logs do not clearly reconstruct security-relevant actions, approval context, actor identity, target resource, or before-and-after state.
-
-Auditability is not the same as having a pile of logs.
-
-### Events worth logging
-
-For bioinformatics platforms, log:
-
-- login
-- failed login
-- MFA change
-- token creation
-- token use
-- project creation
-- permission change
-- file upload
-- file download
-- file preview
-- workflow run
-- workflow cancellation
-- output creation
-- dataset import
-- dataset export
-- support access request
-- support access grant
-- admin action
-- notebook session start
-- notebook file download
-- service account action
-- deletion request
-- deletion completion
-
-### Audit log quality
-
-Useful audit logs should be:
-
-- timestamped
-- tied to stable actor identity
-- tied to target resource
-- structured
-- searchable
-- protected from tampering
-- retained according to policy
-- not overloaded with unnecessary sensitive values
-- exportable for authorized review
-
-### Do not log secrets
-
-Audit logs should not contain:
-
-- passwords
-- API tokens
-- full secret values
-- private keys
-- unnecessary PHI
-- raw genomic content
-
-Logging everything is not the goal.
-
-Logging the right events is the goal.
-
-### Audit principle
-
-An audit log should let you reconstruct important actions without becoming a new uncontrolled sensitive-data repository.
+```text
+Who approved this?
+Why was it needed?
+What could support see?
+When did access expire?
+What did support actually do?
+```
 
 ---
 
-## Example 16: billing, cost reports, and operational exports
+## Step 13: make exports explicit events
 
-Compliance problems often appear in boring business operations.
+A download is not just a file transfer.
 
-A platform may protect project data correctly, but then export cost reports like this:
+It is a governance event.
 
-```csv
-project_name,owner,total_storage_tb,total_compute_usd
-john_smith_lung_cancer,alice@example.org,18.2,2401.77
-pediatric_aml_relapse_batch,bob@example.org,44.9,9210.12
-rare_disease_family_trio,carol@example.org,7.8,1312.90
+Create an export object.
+
+```sql
+create table exports (
+    export_id text primary key,
+    project_id text not null,
+    requested_by text not null,
+    approved_by text,
+    status text not null check (status in ('requested', 'approved', 'rejected', 'created', 'downloaded', 'expired')),
+    reason text,
+    destination text,
+    created_at timestamptz not null default now(),
+    approved_at timestamptz,
+    expires_at timestamptz
+);
+
+create table export_files (
+    export_id text not null references exports(export_id),
+    file_id text not null,
+    checksum text not null,
+    size_bytes bigint not null,
+    primary key (export_id, file_id)
+);
 ```
 
-No raw data left the platform.
-
-But sensitive context did.
-
-Billing exports, usage reports, and project summaries often travel to people who should not see clinical or study-level details.
-
-They may go to:
-
-- finance
-- sales
-- customer success
-- executives
-- cloud cost tooling
-- spreadsheets
-- BI dashboards
-- external consultants
-
-### What the engineer thought
-
-> Finance needs a cost report. Project names are the easiest way to make the report understandable.
-
-That is practical.
-
-But project names can carry sensitive meaning.
-
-### What the reviewer saw
-
-> Sensitive study context is exposed to operational teams through billing metadata, outside the original access model.
-
-The issue is not the report itself.
-
-The issue is the content and audience.
-
-### Better design
-
-Use internal project IDs in broad operational reports:
-
-```csv
-project_id,workspace_type,total_storage_tb,total_compute_usd
-prj_9f31,controlled_research,18.2,2401.77
-prj_7aa2,clinical,44.9,9210.12
-prj_1c90,research,7.8,1312.90
-```
-
-Keep the mapping from project ID to full project name in a restricted metadata system.
-
-For wider audiences, aggregate:
-
-```csv
-customer_id,workspace_type,total_storage_tb,total_compute_usd
-cust_001,controlled_research,81.4,18540.31
-cust_002,research,21.8,4291.84
-```
-
-### Cost report principle
-
-Operational reporting should not become a shortcut around data governance.
-
----
-
-## Example 17: support tickets, screenshots, and chat messages
-
-Support systems often become shadow data stores.
-
-A customer reports a workflow failure and attaches:
-
-```text
-sample sheet
-error log
-screenshot
-small VCF
-notebook export
-```
-
-The support engineer replies in Slack:
-
-```text
-Looks like sample PEDS_0042 from the AML relapse cohort failed at mark_duplicates.
-```
-
-Now sensitive context exists in:
-
-- ticketing system
-- attachments
-- email notifications
-- Slack or Teams
-- search indexes
-- support analytics
-- AI ticket summarization tools
-- exports used for quality review
-
-### What the engineer thought
-
-> We need context to help the customer. Screenshots and attachments are faster than formal diagnostic packages.
-
-True.
-
-But support artifacts are data copies.
-
-### What the reviewer saw
-
-> Sensitive project details and files are now stored in systems that may have different access controls, retention policies, regions, and subprocessors than the analysis platform.
-
-This is why mature organizations build support workflows for regulated data.
-
-### Better design
-
-Use a redacted diagnostic bundle:
+Export manifest:
 
 ```yaml
-ticket_bundle_id: diag_20260608_001
-analysis_id: anl_0042
-workflow: tumor-normal-v2.3.1
-failed_step: mark_duplicates
-error_category: out_of_memory
-resource_summary:
-  requested_memory_gb: 32
-  peak_memory_gb: 31.8
-inputs:
-  total_size_gb: 184
-  file_count: 2
-sensitive_values_redacted: true
+export_id: exp_20260608_001
+project_id: prj_9f31
+requested_by: usr_0042
+approved_by: usr_0099
+reason: "Transfer approved aggregate results to collaborator"
+files:
+  - file_id: fil_001
+    path: outputs/cohort_qc_summary.csv
+    checksum: sha256:...
+    size_bytes: 120938
+restrictions:
+  - no_redistribution
+  - approved_project_only
+created_at: 2026-06-08T11:00:00Z
+expires_at: 2026-06-15T11:00:00Z
 ```
 
-Then instruct users not to attach raw patient files or unredacted manifests unless specifically requested through an approved secure channel.
+Export flow:
 
-### Screenshot hygiene
+```text
+1. User requests export.
+2. System checks data classification.
+3. System checks user permission.
+4. System checks dataset restrictions.
+5. Approval is required if policy says so.
+6. Export package is created.
+7. Manifest and checksums are generated.
+8. Download is logged.
+9. Export expires.
+```
 
-Screenshots should avoid:
+Pseudo-code:
 
-- patient names
-- MRNs
-- full file paths
-- rare disease labels
-- small-cohort identifiers
-- access tokens
-- signed URLs
-- API keys
-- command lines with sensitive arguments
+```python
+def request_export(user, project_id, file_ids, reason):
+    for file_id in file_ids:
+        policy = get_file_policy(file_id)
+        if policy.export_policy == "raw_download_disabled":
+            raise PermissionError("raw download disabled for this dataset")
+        if policy.export_policy == "review_required":
+            status = "requested"
+        else:
+            status = "approved"
 
-When screenshots are unavoidable, crop aggressively.
+    export_id = create_export(project_id, user.id, file_ids, reason, status)
+    audit("export_requested", user, project_id, {"export_id": export_id})
+    return export_id
+```
 
-### Support ticket principle
-
-A support ticket should describe the failure, not become a copy of the dataset.
+This is much better than direct object storage downloads with no context.
 
 ---
 
-## Example 18: deletion requests and hidden copies
+## Step 14: tag data with retention rules
 
-Deletion sounds simple.
+Retention should not be tribal knowledge.
 
-A customer asks:
+Add retention labels to data objects.
 
-```text
-Please delete this dataset.
+```sql
+create table data_objects (
+    file_id text primary key,
+    project_id text not null,
+    data_class text not null,
+    uri text not null,
+    checksum text,
+    size_bytes bigint,
+    retention_policy text not null,
+    delete_after timestamptz,
+    legal_hold boolean not null default false,
+    created_at timestamptz not null default now()
+);
 ```
 
-An engineer deletes:
-
-```text
-s3://bucket/sample.bam
-```
-
-Done?
-
-Not necessarily.
-
-Copies may still exist in:
-
-- object version history
-- backups
-- workflow caches
-- failed-job directories
-- notebook snapshots
-- local downloads
-- support bundles
-- search indexes
-- derived outputs
-- temporary disks
-- analytics exports
-
-Deletion is usually a graph problem, not a file problem.
-
-### What the engineer thought
-
-> I deleted the file from primary storage.
-
-That may be necessary.
-
-It may not be sufficient.
-
-### What the reviewer saw
-
-> The organization cannot explain where copies, derivatives, caches, logs, backups, and support artifacts remain after deletion.
-
-The hard part is not deleting one object.
-
-The hard part is knowing the data lineage.
-
-### Better deletion model
-
-A deletion workflow should know:
-
-- primary file IDs
-- derived outputs
-- workflow cache entries
-- notebook copies
-- export history
-- support bundles
-- backup expiration behavior
-- metadata records
-- audit records
-- legal or scientific retention exceptions
-
-A deletion record might look like:
+Example policies:
 
 ```yaml
-deletion_request_id: del_20260608_001
-requested_by: user_0042
-approved_by: privacy_officer_001
-scope:
-  dataset_id: dset_7788
-primary_objects:
-  status: deleted
-derived_outputs:
-  status: deleted
-workflow_cache:
-  status: expired
-notebook_snapshots:
-  status: reviewed
-support_bundles:
-  status: none_found
-backups:
-  status: expires_after_30_days
-audit_log:
-  status: retained
-completed_at: 2026-06-08T11:40:00Z
+retention_policies:
+  raw_research_data:
+    delete_after: project_end_plus_90_days
+  workflow_temp:
+    delete_after: 14_days
+  failed_job_workdir:
+    delete_after: 7_days
+  audit_logs:
+    delete_after: 6_years
+  clinical_report:
+    delete_after: clinical_record_policy
+  diagnostic_bundle:
+    delete_after: 30_days
 ```
 
-Audit logs are often retained even when data is deleted, because they are evidence of what happened.
+Apply labels during workflow output registration.
 
-But they should not contain unnecessary sensitive values.
+```python
+def register_output(file_id, project_id, uri, data_class):
+    policy = retention_policy_for(data_class)
+    insert_data_object(
+        file_id=file_id,
+        project_id=project_id,
+        uri=uri,
+        data_class=data_class,
+        retention_policy=policy.name,
+        delete_after=policy.delete_after(),
+    )
+```
 
-### Deletion principle
+Cleanup job:
 
-You cannot delete responsibly unless you know where the data went.
+```sql
+select file_id, uri
+from data_objects
+where delete_after < now()
+  and legal_hold = false;
+```
 
----
+Then delete and audit:
 
-## Design patterns for safer bioinformatics platforms
+```json
+{
+  "event_type": "retention_delete_completed",
+  "actor_type": "service_account",
+  "actor_id": "svc-retention-cleaner",
+  "resource_type": "file",
+  "resource_id": "fil_001",
+  "action": "file.delete_retention",
+  "result": "success"
+}
+```
 
-The examples above point toward reusable patterns.
+Retention is especially important for:
 
-### Pattern 1: Separate identity from analysis
+```text
+workflow caches
+failed-job directories
+notebook snapshots
+support bundles
+exports
+temporary disks
+```
 
-Do not pass patient identity through computational systems unless needed.
-
-Use internal IDs for pipelines.
-
-Keep identity mapping restricted.
-
-### Pattern 2: Treat metadata as sensitive
-
-Do not protect only FASTQ, BAM, CRAM, and VCF files.
-
-Also think about:
-
-- sample names
-- project names
-- file paths
-- disease labels
-- collection dates
-- logs
-- notebook outputs
-- tickets
-- screenshots
-- billing exports
-- metrics labels
-
-### Pattern 3: Make access purpose-aware
-
-For controlled research data, access depends on approved use.
-
-Design for:
-
-- dataset restrictions
-- project purpose
-- access expiration
-- derived-data restrictions
-- export rules
-
-### Pattern 4: Make support access layered
-
-Start with metadata.
-
-Then redacted bundles.
-
-Then temporary approved access.
-
-Then break-glass only for exceptional cases.
-
-### Pattern 5: Capture provenance automatically
-
-Do not rely on users to remember versions.
-
-Capture:
-
-- workflow version
-- container digest
-- parameters
-- inputs
-- outputs
-- checksums
-- references
-- execution environment
-
-### Pattern 6: Use safer defaults
-
-Defaults matter.
-
-Good defaults:
-
-- no patient names in paths
-- logs redacted by default
-- downloads separated from view access
-- access expires
-- containers pinned
-- temporary files cleaned up
-- audit events structured
-- service accounts scoped
-
-### Pattern 7: Design for deletion and retention
-
-Know where data lives.
-
-Include:
-
-- primary storage
-- derived outputs
-- caches
-- logs
-- backups
-- notebooks
-- tickets
-- metrics
-- support bundles
-
-### Pattern 8: Keep regulated and non-regulated environments separate
-
-Do not let experiments contaminate production.
-
-Separate:
-
-- research sandbox
-- controlled-access workspace
-- clinical environment
-- development environment
-- support environment
-
-The stricter environment should not depend casually on the weaker one.
-
-### Pattern 9: Make evidence cheap
-
-Audits and investigations need evidence.
-
-Generate it as part of normal operation.
-
-Do not force engineers to reconstruct everything manually after an incident.
-
-### Pattern 10: Escalate policy decisions early
-
-Engineers should not decide legal basis, consent interpretation, regulatory classification, or data use permission alone.
-
-But engineers should know when those questions exist.
+Temporary data still counts.
 
 ---
 
-## Anti-patterns to avoid
+## Step 15: track derived data lineage
 
-### Anti-pattern 1: "Ask legal later"
+Deletion, export review, and controlled-access governance all need lineage.
 
-If the architecture already spreads identifiers into logs, buckets, tickets, and dashboards, legal cannot magically fix it later.
+If file C was created from files A and B, the system should know.
 
-### Anti-pattern 2: "Everything is encrypted, so it is fine"
+Lineage table:
 
-Encryption does not solve bad permissions, overbroad support access, uncontrolled exports, or metadata leakage.
+```sql
+create table data_lineage (
+    child_file_id text not null,
+    parent_file_id text not null,
+    analysis_id text not null,
+    relationship text not null,
+    created_at timestamptz not null default now(),
+    primary key (child_file_id, parent_file_id)
+);
+```
 
-### Anti-pattern 3: "It is de-identified, so we can do anything"
+Example:
 
-Genomic data is hard to anonymize. Pseudonymized data can still be sensitive.
+```text
+fil_vcf_001 was derived from fil_bam_tumor_001
+fil_vcf_001 was derived from fil_bam_normal_001
+fil_report_001 was derived from fil_vcf_001
+```
 
-### Anti-pattern 4: "Support needs admin everywhere"
+This helps answer:
 
-Support needs enough information to solve problems, not unlimited access by default.
+```text
+Which outputs came from this raw dataset?
+Which controlled-access datasets contributed to this result?
+Can this derived file be exported?
+What must be deleted if the parent dataset is removed?
+```
 
-### Anti-pattern 5: "Research-only means no controls"
+Simple lineage registration:
 
-Research data can still be sensitive, controlled, contractual, or governed by consent and data use limitations.
+```python
+def register_lineage(output_file_id, input_file_ids, analysis_id):
+    for parent in input_file_ids:
+        insert_lineage(
+            child_file_id=output_file_id,
+            parent_file_id=parent,
+            analysis_id=analysis_id,
+            relationship="derived_from",
+        )
+```
 
-### Anti-pattern 6: "Latest container is good enough"
+Derived restrictions should not become weaker than parent restrictions.
 
-`latest` is not reproducible.
+Example:
 
-For important workflows, pin versions and digests.
+```python
+def derive_policy(parent_policies):
+    if any(p.download_policy == "raw_download_disabled" for p in parent_policies):
+        return "review_required"
+    if any(p.export_policy == "review_required" for p in parent_policies):
+        return "review_required"
+    return "standard"
+```
 
-### Anti-pattern 7: "Logs are internal, so they can contain anything"
+This is simplistic.
 
-Internal logs can leak, be exported, be copied to tickets, or be viewed by staff who do not need sensitive details.
+Real policy may need governance review.
 
-### Anti-pattern 8: "Temporary files do not count"
-
-Temporary files count if they contain sensitive data.
-
-### Anti-pattern 9: "Admin actions do not need review"
-
-Privileged actions are exactly the actions that need strong logging and review.
-
-### Anti-pattern 10: "Clinical pipelines are just research pipelines with nicer reports"
-
-Clinical pipelines need validation, traceability, change control, and reproducibility.
-
-### Anti-pattern 11: "Only raw data is sensitive"
-
-Metadata, logs, tickets, project names, screenshots, and billing reports may reveal sensitive context.
-
-### Anti-pattern 12: "Deletion means deleting the main file"
-
-Deletion requires understanding derived outputs, caches, backups, notebooks, support bundles, and export history.
+But the system must preserve lineage so the review is possible.
 
 ---
 
-## A practical design review checklist
+## Step 16: control notebooks without killing research
 
-Use this checklist when designing or reviewing a bioinformatics platform feature.
+Notebooks need flexibility.
 
-### Data classification
+They also need guardrails.
 
-Ask:
+Start with practical defaults.
 
-- What data does this feature touch?
-- Is it human genomic data?
-- Is it health data?
-- Is it PHI, personal data, special category data, or controlled-access data?
-- Is the data raw, derived, metadata, log data, or aggregate?
-- Does it include direct identifiers?
-- Does it include linkable identifiers?
+```yaml
+notebook_policy:
+  workspace_scope: project_only
+  internet_egress: restricted
+  package_installation: approved_repositories_only
+  idle_timeout_minutes: 60
+  max_session_hours: 12
+  raw_downloads: disabled_by_default
+  output_export: clear_outputs_required
+  audit_file_access: true
+  audit_downloads: true
+```
 
-### Access control
+Useful controls:
 
-Ask:
+```text
+project-scoped credentials
+short-lived tokens
+no secrets stored in notebooks
+restricted outbound internet for sensitive projects
+approved package mirrors
+automatic idle shutdown
+file download logging
+notebook output stripping before sharing
+warnings for sensitive columns
+```
 
-- Who can access this feature?
-- What roles exist?
-- Is download separate from view?
-- Is support access separate from customer access?
-- Can access expire?
-- Are service accounts scoped?
-- Are permissions reviewable?
-- Is access logged?
+A pre-commit hook to strip notebook output:
 
-### Logging
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-Ask:
+for nb in $(git diff --cached --name-only -- '*.ipynb'); do
+  jupyter nbconvert \
+    --ClearOutputPreprocessor.enabled=True \
+    --inplace "$nb"
+  git add "$nb"
+done
+```
 
-- What events are logged?
-- Do logs include sensitive values?
-- Are logs structured?
-- Who can view logs?
-- How long are logs retained?
-- Are logs region-bound?
-- Can logs support incident investigation?
-- Can logs be exported safely?
+A simple Python helper to avoid accidental `df.head()` leaks:
 
-### Workflow execution
+```python
+SENSITIVE_COLUMNS = {
+    "patient_name", "mrn", "dob", "date_of_birth",
+    "address", "phone", "email", "clinical_notes",
+}
 
-Ask:
 
-- Are workflow versions pinned?
-- Are containers pinned by digest?
-- Are references versioned?
-- Are parameters recorded?
-- Are input and output checksums recorded?
-- Are temporary files cleaned up?
-- Are failed jobs retained safely?
-- Does the workflow need internet access?
+def safe_preview(df, columns=None, n=5):
+    if columns is None:
+        columns = [c for c in df.columns if c.lower() not in SENSITIVE_COLUMNS]
+    return df[columns].head(n)
+```
 
-### Data movement
+Use:
 
-Ask:
+```python
+safe_preview(df, ["sample_id", "qc_status", "coverage_mean"])
+```
 
-- Where is data stored?
-- Where is compute performed?
-- Where do logs go?
-- Where do backups go?
-- Where do support artifacts go?
-- Where does telemetry go?
-- Are cross-region transfers allowed?
-- Are subprocessors involved?
+Instead of:
+
+```python
+df.head()
+```
+
+Notebook principle:
+
+```text
+Enable exploration, but make uncontrolled export harder than controlled analysis.
+```
+
+---
+
+## Step 17: make region boundaries visible
+
+Data residency fails when secondary systems are ignored.
+
+Track region for every data flow.
+
+```yaml
+project_id: prj_9f31
+region_policy: eu_only
+allowed_regions:
+  - eu-west-1
+  - eu-central-1
+systems:
+  object_storage:
+    region: eu-west-1
+  compute:
+    region: eu-west-1
+  metadata_db:
+    region: eu-west-1
+  audit_log:
+    region: eu-west-1
+  backups:
+    region: eu-central-1
+  support_tickets:
+    region: eu_only
+  telemetry:
+    region: disabled_for_sensitive_projects
+```
+
+Create a data flow inventory:
+
+| Flow | Source | Destination | Data type | Region allowed? |
+|---|---|---|---|---|
+| Upload FASTQ | user | object storage | raw genomic | Yes |
+| Workflow log | compute | logging system | logs | Yes |
+| Crash report | compute | external SaaS | telemetry | No |
+| Support bundle | platform | ticket system | diagnostic metadata | Review |
+| Backup | metadata DB | backup storage | metadata | Yes |
+
+Enforce region checks before copy jobs.
+
+```python
+def assert_region_allowed(project_id, destination_region, data_type):
+    policy = get_region_policy(project_id)
+    if destination_region not in policy.allowed_regions:
+        raise PermissionError(
+            f"{data_type} cannot move to {destination_region} under {policy.name}"
+        )
+```
+
+Use the same check for:
+
+```text
+primary data
+metadata
+logs
+backups
+support artifacts
+telemetry
+exports
+```
+
+Do not only protect the FASTQ files.
+
+Metadata can also be sensitive.
+
+---
+
+## Step 18: add CI checks for compliance mistakes
+
+Some mistakes are easy to catch automatically.
+
+Add checks for:
+
+```text
+forbidden manifest columns
+patient-looking filenames
+MRN-looking values
+use of Docker latest
+unpinned Conda packages
+set -x in workflow scripts
+hardcoded secrets
+runtime wget/curl for references
+notebook output committed to Git
+missing provenance schema fields
+```
+
+Example `Makefile`:
+
+```makefile
+.PHONY: check lint-manifests lint-paths lint-containers lint-secrets
+
+check: lint-manifests lint-paths lint-containers lint-secrets
+
+lint-manifests:
+	python scripts/validate_manifest.py examples/operational_manifest.csv
+
+lint-paths:
+	find examples/paths -type f | python scripts/lint_paths.py
+
+lint-containers:
+	python scripts/lint_containers.py workflow.config
+
+lint-secrets:
+	gitleaks detect --source .
+```
+
+Container linter example:
+
+```python
+import re
+import sys
+
+text = open(sys.argv[1]).read()
+
+if ":latest" in text:
+    print("ERROR: container uses :latest")
+    sys.exit(1)
+
+if re.search(r"container\s*=\s*['\"][^'\"]+:[^@'\"]+['\"]", text):
+    print("WARNING: container tag used without digest; prefer sha256 digest for important workflows")
+```
+
+Notebook output check:
+
+```python
+import json
+import sys
+
+failed = False
+for path in sys.argv[1:]:
+    nb = json.load(open(path))
+    for cell in nb.get("cells", []):
+        if cell.get("outputs"):
+            print(f"ERROR: notebook has outputs: {path}")
+            failed = True
+            break
+
+raise SystemExit(1 if failed else 0)
+```
+
+CI cannot prove compliance.
+
+But it can prevent recurring foot-guns.
+
+---
+
+## Step 19: handle deletion as a workflow, not a button
+
+Deletion is not just deleting one object.
+
+A dataset may have copies in:
+
+```text
+primary storage
+derived outputs
+workflow caches
+failed-job directories
+notebook snapshots
+support bundles
+exports
+search indexes
+metadata tables
+backups
+```
+
+Create a deletion request object.
+
+```sql
+create table deletion_requests (
+    deletion_request_id text primary key,
+    project_id text not null,
+    requested_by text not null,
+    approved_by text,
+    scope_type text not null,
+    scope_id text not null,
+    status text not null check (status in ('requested', 'approved', 'in_progress', 'completed', 'rejected')),
+    reason text,
+    created_at timestamptz not null default now(),
+    completed_at timestamptz
+);
+
+create table deletion_tasks (
+    deletion_request_id text not null,
+    target_type text not null,
+    target_id text not null,
+    status text not null,
+    details jsonb not null default '{}'::jsonb,
+    primary key (deletion_request_id, target_type, target_id)
+);
+```
+
+Deletion plan:
+
+```yaml
+delete:
+  primary_objects:
+    - fil_001
+    - fil_002
+  derived_outputs:
+    - fil_991
+  workflow_caches:
+    - cache_anl_001
+  diagnostic_bundles:
+    - diag_001
+  exports:
+    - exp_001
+  metadata_records:
+    - sample_smp_001
+  backups:
+    behavior: expire_after_30_days
+  audit_logs:
+    behavior: retain_without_sensitive_values
+```
+
+Deletion flow:
+
+```text
+1. Request deletion.
+2. Identify primary objects.
+3. Identify derived outputs through lineage.
+4. Identify caches and temporary files.
+5. Identify exports and support bundles.
+6. Check legal hold or clinical retention requirement.
+7. Approve deletion.
+8. Execute deletion tasks.
+9. Record backup expiration behavior.
+10. Audit completion.
+```
+
+Important:
+
+```text
+Audit logs may need to remain even after data deletion.
+```
+
+But audit logs should not contain unnecessary sensitive values.
+
+That is why safe audit design matters from the beginning.
+
+---
+
+## Step 20: add clinical change control when outputs affect patients
+
+Not every bioinformatics workflow is clinical.
+
+But once a workflow affects diagnosis, treatment, or patient management, change control becomes stricter.
+
+Add release records.
+
+```sql
+create table workflow_releases (
+    release_id text primary key,
+    workflow_name text not null,
+    version text not null,
+    source_revision text not null,
+    container_digest text not null,
+    reference_set_id text not null,
+    intended_use text not null,
+    validation_status text not null check (validation_status in ('research_only', 'candidate', 'validated', 'retired')),
+    approved_by text,
+    approved_at timestamptz,
+    release_notes text,
+    created_at timestamptz not null default now()
+);
+```
+
+Clinical release checklist:
+
+```text
+source revision pinned
+container digest pinned
+reference data pinned
+annotation database pinned
+parameters documented
+validation dataset run
+expected variants checked
+QC metrics compared
+output differences reviewed
+rollback plan documented
+release approved
+old version preserved
+```
+
+Output comparison example:
+
+```csv
+metric,previous_version,candidate_version,status
+mean_coverage,96.2,96.1,pass
+snv_count,4218,4220,review
+indel_count,381,379,review
+reportable_variants,3,3,pass
+qc_status,pass,pass,pass
+runtime_hours,7.2,6.8,pass
+```
+
+Do not deploy clinical workflows with floating dependencies.
+
+Bad:
+
+```text
+production uses latest container automatically
+```
+
+Better:
+
+```text
+production uses approved release ID wfrel_20260608_001
+```
+
+When running a clinical workflow, record the release ID in provenance.
+
+```json
+{
+  "analysis_id": "anl_20260608_001",
+  "workflow_release_id": "wfrel_20260608_001",
+  "validation_status": "validated"
+}
+```
+
+Clinical principle:
+
+```text
+A pipeline that still runs is not automatically a pipeline that is still validated.
+```
+
+---
+
+## Minimal implementation roadmap
+
+Do not build everything at once.
+
+Start with the highest leverage controls.
+
+### Phase 1: stop obvious leakage
+
+Implement:
+
+- neutral IDs
+- safe storage paths
+- operational manifests
+- manifest linter
+- path linter
+- no patient identifiers in logs
+- no `latest` containers for important workflows
+
+This already prevents many bad habits.
+
+### Phase 2: make access and audit real
+
+Implement:
+
+- action-based permissions
+- separate download permission
+- structured audit events
+- service account ownership
+- support diagnostic bundles
+- temporary support grants
+
+Now the system can answer who did what.
+
+### Phase 3: make workflows reproducible
+
+Implement:
+
+- provenance JSON
+- input checksums
+- output checksums
+- container digests
+- reference registry
+- dependency pinning
+- workflow release records
+
+Now results have receipts.
+
+### Phase 4: control movement and lifecycle
+
+Implement:
+
+- export objects
+- export manifests
+- retention labels
+- cleanup jobs
+- lineage table
+- deletion workflow
+- region inventory
+
+Now data movement and deletion are less hand-wavy.
+
+### Phase 5: strengthen regulated environments
+
+Implement:
+
+- notebook guardrails
+- egress restrictions
+- approved package mirrors
+- controlled-access dataset policies
+- derived restriction inheritance
+- clinical validation records
+- change control workflow
+
+This is where the platform starts looking mature.
+
+---
+
+## Final checklist
+
+A compliance-aware bioinformatics platform should be able to answer these questions.
+
+### Identity and metadata
+
+```text
+Do system IDs avoid patient identifiers?
+Are identity mappings stored separately?
+Do manifests avoid unnecessary sensitive columns?
+Do object paths avoid names, MRNs, and diagnosis labels?
+```
+
+### Access
+
+```text
+Is download separate from view?
+Is support separate from customer access?
+Can support access expire?
+Are service accounts scoped?
+Can permissions be reviewed?
+```
+
+### Logging and audit
+
+```text
+Are audit events structured?
+Are workflow logs sanitized?
+Can the system show who downloaded a file?
+Can the system show who changed permissions?
+Can the system show who approved support access?
+```
+
+### Workflows
+
+```text
+Are workflow versions recorded?
+Are containers pinned?
+Are references versioned?
+Are parameters captured?
+Are input and output checksums stored?
+```
 
 ### Support
 
-Ask:
+```text
+Can support debug from metadata first?
+Is there a redacted diagnostic bundle?
+Is deeper access approved and time-limited?
+Are support actions logged?
+```
 
-- Can support debug without raw data?
-- Is there a redacted diagnostic bundle?
-- Is customer-approved access available?
-- Is access time-limited?
-- Are support actions logged?
-- Is break-glass access controlled?
-- Are local downloads prohibited or controlled?
+### Export and movement
 
-### Exports
+```text
+Are exports explicit objects?
+Are export manifests generated?
+Are region policies checked?
+Do logs, tickets, backups, and telemetry follow data residency rules?
+```
 
-Ask:
+### Retention and deletion
 
-- Who can download raw data?
-- Are exports logged?
-- Is approval required?
-- Are restrictions included with export packages?
-- Are small cohorts checked for re-identification risk?
-- Are derived outputs governed?
-- Is export destination known?
+```text
+Are temporary files covered by retention policy?
+Are failed-job directories expired?
+Are diagnostic bundles expired?
+Can derived outputs be found from lineage?
+Is deletion tracked as a workflow?
+```
 
-### Clinical or regulated software
+### Clinical use
 
-Ask:
+```text
+Is intended use documented?
+Are clinical releases validated?
+Are dependency changes reviewed?
+Can old results be reproduced?
+Is rollback possible?
+```
 
-- Is this research-only or clinical?
-- Could output influence diagnosis or treatment?
-- Is intended use documented?
-- Is validation required?
-- Are changes reviewed?
-- Can old results be reproduced?
-- Are releases approved?
-- Are reports traceable to workflow versions?
+The main idea is simple:
 
-### Evidence
+```text
+Do not make compliance depend on memory, heroics, or manual cleanup.
+```
 
-Ask:
+Build the safe path into the platform.
 
-- What evidence proves the control works?
-- Can we show access history?
-- Can we show workflow provenance?
-- Can we show deletion events?
-- Can we show export history?
-- Can we show approval records?
-- Can we show change history?
+Make the risky path explicit.
 
-A design is not mature just because someone says the right policy exists.
+Make evidence appear naturally as the system runs.
 
-A design is mature when the system produces evidence naturally.
+That is compliance by design in practice.
 
 ---
 
 ## References
 
-Official and primary references useful for this manual:
+Official and primary sources worth reading alongside this implementation manual:
 
 - HHS. Summary of the HIPAA Security Rule. <https://www.hhs.gov/hipaa/for-professionals/security/laws-regulations/index.html>
-- HHS. Guidance on de-identification of protected health information. <https://www.hhs.gov/hipaa/for-professionals/privacy/special-topics/de-identification/index.html>
-- European Commission. Rules for business and organisations on data protection. <https://commission.europa.eu/law/law-topic/data-protection/rules-business-and-organisations_en>
-- European Data Protection Board. Guidelines, recommendations, best practices. <https://www.edpb.europa.eu/our-work-tools/general-guidance/guidelines-recommendations-best-practices_en>
-- NIH. Genomic Data Sharing Policy overview. <https://sharing.nih.gov/genomic-data-sharing-policy>
-- NIH. Data Management and Sharing Policy. <https://sharing.nih.gov/data-management-and-sharing-policy>
-- NIST. SP 800-53 Rev. 5, Security and Privacy Controls for Information Systems and Organizations. <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>
+- European Commission. What personal data is considered sensitive? <https://commission.europa.eu/law/law-topic/data-protection/rules-business-and-organisations/legal-grounds-processing-data/sensitive-data/what-personal-data-considered-sensitive_en>
+- NIH. Genomic Data Sharing Policy Overview. <https://grants.nih.gov/policy-and-compliance/policy-topics/sharing-policies/gds/overview>
 - NIST. Risk Management Framework. <https://csrc.nist.gov/projects/risk-management>
-- FDA. Clinical Decision Support Software guidance. <https://www.fda.gov/regulatory-information/search-fda-guidance-documents/clinical-decision-support-software>
-- FDA. Clinical Decision Support Software FAQ. <https://www.fda.gov/medical-devices/software-medical-device-samd/clinical-decision-support-software-frequently-asked-questions-faqs>
+- NIST. SP 800-53 Rev. 5, Security and Privacy Controls for Information Systems and Organizations. <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>
+- FDA. Clinical Decision Support Software Guidance. <https://www.fda.gov/regulatory-information/search-fda-guidance-documents/clinical-decision-support-software>
+- ISO. ISO/IEC 27001 information security management. <https://www.iso.org/standard/27001>
