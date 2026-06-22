@@ -201,6 +201,8 @@ Not dramatic trees.
 
 Just branches, leaves, shadows, and sunlight filtering through them.
 
+木漏れ日.
+
 Komorebi.
 
 Then the day continues.
