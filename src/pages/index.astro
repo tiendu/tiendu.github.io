@@ -102,19 +102,21 @@ import SnakeGame from "../components/SnakeGame.astro";
           <form class="terminal-shell" data-terminal-shell hidden>
             <span class="prompt">TIENDU@HOME</span>
             <span class="path">:~$</span>
-            <input
-              class="terminal-shell-input"
-              data-terminal-input
-              type="text"
-              maxlength="16"
-              autocomplete="off"
-              autocapitalize="characters"
-              spellcheck="false"
-              enterkeyhint="go"
-              aria-label="Terminal command"
-              aria-describedby="terminal-input-warning"
-            />
-            <span class="shell-block-cursor" aria-hidden="true"></span>
+            <span class="terminal-shell-entry">
+              <input
+                class="terminal-shell-input"
+                data-terminal-input
+                type="text"
+                maxlength="16"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                enterkeyhint="go"
+                aria-label="Terminal command"
+                aria-describedby="terminal-input-warning"
+              />
+              <span class="shell-block-cursor" aria-hidden="true"></span>
+            </span>
           </form>
 
           <p
@@ -326,9 +328,15 @@ import SnakeGame from "../components/SnakeGame.astro";
             terminalInput.value.length,
             COMMAND_LENGTH_LIMIT,
           );
+
+          /*
+           * Keep a little spare width for the final glyph. This prevents the
+           * native input from horizontally scrolling its text and appearing
+           * to jump left as the command approaches the limit.
+           */
           const measuredWidth = Math.max(
-            visibleCharacters + 0.8,
-            0.8,
+            visibleCharacters + 1.25,
+            1.25,
           );
 
           terminalInput.style.width = `${measuredWidth}ch`;
@@ -684,18 +692,6 @@ import SnakeGame from "../components/SnakeGame.astro";
           if (!(terminalInput instanceof HTMLInputElement)) {
             return;
           }
-
-          terminalInput?.addEventListener("input", () => {
-            if (!(terminalInput instanceof HTMLInputElement)) {
-              return;
-            }
-
-            if (terminalInput.value.length < COMMAND_LENGTH_LIMIT) {
-              hideInputWarning();
-            }
-
-            resizeTerminalInput();
-          });
 
           if (terminalInput.value.length < COMMAND_LENGTH_LIMIT) {
             hideInputWarning();
@@ -1058,10 +1054,17 @@ import SnakeGame from "../components/SnakeGame.astro";
     align-items: baseline;
     color: var(--terminal-green-dim);
     display: flex;
+    flex-wrap: wrap;
     font-size: 1.12rem;
     gap: 0.28rem;
     line-height: 1.25;
     margin: 0;
+    min-width: 0;
+  }
+
+  .terminal-shell-entry {
+    align-items: baseline;
+    display: inline-flex;
     min-width: 0;
   }
 
@@ -1077,7 +1080,7 @@ import SnakeGame from "../components/SnakeGame.astro";
     letter-spacing: inherit;
     line-height: inherit;
     margin-left: 0.06rem;
-    max-width: min(17ch, 55vw);
+    max-width: 17.5ch;
     min-width: 0.8ch;
     outline: 0;
     padding: 0;
