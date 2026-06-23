@@ -805,6 +805,7 @@ a[target="_blank"]::after {
   position: sticky;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
+  scrollbar-color: var(--line-dark) transparent;
   top: 1.5rem;
   -webkit-overflow-scrolling: touch;
 }
@@ -832,13 +833,33 @@ a[target="_blank"]::after {
 
 .toc a,
 .toc a:visited {
+  border-left: 2px solid transparent;
   color: var(--muted);
+  display: block;
+  margin-left: -1.05rem;
+  padding: 0.2rem 0.4rem 0.2rem 1rem;
   text-decoration: none;
+  transition:
+    border-color 140ms ease,
+    color 140ms ease;
 }
 
 .toc a:hover {
   color: var(--amber);
   text-decoration: underline;
+}
+
+.toc a.is-active,
+.toc a.is-active:visited,
+.toc a.is-active:hover {
+  border-left-color: var(--green);
+  color: var(--green-dark);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.post-content :is(h2, h3, h4) {
+  scroll-margin-top: 5rem;
 }
 
 .post-content {

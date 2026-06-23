@@ -1,22 +1,22 @@
 ---
-interface Heading {
-  depth: number;
-  slug: string;
-  text: string;
-}
+import type { MarkdownHeading } from "astro";
 
 interface Props {
-  headings: Heading[];
+  headings: MarkdownHeading[];
 }
 
 const { headings } = Astro.props;
-const visibleHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
+
+const visibleHeadings = headings.filter(
+  ({ depth }) => depth === 2 || depth === 3,
+);
 ---
 
 {
   visibleHeadings.length > 0 && (
     <nav class="toc" aria-label="Table of contents">
       <strong>Contents</strong>
+
       <ol>
         {visibleHeadings.map((heading) => (
           <li class:list={{ "toc-level-3": heading.depth === 3 }}>

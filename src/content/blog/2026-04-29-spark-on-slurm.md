@@ -76,6 +76,205 @@ Just Spark data jobs running inside a Slurm allocation.
 
 ---
 
+## Why bother doing this?
+
+Because real data work rarely stays small.
+
+A simple script is usually the correct starting point.
+
+Maybe you begin with one file:
+
+```text
+events.parquet -> analyze.py -> result.csv
+```
+
+That is fine.
+
+Then the dataset grows.
+
+Now you have:
+
+```text
+events/day=2026-01-01/*.parquet
+events/day=2026-01-02/*.parquet
+events/day=2026-01-03/*.parquet
+...
+events/day=2026-12-31/*.parquet
+```
+
+The same job now needs to:
+
+```text
+scan many files
+filter rows
+join with metadata
+group by user, sample, project, or cohort
+write a clean result
+```
+
+A single machine may still work.
+
+Until it does not.
+
+The job becomes slow. Then fragile. Then nobody wants to touch it.
+
+At that point, people often try to split the work manually.
+
+```text
+node1 -> part 1
+node2 -> part 2
+node3 -> part 3
+```
+
+That sounds simple, but it creates new questions immediately:
+
+```text
+Who decides which node gets which files?
+What happens if one node fails?
+How do we retry only the failed part?
+How do we merge partial outputs?
+How do we avoid duplicate work?
+How do we handle joins?
+How do we handle group-by across all data?
+```
+
+This is the trap.
+
+You started with a data script.
+
+Now you are writing a bad distributed engine.
+
+Spark exists so you do not have to build that engine yourself.
+
+Instead of writing your own worker coordination code, you write:
+
+```python
+events.groupBy("project_id").count()
+```
+
+Spark handles the partitioning, scheduling, shuffle, retry, and execution plan.
+
+That is the value.
+
+Not magic speed.
+
+Not fashionable infrastructure.
+
+Less custom distributed glue.
+
+---
+
+## A realistic bioinformatics example
+
+Imagine a cohort platform with 30,000 samples.
+
+For per-sample work, Slurm arrays are still the right answer.
+
+```text
+sample_001.bam -> coverage tool -> sample_001.metrics
+sample_002.bam -> coverage tool -> sample_002.metrics
+sample_003.bam -> coverage tool -> sample_003.metrics
+```
+
+Use:
+
+```bash
+#SBATCH --array=1-30000
+```
+
+No Spark needed.
+
+But later the question changes.
+
+Now someone asks:
+
+```text
+Count variants across the whole cohort.
+Join variant calls with phenotype data.
+Aggregate carrier counts by ancestry group.
+Generate cohort-level QC tables.
+Prepare feature tables for downstream analysis.
+```
+
+That is no longer just 30,000 independent jobs.
+
+It is a coordinated table-processing problem.
+
+The shape becomes:
+
+```text
+many variant files
+    |
+    v
+large distributed table
+    |
+    v
+join with sample metadata
+    |
+    v
+group, filter, aggregate
+    |
+    v
+cohort-level result
+```
+
+You can force this through shell scripts.
+
+But the shell script will slowly become a scheduler, retry system, merge system, and bookkeeping system.
+
+That is exactly when Spark starts making sense.
+
+Slurm gives you the machines.
+
+Spark uses those machines as one temporary data-processing cluster.
+
+---
+
+## Why not just install a permanent Spark cluster?
+
+Sometimes you should.
+
+But in many HPC environments, Slurm is already the scheduler.
+
+The organization already uses it for:
+
+```text
+fair sharing
+queues
+partitions
+resource limits
+accounting
+job history
+cluster policy
+```
+
+So adding another permanent scheduler may be unnecessary.
+
+You do not always need:
+
+```text
+Kubernetes
+YARN
+Spark Operator
+long-running Spark services
+```
+
+For many teams, a simpler model is enough:
+
+```text
+Ask Slurm for nodes.
+Start Spark inside the job.
+Run the data job.
+Stop Spark.
+Release the nodes.
+```
+
+The Spark cluster is temporary.
+
+That is the whole point.
+
+---
+
 ## What we are building
 
 We are going to build a small Slurm cluster and run Spark inside Slurm jobs.
@@ -611,11 +810,11 @@ sudo ln -sfn spark-3.5.1-bin-hadoop3 spark
 Add Spark environment variables:
 
 ```bash
-sudo tee /etc/profile.d/spark.sh >/dev/null <<'EOF'
+sudo tee /etc/profile.d/spark.sh >/dev/null <<'EOF2'
 export SPARK_HOME=/opt/spark
 export PATH="$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-EOF
+EOF2
 ```
 
 Reload:
@@ -1313,9 +1512,480 @@ Spark is not the first thing to blame.
 
 ---
 
-## Final shape
 
-The whole setup is just this:
+## Putting it together: a 30,000-sample cohort job
+
+After all the setup, the real question is:
+
+```text
+What do we actually do with Spark on Slurm?
+```
+
+Here is a more realistic example.
+
+Assume we have 30,000 samples.
+
+Each sample may have multiple files:
+
+```text
+BAM / CRAM file
+per-sample QC metrics
+variant calls
+sample metadata
+phenotype metadata
+```
+
+The raw analysis may have already happened with normal Slurm arrays:
+
+```text
+sample_00001 -> align / call variants / collect QC
+sample_00002 -> align / call variants / collect QC
+sample_00003 -> align / call variants / collect QC
+...
+sample_30000 -> align / call variants / collect QC
+```
+
+That part is still better as plain Slurm.
+
+But after that, you often need cohort-level answers:
+
+```text
+Which samples passed QC?
+How many variants exist per sample?
+How many carriers exist per ancestry group?
+Which variants appear in affected cases but not controls?
+Which samples have missing phenotype metadata?
+Which variants should be kept for downstream analysis?
+```
+
+That is where Spark becomes useful.
+
+The work is no longer one sample at a time.
+
+The work is now:
+
+```text
+read many sample-level outputs
+normalize them into tables
+join tables together
+filter bad samples
+aggregate across the cohort
+write final cohort-level outputs
+```
+
+That is a data job.
+
+---
+
+## Example input layout
+
+Use a boring directory layout.
+
+```text
+/shared/cohort/
+├── metadata/
+│   ├── samples.csv
+│   └── phenotypes.csv
+├── qc/
+│   ├── sample_id=sample_00001/metrics.json
+│   ├── sample_id=sample_00002/metrics.json
+│   └── ...
+├── variants/
+│   ├── chromosome=1/*.parquet
+│   ├── chromosome=2/*.parquet
+│   └── ...
+└── output/
+```
+
+The important part is not the exact folder names.
+
+The important part is that the data is table-shaped and readable by all Spark workers.
+
+A sample metadata file might look like this:
+
+```csv
+sample_id,sex,ancestry,batch
+sample_00001,F,EUR,batch_01
+sample_00002,M,EAS,batch_01
+sample_00003,F,AFR,batch_02
+```
+
+A phenotype file might look like this:
+
+```csv
+sample_id,case_control,age
+sample_00001,case,61
+sample_00002,control,58
+sample_00003,case,44
+```
+
+A variant table might look like this:
+
+```text
+sample_id
+chromosome
+position
+ref
+alt
+genotype
+quality
+filter_status
+```
+
+For real genomics data, the details can be much richer.
+
+But the shape is enough for this example.
+
+---
+
+## What the final Spark job should do
+
+The final Spark job should behave like a cohort reducer.
+
+It takes many scattered outputs and produces clean cohort-level tables.
+
+```text
+sample metadata
+      |
+      v
+phenotype metadata
+      |
+      v
+variant tables -----> Spark cohort job -----> final cohort outputs
+      |
+      v
+QC metrics
+```
+
+The outputs might be:
+
+```text
+/shared/cohort/output/passing_samples/
+/shared/cohort/output/sample_qc_summary/
+/shared/cohort/output/variant_counts_by_sample/
+/shared/cohort/output/carrier_counts_by_ancestry/
+/shared/cohort/output/case_control_variant_summary/
+/shared/cohort/output/missing_metadata_report/
+```
+
+This is the missing payoff.
+
+We did not set up Spark on Slurm just to run a toy job.
+
+We set it up so a cohort-level job can use the whole Slurm allocation as one temporary data-processing cluster.
+
+---
+
+## Example cohort Spark job
+
+Create `cohort_job.py`:
+
+```python
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, count, countDistinct, sum as spark_sum, when
+
+spark = (
+    SparkSession.builder
+    .appName("cohort-level-summary")
+    .getOrCreate()
+)
+
+base = "/shared/cohort"
+
+samples_path = f"{base}/metadata/samples.csv"
+phenotypes_path = f"{base}/metadata/phenotypes.csv"
+variants_path = f"{base}/variants"
+output_path = f"{base}/output"
+
+samples = (
+    spark.read
+    .option("header", True)
+    .csv(samples_path)
+)
+
+phenotypes = (
+    spark.read
+    .option("header", True)
+    .csv(phenotypes_path)
+)
+
+variants = spark.read.parquet(variants_path)
+
+metadata = (
+    samples
+    .join(phenotypes, on="sample_id", how="left")
+)
+
+missing_metadata = (
+    metadata
+    .where(col("case_control").isNull() | col("ancestry").isNull())
+)
+
+missing_metadata.write.mode("overwrite").parquet(
+    f"{output_path}/missing_metadata_report"
+)
+
+passing_variants = (
+    variants
+    .where(col("filter_status") == "PASS")
+    .where(col("quality") >= 30)
+)
+
+variant_counts_by_sample = (
+    passing_variants
+    .groupBy("sample_id")
+    .agg(count("*").alias("passing_variant_count"))
+)
+
+variant_counts_by_sample.write.mode("overwrite").parquet(
+    f"{output_path}/variant_counts_by_sample"
+)
+
+annotated_variants = (
+    passing_variants
+    .join(metadata, on="sample_id", how="left")
+)
+
+carrier_counts_by_ancestry = (
+    annotated_variants
+    .where(col("genotype").isin("0/1", "1/1"))
+    .groupBy("chromosome", "position", "ref", "alt", "ancestry")
+    .agg(countDistinct("sample_id").alias("carrier_count"))
+)
+
+carrier_counts_by_ancestry.write.mode("overwrite").parquet(
+    f"{output_path}/carrier_counts_by_ancestry"
+)
+
+case_control_variant_summary = (
+    annotated_variants
+    .where(col("genotype").isin("0/1", "1/1"))
+    .groupBy("chromosome", "position", "ref", "alt")
+    .agg(
+        spark_sum(when(col("case_control") == "case", 1).otherwise(0)).alias("case_carriers"),
+        spark_sum(when(col("case_control") == "control", 1).otherwise(0)).alias("control_carriers"),
+        countDistinct("sample_id").alias("total_carriers"),
+    )
+)
+
+case_control_variant_summary.write.mode("overwrite").parquet(
+    f"{output_path}/case_control_variant_summary"
+)
+
+sample_qc_summary = (
+    metadata
+    .join(variant_counts_by_sample, on="sample_id", how="left")
+    .fillna({"passing_variant_count": 0})
+)
+
+sample_qc_summary.write.mode("overwrite").parquet(
+    f"{output_path}/sample_qc_summary"
+)
+
+print("Wrote cohort outputs to:", output_path)
+
+spark.stop()
+```
+
+This is still simplified.
+
+But it shows the real pattern:
+
+```text
+read metadata
+read phenotype table
+read many variant files
+join by sample_id
+filter variants
+aggregate across samples
+write cohort-level outputs
+```
+
+That is exactly the kind of task that becomes painful with raw shell scripts.
+
+---
+
+## Submit the cohort job through Slurm
+
+You can reuse the same `spark-slurm.sh` wrapper.
+
+Change the final `spark-submit` line:
+
+```bash
+spark-submit \
+    --master "$master_url" \
+    --deploy-mode client \
+    --executor-cores 8 \
+    --executor-memory 24G \
+    ./cohort_job.py
+```
+
+Submit:
+
+```bash
+sbatch spark-slurm.sh
+```
+
+Check the final outputs:
+
+```bash
+ls /shared/cohort/output
+```
+
+Expected shape:
+
+```text
+carrier_counts_by_ancestry
+case_control_variant_summary
+missing_metadata_report
+sample_qc_summary
+variant_counts_by_sample
+```
+
+Now the Spark-on-Slurm setup has a clear purpose.
+
+---
+
+## What this solves
+
+This solves the awkward middle layer between per-sample jobs and final cohort reports.
+
+Without Spark, you may end up with many small scripts:
+
+```text
+merge_qc.py
+join_metadata.py
+count_variants.py
+split_by_ancestry.py
+case_control_summary.py
+retry_failed_parts.sh
+merge_outputs.sh
+check_missing_files.sh
+```
+
+That can work.
+
+But after a while, the pipeline becomes fragile.
+
+Spark gives you one distributed execution model for the table-shaped part of the work.
+
+Slurm still controls the resources.
+
+The split becomes clean:
+
+```text
+Per-sample heavy compute       -> Slurm arrays
+Cohort-level table processing  -> Spark on Slurm
+Interactive lookup / serving   -> Postgres or another database
+```
+
+That is the practical architecture.
+
+---
+
+## A reasonable real-world workflow
+
+A full workflow might look like this:
+
+```text
+1. Run alignment / variant calling per sample with Slurm arrays.
+2. Write per-sample outputs to shared storage.
+3. Convert important outputs into table formats such as Parquet.
+4. Run Spark on Slurm for cohort-level processing.
+5. Write clean derived tables.
+6. Load small final tables into Postgres if users need interactive queries.
+7. Archive large intermediate files.
+```
+
+In command form:
+
+```text
+sbatch align-array.sh
+sbatch call-variants-array.sh
+sbatch collect-qc-array.sh
+sbatch spark-cohort-summary.sh
+```
+
+Spark is not replacing the whole pipeline.
+
+It is handling the part where the data stops being independent per sample.
+
+That is the key point.
+
+---
+
+## What not to do
+
+Do not run the full 30,000-sample workflow as one giant Spark job if the early steps are naturally independent.
+
+This is not ideal:
+
+```text
+Spark does alignment
+Spark does variant calling
+Spark does QC
+Spark does cohort aggregation
+```
+
+That mixes two different workload shapes.
+
+Use the boring split instead:
+
+```text
+Slurm arrays for independent sample work.
+Spark for cohort-level distributed table work.
+```
+
+Also avoid thousands of tiny files if possible.
+
+Spark can read many files, but too many tiny files create metadata overhead.
+
+Prefer fewer, larger Parquet partitions where practical.
+
+A common cleanup step is to compact outputs before heavy downstream processing.
+
+---
+
+## The conclusion after setup
+
+After setting up Spark on Slurm, the practical solution is not just:
+
+```text
+Run Spark successfully.
+```
+
+The practical solution is:
+
+```text
+Use Slurm arrays for 30,000 independent sample tasks.
+Store the outputs in shared storage.
+Normalize important outputs into table-shaped data.
+Use Spark on Slurm to join, filter, aggregate, and summarize across the cohort.
+Write final derived tables.
+Use Postgres only for smaller interactive query results if needed.
+```
+
+That is a complete shape.
+
+It avoids forcing Spark into jobs where it does not belong.
+
+It also avoids writing a fragile pile of custom merge scripts when the work becomes cohort-level.
+
+This is why the setup effort can be worth it.
+
+## Practical boundary
+
+Use raw Slurm when the work is many independent jobs.
+
+Use Postgres when the problem is database-shaped.
+
+Use Spark on Slurm when the problem is a distributed data-processing job and the Slurm cluster already exists.
+
+That boundary matters.
+
+Without it, Spark feels like unnecessary complexity.
+
+With it, the setup makes sense:
 
 ```text
 Slurm cluster works.
@@ -1330,12 +2000,6 @@ Spark stops.
 Slurm releases the nodes.
 ```
 
-Use raw Slurm for independent jobs.
+That is the practical shape.
 
-Use Postgres for database-shaped problems.
-
-Use Spark on Slurm for coordinated data jobs over shared datasets.
-
-That is the practical boundary.
-
-Keep that boundary clear and the setup stays simple.
+Keep that shape clear and the system stays understandable.

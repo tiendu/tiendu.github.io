@@ -65,4 +65,157 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
       </div>
     </article>
   </div>
+
+  <script>
+    let removeTocScrollSpy = () => {};
+
+    function initTocScrollSpy() {
+      removeTocScrollSpy();
+
+      const layout = document.querySelector<HTMLElement>(".post-layout");
+      const toc = layout?.querySelector<HTMLElement>(".toc");
+      const article = layout?.querySelector<HTMLElement>(".post-content");
+
+      if (!toc || !article) return;
+
+      const links = Array.from(
+        toc.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'),
+      );
+
+      const entries = links
+        .map((link) => {
+          let id: string;
+
+          try {
+            id = decodeURIComponent(link.hash.slice(1));
+          } catch {
+            return null;
+          }
+
+          const heading = article.querySelector<HTMLElement>(
+            `#${CSS.escape(id)}`,
+          );
+
+          return heading ? { link, heading } : null;
+        })
+        .filter(
+          (
+            entry,
+          ): entry is {
+            link: HTMLAnchorElement;
+            heading: HTMLElement;
+          } => entry !== null,
+        );
+
+      if (entries.length === 0) return;
+
+      const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      );
+
+      let activeId = "";
+      let frame: number | null = null;
+
+      function keepLinkVisible(link: HTMLAnchorElement) {
+        const padding = 12;
+        const tocRect = toc.getBoundingClientRect();
+        const linkRect = link.getBoundingClientRect();
+
+        const behavior: ScrollBehavior = reducedMotion.matches
+          ? "auto"
+          : "smooth";
+
+        if (linkRect.top < tocRect.top + padding) {
+          toc.scrollBy({
+            top: linkRect.top - tocRect.top - padding,
+            behavior,
+          });
+        } else if (linkRect.bottom > tocRect.bottom - padding) {
+          toc.scrollBy({
+            top: linkRect.bottom - tocRect.bottom + padding,
+            behavior,
+          });
+        }
+      }
+
+      function setActive(id: string) {
+        if (id === activeId) return;
+
+        activeId = id;
+
+        for (const { link, heading } of entries) {
+          const active = heading.id === id;
+
+          link.classList.toggle("is-active", active);
+
+          if (active) {
+            link.setAttribute("aria-current", "location");
+            keepLinkVisible(link);
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        }
+      }
+
+      function updateActiveSection() {
+        frame = null;
+
+        const readingOffset = 140;
+
+        const atDocumentBottom =
+          window.scrollY + window.innerHeight >=
+          document.documentElement.scrollHeight - 4;
+
+        let current = entries[0];
+
+        if (atDocumentBottom) {
+          current = entries[entries.length - 1];
+        } else {
+          for (const entry of entries) {
+            if (entry.heading.getBoundingClientRect().top <= readingOffset) {
+              current = entry;
+            } else {
+              break;
+            }
+          }
+        }
+
+        setActive(current.heading.id);
+      }
+
+      function requestUpdate() {
+        if (frame === null) {
+          frame = window.requestAnimationFrame(updateActiveSection);
+        }
+      }
+
+      window.addEventListener("scroll", requestUpdate, { passive: true });
+      window.addEventListener("resize", requestUpdate);
+
+      updateActiveSection();
+
+      removeTocScrollSpy = () => {
+        window.removeEventListener("scroll", requestUpdate);
+        window.removeEventListener("resize", requestUpdate);
+
+        if (frame !== null) {
+          window.cancelAnimationFrame(frame);
+          frame = null;
+        }
+
+        for (const { link } of entries) {
+          link.classList.remove("is-active");
+          link.removeAttribute("aria-current");
+        }
+      };
+    }
+
+    initTocScrollSpy();
+
+    document.addEventListener("astro:page-load", initTocScrollSpy);
+
+    document.addEventListener("astro:before-swap", () => {
+      removeTocScrollSpy();
+    });
+  </script>
 </BaseLayout>
