@@ -3,6 +3,7 @@ layout: post
 title: "An SRE Playbook: Diagnosing Intermittent Failures"
 categories: ["Automation, Systems & Engineering"]
 date: 2026-02-23
+pinned: true
 ---
 
 Most production issues described as "flaky" are not truly random.
