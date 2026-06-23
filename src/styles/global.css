@@ -673,6 +673,7 @@ pre code {
   }
 
   .site-nav {
+    box-shadow: none;
     display: grid;
     gap: 0.55rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
