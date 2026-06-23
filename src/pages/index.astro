@@ -4,10 +4,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <BaseLayout>
   <main class="landing-wrapper" aria-labelledby="home-title">
-    <p class="landing-kicker">
-      Platform operations · reliability · automation
-    </p>
-
     <div class="terminal-container">
       <div class="menu-bar" aria-hidden="true">
         <span class="dot red"></span>
@@ -51,14 +47,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .landing-wrapper {
     margin: 2rem 0 3rem;
     max-width: 700px;
-  }
-
-  .landing-kicker {
-    color: var(--fg-secondary);
-    font-size: 1.05rem;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    margin-bottom: 1rem;
   }
 
   .terminal-container {
@@ -197,10 +185,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   @media (max-width: 420px) {
     .landing-wrapper {
       margin-top: 1rem;
-    }
-
-    .landing-kicker {
-      font-size: 0.95rem;
     }
 
     .typeme {
