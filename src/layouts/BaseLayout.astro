@@ -3,27 +3,41 @@ import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import BackToTop from "../components/BackToTop.astro";
 import "../styles/global.css";
-
 interface Props {
   title?: string;
   description?: string;
   image?: string;
+  imageAlt?: string;
   article?: boolean;
 }
-
 const {
   title,
   description = "Notes on platform operations, reliability, automation, scientific software, and engineering.",
   image,
+  imageAlt,
   article = false,
 } = Astro.props;
-
 const siteTitle = "Tien's notes";
 const pageTitle = title ? `${title} · ${siteTitle}` : siteTitle;
-const canonical = new URL(Astro.url.pathname, Astro.site);
-const socialImage = image ? new URL(image, Astro.site) : undefined;
+/*
+ * Astro.site is used in production when `site` is configured in astro.config.mjs.
+ * Astro.url.origin keeps local development working if `site` is unavailable.
+ */
+const siteBase = Astro.site ?? Astro.url.origin;
+/*
+ * Normalize old-style post URLs so Open Graph and canonical metadata never
+ * point to a nonexistent `.html/` address.
+ */
+const canonicalPath = Astro.url.pathname.replace(/\.html\/$/, ".html");
+const canonical = new URL(canonicalPath, siteBase);
+/*
+ * A social image is optional. Image metadata is only emitted when a page
+ * passes an `image` prop, so there is no broken reference to a missing file.
+ */
+const socialImage = image ? new URL(image, siteBase) : undefined;
+const resolvedImageAlt =
+  imageAlt ?? (title ? `${title} — ${siteTitle}` : siteTitle);
 ---
-
 <!doctype html>
 <html lang="en">
   <head>
@@ -32,36 +46,61 @@ const socialImage = image ? new URL(image, Astro.site) : undefined;
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☕</text></svg>" />
-
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☕</text></svg>"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600;700&family=VT323&display=swap"
       rel="stylesheet"
     />
-
     <meta property="og:type" content={article ? "article" : "website"} />
+    <meta property="og:site_name" content={siteTitle} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    {socialImage && <meta property="og:image" content={socialImage} />}
-    <meta name="twitter:card" content={socialImage ? "summary_large_image" : "summary"} />
-
-    <link rel="alternate" type="application/rss+xml" title={siteTitle} href="/feed.xml" />
+    {
+      socialImage && (
+        <>
+          <meta property="og:image" content={socialImage} />
+          <meta property="og:image:alt" content={resolvedImageAlt} />
+        </>
+      )
+    }
+    <meta
+      name="twitter:card"
+      content={socialImage ? "summary_large_image" : "summary"}
+    />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    {
+      socialImage && (
+        <>
+          <meta name="twitter:image" content={socialImage} />
+          <meta name="twitter:image:alt" content={resolvedImageAlt} />
+        </>
+      )
+    }
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={siteTitle}
+      href="/feed.xml"
+    />
     <title>{pageTitle}</title>
   </head>
-
   <body>
-    <a class="skip-link" href="#main-content">Skip to content</a>
+    <a class="skip-link" href="#main-content">
+      Skip to content
+    </a>
     <Header />
-
     <main class="page-content" id="main-content">
       <div class="wrapper">
         <slot />
       </div>
     </main>
-
     <BackToTop />
     <Footer />
   </body>

@@ -8,7 +8,9 @@ pinned: false
 
 I saw a Reddit post recently about a biostatistician comparing pharma and tech compensation.
 
-It was not a dramatic post. The person had an offer from tech, another from pharma, and sat down to compare the whole package instead of only looking at the biggest number.
+It was not a dramatic post.
+
+The person had an offer from tech, another from pharma, and sat down to compare the whole package instead of only looking at the biggest number.
 
 Base salary.
 
@@ -26,7 +28,13 @@ Interest in the work.
 
 In the end, pharma made more sense for them.
 
-The comments were more interesting than the post itself. Some people stayed in hospitals because they liked the work and could see the impact on patients. Some stayed in academia because the team was good, the hours were flexible, the commute was easy, and their life already worked. Some wanted the higher-paying tech role but could not even get past the first screening.
+The comments were more interesting than the post itself.
+
+Some people stayed in hospitals because they liked the work and could see the impact on patients.
+
+Some stayed in academia because the team was good, the hours were flexible, the commute was easy, and their life already worked.
+
+Some wanted the higher-paying tech role but could not even get past the first screening.
 
 The exact numbers were not what stayed with me.
 
@@ -56,9 +64,7 @@ That would be too easy.
 
 The truth is quieter than that.
 
-I think I have followed the field far enough to understand what it gave me, what it asks from people, and why I may not want to build the rest of my life inside it.
-
-Back in 2019, when I was looking at bioinformatics from Vietnam, the field felt almost imaginary.
+Back in 2019, when I first looked at bioinformatics from Vietnam, the field felt almost imaginary.
 
 There was interest.
 
@@ -68,27 +74,69 @@ There were labs.
 
 There were people who knew biology was becoming more computational.
 
-But as an actual career path, it barely existed locally.
+But as an actual career path, it barely existed.
 
-There was no clear bioinformatics company in Vietnam that I could point to and say:
+There was no company I could point to and say:
 
-This is where people like us can work.
+This is where people like us work.
 
-Now it is a little better.
+Maybe that was why leaving felt necessary at the time.
 
-There are more bioinformatics companies in Vietnam than there were when I started looking.
+If the field did not really exist around me, then maybe I had to go somewhere else to find it.
 
-Not many more.
+So I went deeper into academic bioinformatics.
+
+For a while, I tried very hard to make that path work.
+
+The science was real.
+
+The effort was real.
+
+But the life around it was not something I wanted to keep living.
+
+I worked too much.
+
+I kept trying to prove something.
+
+And somewhere along the way, I started feeling that what I was proving did not matter very much outside a small circle of specialists.
+
+That was a hard thing to admit.
+
+When you are inside academia, it can feel like leaving means failing.
+
+It can feel like you are giving up before the work becomes meaningful.
+
+But sometimes leaving is not failure.
+
+Sometimes it is the first honest decision you have made in years.
+
+I left academic bioinformatics in 2023.
+
+I left Korea and came back to Vietnam.
+
+Not with a grand plan.
+
+Mostly with the feeling that I needed to start over.
+
+Vietnam looked different from how it did in 2019.
+
+The field was still small, but it was no longer imaginary.
+
+There were more companies than there used to be.
+
+Not many.
 
 Depending on how strictly you define bioinformatics, there are probably only five or six that most people in the field would recognize.
+
+That may not sound small until you spend a few years in it.
 
 The community is small enough that I can name nearly all of them.
 
 Small enough that I know people working at several of them.
 
-Small enough that after a few years, you start recognizing the same names again and again.
+Small enough that the same names keep appearing over and over again.
 
-Someone leaves one company and appears at another.
+Someone leaves one company and joins another.
 
 Someone becomes a hiring manager.
 
@@ -98,31 +146,29 @@ Someone moves overseas.
 
 Someone leaves biology entirely.
 
-The community is not empty.
-
-It is not hopeless.
-
-But it is small enough that it often feels like everyone is only one or two introductions away from everyone else.
+After a while, it starts feeling less like an industry and more like a small community.
 
 That changes how a career feels.
 
-Bioinformatics has another strange contradiction too.
+One thing I did not understand back then was how strange bioinformatics is as a profession.
 
-It feels global from the outside.
+From the outside, it looks global.
 
 The papers are global.
 
 The tools are global.
 
-The GitHub repositories are global.
-
 The conferences are global.
 
-The problems look global.
+The problems are global.
 
 But the work is often local.
 
-Clinical data cannot simply move anywhere.
+The knowledge travels easily.
+
+The data does not.
+
+Clinical data is sensitive.
 
 Human genomics data is sensitive.
 
@@ -130,27 +176,21 @@ Hospital data is sensitive.
 
 National biobank data is sensitive.
 
-Even when remote work is technically possible, access, regulation, contracts, institutional trust, and data governance make everything more complicated.
+The regulations are local.
 
-The knowledge travels easily.
+The contracts are local.
 
-The data does not.
+The institutions are local.
 
 And if the data does not move, the jobs do not move as freely either.
 
-That matters a lot when you are in a small market.
-
-You can learn global skills, follow global tools, understand global problems, and still be limited by the number of local organizations trusted to hold and process the data.
-
-In software, you can sometimes build for the world from almost anywhere.
-
-In bioinformatics, the world may still need you to be near the data, near the institution, or near the legal structure that owns the data.
+You can spend years learning global tools and global skills, only to discover that your opportunities are still shaped by a surprisingly small local ecosystem.
 
 Global in knowledge.
 
 Local in opportunity.
 
-When you are trying to build a life inside that contradiction, those abstract ideas become very practical.
+When you are trying to build a life inside that contradiction, those abstract words become very practical.
 
 They become rent.
 
@@ -160,49 +200,61 @@ They become whether your skills can move.
 
 They become whether you can grow without leaving the country, leaving the field, or accepting a role that only uses half of what you know.
 
-For a while, I tried to help in my own small way.
+One of the unexpected things that happened after I came back was teaching.
 
-I taught online courses.
+I taught students who had just entered university.
 
-Not because I thought I had all the answers, but because I could see the hunger.
+I taught doctors.
 
-A lot of biology students wanted to learn IT, programming, Linux, data analysis, anything that could help them cross the bridge from wet lab work into something more computational.
+I taught people from completely different backgrounds.
 
-Some of them were curious.
+Some sold medical devices.
 
-Some of them were ambitious.
+Some sold chemicals.
 
-Some of them were simply tired.
+Some worked in hospitals.
 
-They saw the same thing many people in biology eventually see:
+Some were trying to move into data work.
 
-Lab work can be meaningful.
+Some were trying to move into tech.
 
-But it can also be underpaid, unstable, and difficult to escape from.
+The details were different, but the pattern felt familiar.
 
-They were not trying to become rich overnight.
+They all wanted something.
 
-They were trying to find a way out.
+Maybe better pay.
 
-Or at least a way forward.
+Maybe more stability.
 
-I remember that feeling clearly.
+Maybe a future that felt larger than the one directly in front of them.
 
-The desperation was quiet, but it was there.
+A lot of them saw bioinformatics as a bridge.
 
-People trying to learn Python after a full day in the lab.
+Biology on one side.
 
-People trying to understand command lines when they had never been taught how computers really work.
+Technology on the other.
 
-People trying to read English documentation, install packages, fix errors, and make sense of tools that assumed too much background knowledge.
+And if they could just learn enough programming, enough Linux, enough statistics, maybe they could cross it.
+
+I understood that feeling because I had felt it myself.
+
+What I was less sure about was whether I should encourage it.
+
+Not because bioinformatics is useless.
+
+The field is important.
+
+But because I had started seeing how difficult the path actually was.
+
+I remember students trying to learn Python after a full day in the lab.
+
+Students struggling through English documentation because most of the useful material was not available in Vietnamese.
+
+Students fighting package installation errors before they had even written their first useful script.
 
 People who were smart enough, but had been given the wrong ladder.
 
-That experience stayed with me.
-
-It made me respect the students more.
-
-It also made me more skeptical of the advice we often give.
+That experience changed how I think about career advice.
 
 For years, the message was simple:
 
@@ -212,99 +264,73 @@ Biology is becoming data.
 
 This is the future.
 
-I understand why people said that.
-
-I probably said some version of it too.
-
-And to be fair, it was not wrong.
+The first part turned out to be true.
 
 Biology did become more computational.
 
-Sequencing became cheaper.
+The data kept growing.
 
-Genomics grew.
+The tools kept multiplying.
 
-Single-cell data exploded.
+The scientific need never disappeared.
 
-Biobanks became larger.
+What I am less certain about now is the second part.
 
-Clinical pipelines became more data-heavy.
-
-The scientific need for bioinformatics did not disappear.
-
-But a growing scientific need does not automatically create a healthy career path.
-
-That is the part people do not say loudly enough.
+A growing scientific need does not automatically create a healthy career path.
 
 Data still needs money.
 
-Data needs companies.
+It needs infrastructure.
 
-Data needs infrastructure.
+It needs companies.
 
-Data needs teams.
+It needs long-term ownership.
 
-Data needs long-term ownership.
+It needs people who maintain the boring parts after the exciting announcement is over.
 
-Without those things, telling every biology student to learn bioinformatics can become irresponsible.
+And it needs enough opportunity for the people doing the work.
 
-Not because bioinformatics is useless.
-
-It is not.
-
-But because the path is harder than the slogan.
-
-If a student asked me now whether they should enter bioinformatics, I would not give the same answer I might have given years ago.
+If a student asked me today whether they should enter bioinformatics, I would not give the same answer I might have given years ago.
 
 I would not say:
 
 Yes, just learn Python and R.
 
-I would not sell it as a clean escape from the lab.
+I would ask where they want to live.
 
-I would not present it as a guaranteed future.
+Whether they are willing to move.
 
-I would ask harder questions.
+Whether they genuinely enjoy biology.
 
-Where do you want to work?
+Whether they genuinely enjoy software.
 
-Are there companies in your country that hire for this?
+Whether they are prepared to compete in a field that is global in tools but local in opportunity.
 
-Are you willing to move?
+And whether they understand how much the field may ask from them.
 
-Are you willing to compete globally?
+Because bioinformatics has a habit of quietly expanding.
 
-Do you like biology enough to stay close to it?
+You start by learning biology.
 
-Do you like software enough to become genuinely good at it?
+Then statistics.
 
-And maybe most importantly:
+Then programming.
 
-Do you understand how much the field may ask from you?
+Then Linux.
 
-Because bioinformatics is rarely one thing.
+Then workflow systems.
 
-It sits between biology, statistics, software, data engineering, infrastructure, and scientific communication.
+Then cloud platforms.
 
-The field asks people to become translators between disciplines that do not always understand each other.
+Then data management.
 
-A biologist wants an answer.
+Then debugging.
 
-A statistician wants the assumptions to be valid.
+Then all the things nobody mentioned when you started.
 
-An engineer wants the system to be reliable.
+Maybe that is why the field is often misunderstood.
 
-A manager wants the project to finish.
-
-A user wants the job to stop failing.
-
-Somewhere in the middle is the bioinformatician, trying to make all of those things true at the same time.
-
-That is not easy work.
-
-And because it sits between so many disciplines, much of the work becomes invisible.
-
-People see the part closest to their own world.
+People only see the part closest to them.
 
 The biology.
 
@@ -316,133 +342,181 @@ The infrastructure.
 
 Very few people see the whole thing.
 
-When something fails, you are often expected to debug across all of it.
+Later, I ended up working on the platform side of the industry.
 
-Maybe the model is wrong.
+Not doing biological interpretation.
 
-Maybe the sample IDs do not match.
+Not publishing papers.
 
-Maybe the container changed.
+Supporting the systems that researchers relied on.
 
-Maybe the workflow made assumptions nobody documented.
+That experience changed my view of the field more than anything else.
 
-Maybe the disk filled up.
+Researchers would arrive frustrated because the platform was difficult.
 
-Maybe the reference moved.
+Many were new to cloud computing.
 
-Maybe the original author left.
+Many had never managed infrastructure.
 
-That is the ordinary reality of the field.
+Some principal investigators delegated everything to students and were shocked when costs exceeded expectations.
 
-It is often the work of holding together a scientific question, a pile of imperfect data, a fragile software stack, and a computing environment that was never as clean as the tutorial.
+Some workflows failed after days of runtime.
 
-And after a while, I noticed something.
+Some analyses worked until a dependency changed.
 
-The biology was not the part I enjoyed most.
+Some environments became impossible to reproduce.
 
-The part I enjoyed most was everything underneath it.
+Behind every scientific question was a mountain of engineering nobody wanted to think about.
+
+The uncomfortable truth is that modern bioinformatics depends on an enormous amount of hidden machinery.
+
+Storage systems.
+
+Permissions.
+
+Workflow engines.
+
+Containers.
+
+Compliance controls.
+
+Audit trails.
+
+Cloud infrastructure.
+
+Data governance.
+
+Most researchers never wanted to become experts in those things.
+
+But the science increasingly depends on them.
+
+That is where I started to understand why some difficult platforms still survive.
+
+Not because they are pleasant.
+
+Not because they are easy.
+
+Sometimes they survive because they satisfy legal, security, and governance requirements that ordinary tools cannot satisfy.
+
+Sometimes a platform exists not because researchers love it, but because the data is too sensitive for simpler arrangements.
+
+That creates a strange kind of frustration.
+
+The platform is hard to use.
+
+The users are frustrated.
+
+The support team is frustrated.
+
+The researchers only want to do science.
+
+The students are suddenly expected to understand cloud computing, billing, storage, permissions, and workflow execution.
+
+And yet the platform exists because the alternative may not be legally or institutionally possible.
+
+That is bioinformatics at scale.
+
+Not clean.
+
+Not elegant.
+
+Not what the tutorial promised.
+
+But real.
+
+The same is true of the tools.
+
+The field runs on imperfect solutions.
+
+Workflow engines can feel patched together.
+
+Pipelines can depend on a few people knowing how everything works.
+
+Scripts can grow from Bash, Python, Makefiles, YAML, containers, and hope.
+
+But those imperfect tools are often still better than every lab inventing its own private mess from scratch.
+
+That is one of the strange things about bioinformatics.
+
+It keeps moving through compromise.
+
+Researchers keep publishing.
+
+Students keep learning.
+
+Engineers keep patching.
+
+The next workflow arrives.
+
+The next dataset arrives.
+
+The next generation comes in hoping things will be better.
+
+And somehow the field survives.
+
+For a long time, I thought the combination of everything was what attracted me to bioinformatics.
+
+Biology.
+
+Statistics.
+
+Programming.
+
+Data.
+
+Tools.
+
+Systems.
+
+But eventually I realized I was becoming interested in a very specific part of it.
+
+Not the biological interpretation.
+
+Not the scientific conclusions.
+
+The machinery underneath.
 
 The workflows.
 
-The infrastructure.
-
-The reliability.
+The platforms.
 
 The automation.
 
+The reliability.
+
 The operational details.
 
-A failed GWAS run can look like a scientific problem from the outside.
+A failed analysis can look like a science problem from the outside.
 
-From the inside, it may be storage, memory, permissions, environment drift, cost limits, or assumptions hidden inside software.
+From the inside, it is often a systems problem.
 
-A notebook that will not open can look like a user problem.
+Those were the problems that kept my attention.
 
-From the inside, it may be authentication, networking, startup failures, or service health.
+When a workflow failed, I was less interested in the result than in understanding why the system allowed it to fail.
 
-Those were the problems that pulled me in.
+When users struggled, I was less interested in writing another page of documentation than in making the failure harder to trigger in the first place.
 
-At some point, I stopped seeing only the analysis.
+At some point, I stopped asking only whether the analysis was correct.
 
-I started seeing the operating model underneath it.
+I started asking different questions.
 
 Who owns this workflow?
 
 Who maintains it?
 
-Who knows which version produced this result?
+Who can reproduce it?
 
-Who answers the user when something breaks?
+Who will still understand it six months later?
 
-Who fixes the same failure next month?
+Who pays when it fails after three days?
 
-The biology still matters.
+Who explains the cost to the lab?
 
-Of course it does.
+Who fixes it when it breaks again?
 
-But the machinery decides whether the biology can happen at all.
+Those are not biology questions.
 
-And I cared more and more about the machinery.
-
-For years, bioinformatics seemed like the obvious place for me.
-
-It had biology, code, Linux, pipelines, statistics, and enough broken tools to keep things interesting.
-
-And for a while, it really did fit.
-
-It gave me a career.
-
-It gave me difficult problems.
-
-It taught me how ugly real-world data can be, how fragile research software becomes, and how much work sits between a scientific question and a usable result.
-
-I am grateful for that.
-
-But gratitude and long-term fit are not the same thing.
-
-When I look back at the work I actually enjoyed, it was rarely the biological interpretation.
-
-I liked figuring out why a job failed.
-
-I liked reading logs.
-
-I liked tracing a problem through a workflow, a container, a dataset, and a cloud instance.
-
-I liked turning a fragile process into something people could run again.
-
-Support work probably made this clearer than anything else.
-
-Support is not glamorous.
-
-But support shows you the truth.
-
-It shows you where the documentation is optimistic.
-
-It shows you where a product is confusing.
-
-It shows you which workflows only work because one person knows the magic command.
-
-It shows you where the platform quietly pushes complexity onto the user.
-
-A user says:
-
-My job failed.
-
-Behind that sentence may be days of engineering decisions.
-
-And the questions that interested me were always the same.
-
-What should be automatic?
-
-What should fail early?
-
-What should be visible?
-
-What should be reproducible by default?
-
-What should be impossible to misconfigure?
-
-Those are systems questions.
+They are systems questions.
 
 And I think that is where my attention has been moving for a long time.
 
@@ -450,85 +524,37 @@ This is not a post about bioinformatics being dead.
 
 It is not.
 
-If anything, biology is becoming more computational every year.
-
-The need is real.
-
-The science is real.
+The science matters.
 
 The work matters.
 
-But a growing field does not automatically mean an easy career.
-
-The science can grow while the job market remains narrow.
-
-The data can increase while funding becomes harder.
-
-The need can be obvious while the opportunities remain limited.
-
-Those things can all be true at the same time.
+The people certainly matter.
 
 I do not think everyone should leave.
-
-Some people genuinely love the biology.
-
-Some people love method development.
-
-Some people love research.
 
 Some people are exactly where they should be.
 
 I respect that.
 
-But I no longer think I am one of those people.
+But I no longer think I am one of them.
 
 I do not think I am leaving because I failed at bioinformatics.
 
 I think I followed it far enough to discover which part I actually care about.
 
-I came in because I liked science and code.
+Bioinformatics gave me a career.
 
-I stayed because the problems were messy and useful.
+It gave me difficult problems.
 
-But the work that kept my attention was the work underneath the science.
+It taught me what real scientific computing looks like.
 
-The infrastructure.
+It taught me how messy data is.
 
-The automation.
+It taught me how fragile research software can be.
 
-The reliability.
+It taught me how much invisible engineering sits between a scientific question and a usable result.
 
-The workflows.
-
-The boring path from a question to a result.
-
-I do not want to spend the next ten years explaining why another pipeline failed.
-
-I would rather help build the platform where it fails less often.
-
-So this is not a dramatic farewell.
-
-No rant.
-
-No grand speech.
-
-Just a quiet admission.
-
-Bioinformatics gave me a career and taught me what real scientific computing looks like.
-
-It taught me enough biology to respect the science.
-
-Enough statistics to respect uncertainty.
-
-Enough software engineering to respect complexity.
-
-Enough operations to respect reliability.
-
-It taught me that messy data is normal, that reproducibility is not a slogan, and that users do not need more heroic debugging.
-
-They need better systems.
-
-And maybe that is the final lesson the field gave me.
+And somewhere along the way, it taught me something else.
 
 I came into bioinformatics because I liked science and code.
 
