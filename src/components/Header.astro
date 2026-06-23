@@ -7,6 +7,26 @@ const links = [
   { href: "/tags/", label: "tags", index: "03" },
   { href: "/about/", label: "about", index: "04" },
 ];
+
+const buildDate = new Date();
+
+const months = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
+
+const revision =
+  `${months[buildDate.getUTCMonth()]} ${buildDate.getUTCFullYear()}`;
 ---
 
 <header class="site-header">
@@ -14,16 +34,26 @@ const links = [
     <div class="header-bar">
       <a class="site-identity" href="/" aria-label="Tien's notes, home">
         <span class="system-name">TIEN'S NOTES</span>
-        <span class="system-model">PERSONAL SYSTEM / REV. 2026</span>
+        <span class="system-model">
+          PERSONAL SYSTEM / REV. {revision}
+        </span>
       </a>
 
       <nav class="site-nav" aria-label="Primary navigation">
         {
           links.map(({ href, label, index }) => {
-            const active = pathname === href || pathname.startsWith(href);
+            const active =
+              pathname === href || pathname.startsWith(href);
+
             return (
-              <a href={href} aria-current={active ? "page" : undefined}>
-                <span class="nav-index" aria-hidden="true">{index}</span>
+              <a
+                href={href}
+                aria-current={active ? "page" : undefined}
+              >
+                <span class="nav-index" aria-hidden="true">
+                  {index}
+                </span>
+
                 <span class="nav-label">{label}</span>
               </a>
             );
