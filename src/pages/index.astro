@@ -90,6 +90,20 @@ import SnakeGame from "../components/SnakeGame.astro";
 
           <SnakeGame />
 
+          <div
+            class="snake-mobile-controls"
+            data-snake-mobile-controls
+            aria-label="Snake game controls"
+          >
+            <div class="snake-mobile-actions">
+              <button type="button" data-snake-action="pause">PAUSE</button>
+              <button type="button" data-snake-action="restart">RESTART</button>
+              <button type="button" data-snake-action="exit">EXIT</button>
+            </div>
+
+            <p class="snake-mobile-help">SWIPE OR USE CONTROLS</p>
+          </div>
+
           <form class="terminal-shell" data-terminal-shell hidden>
             <span class="prompt">TIENDU@HOME</span>
             <span class="path">:~$</span>
@@ -226,6 +240,15 @@ import SnakeGame from "../components/SnakeGame.astro";
         );
         const response = wrapper.querySelector("[data-terminal-response]");
         const terminalScreen = wrapper.querySelector("[data-terminal-screen]");
+        const snakeRoot = wrapper.querySelector("[data-snake-game]");
+        const snakeOverlay = wrapper.querySelector("[data-snake-overlay]");
+        const snakeState = wrapper.querySelector("[data-snake-state]");
+        const snakeActionButtons = Array.from(
+          wrapper.querySelectorAll("[data-snake-action]"),
+        );
+        const snakePauseButton = wrapper.querySelector(
+          '[data-snake-action="pause"]',
+        );
 
         const reducedMotion = window.matchMedia(
           "(prefers-reduced-motion: reduce)",
@@ -422,8 +445,72 @@ import SnakeGame from "../components/SnakeGame.astro";
           revealShell();
         };
 
+        const setPauseButtonState = (label, disabled = false) => {
+          if (!(snakePauseButton instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          snakePauseButton.textContent = label;
+          snakePauseButton.disabled = disabled;
+          snakePauseButton.setAttribute(
+            "aria-pressed",
+            label === "RESUME" ? "true" : "false",
+          );
+        };
+
+        const syncSnakeState = () => {
+          if (!snakeIsActive) {
+            return;
+          }
+
+          const state = snakeState?.textContent?.trim().toUpperCase() ?? "";
+          const overlayVisible = snakeOverlay ? !snakeOverlay.hidden : false;
+
+          terminalStatus?.classList.remove("is-paused", "is-game-over");
+
+          if (state === "PAUSED") {
+            terminalStatus?.classList.add("is-paused");
+            setText(statusLabel, "PAUSED");
+            setText(footerState, "GAME PAUSED");
+            setPauseButtonState("RESUME");
+            return;
+          }
+
+          if (state === "GAME OVER" || state === "SYSTEM CLEARED") {
+            terminalStatus?.classList.add("is-game-over");
+            setText(statusLabel, state);
+            setText(footerState, "GAME OVER · RESTART OR EXIT");
+            setPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (state === "PRESS A DIRECTION") {
+            setText(statusLabel, "READY");
+            setText(
+              footerState,
+              finePointer.matches
+                ? "GAME READY · ARROWS/WASD"
+                : "GAME READY · USE CONTROLS",
+            );
+            setPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (!overlayVisible) {
+            setText(statusLabel, "RUNNING");
+            setText(
+              footerState,
+              finePointer.matches
+                ? "GAME ACTIVE · ESC EXIT"
+                : "GAME ACTIVE · USE CONTROLS",
+            );
+            setPauseButtonState("PAUSE");
+          }
+        };
+
         const openSnake = () => {
           snakeIsActive = true;
+          wrapper.classList.add("snake-mode");
 
           if (profileView) {
             profileView.hidden = true;
@@ -435,13 +522,23 @@ import SnakeGame from "../components/SnakeGame.astro";
 
           clearResponse();
           setText(terminalMode, "SNAKE");
-          setText(statusLabel, "RUNNING");
-          setText(footerState, "GAME ACTIVE · ESC EXIT");
+          setText(statusLabel, "READY");
+          setText(
+            footerState,
+            finePointer.matches
+              ? "GAME READY · ARROWS/WASD"
+              : "GAME READY · USE CONTROLS",
+          );
+          setPauseButtonState("PAUSE", true);
           window.dispatchEvent(new CustomEvent("tiendu:snake-start"));
+          window.setTimeout(syncSnakeState, 0);
         };
 
         const restoreProfile = (score = 0, highScore = 0) => {
           snakeIsActive = false;
+          wrapper.classList.remove("snake-mode");
+          terminalStatus?.classList.remove("is-paused", "is-game-over");
+          setPauseButtonState("PAUSE");
 
           if (profileView) {
             profileView.hidden = false;
@@ -649,6 +746,42 @@ import SnakeGame from "../components/SnakeGame.astro";
           terminalInput.focus();
         });
 
+        snakeActionButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const action = button.dataset.snakeAction;
+            const keyByAction = {
+              pause: "p",
+              restart: "r",
+              exit: "Escape",
+            };
+            const key = keyByAction[action];
+
+            if (!key || !snakeIsActive) {
+              return;
+            }
+
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", {
+                key,
+                bubbles: true,
+                cancelable: true,
+              }),
+            );
+          });
+        });
+
+        if (snakeRoot) {
+          const snakeStateObserver = new MutationObserver(syncSnakeState);
+
+          snakeStateObserver.observe(snakeRoot, {
+            attributes: true,
+            attributeFilter: ["hidden"],
+            characterData: true,
+            childList: true,
+            subtree: true,
+          });
+        }
+
         window.addEventListener("tiendu:snake-exit", (event) => {
           const detail = event.detail ?? {};
           restoreProfile(detail.score ?? 0, detail.highScore ?? 0);
@@ -777,6 +910,28 @@ import SnakeGame from "../components/SnakeGame.astro";
     box-shadow:
       0 0 4px rgb(199 240 139 / 70%),
       0 0 9px rgb(199 240 139 / 34%);
+  }
+
+  .terminal-status.is-paused {
+    color: var(--amber);
+  }
+
+  .terminal-status.is-paused .status-light {
+    background: var(--amber);
+    box-shadow:
+      0 0 4px rgb(167 96 47 / 62%),
+      0 0 9px rgb(167 96 47 / 28%);
+  }
+
+  .terminal-status.is-game-over {
+    color: var(--red);
+  }
+
+  .terminal-status.is-game-over .status-light {
+    background: var(--red);
+    box-shadow:
+      0 0 4px rgb(166 78 61 / 65%),
+      0 0 9px rgb(166 78 61 / 30%);
   }
 
   .terminal-screen {
@@ -1011,6 +1166,10 @@ import SnakeGame from "../components/SnakeGame.astro";
     display: none;
   }
 
+  .snake-mobile-controls {
+    display: none;
+  }
+
   .terminal-footer {
     align-items: center;
     border-top: 1px solid rgb(199 240 139 / 15%);
@@ -1128,6 +1287,62 @@ import SnakeGame from "../components/SnakeGame.astro";
 
     .terminal-footer {
       font-size: 0.8rem;
+    }
+  }
+
+  @media (max-width: 620px), (pointer: coarse) {
+    .landing-wrapper.snake-mode .snake-mobile-controls {
+      display: grid;
+      gap: 0.55rem;
+      margin: -0.15rem auto 0;
+      max-width: 430px;
+      width: 100%;
+    }
+
+    .snake-mobile-actions {
+      display: grid;
+      gap: 0.5rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .snake-mobile-actions button {
+      background: rgb(199 240 139 / 5%);
+      border: 1px solid rgb(199 240 139 / 25%);
+      border-radius: 2px;
+      color: var(--terminal-green);
+      cursor: pointer;
+      font-family: var(--font-terminal);
+      font-size: 0.9rem;
+      letter-spacing: 0.07em;
+      min-height: 44px;
+      padding: 0.55rem 0.35rem;
+      text-transform: uppercase;
+      touch-action: manipulation;
+    }
+
+    .snake-mobile-actions button:hover,
+    .snake-mobile-actions button:focus-visible {
+      background: rgb(199 240 139 / 12%);
+      border-color: var(--terminal-green-dim);
+      color: var(--terminal-green-bright);
+    }
+
+    .snake-mobile-actions button:disabled {
+      cursor: default;
+      opacity: 0.38;
+    }
+
+    .snake-mobile-help {
+      color: var(--terminal-green-dim);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      margin: 0;
+      max-width: none;
+      text-align: center;
+    }
+
+    .landing-wrapper.snake-mode :global(.snake-help) {
+      display: none;
     }
   }
 
