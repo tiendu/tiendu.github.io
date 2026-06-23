@@ -791,14 +791,22 @@ a[target="_blank"]::after {
 }
 
 .toc {
+  align-self: start;
   border-left: 1px solid var(--line-dark);
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 0.68rem;
   line-height: 1.45;
+  max-height: calc(100vh - 3rem);
+  max-height: calc(100dvh - 3rem);
+  overflow-y: auto;
   padding-left: 1rem;
+  padding-right: 0.6rem;
   position: sticky;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
   top: 1.5rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 .toc strong {
@@ -1058,8 +1066,11 @@ kbd {
     border-bottom: 1px solid var(--line);
     border-left: 0;
     margin-bottom: 2.2rem;
+    max-height: none;
+    overflow: visible;
     padding: 0 0 1rem;
     position: static;
+    scrollbar-gutter: auto;
   }
 
   .toc ol {
