@@ -1,0 +1,298 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout>
+  <article class="about-page">
+    <header class="about-header">
+      <p class="about-kicker">A little more context</p>
+      <h1>About me</h1>
+      <p class="about-lede">
+        I’m Tien, a platform operations engineer based in Vietnam. I like
+        dependable systems, useful tools, and understanding why things fail.
+      </p>
+    </header>
+
+    <section aria-labelledby="path-heading">
+      <h2 id="path-heading">How I got here</h2>
+
+      <p>
+        My background is in biotechnology and bioinformatics rather than
+        traditional computer science. I completed a BSc in Biotechnology in
+        Singapore in 2017, followed by an MSc in Bioinformatics and
+        Computational Biology in Ireland in 2019.
+      </p>
+
+      <p>
+        I later entered a PhD programme, but left in 2023 after deciding it was
+        no longer the right path for me. It was a difficult and sad decision,
+        but also a deliberate one. It gave me space to reconsider the kind of
+        work I actually wanted to do.
+      </p>
+
+      <div class="timeline" aria-label="Education and career timeline">
+        <div>
+          <span class="timeline-year">2017</span>
+          <p>BSc in Biotechnology, completed in Singapore.</p>
+        </div>
+        <div>
+          <span class="timeline-year">2019</span>
+          <p>MSc in Bioinformatics and Computational Biology in Ireland.</p>
+        </div>
+        <div>
+          <span class="timeline-year">2023</span>
+          <p>Left academia and moved more deliberately toward engineering.</p>
+        </div>
+        <div>
+          <span class="timeline-year">Now</span>
+          <p>Platform operations, reliability, automation, and scientific software.</p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="work-heading">
+      <h2 id="work-heading">What I work on</h2>
+
+      <p>
+        I started around scientific research, biological data, and computational
+        workflows. Over time, I became increasingly interested in the engineering
+        underneath them:
+      </p>
+
+      <ul class="question-list">
+        <li>Why did this job fail after running for two days?</li>
+        <li>Why can nobody reproduce this environment?</li>
+        <li>Where did the storage disappear?</li>
+        <li>Why is this process still retrying after a month?</li>
+        <li>How do we make the system easier to operate next time?</li>
+      </ul>
+
+      <p>
+        That gradually pulled me toward Linux systems, cloud infrastructure,
+        distributed workloads, automation, observability, and reliability
+        engineering.
+      </p>
+
+      <p>
+        Today, I investigate production failures, build operational tooling,
+        improve cloud usage, document failure modes, and help make complicated
+        systems less fragile. I do not think reliability means that nothing ever
+        fails. It means failures are visible, understandable, recoverable, and
+        less likely to surprise the next person.
+      </p>
+    </section>
+
+    <section aria-labelledby="outside-heading">
+      <h2 id="outside-heading">Outside work</h2>
+
+      <p>
+        I like coffee, photography, and simple things that reward attention.
+        I especially like sunlight passing through leaves—the Japanese word
+        <em>komorebi</em> describes it better than I can.
+      </p>
+
+      <p>
+        I also have a soft spot for mechanical things: watches, cars, tools, and
+        machines whose behaviour can be observed and understood. Perhaps that is
+        part of why systems engineering appeals to me. I like things that are
+        dependable, maintainable, and honest about how they work.
+      </p>
+    </section>
+
+    <section class="contact-card" aria-labelledby="contact-heading">
+      <p class="contact-prompt">~/say-hello</p>
+      <h2 id="contact-heading">Open to thoughtful conversations</h2>
+
+      <p>
+        I’m happy to hear from people working on platform operations, reliability,
+        Linux and cloud infrastructure, scientific software, automation,
+        developer tooling, technical writing, or small open-source projects.
+      </p>
+
+      <div class="contact-links">
+        <a href="mailto:tiendu107@gmail.com">send an email</a>
+        <a
+          href="https://github.com/tiendu"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          GitHub
+        </a>
+        <a
+          href="https://www.linkedin.com/in/tienhdu"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          LinkedIn
+        </a>
+      </div>
+    </section>
+  </article>
+</BaseLayout>
+
+<style>
+  .about-page {
+    margin-inline: auto;
+    max-width: var(--content-width);
+  }
+
+  .about-header {
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+  }
+
+  .about-kicker {
+    color: var(--brand);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .about-header h1 {
+    margin-block: 0 0.75rem;
+  }
+
+  .about-lede {
+    color: var(--muted);
+    font-size: 1.15rem;
+    line-height: 1.65;
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  .about-page section + section {
+    margin-top: 3.25rem;
+  }
+
+  .about-page section h2 {
+    margin-top: 0;
+  }
+
+  .timeline {
+    border-left: 2px solid var(--border);
+    margin-block: 1.75rem 0.5rem;
+    padding-left: 1.25rem;
+  }
+
+  .timeline > div {
+    display: grid;
+    gap: 0.25rem 1rem;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    padding-block: 0.5rem;
+    position: relative;
+  }
+
+  .timeline > div::before {
+    background: var(--background);
+    border: 2px solid var(--brand);
+    border-radius: 50%;
+    content: "";
+    height: 10px;
+    left: calc(-1.25rem - 6px);
+    position: absolute;
+    top: 1.05rem;
+    width: 10px;
+  }
+
+  .timeline-year {
+    color: var(--brand);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .timeline p {
+    margin: 0;
+  }
+
+  .question-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    list-style: none;
+    margin-block: 1.25rem;
+    max-width: 680px;
+    padding: 1rem 1.15rem;
+  }
+
+  .question-list li {
+    padding-left: 1.35rem;
+    position: relative;
+  }
+
+  .question-list li::before {
+    color: var(--brand);
+    content: ">";
+    font-family: var(--font-mono);
+    left: 0;
+    position: absolute;
+  }
+
+  .question-list li + li {
+    margin-top: 0.45rem;
+  }
+
+  .contact-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem;
+  }
+
+  .contact-prompt {
+    color: var(--brand);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .contact-card h2 {
+    margin-bottom: 0.7rem;
+  }
+
+  .contact-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.15rem;
+    margin-top: 1.15rem;
+  }
+
+  .contact-links a {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+  }
+
+  .contact-links a::before {
+    content: "→ ";
+  }
+
+  @media (max-width: 650px) {
+    .about-header {
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+    }
+
+    .about-lede {
+      font-size: 1.05rem;
+    }
+
+    .about-page section + section {
+      margin-top: 2.5rem;
+    }
+
+    .timeline > div {
+      grid-template-columns: 3.5rem minmax(0, 1fr);
+    }
+
+    .contact-card {
+      padding: 1.15rem;
+    }
+
+    .contact-links {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+  }
+</style>
