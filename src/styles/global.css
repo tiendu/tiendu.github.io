@@ -803,14 +803,3 @@ pre code {
   }
 }
 
-/* Reduced motion */
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  .site-nav a {
-    transition: none;
-  }
-}
