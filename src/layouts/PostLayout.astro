@@ -78,8 +78,10 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
 
       if (!toc || !article) return;
 
+      const tocElement = toc;
+
       const links = Array.from(
-        toc.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'),
+        tocElement.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'),
       );
 
       const entries = links
@@ -118,7 +120,7 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
 
       function keepLinkVisible(link: HTMLAnchorElement) {
         const padding = 12;
-        const tocRect = toc.getBoundingClientRect();
+        const tocRect = tocElement.getBoundingClientRect();
         const linkRect = link.getBoundingClientRect();
 
         const behavior: ScrollBehavior = reducedMotion.matches
@@ -126,12 +128,12 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
           : "smooth";
 
         if (linkRect.top < tocRect.top + padding) {
-          toc.scrollBy({
+          tocElement.scrollBy({
             top: linkRect.top - tocRect.top - padding,
             behavior,
           });
         } else if (linkRect.bottom > tocRect.bottom - padding) {
-          toc.scrollBy({
+          tocElement.scrollBy({
             top: linkRect.bottom - tocRect.bottom + padding,
             behavior,
           });
