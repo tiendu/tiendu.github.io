@@ -77,7 +77,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
           <p class="terminal-footer" data-terminal-footer aria-hidden="true">
             <span>READY</span>
-            <span>SESSION 01</span>
+            <span>
+              SESSION <span data-session-count>01</span>
+            </span>
           </p>
         </div>
       </div>
@@ -92,6 +94,60 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         }
 
         wrapper.dataset.animationStarted = "true";
+
+        const sessionCounter = wrapper.querySelector("[data-session-count]");
+
+        const SESSION_STORAGE_KEY = "tiendu-home-session";
+        const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+
+        const updateSessionCounter = () => {
+          const now = Date.now();
+          let count = 1;
+
+          try {
+            const storedValue = window.localStorage.getItem(
+              SESSION_STORAGE_KEY,
+            );
+
+            const storedSession = storedValue
+              ? JSON.parse(storedValue)
+              : null;
+
+            const sessionIsValid =
+              storedSession &&
+              Number.isInteger(storedSession.count) &&
+              typeof storedSession.expiresAt === "number" &&
+              storedSession.expiresAt > now;
+
+            const nextSession = sessionIsValid
+              ? {
+                  count: storedSession.count + 1,
+                  expiresAt: storedSession.expiresAt,
+                }
+              : {
+                  count: 1,
+                  expiresAt: now + SESSION_TTL_MS,
+                };
+
+            window.localStorage.setItem(
+              SESSION_STORAGE_KEY,
+              JSON.stringify(nextSession),
+            );
+
+            count = nextSession.count;
+          } catch {
+            /*
+             * localStorage may be blocked in private or restricted browsing.
+             * In that case, leave the counter at SESSION 01.
+             */
+          }
+
+          if (sessionCounter) {
+            sessionCounter.textContent = String(count).padStart(2, "0");
+          }
+        };
+
+        updateSessionCounter();
 
         const greetings = [
           "Hey there! Thanks for stopping by!",
