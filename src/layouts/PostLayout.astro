@@ -2,7 +2,13 @@
 import type { MarkdownHeading } from "astro";
 import BaseLayout from "./BaseLayout.astro";
 import TableOfContents from "../components/TableOfContents.astro";
-import { formatDate, getPostLabels, readingTime, type BlogPost } from "../utils/posts";
+import {
+  formatDate,
+  getPostLabels,
+  getPostSlug,
+  readingTime,
+  type BlogPost,
+} from "../utils/posts";
 
 interface Props {
   post: BlogPost;
@@ -15,26 +21,39 @@ const hasToc = headings.some(({ depth }) => depth === 2 || depth === 3);
 const description =
   post.data.description ??
   `A note by Tien Du, published ${formatDate(post.data.date)}.`;
+
+const year = post.data.date.getUTCFullYear();
+const month = String(post.data.date.getUTCMonth() + 1).padStart(2, "0");
+const day = String(post.data.date.getUTCDate()).padStart(2, "0");
+const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUpperCase()}`;
 ---
 
 <BaseLayout title={post.data.title} description={description} article>
   <div class:list={["post-layout", { "no-toc": !hasToc }]}>
     {hasToc && <TableOfContents headings={headings} />}
 
-    <article class="post h-entry">
+    <article class="post h-entry manual-sheet">
       <header class="post-header">
+        <p class="post-doc-strip">DOCUMENT / {docId}</p>
         <h1 class="post-title p-name">{post.data.title}</h1>
-        <p class="post-meta">
-          <time datetime={post.data.date.toISOString()}>{formatDate(post.data.date)}</time>
-          <span aria-hidden="true"> · </span>
+
+        <div class="post-meta" aria-label="Document metadata">
+          <time datetime={post.data.date.toISOString()}>
+            {formatDate(post.data.date)}
+          </time>
+          <span aria-hidden="true">·</span>
           <span>{readingTime(post.body ?? "")} min read</span>
-        </p>
+        </div>
 
         {
           labels.length > 0 && (
             <ul class="post-labels" aria-label="Post tags">
               {labels.map((label) => (
-                <li><a href={`/tags/#${encodeURIComponent(label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""))}`}>{label}</a></li>
+                <li>
+                  <a href={`/tags/#${encodeURIComponent(label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""))}`}>
+                    {label}
+                  </a>
+                </li>
               ))}
             </ul>
           )

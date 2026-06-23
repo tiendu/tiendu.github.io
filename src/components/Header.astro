@@ -2,28 +2,34 @@
 const pathname = Astro.url.pathname;
 
 const links = [
-  { href: "/posts/", label: "posts" },
-  { href: "/projects/", label: "projects" },
-  { href: "/tags/", label: "tags" },
-  { href: "/about/", label: "about" },
+  { href: "/posts/", label: "posts", index: "01" },
+  { href: "/projects/", label: "projects", index: "02" },
+  { href: "/tags/", label: "tags", index: "03" },
+  { href: "/about/", label: "about", index: "04" },
 ];
 ---
 
 <header class="site-header">
-  <div class="wrapper header-inner">
-    <a class="site-title" href="/" aria-label="Tien's notes, home">Tien's notes</a>
+  <div class="wrapper">
+    <div class="header-bar">
+      <a class="site-identity" href="/" aria-label="Tien's notes, home">
+        <span class="system-name">TIEN'S NOTES</span>
+        <span class="system-model">PERSONAL SYSTEM / REV. 2026</span>
+      </a>
 
-    <nav class="site-nav" aria-label="Primary navigation">
-      {
-        links.map(({ href, label }) => {
-          const active = pathname === href || pathname.startsWith(href);
-          return (
-            <a href={href} aria-current={active ? "page" : undefined}>
-              {label}
-            </a>
-          );
-        })
-      }
-    </nav>
+      <nav class="site-nav" aria-label="Primary navigation">
+        {
+          links.map(({ href, label, index }) => {
+            const active = pathname === href || pathname.startsWith(href);
+            return (
+              <a href={href} aria-current={active ? "page" : undefined}>
+                <span class="nav-index" aria-hidden="true">{index}</span>
+                <span class="nav-label">{label}</span>
+              </a>
+            );
+          })
+        }
+      </nav>
+    </div>
   </div>
 </header>

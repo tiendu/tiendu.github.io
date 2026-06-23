@@ -17,21 +17,46 @@ for (const post of posts) {
 const groups = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
 const slugify = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+const compactDate = (date: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "UTC",
+  }).format(date).replaceAll("-", ".");
 ---
 
-<PageLayout title="tags" description="Browse posts by topic.">
-  <div class="archives">
-    {
-      groups.length > 0 ? groups.map(([label, taggedPosts]) => (
-        <section class="archive-group" id={slugify(label)}>
-          <h2>{label}</h2>
-          {taggedPosts.map((post) => (
-            <article class="archive-item">
-              <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
-            </article>
-          ))}
-        </section>
-      )) : <p>No tags yet.</p>
-    }
-  </div>
+<PageLayout
+  title="Tags"
+  fileCode="SUBJECT-INDEX"
+  description="Browse the archive by topic, system, tool, or recurring engineering problem."
+>
+  {
+    groups.length > 0 ? (
+      <div class="tag-index">
+        {groups.map(([label, taggedPosts]) => (
+          <section class="tag-drawer" id={slugify(label)}>
+            <header class="tag-drawer-header">
+              <h2>{label}</h2>
+              <span class="tag-count">{taggedPosts.length} FILES</span>
+            </header>
+
+            <ol class="tag-drawer-list">
+              {taggedPosts.map((post) => (
+                <li>
+                  <time datetime={post.data.date.toISOString()}>
+                    {compactDate(post.data.date)}
+                  </time>
+                  <a href={getPostRoute(post)}>{post.data.title}</a>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ))}
+      </div>
+    ) : (
+      <p>No tags yet.</p>
+    )
+  }
 </PageLayout>

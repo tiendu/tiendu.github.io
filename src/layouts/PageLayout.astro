@@ -4,16 +4,26 @@ import BaseLayout from "./BaseLayout.astro";
 interface Props {
   title: string;
   description?: string;
+  fileCode?: string;
 }
 
-const { title, description } = Astro.props;
+const {
+  title,
+  description,
+  fileCode = title.toUpperCase().replace(/[^A-Z0-9]+/g, "-"),
+} = Astro.props;
 ---
 
 <BaseLayout title={title} description={description}>
   <article class="page">
-    <header class="page-header">
+    <header class="document-header">
+      <p class="document-strip">FILE / {fileCode}</p>
       <h1>{title}</h1>
+      {description && <p class="document-description">{description}</p>}
     </header>
-    <slot />
+
+    <div class="document-body">
+      <slot />
+    </div>
   </article>
 </BaseLayout>

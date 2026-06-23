@@ -1,122 +1,90 @@
 ---
 import PageLayout from "../../layouts/PageLayout.astro";
+
+const projects = [
+  {
+    name: "RunWatch",
+    repo: "https://github.com/tiendu/runwatch",
+    label: "Process observation / Linux systems",
+    tech: "Python · Linux · systemd · cgroups · OpenMetrics",
+    summary:
+      "A lightweight Linux service and process monitor built for operational visibility without requiring a full observability stack.",
+    details:
+      "Tracks process trees, CPU, memory, disk I/O, file descriptors, TCP/UDP connections, Unix sockets, and HTTP health checks. Includes structured JSON logs, OpenMetrics output, strict TOML configuration, atomic writes, and persistent monitoring through systemd.",
+    featured: true,
+  },
+  {
+    name: "depviz",
+    repo: "https://github.com/tiendu/depviz",
+    label: "Dependency analysis / Environment inspection",
+    tech: "Python · PyPI · Conda · Bioconda · Graph Analysis · CLI",
+    summary:
+      "A dependency-risk and upgrade-impact inspector for PyPI and Conda/Bioconda environments.",
+    details:
+      "Resolves package graphs, calculates dependency blast radius and transitive weight, explains why packages are present, estimates upgrade impact, renders ASCII trees, identifies environment conflicts, and caches repeatable analyses.",
+  },
+  {
+    name: "seqgrep",
+    repo: "https://github.com/tiendu/seqgrep",
+    label: "Sequence search / Bioinformatics",
+    tech: "Python · FASTA · FASTQ · Gzip · IUPAC · Multiprocessing",
+    summary:
+      "A DNA-aware, grep-style search tool for biological sequences.",
+    details:
+      "Supports literal sequence search, optional IUPAC ambiguity matching, reverse-complement search, circular DNA boundary matches, FASTA/FASTQ input, gzip-compressed files, and chunked multiprocessing for long sequences.",
+  },
+  {
+    name: "Gommitizen",
+    repo: "https://github.com/tiendu/gommitizen",
+    label: "Commit workflow / Developer tooling",
+    tech: "Go · CLI · Git · Conventional Commits",
+    summary:
+      "A Go implementation of Commitizen for generating consistent conventional commit messages.",
+    details:
+      "Designed for small, predictable release workflows where commit structure should help review, changelog generation, and long-term repository maintenance.",
+  },
+  {
+    name: "gentr",
+    repo: "https://github.com/tiendu/gentr",
+    label: "File watching / Command execution",
+    tech: "Go · File Watching · Command Execution · CLI",
+    summary:
+      "A lightweight command runner that watches files and directories, then reruns a command automatically.",
+    details:
+      "Supports recursive watching, glob and stdin-based input, configurable output, and simple install and uninstall commands.",
+  },
+];
 ---
 
 <PageLayout
-  title="projects"
-  description="Open-source projects by Tien Du."
+  title="Projects"
+  fileCode="PROJECT-CATALOGUE"
+  description="Small tools for Linux operations, dependency analysis, bioinformatics, automation, and developer workflows."
 >
-  <div class="projects">
-    <article class="project">
-      <h2>
-        <a
-          href="https://github.com/tiendu/runwatch"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          RunWatch
-        </a>
-      </h2>
-      <p class="tech">
-        Python · Linux · systemd · cgroups · OpenMetrics
-      </p>
-      <p>
-        A lightweight Linux service and process monitor built for operational
-        visibility without requiring a full observability stack.
-      </p>
-      <p>
-        RunWatch tracks process trees, CPU, memory, disk I/O, file descriptors,
-        TCP/UDP connections, Unix sockets, and HTTP health checks. It supports
-        structured JSON logs, OpenMetrics-compatible output, strict TOML
-        configuration, atomic writes, and persistent monitoring through systemd.
-      </p>
-    </article>
-    <article class="project">
-      <h2>
-        <a
-          href="https://github.com/tiendu/depviz"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          depviz
-        </a>
-      </h2>
-      <p class="tech">
-        Python · PyPI · Conda · Bioconda · Graph Analysis · CLI · Caching
-      </p>
-      <p>
-        A dependency-risk and upgrade-impact inspector for PyPI and
-        Conda/Bioconda environments.
-      </p>
-      <p>
-        depviz resolves package graphs, calculates dependency blast radius and
-        transitive weight, explains why packages are present, estimates upgrade
-        impact, renders ASCII dependency trees, identifies environment
-        conflicts, and caches repeatable analysis results.
-      </p>
-    </article>
-    <article class="project">
-      <h2>
-        <a
-          href="https://github.com/tiendu/seqgrep"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          seqgrep
-        </a>
-      </h2>
-      <p class="tech">
-        Python · Bioinformatics · FASTA · FASTQ · Gzip · IUPAC · CLI · Multiprocessing
-      </p>
-      <p>
-        A DNA-aware, grep-style search tool for biological sequences.
-      </p>
-      <p>
-        seqgrep supports literal sequence search by default, optional IUPAC
-        ambiguity matching, reverse-complement search, circular DNA boundary
-        matches, FASTA/FASTQ input, gzip-compressed files, and chunked
-        multiprocessing for long sequences.
-      </p>
-    </article>
-    <article class="project">
-      <h2>
-        <a
-          href="https://github.com/tiendu/gommitizen"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Gommitizen
-        </a>
-      </h2>
-      <p class="tech">
-        Go · CLI · Git · Conventional Commits
-      </p>
-      <p>
-        A Go implementation of Commitizen for generating consistent
-        conventional commit messages and supporting cleaner release workflows.
-      </p>
-    </article>
-    <article class="project">
-      <h2>
-        <a
-          href="https://github.com/tiendu/gentr"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          gentr
-        </a>
-      </h2>
-      <p class="tech">
-        Go · File Watching · Command Execution · CLI · Developer Tooling
-      </p>
-      <p>
-        A lightweight command runner that watches files and directories for
-        changes, then reruns a command automatically.
-      </p>
-      <p>
-        gentr supports recursive watching, glob and stdin-based input,
-        configurable output, and simple install and uninstall commands.
-      </p>
-    </article>
-  </div>
+  <ol class="project-catalogue">
+    {
+      projects.map((project, index) => (
+        <li class:list={["project-entry", { featured: project.featured }]}>
+          <div class="project-index" aria-hidden="true">
+            {String(index + 1).padStart(2, "0")}
+          </div>
+
+          <article class="project-main">
+            <p class="project-kicker">{project.label}</p>
+            <h2>
+              <a href={project.repo} target="_blank" rel="noopener noreferrer">
+                {project.name}
+              </a>
+            </h2>
+            <p class="project-tech">{project.tech}</p>
+            <p class="project-summary">{project.summary}</p>
+            <p>{project.details}</p>
+            <a class="project-link" href={project.repo} target="_blank" rel="noopener noreferrer">
+              Source repository
+            </a>
+          </article>
+        </li>
+      ))
+    }
+  </ol>
 </PageLayout>

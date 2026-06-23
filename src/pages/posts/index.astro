@@ -1,42 +1,93 @@
 ---
 import { getCollection } from "astro:content";
 import PageLayout from "../../layouts/PageLayout.astro";
-import { formatDate, getPostRoute, readingTime, sortPosts } from "../../utils/posts";
+import {
+  getPostLabels,
+  getPostRoute,
+  readingTime,
+  sortPosts,
+} from "../../utils/posts";
 
 const posts = sortPosts(
   await getCollection("blog", ({ data }) => !data.draft),
 );
 const pinned = posts.filter(({ data }) => data.pinned);
 const normalPosts = posts.filter(({ data }) => !data.pinned);
+
+const compactDate = (date: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "UTC",
+  }).format(date).replaceAll("-", ".");
+
+const labelLine = (post: (typeof posts)[number]) => {
+  const labels = getPostLabels(post);
+  return labels.length > 0 ? labels.join(" / ") : "GENERAL NOTES";
+};
 ---
 
-<PageLayout title="posts" description="Writing by Tien Du on systems, platform operations, scientific software, and work.">
+<PageLayout
+  title="Posts"
+  fileCode="LOG-ARCHIVE"
+  description="Field notes, engineering references, and lessons from systems that failed in interesting ways."
+>
   {
     pinned.length > 0 && (
-      <section class="pinned-posts" aria-labelledby="pinned-posts-title">
-        <h2 id="pinned-posts-title" class="section-label">Pinned</h2>
-        {pinned.map((post) => (
-          <article class="post-summary">
-            <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
-            <p class="post-summary-meta">
-              {formatDate(post.data.date)} · {readingTime(post.body ?? "")} min read
-            </p>
-          </article>
-        ))}
+      <section class="archive-section priority" aria-labelledby="priority-title">
+        <header class="archive-section-header">
+          <h2 id="priority-title">Pinned notes</h2>
+          <span>{pinned.length} records</span>
+        </header>
+
+        <ol class="log-list">
+          {pinned.map((post, index) => (
+            <li class="log-entry">
+              <span class="log-number">P-{String(index + 1).padStart(2, "0")}</span>
+              <time class="log-date" datetime={post.data.date.toISOString()}>
+                {compactDate(post.data.date)}
+              </time>
+              <div class="log-main">
+                <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
+                <p class="log-subline">
+                  {labelLine(post)} · {readingTime(post.body ?? "")} MIN
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
       </section>
     )
   }
 
-  <section class="post-list" aria-label="All posts">
+  <section class="archive-section" aria-labelledby="all-records-title">
+    <header class="archive-section-header">
+      <h2 id="all-records-title">Complete archive</h2>
+      <span>{normalPosts.length} records</span>
+    </header>
+
     {
-      normalPosts.length > 0 ? normalPosts.map((post) => (
-        <article class="post-summary">
-          <h2><a href={getPostRoute(post)}>{post.data.title}</a></h2>
-          <p class="post-summary-meta">
-            {formatDate(post.data.date)} · {readingTime(post.body ?? "")} min read
-          </p>
-        </article>
-      )) : <p>No posts yet.</p>
+      normalPosts.length > 0 ? (
+        <ol class="log-list">
+          {normalPosts.map((post, index) => (
+            <li class="log-entry">
+              <span class="log-number">{String(index + 1).padStart(3, "0")}</span>
+              <time class="log-date" datetime={post.data.date.toISOString()}>
+                {compactDate(post.data.date)}
+              </time>
+              <div class="log-main">
+                <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
+                <p class="log-subline">
+                  {labelLine(post)} · {readingTime(post.body ?? "")} MIN
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p>No records yet.</p>
+      )
     }
   </section>
 </PageLayout>
