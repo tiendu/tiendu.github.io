@@ -2,30 +2,125 @@
 import PageLayout from "../../layouts/PageLayout.astro";
 ---
 
-<PageLayout title="projects" description="Open-source projects by Tien Du.">
+<PageLayout
+  title="projects"
+  description="Open-source projects by Tien Du."
+>
   <div class="projects">
+    <p class="projects-intro">
+      Small tools for Linux operations, dependency analysis, bioinformatics,
+      automation, and developer workflows.
+    </p>
     <article class="project">
-      <h2><a href="https://github.com/tiendu/depviz" target="_blank" rel="noopener noreferrer">depviz</a></h2>
-      <p class="tech">Python · PyPI · Conda · Bioconda · Graph Analysis · CLI · Caching</p>
-      <p>Inspect dependency graphs for PyPI and Conda/Bioconda environments. depviz resolves package dependencies, calculates dependency blast radius and transitive dependency weight, explains why packages are present, estimates upgrade impact, renders ASCII dependency trees, and caches resolved graphs for fast repeated analysis.</p>
+      <h2>
+        <a
+          href="https://github.com/tiendu/runwatch"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          RunWatch
+        </a>
+      </h2>
+      <p class="tech">
+        Python · Linux · systemd · cgroups · OpenMetrics
+      </p>
+      <p>
+        A lightweight Linux service and process monitor built for operational
+        visibility without requiring a full observability stack.
+      </p>
+      <p>
+        RunWatch tracks process trees, CPU, memory, disk I/O, file descriptors,
+        TCP/UDP connections, Unix sockets, and HTTP health checks. It supports
+        structured JSON logs, OpenMetrics-compatible output, strict TOML
+        configuration, atomic writes, and persistent monitoring through systemd.
+      </p>
     </article>
-
     <article class="project">
-      <h2><a href="https://github.com/tiendu/seqgrep" target="_blank" rel="noopener noreferrer">seqgrep</a></h2>
-      <p class="tech">Python · Bioinformatics · FASTA · FASTQ · Gzip · IUPAC · CLI · Multiprocessing</p>
-      <p>A DNA-aware grep-style search tool for biological sequences. seqgrep supports literal sequence search by default, optional IUPAC nucleotide ambiguity matching, reverse-complement search, circular DNA boundary matches, FASTA/FASTQ input, gzip-compressed files, and chunked multiprocessing for long sequences.</p>
+      <h2>
+        <a
+          href="https://github.com/tiendu/depviz"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          depviz
+        </a>
+      </h2>
+      <p class="tech">
+        Python · PyPI · Conda · Bioconda · Graph Analysis · CLI · Caching
+      </p>
+      <p>
+        A dependency-risk and upgrade-impact inspector for PyPI and
+        Conda/Bioconda environments.
+      </p>
+      <p>
+        depviz resolves package graphs, calculates dependency blast radius and
+        transitive weight, explains why packages are present, estimates upgrade
+        impact, renders ASCII dependency trees, identifies environment
+        conflicts, and caches repeatable analysis results.
+      </p>
     </article>
-
     <article class="project">
-      <h2><a href="https://github.com/tiendu/gommitizen" target="_blank" rel="noopener noreferrer">Gommitizen</a></h2>
-      <p class="tech">Go · CLI · Git · Conventional Commits</p>
-      <p>A Go implementation of Commitizen that helps developers generate conventional commit messages consistently and automate release workflows.</p>
+      <h2>
+        <a
+          href="https://github.com/tiendu/seqgrep"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          seqgrep
+        </a>
+      </h2>
+      <p class="tech">
+        Python · Bioinformatics · FASTA · FASTQ · Gzip · IUPAC · CLI · Multiprocessing
+      </p>
+      <p>
+        A DNA-aware, grep-style search tool for biological sequences.
+      </p>
+      <p>
+        seqgrep supports literal sequence search by default, optional IUPAC
+        ambiguity matching, reverse-complement search, circular DNA boundary
+        matches, FASTA/FASTQ input, gzip-compressed files, and chunked
+        multiprocessing for long sequences.
+      </p>
     </article>
-
     <article class="project">
-      <h2><a href="https://github.com/tiendu/gentr" target="_blank" rel="noopener noreferrer">gentr</a></h2>
-      <p class="tech">Go · File Watching · Command Execution · CLI · Developer Tooling</p>
-      <p>A lightweight command runner that watches files and directories for changes, then automatically reruns a command. gentr supports recursive watching, glob and stdin-based input, configurable output, and simple install and uninstall commands.</p>
+      <h2>
+        <a
+          href="https://github.com/tiendu/gommitizen"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Gommitizen
+        </a>
+      </h2>
+      <p class="tech">
+        Go · CLI · Git · Conventional Commits
+      </p>
+      <p>
+        A Go implementation of Commitizen for generating consistent
+        conventional commit messages and supporting cleaner release workflows.
+      </p>
+    </article>
+    <article class="project">
+      <h2>
+        <a
+          href="https://github.com/tiendu/gentr"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          gentr
+        </a>
+      </h2>
+      <p class="tech">
+        Go · File Watching · Command Execution · CLI · Developer Tooling
+      </p>
+      <p>
+        A lightweight command runner that watches files and directories for
+        changes, then reruns a command automatically.
+      </p>
+      <p>
+        gentr supports recursive watching, glob and stdin-based input,
+        configurable output, and simple install and uninstall commands.
+      </p>
     </article>
   </div>
 </PageLayout>
