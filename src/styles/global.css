@@ -188,7 +188,7 @@ a[target="_blank"]::after {
 }
 
 .footer-prompt {
-  color: var(--accent);
+  color: var(--brand);
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 0.85rem;
@@ -559,7 +559,6 @@ pre code {
   }
 
   .header-inner,
-
   .site-header,
   .header-inner {
     min-height: auto;
