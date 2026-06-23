@@ -19,9 +19,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     <div class="terminal-card">
       <div class="terminal-header" aria-hidden="true">
         <span>TIENDU@HOME / PROFILE</span>
-        <span class="terminal-status">
-          <span class="status-light"></span>
-          ONLINE
+        <span class="terminal-status" data-terminal-status>
+          <span class="status-light" aria-hidden="true"></span>
+          <span data-status-label>STANDBY</span>
         </span>
       </div>
 
@@ -172,9 +172,49 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         const output = wrapper.querySelector(".output");
         const commandCursor = wrapper.querySelector(".block-cursor");
         const footer = wrapper.querySelector("[data-terminal-footer]");
+        const typedCommand = wrapper.querySelector(".typed-command");
+        const terminalStatus = wrapper.querySelector(
+          "[data-terminal-status]",
+        );
+        const statusLabel = wrapper.querySelector("[data-status-label]");
+
         const reducedMotion = window.matchMedia(
           "(prefers-reduced-motion: reduce)",
         );
+
+        let terminalIsOnline = false;
+
+        const setTerminalOnline = () => {
+          if (terminalIsOnline) {
+            return;
+          }
+
+          terminalIsOnline = true;
+          terminalStatus?.classList.add("is-online");
+
+          if (statusLabel) {
+            statusLabel.textContent = "ONLINE";
+          }
+        };
+
+        if (reducedMotion.matches) {
+          setTerminalOnline();
+        } else if (typedCommand) {
+          typedCommand.addEventListener(
+            "animationend",
+            (event) => {
+              if (event.animationName === "command-typing") {
+                setTerminalOnline();
+              }
+            },
+            { once: true },
+          );
+
+          // Fallback in case animationend does not fire.
+          window.setTimeout(setTerminalOnline, 1800);
+        } else {
+          setTerminalOnline();
+        }
 
         const sleep = (milliseconds) =>
           new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -360,18 +400,34 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
   .terminal-status {
     align-items: center;
+    color: var(--amber);
     display: inline-flex;
     gap: 0.42rem;
+    transition: color 180ms ease;
   }
 
   .status-light {
-    background: var(--terminal-green);
+    background: var(--amber);
     border-radius: 50%;
+    box-shadow:
+      0 0 4px rgb(167 96 47 / 62%),
+      0 0 9px rgb(167 96 47 / 28%);
+    height: 6px;
+    transition:
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+    width: 6px;
+  }
+
+  .terminal-status.is-online {
+    color: var(--terminal-green-dim);
+  }
+
+  .terminal-status.is-online .status-light {
+    background: var(--terminal-green);
     box-shadow:
       0 0 4px rgb(199 240 139 / 70%),
       0 0 9px rgb(199 240 139 / 34%);
-    height: 6px;
-    width: 6px;
   }
 
   .terminal-screen {
