@@ -624,6 +624,64 @@ Keep these simple. If parsing becomes complex, switch to Python.
 
 ---
 
+## Hidden Characters
+
+Some files look normal but contain hidden characters.
+
+The common one is Windows line ending:
+
+```text
+\r\n
+```
+
+Linux expects:
+
+```text
+\n
+```
+
+This can break scripts with errors like:
+
+```text
+bad interpreter: /usr/bin/env: ‘bash\r’: No such file or directory
+```
+
+Check it:
+
+```bash
+cat -v script.sh | head
+```
+
+If you see `^M`, the file has Windows carriage returns.
+
+Lower-level check:
+
+```bash
+od -c script.sh | head
+```
+
+Look for:
+
+```text
+\r \n
+```
+
+Fix it:
+
+```bash
+dos2unix script.sh
+```
+
+Or without `dos2unix`:
+
+```bash
+sed -i 's/\r$//' script.sh
+```
+
+Useful for scripts, config files, TSV files, manifests, and anything copied from Windows.
+
+---
+
 ## Archives & Transfers
 
 | Command | Meaning |
