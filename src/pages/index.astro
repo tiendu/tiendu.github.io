@@ -685,17 +685,17 @@ import SnakeGame from "../components/SnakeGame.astro";
             return;
           }
 
-          const selectionStart = terminalInput.selectionStart;
-          const selectionEnd = terminalInput.selectionEnd;
-          const uppercaseValue = terminalInput.value.toUpperCase();
-
-          if (uppercaseValue !== terminalInput.value) {
-            terminalInput.value = uppercaseValue;
-
-            if (selectionStart !== null && selectionEnd !== null) {
-              terminalInput.setSelectionRange(selectionStart, selectionEnd);
+          terminalInput?.addEventListener("input", () => {
+            if (!(terminalInput instanceof HTMLInputElement)) {
+              return;
             }
-          }
+
+            if (terminalInput.value.length < COMMAND_LENGTH_LIMIT) {
+              hideInputWarning();
+            }
+
+            resizeTerminalInput();
+          });
 
           if (terminalInput.value.length < COMMAND_LENGTH_LIMIT) {
             hideInputWarning();
