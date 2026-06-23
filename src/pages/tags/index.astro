@@ -1,0 +1,37 @@
+---
+import { getCollection } from "astro:content";
+import PageLayout from "../../layouts/PageLayout.astro";
+import { getPostLabels, getPostRoute, sortPosts } from "../../utils/posts";
+
+const posts = sortPosts(await getCollection("blog", ({ data }) => !data.draft));
+const grouped = new Map<string, typeof posts>();
+
+for (const post of posts) {
+  for (const label of getPostLabels(post)) {
+    const existing = grouped.get(label) ?? [];
+    existing.push(post);
+    grouped.set(label, existing);
+  }
+}
+
+const groups = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
+const slugify = (value: string) =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+---
+
+<PageLayout title="tags" description="Browse posts by topic.">
+  <div class="archives">
+    {
+      groups.length > 0 ? groups.map(([label, taggedPosts]) => (
+        <section class="archive-group" id={slugify(label)}>
+          <h2>{label}</h2>
+          {taggedPosts.map((post) => (
+            <article class="archive-item">
+              <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
+            </article>
+          ))}
+        </section>
+      )) : <p>No tags yet.</p>
+    }
+  </div>
+</PageLayout>
