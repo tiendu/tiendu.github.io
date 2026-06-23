@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import SnakeGame from "../components/SnakeGame.astro";
 ---
 
 <BaseLayout>
@@ -18,14 +19,17 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
     <div class="terminal-card">
       <div class="terminal-header" aria-hidden="true">
-        <span>TIENDU@HOME / PROFILE</span>
+        <span>
+          TIENDU@HOME / <span data-terminal-mode>PROFILE</span>
+        </span>
+
         <span class="terminal-status" data-terminal-status>
           <span class="status-light" aria-hidden="true"></span>
           <span data-status-label>STANDBY</span>
         </span>
       </div>
 
-      <div class="terminal-screen">
+      <div class="terminal-screen" data-terminal-screen>
         <div class="terminal-content">
           <p class="command-line" aria-label="Terminal command: profile">
             <span class="typed-command">
@@ -36,47 +40,87 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             <span class="block-cursor" aria-hidden="true"></span>
           </p>
 
-          <div class="output-stage">
-            <div class="output-measure" aria-hidden="true">
-              <p class="terminal-title">I'M TIEN.</p>
+          <div class="profile-view" data-profile-view>
+            <div class="output-stage" data-profile-copy>
+              <div class="output-measure" aria-hidden="true">
+                <p class="terminal-title">I'M TIEN.</p>
 
-              <p>
-                I work across Linux systems, cloud infrastructure, distributed
-                workloads, monitoring, automation, and production reliability.
-              </p>
+                <p>
+                  I work across Linux systems, cloud infrastructure, distributed
+                  workloads, monitoring, automation, and production reliability.
+                </p>
 
-              <p>
-                This site is where I keep technical notes, engineering references,
-                small projects, and lessons from systems that failed in interesting
-                ways.
-              </p>
+                <p>
+                  This site is where I keep technical notes, engineering references,
+                  small projects, and lessons from systems that failed in interesting
+                  ways.
+                </p>
+              </div>
+
+              <section class="output" aria-busy="false">
+                <h1
+                  id="home-title"
+                  class="terminal-title"
+                  data-terminal-line
+                  data-speed="55"
+                >
+                  I'M TIEN.
+                </h1>
+
+                <p data-terminal-line data-speed="24">
+                  I work across Linux systems, cloud infrastructure, distributed
+                  workloads, monitoring, automation, and production reliability.
+                </p>
+
+                <p data-terminal-line data-speed="24">
+                  This site is where I keep technical notes, engineering references,
+                  small projects, and lessons from systems that failed in interesting
+                  ways.
+                </p>
+              </section>
             </div>
 
-            <section class="output" aria-busy="false">
-              <h1
-                id="home-title"
-                class="terminal-title"
-                data-terminal-line
-                data-speed="55"
-              >
-                I'M TIEN.
-              </h1>
-
-              <p data-terminal-line data-speed="24">
-                I work across Linux systems, cloud infrastructure, distributed
-                workloads, monitoring, automation, and production reliability.
-              </p>
-
-              <p data-terminal-line data-speed="24">
-                This site is where I keep technical notes, engineering references,
-                small projects, and lessons from systems that failed in interesting
-                ways.
-              </p>
-            </section>
+            <p
+              class="terminal-response"
+              data-terminal-response
+              aria-live="polite"
+              hidden
+            ></p>
           </div>
 
+          <SnakeGame />
+
+          <form class="terminal-shell" data-terminal-shell hidden>
+            <span class="prompt">TIENDU@HOME</span>
+            <span class="path">:~$</span>
+            <input
+              class="terminal-shell-input"
+              data-terminal-input
+              type="text"
+              maxlength="16"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              enterkeyhint="go"
+              aria-label="Terminal command"
+              aria-describedby="terminal-input-warning"
+            />
+            <span class="shell-block-cursor" aria-hidden="true"></span>
+          </form>
+
+          <p
+            id="terminal-input-warning"
+            class="terminal-input-warning"
+            data-terminal-input-warning
+            role="status"
+            aria-live="polite"
+            hidden
+          >
+            MAX 16 CHARACTERS · PRESS ENTER OR BACKSPACE
+          </p>
+
           <p class="terminal-footer" data-terminal-footer aria-hidden="true">
-            <span>READY</span>
+            <span data-footer-state>BOOTING</span>
             <span>
               SESSION <span data-session-count>01</span>
             </span>
@@ -96,7 +140,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         wrapper.dataset.animationStarted = "true";
 
         const sessionCounter = wrapper.querySelector("[data-session-count]");
-
         const SESSION_STORAGE_KEY = "tiendu-home-session";
         const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -108,11 +151,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             const storedValue = window.localStorage.getItem(
               SESSION_STORAGE_KEY,
             );
-
             const storedSession = storedValue
               ? JSON.parse(storedValue)
               : null;
-
             const sessionIsValid =
               storedSession &&
               Number.isInteger(storedSession.count) &&
@@ -136,10 +177,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
             count = nextSession.count;
           } catch {
-            /*
-             * localStorage may be blocked in private or restricted browsing.
-             * In that case, leave the counter at SESSION 01.
-             */
+            // Keep SESSION 01 when browser storage is unavailable.
           }
 
           if (sessionCounter) {
@@ -170,19 +208,40 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
         const greeting = wrapper.querySelector("#greeting");
         const output = wrapper.querySelector(".output");
+        const profileView = wrapper.querySelector("[data-profile-view]");
+        const profileCopy = wrapper.querySelector("[data-profile-copy]");
         const commandCursor = wrapper.querySelector(".block-cursor");
         const footer = wrapper.querySelector("[data-terminal-footer]");
+        const footerState = wrapper.querySelector("[data-footer-state]");
         const typedCommand = wrapper.querySelector(".typed-command");
         const terminalStatus = wrapper.querySelector(
           "[data-terminal-status]",
         );
+        const terminalMode = wrapper.querySelector("[data-terminal-mode]");
         const statusLabel = wrapper.querySelector("[data-status-label]");
+        const shell = wrapper.querySelector("[data-terminal-shell]");
+        const terminalInput = wrapper.querySelector("[data-terminal-input]");
+        const inputWarning = wrapper.querySelector(
+          "[data-terminal-input-warning]",
+        );
+        const response = wrapper.querySelector("[data-terminal-response]");
+        const terminalScreen = wrapper.querySelector("[data-terminal-screen]");
 
         const reducedMotion = window.matchMedia(
           "(prefers-reduced-motion: reduce)",
         );
+        const finePointer = window.matchMedia("(pointer: fine)");
+
+        const COMMAND_LENGTH_LIMIT = 16;
 
         let terminalIsOnline = false;
+        let snakeIsActive = false;
+
+        const setText = (element, value) => {
+          if (element) {
+            element.textContent = value;
+          }
+        };
 
         const setTerminalOnline = () => {
           if (terminalIsOnline) {
@@ -191,10 +250,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
           terminalIsOnline = true;
           terminalStatus?.classList.add("is-online");
-
-          if (statusLabel) {
-            statusLabel.textContent = "ONLINE";
-          }
+          setText(statusLabel, "ONLINE");
         };
 
         if (reducedMotion.matches) {
@@ -210,7 +266,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             { once: true },
           );
 
-          // Fallback in case animationend does not fire.
           window.setTimeout(setTerminalOnline, 1800);
         } else {
           setTerminalOnline();
@@ -218,6 +273,65 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
         const sleep = (milliseconds) =>
           new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+        const showResponse = (message) => {
+          if (!response) {
+            return;
+          }
+
+          response.textContent = message;
+          response.hidden = false;
+        };
+
+        const clearResponse = () => {
+          if (response) {
+            response.textContent = "";
+            response.hidden = true;
+          }
+        };
+
+        const hideInputWarning = () => {
+          inputWarning?.setAttribute("hidden", "");
+          shell?.classList.remove("is-at-limit");
+        };
+
+        const showInputWarning = () => {
+          inputWarning?.removeAttribute("hidden");
+          shell?.classList.add("is-at-limit");
+        };
+
+        const resizeTerminalInput = () => {
+          if (!(terminalInput instanceof HTMLInputElement)) {
+            return;
+          }
+
+          const visibleCharacters = Math.min(
+            terminalInput.value.length,
+            COMMAND_LENGTH_LIMIT,
+          );
+          const measuredWidth = Math.max(
+            visibleCharacters + 0.8,
+            0.8,
+          );
+
+          terminalInput.style.width = `${measuredWidth}ch`;
+        };
+
+        const revealShell = () => {
+          commandCursor?.classList.add("cursor-hidden");
+
+          if (shell) {
+            shell.hidden = false;
+          }
+
+          resizeTerminalInput();
+          footer?.classList.add("terminal-footer-visible");
+          setText(footerState, "READY · TYPE HELP");
+
+          if (finePointer.matches && terminalInput instanceof HTMLElement) {
+            window.setTimeout(() => terminalInput.focus(), 0);
+          }
+        };
 
         const startGreeting = () => {
           if (!greeting || reducedMotion.matches) {
@@ -269,6 +383,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         const startTerminalOutput = async () => {
           if (!output) {
             wrapper.classList.remove("terminal-typing-enabled");
+            revealShell();
             return;
           }
 
@@ -279,7 +394,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           if (reducedMotion.matches) {
             wrapper.classList.remove("terminal-typing-enabled");
             output.setAttribute("aria-busy", "false");
-            footer?.classList.add("terminal-footer-visible");
+            revealShell();
             return;
           }
 
@@ -302,10 +417,242 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             await sleep(index === 0 ? 420 : 650);
           }
 
-          footer?.classList.add("terminal-footer-visible");
           output.setAttribute("aria-busy", "false");
           wrapper.classList.remove("terminal-typing-enabled");
+          revealShell();
         };
+
+        const openSnake = () => {
+          snakeIsActive = true;
+
+          if (profileView) {
+            profileView.hidden = true;
+          }
+
+          if (shell) {
+            shell.hidden = true;
+          }
+
+          clearResponse();
+          setText(terminalMode, "SNAKE");
+          setText(statusLabel, "RUNNING");
+          setText(footerState, "GAME ACTIVE · ESC EXIT");
+          window.dispatchEvent(new CustomEvent("tiendu:snake-start"));
+        };
+
+        const restoreProfile = (score = 0, highScore = 0) => {
+          snakeIsActive = false;
+
+          if (profileView) {
+            profileView.hidden = false;
+          }
+
+          if (profileCopy) {
+            profileCopy.hidden = false;
+          }
+
+          if (shell) {
+            shell.hidden = false;
+          }
+
+          resizeTerminalInput();
+          setText(terminalMode, "PROFILE");
+          setText(statusLabel, "ONLINE");
+          setText(footerState, "READY · TYPE HELP");
+          showResponse(
+            `SNAKE CLOSED · SCORE ${String(score).padStart(4, "0")} · HIGH ${String(highScore).padStart(4, "0")}`,
+          );
+
+          if (finePointer.matches && terminalInput instanceof HTMLElement) {
+            window.setTimeout(() => terminalInput.focus(), 0);
+          }
+        };
+
+        const runCommand = (rawCommand) => {
+          const command = rawCommand.trim().toLowerCase();
+
+          if (!command) {
+            return;
+          }
+
+          if (command === "help") {
+            showResponse(
+              "COMMANDS: PROFILE · POSTS · PROJECTS · TAGS · ABOUT · SNAKE · CLEAR",
+            );
+            return;
+          }
+
+          if (command === "profile" || command === "home") {
+            if (profileCopy) {
+              profileCopy.hidden = false;
+            }
+            showResponse("PROFILE DISPLAYED.");
+            return;
+          }
+
+          if (command === "clear") {
+            if (profileCopy) {
+              profileCopy.hidden = true;
+            }
+            clearResponse();
+            return;
+          }
+
+          if (command === "snake") {
+            openSnake();
+            return;
+          }
+
+          const routes = {
+            posts: "/posts/",
+            projects: "/projects/",
+            tags: "/tags/",
+            about: "/about/",
+          };
+
+          if (routes[command]) {
+            window.location.assign(routes[command]);
+            return;
+          }
+
+          showResponse(`COMMAND NOT FOUND: ${command.toUpperCase()} · TYPE HELP`);
+        };
+
+        terminalInput?.addEventListener("beforeinput", (event) => {
+          if (
+            !(terminalInput instanceof HTMLInputElement) ||
+            !(event instanceof InputEvent) ||
+            !event.inputType.startsWith("insert")
+          ) {
+            return;
+          }
+
+          const selectionStart =
+            terminalInput.selectionStart ?? terminalInput.value.length;
+          const selectionEnd =
+            terminalInput.selectionEnd ?? terminalInput.value.length;
+          const selectedCharacters = selectionEnd - selectionStart;
+          const insertedCharacters = event.data?.length ?? 1;
+          const resultingLength =
+            terminalInput.value.length -
+            selectedCharacters +
+            insertedCharacters;
+
+          if (resultingLength > COMMAND_LENGTH_LIMIT) {
+            event.preventDefault();
+            showInputWarning();
+          }
+        });
+
+        terminalInput?.addEventListener("paste", (event) => {
+          if (!(terminalInput instanceof HTMLInputElement)) {
+            return;
+          }
+
+          const pastedText = event.clipboardData?.getData("text") ?? "";
+          const selectionStart =
+            terminalInput.selectionStart ?? terminalInput.value.length;
+          const selectionEnd =
+            terminalInput.selectionEnd ?? terminalInput.value.length;
+          const selectedCharacters = selectionEnd - selectionStart;
+          const resultingLength =
+            terminalInput.value.length -
+            selectedCharacters +
+            pastedText.length;
+
+          if (resultingLength > COMMAND_LENGTH_LIMIT) {
+            event.preventDefault();
+            showInputWarning();
+          }
+        });
+
+        terminalInput?.addEventListener("keydown", (event) => {
+          if (!(terminalInput instanceof HTMLInputElement)) {
+            return;
+          }
+
+          if (event.key === "Backspace" || event.key === "Delete") {
+            hideInputWarning();
+            return;
+          }
+
+          const hasSelection =
+            terminalInput.selectionStart !== terminalInput.selectionEnd;
+          const isPrintableCharacter =
+            event.key.length === 1 &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.altKey;
+
+          if (
+            isPrintableCharacter &&
+            !hasSelection &&
+            terminalInput.value.length >= COMMAND_LENGTH_LIMIT
+          ) {
+            event.preventDefault();
+            showInputWarning();
+          }
+        });
+
+        terminalInput?.addEventListener("input", () => {
+          if (!(terminalInput instanceof HTMLInputElement)) {
+            return;
+          }
+
+          const selectionStart = terminalInput.selectionStart;
+          const selectionEnd = terminalInput.selectionEnd;
+          const uppercaseValue = terminalInput.value.toUpperCase();
+
+          if (uppercaseValue !== terminalInput.value) {
+            terminalInput.value = uppercaseValue;
+
+            if (selectionStart !== null && selectionEnd !== null) {
+              terminalInput.setSelectionRange(selectionStart, selectionEnd);
+            }
+          }
+
+          if (terminalInput.value.length < COMMAND_LENGTH_LIMIT) {
+            hideInputWarning();
+          }
+
+          resizeTerminalInput();
+        });
+
+        shell?.addEventListener("submit", (event) => {
+          event.preventDefault();
+
+          if (!(terminalInput instanceof HTMLInputElement)) {
+            return;
+          }
+
+          const command = terminalInput.value;
+          terminalInput.value = "";
+          hideInputWarning();
+          resizeTerminalInput();
+          runCommand(command);
+        });
+
+        terminalScreen?.addEventListener("click", (event) => {
+          if (
+            snakeIsActive ||
+            !shell ||
+            shell.hidden ||
+            !(terminalInput instanceof HTMLInputElement)
+          ) {
+            return;
+          }
+
+          if (event.target instanceof HTMLButtonElement) {
+            return;
+          }
+
+          terminalInput.focus();
+        });
+
+        window.addEventListener("tiendu:snake-exit", (event) => {
+          const detail = event.detail ?? {};
+          restoreProfile(detail.score ?? 0, detail.highScore ?? 0);
+        });
 
         startGreeting();
 
@@ -315,6 +662,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           if (output) {
             output.setAttribute("aria-busy", "false");
           }
+
+          revealShell();
         });
       })();
     </script>
@@ -520,6 +869,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     opacity: 0.22;
   }
 
+  .block-cursor.cursor-hidden {
+    display: none;
+  }
+
   .output-stage {
     display: grid;
   }
@@ -577,6 +930,85 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     margin-left: 0.16rem;
     transform: translateY(0.08em);
     width: 0.44em;
+  }
+
+
+  .profile-view[hidden],
+  .terminal-shell[hidden],
+  .terminal-response[hidden] {
+    display: none;
+  }
+
+  .terminal-response {
+    border-left: 2px solid rgb(199 240 139 / 28%);
+    color: var(--terminal-green-dim);
+    font-size: 1rem;
+    line-height: 1.4;
+    margin: 0.25rem 0 0;
+    max-width: none;
+    padding-left: 0.75rem;
+    white-space: pre-wrap;
+  }
+
+  .terminal-shell {
+    align-items: baseline;
+    color: var(--terminal-green-dim);
+    display: flex;
+    font-size: 1.12rem;
+    gap: 0.28rem;
+    line-height: 1.25;
+    margin: 0;
+    min-width: 0;
+  }
+
+  .terminal-shell-input {
+    background: transparent;
+    border: 0;
+    caret-color: transparent;
+    color: var(--terminal-green-bright);
+    flex: 0 0 auto;
+    font-family: inherit;
+    font-size: inherit;
+    font-variant-ligatures: none;
+    letter-spacing: inherit;
+    line-height: inherit;
+    margin-left: 0.06rem;
+    max-width: min(17ch, 55vw);
+    min-width: 0.8ch;
+    outline: 0;
+    padding: 0;
+    text-transform: uppercase;
+    width: 0.8ch;
+  }
+
+  .shell-block-cursor {
+    animation: cursor-blink 0.85s steps(1, end) infinite;
+    background: var(--terminal-green-bright);
+    box-shadow: 0 0 6px var(--terminal-green);
+    display: inline-block;
+    flex: 0 0 auto;
+    height: 0.9em;
+    margin-left: 0.06rem;
+    transform: translateY(0.1em);
+    width: 0.52em;
+  }
+
+  .terminal-shell.is-at-limit .shell-block-cursor {
+    background: var(--amber-soft);
+    box-shadow: 0 0 6px rgb(214 170 114 / 55%);
+  }
+
+  .terminal-input-warning {
+    color: var(--amber-soft);
+    font-size: 0.88rem;
+    letter-spacing: 0.07em;
+    line-height: 1.25;
+    margin: -0.55rem 0 0;
+    max-width: none;
+  }
+
+  .terminal-input-warning[hidden] {
+    display: none;
   }
 
   .terminal-footer {
@@ -674,6 +1106,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       overflow: hidden;
     }
 
+    .terminal-shell {
+      font-size: 1rem;
+    }
+
+     .terminal-response {
+      font-size: 0.92rem;
+    }
+
     .output p,
     .output-measure p {
       font-size: 1.13rem;
@@ -698,6 +1138,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     }
 
     .block-cursor,
+    .shell-block-cursor,
     .output .is-typing::after,
     .neon-greeting p.is-changing {
       animation: none;
