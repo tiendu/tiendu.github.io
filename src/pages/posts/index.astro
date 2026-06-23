@@ -1,0 +1,42 @@
+---
+import { getCollection } from "astro:content";
+import PageLayout from "../../layouts/PageLayout.astro";
+import { formatDate, getPostRoute, readingTime, sortPosts } from "../../utils/posts";
+
+const posts = sortPosts(
+  await getCollection("blog", ({ data }) => !data.draft),
+);
+const pinned = posts.filter(({ data }) => data.pinned);
+const normalPosts = posts.filter(({ data }) => !data.pinned);
+---
+
+<PageLayout title="posts" description="Writing by Tien Du on systems, platform operations, scientific software, and work.">
+  {
+    pinned.length > 0 && (
+      <section class="pinned-posts" aria-labelledby="pinned-posts-title">
+        <h2 id="pinned-posts-title" class="section-label">Pinned</h2>
+        {pinned.map((post) => (
+          <article class="post-summary">
+            <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
+            <p class="post-summary-meta">
+              {formatDate(post.data.date)} · {readingTime(post.body ?? "")} min read
+            </p>
+          </article>
+        ))}
+      </section>
+    )
+  }
+
+  <section class="post-list" aria-label="All posts">
+    {
+      normalPosts.length > 0 ? normalPosts.map((post) => (
+        <article class="post-summary">
+          <h2><a href={getPostRoute(post)}>{post.data.title}</a></h2>
+          <p class="post-summary-meta">
+            {formatDate(post.data.date)} · {readingTime(post.body ?? "")} min read
+          </p>
+        </article>
+      )) : <p>No posts yet.</p>
+    }
+  </section>
+</PageLayout>

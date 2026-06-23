@@ -1,0 +1,28 @@
+---
+const pathname = Astro.url.pathname;
+
+const links = [
+  { href: "/posts/", label: "posts" },
+  { href: "/projects/", label: "projects" },
+  { href: "/tags/", label: "tags" },
+];
+---
+
+<header class="site-header">
+  <div class="wrapper header-inner">
+    <a class="site-title" href="/" aria-label="Tien's notes, home">Tien's notes</a>
+
+    <nav class="site-nav" aria-label="Primary navigation">
+      {
+        links.map(({ href, label }) => {
+          const active = pathname === href || pathname.startsWith(href);
+          return (
+            <a href={href} aria-current={active ? "page" : undefined}>
+              {label}
+            </a>
+          );
+        })
+      }
+    </nav>
+  </div>
+</header>

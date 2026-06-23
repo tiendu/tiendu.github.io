@@ -1,0 +1,49 @@
+---
+import type { MarkdownHeading } from "astro";
+import BaseLayout from "./BaseLayout.astro";
+import TableOfContents from "../components/TableOfContents.astro";
+import { formatDate, getPostLabels, readingTime, type BlogPost } from "../utils/posts";
+
+interface Props {
+  post: BlogPost;
+  headings: MarkdownHeading[];
+}
+
+const { post, headings } = Astro.props;
+const labels = getPostLabels(post);
+const hasToc = headings.some(({ depth }) => depth === 2 || depth === 3);
+const description =
+  post.data.description ??
+  `A note by Tien Du, published ${formatDate(post.data.date)}.`;
+---
+
+<BaseLayout title={post.data.title} description={description} article>
+  <div class:list={["post-layout", { "no-toc": !hasToc }]}>
+    {hasToc && <TableOfContents headings={headings} />}
+
+    <article class="post h-entry">
+      <header class="post-header">
+        <h1 class="post-title p-name">{post.data.title}</h1>
+        <p class="post-meta">
+          <time datetime={post.data.date.toISOString()}>{formatDate(post.data.date)}</time>
+          <span aria-hidden="true"> · </span>
+          <span>{readingTime(post.body ?? "")} min read</span>
+        </p>
+
+        {
+          labels.length > 0 && (
+            <ul class="post-labels" aria-label="Post tags">
+              {labels.map((label) => (
+                <li><a href={`/tags/#${encodeURIComponent(label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""))}`}>{label}</a></li>
+              ))}
+            </ul>
+          )
+        }
+      </header>
+
+      <div class="post-content e-content">
+        <slot />
+      </div>
+    </article>
+  </div>
+</BaseLayout>
