@@ -11,11 +11,6 @@ import SnakeGame from "../components/SnakeGame.astro";
       );
     </script>
 
-    <div class="neon-greeting" aria-live="polite">
-      <span class="neon-mark" aria-hidden="true">✦</span>
-      <p id="greeting">Xin chào! Cảm ơn bạn đã ghé thăm!</p>
-      <span class="neon-mark" aria-hidden="true">✦</span>
-    </div>
 
     <div class="terminal-card">
       <div class="terminal-header" aria-hidden="true">
@@ -220,7 +215,6 @@ import SnakeGame from "../components/SnakeGame.astro";
           "Xin chào! Cảm ơn bạn đã ghé thăm!",
         ];
 
-        const greeting = wrapper.querySelector("#greeting");
         const output = wrapper.querySelector(".output");
         const profileView = wrapper.querySelector("[data-profile-view]");
         const profileCopy = wrapper.querySelector("[data-profile-copy]");
@@ -356,22 +350,12 @@ import SnakeGame from "../components/SnakeGame.astro";
           }
         };
 
-        const startGreeting = () => {
-          if (!greeting || reducedMotion.matches) {
-            return;
-          }
+        let greetingIndex = Math.floor(Math.random() * greetings.length);
 
-          let index = greetings.indexOf(greeting.textContent?.trim() ?? "");
-
-          window.setInterval(() => {
-            greeting.classList.add("is-changing");
-
-            window.setTimeout(() => {
-              index = (index + 1) % greetings.length;
-              greeting.textContent = greetings[index];
-              greeting.classList.remove("is-changing");
-            }, 160);
-          }, 3000);
+        const getNextGreeting = () => {
+          const message = greetings[greetingIndex];
+          greetingIndex = (greetingIndex + 1) % greetings.length;
+          return message;
         };
 
         const typeLine = async (element, text) => {
@@ -574,8 +558,13 @@ import SnakeGame from "../components/SnakeGame.astro";
 
           if (command === "help") {
             showResponse(
-              "COMMANDS: PROFILE · POSTS · PROJECTS · TAGS · ABOUT · SNAKE · CLEAR",
+              "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TAGS · ABOUT · SNAKE · CLEAR",
             );
+            return;
+          }
+
+          if (command === "hello" || command === "hi") {
+            showResponse(getNextGreeting());
             return;
           }
 
@@ -787,8 +776,6 @@ import SnakeGame from "../components/SnakeGame.astro";
           restoreProfile(detail.score ?? 0, detail.highScore ?? 0);
         });
 
-        startGreeting();
-
         startTerminalOutput().catch(() => {
           wrapper.classList.remove("terminal-typing-enabled");
 
@@ -811,8 +798,6 @@ import SnakeGame from "../components/SnakeGame.astro";
     --terminal-green-bright: #e7ffb0;
     --terminal-green-dim: #7fa45c;
     --terminal-glow: rgb(199 240 139 / 24%);
-    --neon-warm: #d9805d;
-    --neon-cool: #6f8c83;
   }
 
   .landing-wrapper {
@@ -820,42 +805,6 @@ import SnakeGame from "../components/SnakeGame.astro";
     max-width: 760px;
   }
 
-  .neon-greeting {
-    align-items: center;
-    display: flex;
-    gap: 0.75rem;
-    justify-content: center;
-    margin: 0 auto 1.2rem;
-    min-height: 2.4rem;
-    padding-inline: 0.75rem;
-    text-align: center;
-  }
-
-  .neon-greeting p {
-    color: var(--neon-warm);
-    font-family: var(--font-ui);
-    font-size: clamp(0.95rem, 2.5vw, 1.08rem);
-    font-weight: 600;
-    letter-spacing: 0.015em;
-    line-height: 1.25;
-    margin: 0;
-    max-width: none;
-    text-shadow:
-      0 0 1px rgb(255 255 255 / 70%),
-      0 0 5px rgb(217 128 93 / 34%),
-      0 0 12px rgb(217 128 93 / 16%);
-  }
-
-  .neon-mark {
-    color: var(--neon-cool);
-    font-size: 0.72rem;
-    opacity: 0.78;
-    text-shadow: 0 0 6px rgb(111 140 131 / 36%);
-  }
-
-  .neon-greeting p.is-changing {
-    animation: neon-flicker 160ms steps(2, end);
-  }
 
   .terminal-card {
     border: 1px solid rgb(38 40 33 / 48%);
@@ -1205,23 +1154,6 @@ import SnakeGame from "../components/SnakeGame.astro";
     }
   }
 
-  @keyframes neon-flicker {
-    0%,
-    100% {
-      filter: brightness(1);
-      opacity: 1;
-    }
-
-    35% {
-      filter: brightness(0.55);
-      opacity: 0.45;
-    }
-
-    65% {
-      filter: brightness(1.28);
-      opacity: 0.92;
-    }
-  }
 
   @media (min-width: 600px) {
     .landing-wrapper {
@@ -1234,20 +1166,6 @@ import SnakeGame from "../components/SnakeGame.astro";
       margin-top: 0.75rem;
     }
 
-    .neon-greeting {
-      gap: 0.5rem;
-      margin-bottom: 0.9rem;
-      min-height: 3rem;
-      padding-inline: 0.25rem;
-    }
-
-    .neon-greeting p {
-      font-size: 0.91rem;
-    }
-
-    .neon-mark {
-      font-size: 0.6rem;
-    }
 
     .terminal-header {
       font-size: 0.63rem;
@@ -1354,8 +1272,7 @@ import SnakeGame from "../components/SnakeGame.astro";
 
     .block-cursor,
     .shell-block-cursor,
-    .output .is-typing::after,
-    .neon-greeting p.is-changing {
+    .output .is-typing::after {
       animation: none;
     }
 
