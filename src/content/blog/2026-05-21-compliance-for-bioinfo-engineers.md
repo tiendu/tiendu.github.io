@@ -891,7 +891,7 @@ Research governance creates infrastructure requirements.
 
 NIH data-sharing requirements are not frozen forever.
 
-NIH’s 2023 Data Management and Sharing Policy already expects researchers to plan for responsible sharing, and GDS-specific considerations may still apply when a project falls under the GDS Policy.
+NIH's 2023 Data Management and Sharing Policy already expects researchers to plan for responsible sharing, and GDS-specific considerations may still apply when a project falls under the GDS Policy.
 
 NIH has also proposed revisions to harmonize participant-data policies and controlled-access expectations. Treat NIH policy as something to verify from official sources during project design, not something to memorize once and ignore.
 
