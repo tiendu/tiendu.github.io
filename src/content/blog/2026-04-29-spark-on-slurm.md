@@ -118,7 +118,7 @@ Until it does not.
 
 The job becomes slow. Then fragile. Then nobody wants to touch it.
 
-At that point, people often try to split the work manually.
+At that point, people often try to split the work manually:
 
 ```text
 node1 -> part 1
@@ -171,9 +171,9 @@ Imagine a cohort platform with 30,000 samples.
 For per-sample work, Slurm arrays are still the right answer.
 
 ```text
-sample_001.bam -> coverage tool -> sample_001.metrics
-sample_002.bam -> coverage tool -> sample_002.metrics
-sample_003.bam -> coverage tool -> sample_003.metrics
+sample_00001.bam -> coverage tool -> sample_00001.metrics
+sample_00002.bam -> coverage tool -> sample_00002.metrics
+sample_00003.bam -> coverage tool -> sample_00003.metrics
 ```
 
 Use:
@@ -297,11 +297,10 @@ Test multi-node Slurm jobs.
 Create a shared directory.
 Install Java and Spark.
 Run Spark inside a Slurm allocation.
+Run a real cohort-style Spark job.
 ```
 
-The Spark cluster is temporary.
-
-It starts when the Slurm job starts.
+The Spark cluster starts when the Slurm job starts.
 
 It stops when the Slurm job exits.
 
@@ -462,7 +461,7 @@ NodeName=node[1-3] CPUs=16 RealMemory=64000 State=UNKNOWN
 PartitionName=compute Nodes=node[1-3] Default=YES MaxTime=INFINITE State=UP
 ```
 
-Adjust:
+Adjust these values for your environment:
 
 ```text
 CPUs
@@ -615,6 +614,12 @@ Spark will write to:
 
 ```text
 /shared/output
+```
+
+Spark will keep logs in:
+
+```text
+/shared/logs
 ```
 
 This is not the fastest storage design in the world.
@@ -810,11 +815,11 @@ sudo ln -sfn spark-3.5.1-bin-hadoop3 spark
 Add Spark environment variables:
 
 ```bash
-sudo tee /etc/profile.d/spark.sh >/dev/null <<'EOF2'
+sudo tee /etc/profile.d/spark.sh >/dev/null <<'EOF'
 export SPARK_HOME=/opt/spark
 export PATH="$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-EOF2
+EOF
 ```
 
 Reload:
@@ -836,6 +841,8 @@ All nodes should return the same Spark version.
 ---
 
 ## Create a small PySpark job
+
+Before running a real job, create a boring test job.
 
 Create `job.py`:
 
@@ -961,7 +968,7 @@ done
 
 sleep 15
 
-echo "Submitting Spark job"
+echo "Submitting Spark test job"
 spark-submit \
     --master "$master_url" \
     --deploy-mode client \
@@ -996,6 +1003,10 @@ ls /shared/output/events_summary
 ```
 
 You should see Parquet output.
+
+At this point, Spark is running inside a Slurm allocation.
+
+Now we can talk about the real payoff.
 
 ---
 
@@ -1172,346 +1183,6 @@ ssh "$node" "$SPARK_HOME/sbin/start-worker.sh" "$master_url"
 That is cleaner.
 
 ---
-
-## When raw Slurm is still better
-
-Use raw Slurm when the work is independent.
-
-Good examples:
-
-- FastQC per sample
-- BWA per sample
-- samtools per BAM
-- independent simulations
-- image conversion
-- many small file-by-file jobs
-- simple batch commands
-
-For these, use:
-
-```bash
-#SBATCH --array=1-100
-```
-
-Do not force Spark into this.
-
-Spark adds startup time, JVM overhead, logs, ports, and more moving pieces.
-
-That overhead is only worth it when Spark is solving a real data-distribution problem.
-
----
-
-## When Postgres is still better
-
-Spark is not automatically better than Postgres either.
-
-Use Postgres when the data fits well on one database server and you need:
-
-- indexed SQL queries
-- transactions
-- data integrity
-- frequent interactive queries
-- many small lookups
-- application serving
-- relational constraints
-
-A tuned Postgres box can beat a small Spark cluster for many SQL workloads.
-
-Do not use Spark just because the dataset feels big.
-
-Use Spark when the data already lives as many files on shared storage, or when one job needs to scan, join, aggregate, and transform data across multiple nodes.
-
-Postgres is a database.
-
-Spark is a distributed compute engine.
-
-Different tools.
-
----
-
-## When Spark on Slurm is better
-
-Use Spark on Slurm when the workload needs coordinated data processing.
-
-Good examples:
-
-- large Parquet processing
-- large table processing
-- joins across big datasets
-- group-by and aggregation
-- repeated filtering and transformation
-- distributed feature generation
-- data preparation for ML
-- workloads that benefit from caching
-- jobs where task retry matters
-
-This is where raw `sbatch` starts to feel awkward.
-
-Spark gives you the distributed data engine.
-
-Slurm gives you the machines.
-
-Shared storage gives all workers the same data path.
-
-That combination is the point.
-
----
-
-## NFS limits
-
-NFS is fine for a small tutorial cluster.
-
-But NFS is not magic.
-
-It can become the bottleneck when:
-
-- many nodes read heavily
-- many nodes write heavily
-- there are many small files
-- metadata operations are high
-- shuffle output is large
-- the cluster grows
-
-If storage becomes the bottleneck, move to something built for this:
-
-```text
-Lustre
-BeeGFS
-GPFS
-Ceph
-S3 / MinIO
-HDFS
-```
-
-Start simple.
-
-But do not pretend NFS is the final answer for every cluster.
-
----
-
-## Common problems
-
-### Nodes are down in Slurm
-
-Check:
-
-```bash
-sinfo
-scontrol show node node1
-sudo journalctl -u slurmd -n 100
-sudo journalctl -u slurmctld -n 100
-```
-
-Common causes:
-
-- hostname mismatch
-- bad `/etc/hosts`
-- Munge not running
-- wrong Munge key
-- wrong CPU or memory values in `slurm.conf`
-- firewall issues
-
-Fix Slurm first.
-
----
-
-### Multi-node Slurm test does not show all nodes
-
-Check the job request:
-
-```bash
-#SBATCH --nodes=3
-#SBATCH --ntasks-per-node=1
-```
-
-Check the partition:
-
-```bash
-sinfo
-```
-
-Check that nodes are idle or available.
-
-Spark will not run multi-node if Slurm is only giving one node.
-
----
-
-### NFS mount is missing on one node
-
-Check:
-
-```bash
-srun ls /shared
-```
-
-If one node fails, fix `/etc/fstab` or the NFS mount on that node.
-
-Also check:
-
-```bash
-showmount -e master
-sudo mount -a
-```
-
-Spark workers need the same paths.
-
----
-
-### Spark workers do not connect to master
-
-Check that nodes can resolve the master node name:
-
-```bash
-srun getent hosts "$master_node"
-```
-
-Check common Spark ports:
-
-```text
-7077    Spark master
-8080    Spark master web UI
-8081    Spark worker web UI
-```
-
-If the firewall blocks node-to-node traffic, workers may not connect.
-
----
-
-### Spark only runs locally
-
-Do not use:
-
-```bash
-spark-submit --master local[*] job.py
-```
-
-Use:
-
-```bash
-spark-submit --master "$master_url" job.py
-```
-
-Also check that workers actually started.
-
-Look in:
-
-```bash
-/shared/logs/spark-<jobid>
-```
-
----
-
-### Spark cannot read input files
-
-Check that all nodes can see the same input:
-
-```bash
-srun ls /shared/data
-```
-
-If the path exists only on one node, Spark will fail or behave strangely.
-
-Use shared storage.
-
-Keep the path identical on all nodes.
-
----
-
-### Spark runs out of memory
-
-Reduce:
-
-```bash
---executor-memory
-```
-
-Also reduce the amount of data per partition or increase the partition count.
-
-For PySpark, remember:
-
-```text
-JVM memory + Python memory + overhead
-```
-
-Do not size memory too close to the Slurm limit.
-
----
-
-### The job hangs during startup
-
-Common causes:
-
-- Spark master not ready yet
-- workers cannot reach the master
-- firewall blocks Spark ports
-- wrong hostname
-- Java missing on one node
-- Spark path differs between nodes
-- `/shared` is not mounted on one node
-
-Check:
-
-```bash
-cat spark-<jobid>.err
-ls /shared/logs/spark-<jobid>
-```
-
-Then check Slurm logs if needed.
-
----
-
-## Optional GPU notes
-
-You can run this on GPU nodes too.
-
-But Spark does not magically use GPUs.
-
-Slurm can allocate GPUs:
-
-```bash
-#SBATCH --partition=gpu
-#SBATCH --nodes=3
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=16
-#SBATCH --gpus-per-node=2
-#SBATCH --mem=64G
-```
-
-Spark can be told about GPU resources:
-
-```bash
-spark-submit \
-    --master "$master_url" \
-    --conf spark.executor.resource.gpu.amount=2 \
-    --conf spark.task.resource.gpu.amount=1 \
-    --executor-cores 16 \
-    --executor-memory 48G \
-    ./gpu_job.py
-```
-
-But the application must actually use CUDA.
-
-Check GPU visibility:
-
-```bash
-srun nvidia-smi
-```
-
-For PyTorch:
-
-```python
-import torch
-
-print(torch.cuda.is_available())
-print(torch.cuda.device_count())
-```
-
-If GPUs are not visible, fix Slurm and NVIDIA first.
-
-Spark is not the first thing to blame.
-
----
-
 
 ## Putting it together: a 30,000-sample cohort job
 
@@ -1946,32 +1617,344 @@ A common cleanup step is to compact outputs before heavy downstream processing.
 
 ---
 
-## The conclusion after setup
+## When raw Slurm is still better
 
-After setting up Spark on Slurm, the practical solution is not just:
+Use raw Slurm when the work is independent.
 
-```text
-Run Spark successfully.
+Good examples:
+
+- FastQC per sample
+- BWA per sample
+- samtools per BAM
+- independent simulations
+- image conversion
+- many small file-by-file jobs
+- simple batch commands
+
+For these, use:
+
+```bash
+#SBATCH --array=1-100
 ```
 
-The practical solution is:
+Do not force Spark into this.
+
+Spark adds startup time, JVM overhead, logs, ports, and more moving pieces.
+
+That overhead is only worth it when Spark is solving a real data-distribution problem.
+
+---
+
+## When Postgres is still better
+
+Spark is not automatically better than Postgres either.
+
+Use Postgres when the data fits well on one database server and you need:
+
+- indexed SQL queries
+- transactions
+- data integrity
+- frequent interactive queries
+- many small lookups
+- application serving
+- relational constraints
+
+A tuned Postgres box can beat a small Spark cluster for many SQL workloads.
+
+Do not use Spark just because the dataset feels big.
+
+Use Spark when the data already lives as many files on shared storage, or when one job needs to scan, join, aggregate, and transform data across multiple nodes.
+
+Postgres is a database.
+
+Spark is a distributed compute engine.
+
+Different tools.
+
+---
+
+## When Spark on Slurm is better
+
+Use Spark on Slurm when the workload needs coordinated data processing.
+
+Good examples:
+
+- large Parquet processing
+- large table processing
+- joins across big datasets
+- group-by and aggregation
+- repeated filtering and transformation
+- distributed feature generation
+- data preparation for ML
+- workloads that benefit from caching
+- jobs where task retry matters
+
+This is where raw `sbatch` starts to feel awkward.
+
+Spark gives you the distributed data engine.
+
+Slurm gives you the machines.
+
+Shared storage gives all workers the same data path.
+
+That combination is the point.
+
+---
+
+## NFS limits
+
+NFS is fine for a small tutorial cluster.
+
+But NFS is not magic.
+
+It can become the bottleneck when:
+
+- many nodes read heavily
+- many nodes write heavily
+- there are many small files
+- metadata operations are high
+- shuffle output is large
+- the cluster grows
+
+If storage becomes the bottleneck, move to something built for this:
 
 ```text
-Use Slurm arrays for 30,000 independent sample tasks.
-Store the outputs in shared storage.
-Normalize important outputs into table-shaped data.
-Use Spark on Slurm to join, filter, aggregate, and summarize across the cohort.
-Write final derived tables.
-Use Postgres only for smaller interactive query results if needed.
+Lustre
+BeeGFS
+GPFS
+Ceph
+S3 / MinIO
+HDFS
 ```
 
-That is a complete shape.
+Start simple.
 
-It avoids forcing Spark into jobs where it does not belong.
+But do not pretend NFS is the final answer for every cluster.
 
-It also avoids writing a fragile pile of custom merge scripts when the work becomes cohort-level.
+---
 
-This is why the setup effort can be worth it.
+## Common problems
+
+### Nodes are down in Slurm
+
+Check:
+
+```bash
+sinfo
+scontrol show node node1
+sudo journalctl -u slurmd -n 100
+sudo journalctl -u slurmctld -n 100
+```
+
+Common causes:
+
+- hostname mismatch
+- bad `/etc/hosts`
+- Munge not running
+- wrong Munge key
+- wrong CPU or memory values in `slurm.conf`
+- firewall issues
+
+Fix Slurm first.
+
+---
+
+### Multi-node Slurm test does not show all nodes
+
+Check the job request:
+
+```bash
+#SBATCH --nodes=3
+#SBATCH --ntasks-per-node=1
+```
+
+Check the partition:
+
+```bash
+sinfo
+```
+
+Check that nodes are idle or available.
+
+Spark will not run multi-node if Slurm is only giving one node.
+
+---
+
+### NFS mount is missing on one node
+
+Check:
+
+```bash
+srun ls /shared
+```
+
+If one node fails, fix `/etc/fstab` or the NFS mount on that node.
+
+Also check:
+
+```bash
+showmount -e master
+sudo mount -a
+```
+
+Spark workers need the same paths.
+
+---
+
+### Spark workers do not connect to master
+
+Check that nodes can resolve the master node name:
+
+```bash
+srun getent hosts "$master_node"
+```
+
+Check common Spark ports:
+
+```text
+7077    Spark master
+8080    Spark master web UI
+8081    Spark worker web UI
+```
+
+If the firewall blocks node-to-node traffic, workers may not connect.
+
+---
+
+### Spark only runs locally
+
+Do not use:
+
+```bash
+spark-submit --master local[*] job.py
+```
+
+Use:
+
+```bash
+spark-submit --master "$master_url" job.py
+```
+
+Also check that workers actually started.
+
+Look in:
+
+```bash
+/shared/logs/spark-<jobid>
+```
+
+---
+
+### Spark cannot read input files
+
+Check that all nodes can see the same input:
+
+```bash
+srun ls /shared/data
+```
+
+If the path exists only on one node, Spark will fail or behave strangely.
+
+Use shared storage.
+
+Keep the path identical on all nodes.
+
+---
+
+### Spark runs out of memory
+
+Reduce:
+
+```bash
+--executor-memory
+```
+
+Also reduce the amount of data per partition or increase the partition count.
+
+For PySpark, remember:
+
+```text
+JVM memory + Python memory + overhead
+```
+
+Do not size memory too close to the Slurm limit.
+
+---
+
+### The job hangs during startup
+
+Common causes:
+
+- Spark master not ready yet
+- workers cannot reach the master
+- firewall blocks Spark ports
+- wrong hostname
+- Java missing on one node
+- Spark path differs between nodes
+- `/shared` is not mounted on one node
+
+Check:
+
+```bash
+cat spark-<jobid>.err
+ls /shared/logs/spark-<jobid>
+```
+
+Then check Slurm logs if needed.
+
+---
+
+## Optional GPU notes
+
+You can run this on GPU nodes too.
+
+But Spark does not magically use GPUs.
+
+Slurm can allocate GPUs:
+
+```bash
+#SBATCH --partition=gpu
+#SBATCH --nodes=3
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --gpus-per-node=2
+#SBATCH --mem=64G
+```
+
+Spark can be told about GPU resources:
+
+```bash
+spark-submit \
+    --master "$master_url" \
+    --conf spark.executor.resource.gpu.amount=2 \
+    --conf spark.task.resource.gpu.amount=1 \
+    --executor-cores 16 \
+    --executor-memory 48G \
+    ./gpu_job.py
+```
+
+But the application must actually use CUDA.
+
+Check GPU visibility:
+
+```bash
+srun nvidia-smi
+```
+
+For PyTorch:
+
+```python
+import torch
+
+print(torch.cuda.is_available())
+print(torch.cuda.device_count())
+```
+
+If GPUs are not visible, fix Slurm and NVIDIA first.
+
+Spark is not the first thing to blame.
+
+---
 
 ## Practical boundary
 
