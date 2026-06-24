@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import SnakeGame from "../components/SnakeGame.astro";
 import InvadersGame from "../components/InvadersGame.astro";
+import BreakoutGame from "../components/BreakoutGame.astro";
 ---
 
 <BaseLayout>
@@ -114,6 +115,22 @@ import InvadersGame from "../components/InvadersGame.astro";
             </div>
 
             <p class="invaders-mobile-help">MOVE · FIRE · SURVIVE</p>
+          </div>
+
+          <BreakoutGame />
+
+          <div
+            class="breakout-mobile-controls"
+            data-breakout-mobile-controls
+            aria-label="Breakout game controls"
+          >
+            <div class="breakout-mobile-actions">
+              <button type="button" data-breakout-action="pause">PAUSE</button>
+              <button type="button" data-breakout-action="restart">RESTART</button>
+              <button type="button" data-breakout-action="exit">EXIT</button>
+            </div>
+
+            <p class="breakout-mobile-help">MOVE · LAUNCH · CATCH BONUSES</p>
           </div>
 
           <form class="terminal-shell" data-terminal-shell hidden>
@@ -273,6 +290,16 @@ import InvadersGame from "../components/InvadersGame.astro";
         const invadersPauseButton = wrapper.querySelector(
           '[data-invaders-action="pause"]',
         );
+        const breakoutRoot = wrapper.querySelector("[data-breakout-game]");
+        const breakoutOverlay = wrapper.querySelector("[data-breakout-overlay]");
+        const breakoutState = wrapper.querySelector("[data-breakout-state]");
+        const breakoutLevel = wrapper.querySelector("[data-breakout-level]");
+        const breakoutActionButtons = Array.from(
+          wrapper.querySelectorAll("[data-breakout-action]"),
+        );
+        const breakoutPauseButton = wrapper.querySelector(
+          '[data-breakout-action="pause"]',
+        );
 
         const reducedMotion = window.matchMedia(
           "(prefers-reduced-motion: reduce)",
@@ -284,6 +311,7 @@ import InvadersGame from "../components/InvadersGame.astro";
         let terminalIsOnline = false;
         let snakeIsActive = false;
         let invadersIsActive = false;
+        let breakoutIsActive = false;
 
         const setText = (element, value) => {
           if (element) {
@@ -487,6 +515,19 @@ import InvadersGame from "../components/InvadersGame.astro";
           invadersPauseButton.textContent = label;
           invadersPauseButton.disabled = disabled;
           invadersPauseButton.setAttribute(
+            "aria-pressed",
+            label === "RESUME" ? "true" : "false",
+          );
+        };
+
+        const setBreakoutPauseButtonState = (label, disabled = false) => {
+          if (!(breakoutPauseButton instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          breakoutPauseButton.textContent = label;
+          breakoutPauseButton.disabled = disabled;
+          breakoutPauseButton.setAttribute(
             "aria-pressed",
             label === "RESUME" ? "true" : "false",
           );
@@ -752,6 +793,142 @@ import InvadersGame from "../components/InvadersGame.astro";
           }
         };
 
+        const syncBreakoutState = () => {
+          if (!breakoutIsActive) {
+            return;
+          }
+
+          const state =
+            breakoutState?.textContent?.trim().toUpperCase() ?? "";
+          const levelLabel =
+            breakoutLevel?.textContent?.trim().padStart(2, "0") ?? "01";
+          const overlayVisible = breakoutOverlay
+            ? !breakoutOverlay.hidden
+            : false;
+
+          setText(terminalMode, `BREAKOUT / LEVEL ${levelLabel}`);
+          terminalStatus?.classList.remove("is-paused", "is-game-over");
+
+          if (state === "PAUSED") {
+            terminalStatus?.classList.add("is-paused");
+            setText(statusLabel, "PAUSED");
+            setText(footerState, `LEVEL ${levelLabel} · GAME PAUSED`);
+            setBreakoutPauseButtonState("RESUME");
+            return;
+          }
+
+          if (state === "GAME OVER") {
+            terminalStatus?.classList.add("is-game-over");
+            setText(statusLabel, "GAME OVER");
+            setText(
+              footerState,
+              `LEVEL ${levelLabel} · GAME OVER · RESTART OR EXIT`,
+            );
+            setBreakoutPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (state === "BALL LOST") {
+            terminalStatus?.classList.add("is-paused");
+            setText(statusLabel, "BALL LOST");
+            setText(footerState, `LEVEL ${levelLabel} · RECOVERING`);
+            setBreakoutPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (state.startsWith("LEVEL ") && state.endsWith(" CLEARED")) {
+            terminalStatus?.classList.add("is-paused");
+            setText(statusLabel, "LEVEL CLEAR");
+            setText(footerState, `${state} · NEXT BOARD`);
+            setBreakoutPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (state === "PRESS FIRE OR MOVE") {
+            setText(statusLabel, "READY");
+            setText(
+              footerState,
+              finePointer.matches
+                ? `LEVEL ${levelLabel} · READY · A/D + SPACE`
+                : `LEVEL ${levelLabel} · READY · USE CONTROLS`,
+            );
+            setBreakoutPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (!overlayVisible || state === "RUNNING") {
+            setText(statusLabel, "RUNNING");
+            setText(
+              footerState,
+              finePointer.matches
+                ? `LEVEL ${levelLabel} · ACTIVE · ESC EXIT`
+                : `LEVEL ${levelLabel} · ACTIVE · USE CONTROLS`,
+            );
+            setBreakoutPauseButtonState("PAUSE");
+          }
+        };
+
+        const openBreakout = () => {
+          breakoutIsActive = true;
+          wrapper.classList.add("breakout-mode");
+
+          if (profileView) {
+            profileView.hidden = true;
+          }
+
+          if (shell) {
+            shell.hidden = true;
+          }
+
+          clearResponse();
+          setText(terminalMode, "BREAKOUT / LEVEL 01");
+          setText(statusLabel, "READY");
+          setText(
+            footerState,
+            finePointer.matches
+              ? "LEVEL 01 · READY · A/D + SPACE"
+              : "LEVEL 01 · READY · USE CONTROLS",
+          );
+          setBreakoutPauseButtonState("PAUSE", true);
+          window.dispatchEvent(new CustomEvent("tiendu:breakout-start"));
+          window.setTimeout(syncBreakoutState, 0);
+        };
+
+        const restoreBreakoutProfile = (
+          score = 0,
+          highScore = 0,
+          level = 1,
+        ) => {
+          breakoutIsActive = false;
+          wrapper.classList.remove("breakout-mode");
+          terminalStatus?.classList.remove("is-paused", "is-game-over");
+          setBreakoutPauseButtonState("PAUSE");
+
+          if (profileView) {
+            profileView.hidden = false;
+          }
+
+          if (profileCopy) {
+            profileCopy.hidden = false;
+          }
+
+          if (shell) {
+            shell.hidden = false;
+          }
+
+          resizeTerminalInput();
+          setText(terminalMode, "PROFILE");
+          setText(statusLabel, "ONLINE");
+          setText(footerState, "READY · TYPE HELP");
+          showResponse(
+            `BREAKOUT CLOSED · SCORE ${String(score).padStart(4, "0")} · HIGH ${String(highScore).padStart(4, "0")} · LEVEL ${String(level).padStart(2, "0")}`,
+          );
+
+          if (finePointer.matches && terminalInput instanceof HTMLElement) {
+            window.setTimeout(() => terminalInput.focus(), 0);
+          }
+        };
+
         const runCommand = (rawCommand) => {
           const command = rawCommand.trim().toLowerCase();
 
@@ -761,7 +938,7 @@ import InvadersGame from "../components/InvadersGame.astro";
 
           if (command === "help") {
             showResponse(
-              "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TAGS · ABOUT · SNAKE · INVADERS · CLEAR",
+              "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TAGS · ABOUT · SNAKE · INVADERS · BREAKOUT · CLEAR",
             );
             return;
           }
@@ -794,6 +971,11 @@ import InvadersGame from "../components/InvadersGame.astro";
 
           if (command === "invaders" || command === "invader") {
             openInvaders();
+            return;
+          }
+
+          if (command === "breakout" || command === "arkanoid") {
+            openBreakout();
             return;
           }
 
@@ -918,6 +1100,7 @@ import InvadersGame from "../components/InvadersGame.astro";
           if (
             snakeIsActive ||
             invadersIsActive ||
+            breakoutIsActive ||
             !shell ||
             shell.hidden ||
             !(terminalInput instanceof HTMLInputElement)
@@ -980,6 +1163,31 @@ import InvadersGame from "../components/InvadersGame.astro";
           });
         });
 
+
+        breakoutActionButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const action = button.dataset.breakoutAction;
+            const keyByAction = {
+              pause: "p",
+              restart: "r",
+              exit: "Escape",
+            };
+            const key = keyByAction[action];
+
+            if (!key || !breakoutIsActive) {
+              return;
+            }
+
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", {
+                key,
+                bubbles: true,
+                cancelable: true,
+              }),
+            );
+          });
+        });
+
         if (snakeRoot) {
           const snakeStateObserver = new MutationObserver(syncSnakeState);
 
@@ -1015,6 +1223,27 @@ import InvadersGame from "../components/InvadersGame.astro";
             detail.score ?? 0,
             detail.highScore ?? 0,
             detail.wave ?? 1,
+          );
+        });
+
+        if (breakoutRoot) {
+          const breakoutStateObserver = new MutationObserver(syncBreakoutState);
+
+          breakoutStateObserver.observe(breakoutRoot, {
+            attributes: true,
+            attributeFilter: ["hidden"],
+            characterData: true,
+            childList: true,
+            subtree: true,
+          });
+        }
+
+        window.addEventListener("tiendu:breakout-exit", (event) => {
+          const detail = event.detail ?? {};
+          restoreBreakoutProfile(
+            detail.score ?? 0,
+            detail.highScore ?? 0,
+            detail.level ?? 1,
           );
         });
 
@@ -1365,7 +1594,8 @@ import InvadersGame from "../components/InvadersGame.astro";
   }
 
   .snake-mobile-controls,
-  .invaders-mobile-controls {
+  .invaders-mobile-controls,
+  .breakout-mobile-controls {
     display: none;
   }
 
@@ -1566,6 +1796,62 @@ import InvadersGame from "../components/InvadersGame.astro";
     }
 
     .landing-wrapper.invaders-mode :global(.invaders-help) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 620px), (pointer: coarse) {
+    .landing-wrapper.breakout-mode .breakout-mobile-controls {
+      display: grid;
+      gap: 0.55rem;
+      margin: -0.15rem auto 0;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .breakout-mobile-actions {
+      display: grid;
+      gap: 0.5rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .breakout-mobile-actions button {
+      background: rgb(199 240 139 / 5%);
+      border: 1px solid rgb(199 240 139 / 25%);
+      border-radius: 2px;
+      color: var(--terminal-green);
+      cursor: pointer;
+      font-family: var(--font-terminal);
+      font-size: 0.9rem;
+      letter-spacing: 0.07em;
+      min-height: 44px;
+      padding: 0.55rem 0.35rem;
+      text-transform: uppercase;
+      touch-action: manipulation;
+    }
+
+    .breakout-mobile-actions button:hover,
+    .breakout-mobile-actions button:focus-visible {
+      background: rgb(199 240 139 / 12%);
+      border-color: var(--terminal-green-dim);
+      color: var(--terminal-green-bright);
+    }
+
+    .breakout-mobile-actions button:disabled {
+      cursor: default;
+      opacity: 0.38;
+    }
+
+    .breakout-mobile-help {
+      color: var(--terminal-green-dim);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      margin: 0;
+      max-width: none;
+      text-align: center;
+    }
+
+    .landing-wrapper.breakout-mode :global(.breakout-help) {
       display: none;
     }
   }
