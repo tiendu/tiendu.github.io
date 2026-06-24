@@ -6,6 +6,14 @@
 >
   <div class="snake-scoreboard" aria-live="polite">
     <span>SCORE <output data-snake-score>0000</output></span>
+    <span
+      class="snake-bonus-indicator"
+      data-snake-bonus-indicator
+      aria-label="Bonus meal time remaining"
+      hidden
+    >
+      BONUS <output data-snake-bonus-time>5</output>
+    </span>
     <span>HIGH <output data-snake-high-score>0000</output></span>
   </div>
 
@@ -50,6 +58,10 @@
     const canvas = root.querySelector("[data-snake-canvas]");
     const scoreOutput = root.querySelector("[data-snake-score]");
     const highScoreOutput = root.querySelector("[data-snake-high-score]");
+    const bonusIndicator = root.querySelector(
+      "[data-snake-bonus-indicator]",
+    );
+    const bonusTimeOutput = root.querySelector("[data-snake-bonus-time]");
     const overlay = root.querySelector("[data-snake-overlay]");
     const stateLabel = root.querySelector("[data-snake-state]");
     const messageLabel = root.querySelector("[data-snake-message]");
@@ -72,6 +84,10 @@
     const CELL_SIZE = BOARD_SIZE / GRID_SIZE;
     const START_SPEED = 132;
     const MIN_SPEED = 72;
+    const BONUS_TRIGGER_FOODS = 5;
+    const BONUS_DURATION_MS = 5000;
+    const BONUS_MIN_SCORE = 40;
+    const BONUS_MAX_SCORE = 120;
     const HIGH_SCORE_KEY = "tiendu-snake-high-score";
 
     const directions = {
@@ -87,6 +103,9 @@
     let gameOver = false;
     let snake = [];
     let food = { x: 14, y: 10 };
+    let bonusFood = null;
+    let bonusRemainingMs = 0;
+    let regularFoodsEaten = 0;
     let direction = directions.right;
     let queuedDirection = directions.right;
     let score = 0;
@@ -130,6 +149,26 @@
       if (highScoreOutput) {
         highScoreOutput.textContent = formatScore(highScore);
       }
+    };
+
+    const updateBonusIndicator = () => {
+      const visible = bonusFood && bonusRemainingMs > 0;
+
+      if (bonusIndicator) {
+        bonusIndicator.hidden = !visible;
+      }
+
+      if (visible && bonusTimeOutput) {
+        bonusTimeOutput.textContent = String(
+          Math.max(1, Math.ceil(bonusRemainingMs / 1000)),
+        );
+      }
+    };
+
+    const clearBonusFood = () => {
+      bonusFood = null;
+      bonusRemainingMs = 0;
+      updateBonusIndicator();
     };
 
     const setOverlay = (title, message, visible = true) => {
@@ -185,6 +224,36 @@
       context.shadowColor = "rgba(217, 128, 93, 0.75)";
       context.shadowBlur = 10;
       context.fillRect(-radius, -radius, radius * 2, radius * 2);
+      context.restore();
+    };
+
+    const drawBonusFood = () => {
+      if (!bonusFood) {
+        return;
+      }
+
+      const originX = bonusFood.x * CELL_SIZE;
+      const originY = bonusFood.y * CELL_SIZE;
+      const flashing =
+        bonusRemainingMs <= 2000 &&
+        Math.floor(bonusRemainingMs / 160) % 2 === 0;
+
+      context.save();
+      context.globalAlpha = flashing ? 0.34 : 1;
+      context.fillStyle = "#f0c36f";
+      context.shadowColor = "rgba(240, 195, 111, 0.9)";
+      context.shadowBlur = 15;
+
+      /*
+       * A large pixel-style meal: visibly different from the normal diamond,
+       * while still occupying one logical grid cell.
+       */
+      context.fillRect(originX + 6, originY + 1, 8, 18);
+      context.fillRect(originX + 1, originY + 6, 18, 8);
+
+      context.shadowBlur = 0;
+      context.fillStyle = "#07120b";
+      context.fillRect(originX + 8, originY + 8, 4, 4);
       context.restore();
     };
 
@@ -254,6 +323,7 @@
       context.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
       drawGrid();
       drawFood();
+      drawBonusFood();
       drawSnake();
     };
 
@@ -280,9 +350,35 @@
       food = freeCells[Math.floor(Math.random() * freeCells.length)];
     };
 
+    const placeBonusFood = () => {
+      const freeCells = [];
+
+      for (let y = 0; y < GRID_SIZE; y += 1) {
+        for (let x = 0; x < GRID_SIZE; x += 1) {
+          const occupiedBySnake = snake.some(
+            (segment) => segment.x === x && segment.y === y,
+          );
+          const occupiedByFood = food.x === x && food.y === y;
+
+          if (!occupiedBySnake && !occupiedByFood) {
+            freeCells.push({ x, y });
+          }
+        }
+      }
+
+      if (freeCells.length === 0) {
+        return;
+      }
+
+      bonusFood = freeCells[Math.floor(Math.random() * freeCells.length)];
+      bonusRemainingMs = BONUS_DURATION_MS;
+      updateBonusIndicator();
+    };
+
     const finishGame = (won = false) => {
       gameOver = true;
       started = false;
+      clearBonusFood();
       saveHighScore();
       updateScoreboard();
       setOverlay(
@@ -301,7 +397,9 @@
       direction = directions.right;
       queuedDirection = directions.right;
       score = 0;
+      regularFoodsEaten = 0;
       speed = START_SPEED;
+      clearBonusFood();
       started = false;
       paused = false;
       gameOver = false;
@@ -347,8 +445,15 @@
         nextHead.y < 0 ||
         nextHead.y >= GRID_SIZE;
 
-      const eating = nextHead.x === food.x && nextHead.y === food.y;
-      const collisionBody = eating ? snake : snake.slice(0, -1);
+      const eatingRegularFood =
+        nextHead.x === food.x && nextHead.y === food.y;
+      const eatingBonusFood =
+        bonusFood &&
+        nextHead.x === bonusFood.x &&
+        nextHead.y === bonusFood.y;
+      const collisionBody = eatingRegularFood
+        ? snake
+        : snake.slice(0, -1);
       const hitSelf = collisionBody.some(
         (segment) =>
           segment.x === nextHead.x && segment.y === nextHead.y,
@@ -361,11 +466,41 @@
 
       snake.unshift(nextHead);
 
-      if (eating) {
+      if (eatingRegularFood) {
         score += 10;
+        regularFoodsEaten += 1;
         saveHighScore();
-        speed = Math.max(MIN_SPEED, START_SPEED - score * 0.45);
+        speed = Math.max(
+          MIN_SPEED,
+          START_SPEED - regularFoodsEaten * 4.5,
+        );
         placeFood();
+
+        if (
+          regularFoodsEaten % BONUS_TRIGGER_FOODS === 0 &&
+          !bonusFood
+        ) {
+          placeBonusFood();
+        }
+
+        updateScoreboard();
+      } else if (eatingBonusFood) {
+        const remainingRatio = Math.max(
+          0,
+          Math.min(1, bonusRemainingMs / BONUS_DURATION_MS),
+        );
+        const rawBonus =
+          BONUS_MIN_SCORE +
+          (BONUS_MAX_SCORE - BONUS_MIN_SCORE) * remainingRatio;
+        const bonusPoints = Math.max(
+          BONUS_MIN_SCORE,
+          Math.ceil(rawBonus / 10) * 10,
+        );
+
+        score += bonusPoints;
+        snake.pop(); // Nokia-style bonus: points only, no extra length.
+        clearBonusFood();
+        saveHighScore();
         updateScoreboard();
       } else {
         snake.pop();
@@ -387,6 +522,17 @@
       previousTime = time;
 
       if (started && !paused && !gameOver) {
+        if (bonusFood) {
+          bonusRemainingMs = Math.max(0, bonusRemainingMs - elapsed);
+
+          if (bonusRemainingMs === 0) {
+            clearBonusFood();
+            draw();
+          } else {
+            updateBonusIndicator();
+          }
+        }
+
         accumulator += elapsed;
 
         while (accumulator >= speed) {
@@ -396,6 +542,14 @@
           if (gameOver) {
             break;
           }
+        }
+
+        /*
+         * Redraw while the bonus exists so its final two-second warning
+         * can flash even between snake movement ticks.
+         */
+        if (bonusFood) {
+          draw();
         }
       }
 
@@ -583,7 +737,8 @@
 
 <style>
   .snake-panel[hidden],
-  .snake-overlay[hidden] {
+  .snake-overlay[hidden],
+  .snake-bonus-indicator[hidden] {
     display: none;
   }
 
@@ -606,6 +761,15 @@
   .snake-scoreboard output {
     color: var(--terminal-green-bright);
     font-family: inherit;
+  }
+
+  .snake-bonus-indicator {
+    color: #d9a35f;
+    text-shadow: 0 0 7px rgb(217 163 95 / 42%);
+  }
+
+  .snake-bonus-indicator output {
+    color: #f0c36f;
   }
 
   .snake-board-frame {
