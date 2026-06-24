@@ -239,6 +239,7 @@ import SnakeGame from "../components/SnakeGame.astro";
         const snakeRoot = wrapper.querySelector("[data-snake-game]");
         const snakeOverlay = wrapper.querySelector("[data-snake-overlay]");
         const snakeState = wrapper.querySelector("[data-snake-state]");
+        const snakeModeOutput = wrapper.querySelector("[data-snake-mode]");
         const snakeActionButtons = Array.from(
           wrapper.querySelectorAll("[data-snake-action]"),
         );
@@ -450,20 +451,39 @@ import SnakeGame from "../components/SnakeGame.astro";
           );
         };
 
+        const getSnakeMode = () => {
+          const value = snakeModeOutput?.textContent?.trim().toUpperCase() ?? "";
+          return value === "FREE" || value === "MAZE" ? value : "";
+        };
+
+        const setSnakeModeLabel = (mode) => {
+          setText(terminalMode, mode ? `SNAKE / ${mode}` : "SNAKE");
+        };
+
         const syncSnakeState = () => {
           if (!snakeIsActive) {
             return;
           }
 
           const state = snakeState?.textContent?.trim().toUpperCase() ?? "";
+          const mode = getSnakeMode();
+          const modePrefix = mode ? `${mode} MODE · ` : "";
           const overlayVisible = snakeOverlay ? !snakeOverlay.hidden : false;
 
+          setSnakeModeLabel(mode);
           terminalStatus?.classList.remove("is-paused", "is-game-over");
+
+          if (state === "SELECT MODE") {
+            setText(statusLabel, "SELECT MODE");
+            setText(footerState, "SELECT MODE · FREE OR MAZE");
+            setPauseButtonState("PAUSE", true);
+            return;
+          }
 
           if (state === "PAUSED") {
             terminalStatus?.classList.add("is-paused");
             setText(statusLabel, "PAUSED");
-            setText(footerState, "GAME PAUSED");
+            setText(footerState, `${modePrefix}GAME PAUSED`);
             setPauseButtonState("RESUME");
             return;
           }
@@ -471,7 +491,10 @@ import SnakeGame from "../components/SnakeGame.astro";
           if (state === "GAME OVER" || state === "SYSTEM CLEARED") {
             terminalStatus?.classList.add("is-game-over");
             setText(statusLabel, state);
-            setText(footerState, "GAME OVER · RESTART OR EXIT");
+            setText(
+              footerState,
+              `${modePrefix}${state} · RESTART, CHANGE MODE, OR EXIT`,
+            );
             setPauseButtonState("PAUSE", true);
             return;
           }
@@ -481,8 +504,8 @@ import SnakeGame from "../components/SnakeGame.astro";
             setText(
               footerState,
               finePointer.matches
-                ? "GAME READY · ARROWS/WASD"
-                : "GAME READY · USE CONTROLS",
+                ? `${modePrefix}READY · ARROWS/WASD`
+                : `${modePrefix}READY · USE CONTROLS`,
             );
             setPauseButtonState("PAUSE", true);
             return;
@@ -493,8 +516,8 @@ import SnakeGame from "../components/SnakeGame.astro";
             setText(
               footerState,
               finePointer.matches
-                ? "GAME ACTIVE · ESC EXIT"
-                : "GAME ACTIVE · USE CONTROLS",
+                ? `${modePrefix}ACTIVE · ESC EXIT`
+                : `${modePrefix}ACTIVE · USE CONTROLS`,
             );
             setPauseButtonState("PAUSE");
           }
@@ -513,14 +536,9 @@ import SnakeGame from "../components/SnakeGame.astro";
           }
 
           clearResponse();
-          setText(terminalMode, "SNAKE");
-          setText(statusLabel, "READY");
-          setText(
-            footerState,
-            finePointer.matches
-              ? "GAME READY · ARROWS/WASD"
-              : "GAME READY · USE CONTROLS",
-          );
+          setSnakeModeLabel("");
+          setText(statusLabel, "SELECT MODE");
+          setText(footerState, "SELECT MODE · FREE OR MAZE");
           setPauseButtonState("PAUSE", true);
           window.dispatchEvent(new CustomEvent("tiendu:snake-start"));
           window.setTimeout(syncSnakeState, 0);

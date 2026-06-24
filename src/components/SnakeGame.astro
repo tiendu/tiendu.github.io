@@ -5,6 +5,7 @@
   hidden
 >
   <div class="snake-scoreboard" aria-live="polite">
+    <span>MODE <output data-snake-mode>--</output></span>
     <span>SCORE <output data-snake-score>0000</output></span>
     <span
       class="snake-bonus-indicator"
@@ -28,8 +29,23 @@
     ></canvas>
 
     <div class="snake-overlay" data-snake-overlay>
-      <strong data-snake-state>PRESS A DIRECTION</strong>
-      <span data-snake-message>ARROWS / WASD / SWIPE</span>
+      <strong data-snake-state>SELECT MODE</strong>
+      <span data-snake-message>FREE WRAPS · MAZE HAS WALLS</span>
+
+      <div
+        class="snake-mode-picker"
+        data-snake-mode-picker
+        aria-label="Select Snake game mode"
+      >
+        <button type="button" data-snake-mode="free">
+          FREE
+          <small>WRAP EDGES</small>
+        </button>
+        <button type="button" data-snake-mode="maze">
+          MAZE
+          <small>WALLS + OBSTACLES</small>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -56,6 +72,7 @@
     root.dataset.snakeInitialized = "true";
 
     const canvas = root.querySelector("[data-snake-canvas]");
+    const modeOutput = root.querySelector("[data-snake-mode]");
     const scoreOutput = root.querySelector("[data-snake-score]");
     const highScoreOutput = root.querySelector("[data-snake-high-score]");
     const bonusIndicator = root.querySelector(
@@ -65,6 +82,10 @@
     const overlay = root.querySelector("[data-snake-overlay]");
     const stateLabel = root.querySelector("[data-snake-state]");
     const messageLabel = root.querySelector("[data-snake-message]");
+    const modePicker = root.querySelector("[data-snake-mode-picker]");
+    const modeButtons = Array.from(
+      root.querySelectorAll("[data-snake-mode]"),
+    );
     const directionButtons = Array.from(
       root.querySelectorAll("[data-snake-direction]"),
     );
@@ -88,6 +109,8 @@
     const BONUS_DURATION_MS = 5000;
     const BONUS_MIN_SCORE = 40;
     const BONUS_MAX_SCORE = 120;
+    const MAZE_SEGMENTS = 7;
+    const MAZE_MIN_REACHABLE_RATIO = 0.72;
     const HIGH_SCORE_KEY = "tiendu-snake-high-score";
 
     const directions = {
@@ -101,8 +124,11 @@
     let started = false;
     let paused = false;
     let gameOver = false;
+    let mode = null;
     let snake = [];
-    let food = { x: 14, y: 10 };
+    let food = null;
+    let obstacles = new Set();
+    let mazeReachableCells = [];
     let bonusFood = null;
     let bonusRemainingMs = 0;
     let regularFoodsEaten = 0;
@@ -142,6 +168,10 @@
     };
 
     const updateScoreboard = () => {
+      if (modeOutput) {
+        modeOutput.textContent = mode ? mode.toUpperCase() : "--";
+      }
+
       if (scoreOutput) {
         scoreOutput.textContent = formatScore(score);
       }
@@ -171,7 +201,12 @@
       updateBonusIndicator();
     };
 
-    const setOverlay = (title, message, visible = true) => {
+    const setOverlay = (
+      title,
+      message,
+      visible = true,
+      showModePicker = false,
+    ) => {
       if (stateLabel) {
         stateLabel.textContent = title;
       }
@@ -180,9 +215,158 @@
         messageLabel.textContent = message;
       }
 
+      if (modePicker) {
+        modePicker.hidden = !showModePicker;
+      }
+
       if (overlay) {
         overlay.hidden = !visible;
       }
+    };
+
+    const cellKey = (x, y) => `${x},${y}`;
+
+    const isInsideBoard = (x, y) =>
+      x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
+
+    const isObstacle = (x, y) => obstacles.has(cellKey(x, y));
+
+    const isSnakeCell = (x, y) =>
+      snake.some((segment) => segment.x === x && segment.y === y);
+
+    const startingSnake = () => [
+      { x: 9, y: 10 },
+      { x: 8, y: 10 },
+      { x: 7, y: 10 },
+      { x: 6, y: 10 },
+    ];
+
+    const isReservedStartCell = (x, y) =>
+      x >= 4 && x <= 13 && y >= 8 && y <= 12;
+
+    const floodFill = (blockedCells) => {
+      const start = { x: 9, y: 10 };
+      const visited = new Set([cellKey(start.x, start.y)]);
+      const queue = [start];
+
+      while (queue.length > 0) {
+        const current = queue.shift();
+        const neighbors = [
+          { x: current.x + 1, y: current.y },
+          { x: current.x - 1, y: current.y },
+          { x: current.x, y: current.y + 1 },
+          { x: current.x, y: current.y - 1 },
+        ];
+
+        for (const neighbor of neighbors) {
+          const key = cellKey(neighbor.x, neighbor.y);
+
+          if (
+            !isInsideBoard(neighbor.x, neighbor.y) ||
+            blockedCells.has(key) ||
+            visited.has(key)
+          ) {
+            continue;
+          }
+
+          visited.add(key);
+          queue.push(neighbor);
+        }
+      }
+
+      return visited;
+    };
+
+    const generateMaze = () => {
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        const candidate = new Set();
+
+        for (let segmentIndex = 0; segmentIndex < MAZE_SEGMENTS; segmentIndex += 1) {
+          const horizontal = Math.random() < 0.5;
+          const length = 3 + Math.floor(Math.random() * 4);
+          const maxX = horizontal ? GRID_SIZE - length - 1 : GRID_SIZE - 2;
+          const maxY = horizontal ? GRID_SIZE - 2 : GRID_SIZE - length - 1;
+          const startX = 1 + Math.floor(Math.random() * Math.max(1, maxX));
+          const startY = 1 + Math.floor(Math.random() * Math.max(1, maxY));
+          const cells = [];
+
+          for (let offset = 0; offset < length; offset += 1) {
+            const x = horizontal ? startX + offset : startX;
+            const y = horizontal ? startY : startY + offset;
+            cells.push({ x, y });
+          }
+
+          if (cells.some(({ x, y }) => isReservedStartCell(x, y))) {
+            continue;
+          }
+
+          cells.forEach(({ x, y }) => candidate.add(cellKey(x, y)));
+        }
+
+        const reachable = floodFill(candidate);
+        const freeCellCount = GRID_SIZE * GRID_SIZE - candidate.size;
+
+        if (
+          candidate.size >= 14 &&
+          reachable.size >= freeCellCount * MAZE_MIN_REACHABLE_RATIO
+        ) {
+          obstacles = candidate;
+          mazeReachableCells = Array.from(reachable, (key) => {
+            const [x, y] = key.split(",").map(Number);
+            return { x, y };
+          });
+          return;
+        }
+      }
+
+      /*
+       * Deterministic fallback. It keeps the starting corridor open and
+       * cannot divide the board into isolated food regions.
+       */
+      const fallbackSegments = [
+        [{ x: 2, y: 4 }, { x: 3, y: 4 }, { x: 4, y: 4 }, { x: 5, y: 4 }],
+        [{ x: 14, y: 3 }, { x: 14, y: 4 }, { x: 14, y: 5 }, { x: 14, y: 6 }],
+        [{ x: 3, y: 15 }, { x: 4, y: 15 }, { x: 5, y: 15 }, { x: 6, y: 15 }],
+        [{ x: 15, y: 14 }, { x: 16, y: 14 }, { x: 17, y: 14 }],
+        [{ x: 11, y: 17 }, { x: 11, y: 18 }],
+      ];
+
+      obstacles = new Set(
+        fallbackSegments
+          .flat()
+          .map(({ x, y }) => cellKey(x, y)),
+      );
+
+      mazeReachableCells = Array.from(floodFill(obstacles), (key) => {
+        const [x, y] = key.split(",").map(Number);
+        return { x, y };
+      });
+    };
+
+    const getSpawnCells = () => {
+      const candidates =
+        mode === "maze"
+          ? mazeReachableCells
+          : Array.from(
+              { length: GRID_SIZE * GRID_SIZE },
+              (_, index) => ({
+                x: index % GRID_SIZE,
+                y: Math.floor(index / GRID_SIZE),
+              }),
+            );
+
+      return candidates.filter(({ x, y }) => {
+        const occupiedByFood = food && food.x === x && food.y === y;
+        const occupiedByBonus =
+          bonusFood && bonusFood.x === x && bonusFood.y === y;
+
+        return (
+          !isObstacle(x, y) &&
+          !isSnakeCell(x, y) &&
+          !occupiedByFood &&
+          !occupiedByBonus
+        );
+      });
     };
 
     const configureCanvas = () => {
@@ -213,6 +397,10 @@
     };
 
     const drawFood = () => {
+      if (!food) {
+        return;
+      }
+
       const centerX = food.x * CELL_SIZE + CELL_SIZE / 2;
       const centerY = food.y * CELL_SIZE + CELL_SIZE / 2;
       const radius = CELL_SIZE * 0.32;
@@ -254,6 +442,37 @@
       context.shadowBlur = 0;
       context.fillStyle = "#07120b";
       context.fillRect(originX + 8, originY + 8, 4, 4);
+      context.restore();
+    };
+
+    const drawObstacles = () => {
+      if (mode !== "maze") {
+        return;
+      }
+
+      context.save();
+
+      obstacles.forEach((key) => {
+        const [x, y] = key.split(",").map(Number);
+        const originX = x * CELL_SIZE;
+        const originY = y * CELL_SIZE;
+
+        context.fillStyle = "#536b3d";
+        context.shadowColor = "rgba(127, 164, 92, 0.28)";
+        context.shadowBlur = 5;
+        context.fillRect(originX + 2, originY + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+
+        context.shadowBlur = 0;
+        context.strokeStyle = "rgba(231, 255, 176, 0.18)";
+        context.lineWidth = 1;
+        context.strokeRect(
+          originX + 4.5,
+          originY + 4.5,
+          CELL_SIZE - 9,
+          CELL_SIZE - 9,
+        );
+      });
+
       context.restore();
     };
 
@@ -322,25 +541,14 @@
       context.fillStyle = "#020704";
       context.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
       drawGrid();
+      drawObstacles();
       drawFood();
       drawBonusFood();
       drawSnake();
     };
 
     const placeFood = () => {
-      const freeCells = [];
-
-      for (let y = 0; y < GRID_SIZE; y += 1) {
-        for (let x = 0; x < GRID_SIZE; x += 1) {
-          const occupied = snake.some(
-            (segment) => segment.x === x && segment.y === y,
-          );
-
-          if (!occupied) {
-            freeCells.push({ x, y });
-          }
-        }
-      }
+      const freeCells = getSpawnCells();
 
       if (freeCells.length === 0) {
         finishGame(true);
@@ -351,20 +559,7 @@
     };
 
     const placeBonusFood = () => {
-      const freeCells = [];
-
-      for (let y = 0; y < GRID_SIZE; y += 1) {
-        for (let x = 0; x < GRID_SIZE; x += 1) {
-          const occupiedBySnake = snake.some(
-            (segment) => segment.x === x && segment.y === y,
-          );
-          const occupiedByFood = food.x === x && food.y === y;
-
-          if (!occupiedBySnake && !occupiedByFood) {
-            freeCells.push({ x, y });
-          }
-        }
-      }
+      const freeCells = getSpawnCells();
 
       if (freeCells.length === 0) {
         return;
@@ -383,17 +578,32 @@
       updateScoreboard();
       setOverlay(
         won ? "SYSTEM CLEARED" : "GAME OVER",
-        `${formatScore(score)} · R RESTART · ESC EXIT`,
+        `${formatScore(score)} · R RESTART · SELECT MODE · ESC EXIT`,
+        true,
+        true,
       );
     };
 
     const resetGame = () => {
-      snake = [
-        { x: 9, y: 10 },
-        { x: 8, y: 10 },
-        { x: 7, y: 10 },
-        { x: 6, y: 10 },
-      ];
+      if (!mode) {
+        setOverlay(
+          "SELECT MODE",
+          "FREE WRAPS · MAZE HAS WALLS",
+          true,
+          true,
+        );
+        draw();
+        return;
+      }
+
+      snake = startingSnake();
+      obstacles = new Set();
+      mazeReachableCells = [];
+
+      if (mode === "maze") {
+        generateMaze();
+      }
+
       direction = directions.right;
       queuedDirection = directions.right;
       score = 0;
@@ -407,8 +617,21 @@
       accumulator = 0;
       placeFood();
       updateScoreboard();
-      setOverlay("PRESS A DIRECTION", "ARROWS / WASD / SWIPE");
+      setOverlay(
+        "PRESS A DIRECTION",
+        `${mode.toUpperCase()} MODE · ARROWS / WASD / SWIPE`,
+      );
       draw();
+    };
+
+    const selectMode = (nextMode) => {
+      if (!active || (nextMode !== "free" && nextMode !== "maze")) {
+        return;
+      }
+
+      mode = nextMode;
+      resetGame();
+      window.setTimeout(() => canvas.focus({ preventScroll: true }), 0);
     };
 
     const isOpposite = (nextDirection) =>
@@ -416,7 +639,7 @@
       nextDirection.y + direction.y === 0;
 
     const setDirection = (nextDirection) => {
-      if (!active || gameOver || isOpposite(nextDirection)) {
+      if (!active || !mode || gameOver || isOpposite(nextDirection)) {
         return;
       }
 
@@ -434,19 +657,28 @@
       direction = queuedDirection;
 
       const currentHead = snake[0];
-      const nextHead = {
+      let nextHead = {
         x: currentHead.x + direction.x,
         y: currentHead.y + direction.y,
       };
 
-      const hitWall =
-        nextHead.x < 0 ||
-        nextHead.x >= GRID_SIZE ||
-        nextHead.y < 0 ||
-        nextHead.y >= GRID_SIZE;
+      const outsideBoard = !isInsideBoard(nextHead.x, nextHead.y);
+
+      if (mode === "free") {
+        nextHead = {
+          x: (nextHead.x + GRID_SIZE) % GRID_SIZE,
+          y: (nextHead.y + GRID_SIZE) % GRID_SIZE,
+        };
+      }
+
+      const hitWall = mode === "maze" && outsideBoard;
+      const hitObstacle =
+        mode === "maze" &&
+        isInsideBoard(nextHead.x, nextHead.y) &&
+        isObstacle(nextHead.x, nextHead.y);
 
       const eatingRegularFood =
-        nextHead.x === food.x && nextHead.y === food.y;
+        food && nextHead.x === food.x && nextHead.y === food.y;
       const eatingBonusFood =
         bonusFood &&
         nextHead.x === bonusFood.x &&
@@ -459,7 +691,7 @@
           segment.x === nextHead.x && segment.y === nextHead.y,
       );
 
-      if (hitWall || hitSelf) {
+      if (hitWall || hitObstacle || hitSelf) {
         finishGame();
         return;
       }
@@ -585,8 +817,21 @@
       active = true;
       root.hidden = false;
       highScore = readHighScore();
+      mode = null;
+      snake = [];
+      food = null;
+      obstacles = new Set();
+      mazeReachableCells = [];
+      clearBonusFood();
       configureCanvas();
-      resetGame();
+      updateScoreboard();
+      setOverlay(
+        "SELECT MODE",
+        "FREE WRAPS · MAZE HAS WALLS",
+        true,
+        true,
+      );
+      draw();
 
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
@@ -604,6 +849,7 @@
       active = false;
       started = false;
       paused = false;
+      mode = null;
       saveHighScore();
       updateScoreboard();
       root.hidden = true;
@@ -644,6 +890,14 @@
 
     const onKeyDown = (event) => {
       if (!active) {
+        return;
+      }
+
+      const normalizedKey = event.key.toLowerCase();
+
+      if (!mode && (normalizedKey === "f" || normalizedKey === "m")) {
+        event.preventDefault();
+        selectMode(normalizedKey === "f" ? "free" : "maze");
         return;
       }
 
@@ -701,6 +955,12 @@
       }
     };
 
+    modeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        selectMode(button.dataset.snakeMode);
+      });
+    });
+
     directionButtons.forEach((button) => {
       button.addEventListener("click", () => {
         const name = button.dataset.snakeDirection;
@@ -753,7 +1013,9 @@
   .snake-scoreboard {
     color: var(--terminal-green-dim);
     display: flex;
+    flex-wrap: wrap;
     font-size: 0.98rem;
+    gap: 0.35rem 1rem;
     justify-content: space-between;
     letter-spacing: 0.11em;
   }
@@ -821,11 +1083,55 @@
     text-shadow: 0 0 8px rgb(199 240 139 / 34%);
   }
 
-  .snake-overlay span {
+  .snake-overlay > span {
     color: var(--terminal-green-dim);
     font-size: 0.86rem;
     letter-spacing: 0.08em;
     margin-top: 0.35rem;
+  }
+
+  .snake-mode-picker {
+    display: grid;
+    gap: 0.55rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 1rem;
+    max-width: 300px;
+    pointer-events: auto;
+    width: 100%;
+  }
+
+  .snake-mode-picker[hidden] {
+    display: none;
+  }
+
+  .snake-mode-picker button {
+    background: rgb(199 240 139 / 7%);
+    border: 1px solid rgb(199 240 139 / 32%);
+    border-radius: 2px;
+    color: var(--terminal-green-bright);
+    cursor: pointer;
+    font-family: var(--font-terminal);
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    min-height: 52px;
+    padding: 0.55rem 0.4rem;
+    text-transform: uppercase;
+    touch-action: manipulation;
+  }
+
+  .snake-mode-picker button:hover,
+  .snake-mode-picker button:focus-visible {
+    background: rgb(199 240 139 / 15%);
+    border-color: var(--terminal-green);
+  }
+
+  .snake-mode-picker small {
+    color: var(--terminal-green-dim);
+    display: block;
+    font-family: inherit;
+    font-size: 0.64rem;
+    letter-spacing: 0.05em;
+    margin-top: 0.2rem;
   }
 
   .snake-pad {
@@ -885,6 +1191,14 @@
   }
 
   @media (max-width: 620px), (pointer: coarse) {
+    .snake-mode-picker {
+      max-width: 260px;
+    }
+
+    .snake-mode-picker button {
+      min-height: 48px;
+    }
+
     .snake-pad {
       display: grid;
     }
