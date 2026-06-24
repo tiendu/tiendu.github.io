@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import SnakeGame from "../components/SnakeGame.astro";
+import InvadersGame from "../components/InvadersGame.astro";
 ---
 
 <BaseLayout>
@@ -97,6 +98,22 @@ import SnakeGame from "../components/SnakeGame.astro";
             </div>
 
             <p class="snake-mobile-help">SWIPE OR USE CONTROLS</p>
+          </div>
+
+          <InvadersGame />
+
+          <div
+            class="invaders-mobile-controls"
+            data-invaders-mobile-controls
+            aria-label="Space Invaders game controls"
+          >
+            <div class="invaders-mobile-actions">
+              <button type="button" data-invaders-action="pause">PAUSE</button>
+              <button type="button" data-invaders-action="restart">RESTART</button>
+              <button type="button" data-invaders-action="exit">EXIT</button>
+            </div>
+
+            <p class="invaders-mobile-help">MOVE · FIRE · SURVIVE</p>
           </div>
 
           <form class="terminal-shell" data-terminal-shell hidden>
@@ -246,6 +263,16 @@ import SnakeGame from "../components/SnakeGame.astro";
         const snakePauseButton = wrapper.querySelector(
           '[data-snake-action="pause"]',
         );
+        const invadersRoot = wrapper.querySelector("[data-invaders-game]");
+        const invadersOverlay = wrapper.querySelector("[data-invaders-overlay]");
+        const invadersState = wrapper.querySelector("[data-invaders-state]");
+        const invadersWave = wrapper.querySelector("[data-invaders-wave]");
+        const invadersActionButtons = Array.from(
+          wrapper.querySelectorAll("[data-invaders-action]"),
+        );
+        const invadersPauseButton = wrapper.querySelector(
+          '[data-invaders-action="pause"]',
+        );
 
         const reducedMotion = window.matchMedia(
           "(prefers-reduced-motion: reduce)",
@@ -256,6 +283,7 @@ import SnakeGame from "../components/SnakeGame.astro";
 
         let terminalIsOnline = false;
         let snakeIsActive = false;
+        let invadersIsActive = false;
 
         const setText = (element, value) => {
           if (element) {
@@ -451,6 +479,19 @@ import SnakeGame from "../components/SnakeGame.astro";
           );
         };
 
+        const setInvadersPauseButtonState = (label, disabled = false) => {
+          if (!(invadersPauseButton instanceof HTMLButtonElement)) {
+            return;
+          }
+
+          invadersPauseButton.textContent = label;
+          invadersPauseButton.disabled = disabled;
+          invadersPauseButton.setAttribute(
+            "aria-pressed",
+            label === "RESUME" ? "true" : "false",
+          );
+        };
+
         const getSnakeMode = () => {
           const value = snakeModeOutput?.textContent?.trim().toUpperCase() ?? "";
           return value === "FREE" || value === "MAZE" ? value : "";
@@ -575,6 +616,142 @@ import SnakeGame from "../components/SnakeGame.astro";
           }
         };
 
+        const syncInvadersState = () => {
+          if (!invadersIsActive) {
+            return;
+          }
+
+          const state =
+            invadersState?.textContent?.trim().toUpperCase() ?? "";
+          const waveLabel =
+            invadersWave?.textContent?.trim().padStart(2, "0") ?? "01";
+          const overlayVisible = invadersOverlay
+            ? !invadersOverlay.hidden
+            : false;
+
+          setText(terminalMode, `INVADERS / WAVE ${waveLabel}`);
+          terminalStatus?.classList.remove("is-paused", "is-game-over");
+
+          if (state === "PAUSED") {
+            terminalStatus?.classList.add("is-paused");
+            setText(statusLabel, "PAUSED");
+            setText(footerState, `WAVE ${waveLabel} · GAME PAUSED`);
+            setInvadersPauseButtonState("RESUME");
+            return;
+          }
+
+          if (state === "GAME OVER") {
+            terminalStatus?.classList.add("is-game-over");
+            setText(statusLabel, "GAME OVER");
+            setText(
+              footerState,
+              `WAVE ${waveLabel} · GAME OVER · RESTART OR EXIT`,
+            );
+            setInvadersPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (state === "SHIP LOST") {
+            terminalStatus?.classList.add("is-paused");
+            setText(statusLabel, "SHIP LOST");
+            setText(footerState, `WAVE ${waveLabel} · RECOVERING`);
+            setInvadersPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (state.startsWith("WAVE ") && state.endsWith(" CLEARED")) {
+            terminalStatus?.classList.add("is-paused");
+            setText(statusLabel, "WAVE CLEAR");
+            setText(footerState, `${state} · NEXT SIGNAL`);
+            setInvadersPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (state === "PRESS FIRE OR MOVE") {
+            setText(statusLabel, "READY");
+            setText(
+              footerState,
+              finePointer.matches
+                ? `WAVE ${waveLabel} · READY · A/D + SPACE`
+                : `WAVE ${waveLabel} · READY · USE CONTROLS`,
+            );
+            setInvadersPauseButtonState("PAUSE", true);
+            return;
+          }
+
+          if (!overlayVisible || state === "RUNNING") {
+            setText(statusLabel, "RUNNING");
+            setText(
+              footerState,
+              finePointer.matches
+                ? `WAVE ${waveLabel} · ACTIVE · ESC EXIT`
+                : `WAVE ${waveLabel} · ACTIVE · USE CONTROLS`,
+            );
+            setInvadersPauseButtonState("PAUSE");
+          }
+        };
+
+        const openInvaders = () => {
+          invadersIsActive = true;
+          wrapper.classList.add("invaders-mode");
+
+          if (profileView) {
+            profileView.hidden = true;
+          }
+
+          if (shell) {
+            shell.hidden = true;
+          }
+
+          clearResponse();
+          setText(terminalMode, "INVADERS / WAVE 01");
+          setText(statusLabel, "READY");
+          setText(
+            footerState,
+            finePointer.matches
+              ? "WAVE 01 · READY · A/D + SPACE"
+              : "WAVE 01 · READY · USE CONTROLS",
+          );
+          setInvadersPauseButtonState("PAUSE", true);
+          window.dispatchEvent(new CustomEvent("tiendu:invaders-start"));
+          window.setTimeout(syncInvadersState, 0);
+        };
+
+        const restoreInvadersProfile = (
+          score = 0,
+          highScore = 0,
+          wave = 1,
+        ) => {
+          invadersIsActive = false;
+          wrapper.classList.remove("invaders-mode");
+          terminalStatus?.classList.remove("is-paused", "is-game-over");
+          setInvadersPauseButtonState("PAUSE");
+
+          if (profileView) {
+            profileView.hidden = false;
+          }
+
+          if (profileCopy) {
+            profileCopy.hidden = false;
+          }
+
+          if (shell) {
+            shell.hidden = false;
+          }
+
+          resizeTerminalInput();
+          setText(terminalMode, "PROFILE");
+          setText(statusLabel, "ONLINE");
+          setText(footerState, "READY · TYPE HELP");
+          showResponse(
+            `INVADERS CLOSED · SCORE ${String(score).padStart(4, "0")} · HIGH ${String(highScore).padStart(4, "0")} · WAVE ${String(wave).padStart(2, "0")}`,
+          );
+
+          if (finePointer.matches && terminalInput instanceof HTMLElement) {
+            window.setTimeout(() => terminalInput.focus(), 0);
+          }
+        };
+
         const runCommand = (rawCommand) => {
           const command = rawCommand.trim().toLowerCase();
 
@@ -584,7 +761,7 @@ import SnakeGame from "../components/SnakeGame.astro";
 
           if (command === "help") {
             showResponse(
-              "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TAGS · ABOUT · SNAKE · CLEAR",
+              "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TAGS · ABOUT · SNAKE · INVADERS · CLEAR",
             );
             return;
           }
@@ -612,6 +789,11 @@ import SnakeGame from "../components/SnakeGame.astro";
 
           if (command === "snake") {
             openSnake();
+            return;
+          }
+
+          if (command === "invaders" || command === "invader") {
+            openInvaders();
             return;
           }
 
@@ -735,6 +917,7 @@ import SnakeGame from "../components/SnakeGame.astro";
         terminalScreen?.addEventListener("click", (event) => {
           if (
             snakeIsActive ||
+            invadersIsActive ||
             !shell ||
             shell.hidden ||
             !(terminalInput instanceof HTMLInputElement)
@@ -773,6 +956,30 @@ import SnakeGame from "../components/SnakeGame.astro";
           });
         });
 
+        invadersActionButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const action = button.dataset.invadersAction;
+            const keyByAction = {
+              pause: "p",
+              restart: "r",
+              exit: "Escape",
+            };
+            const key = keyByAction[action];
+
+            if (!key || !invadersIsActive) {
+              return;
+            }
+
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", {
+                key,
+                bubbles: true,
+                cancelable: true,
+              }),
+            );
+          });
+        });
+
         if (snakeRoot) {
           const snakeStateObserver = new MutationObserver(syncSnakeState);
 
@@ -788,6 +995,27 @@ import SnakeGame from "../components/SnakeGame.astro";
         window.addEventListener("tiendu:snake-exit", (event) => {
           const detail = event.detail ?? {};
           restoreProfile(detail.score ?? 0, detail.highScore ?? 0);
+        });
+
+        if (invadersRoot) {
+          const invadersStateObserver = new MutationObserver(syncInvadersState);
+
+          invadersStateObserver.observe(invadersRoot, {
+            attributes: true,
+            attributeFilter: ["hidden"],
+            characterData: true,
+            childList: true,
+            subtree: true,
+          });
+        }
+
+        window.addEventListener("tiendu:invaders-exit", (event) => {
+          const detail = event.detail ?? {};
+          restoreInvadersProfile(
+            detail.score ?? 0,
+            detail.highScore ?? 0,
+            detail.wave ?? 1,
+          );
         });
 
         startTerminalOutput().catch(() => {
@@ -1136,7 +1364,8 @@ import SnakeGame from "../components/SnakeGame.astro";
     display: none;
   }
 
-  .snake-mobile-controls {
+  .snake-mobile-controls,
+  .invaders-mobile-controls {
     display: none;
   }
 
@@ -1281,6 +1510,62 @@ import SnakeGame from "../components/SnakeGame.astro";
     }
 
     .landing-wrapper.snake-mode :global(.snake-help) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 620px), (pointer: coarse) {
+    .landing-wrapper.invaders-mode .invaders-mobile-controls {
+      display: grid;
+      gap: 0.55rem;
+      margin: -0.15rem auto 0;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .invaders-mobile-actions {
+      display: grid;
+      gap: 0.5rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .invaders-mobile-actions button {
+      background: rgb(199 240 139 / 5%);
+      border: 1px solid rgb(199 240 139 / 25%);
+      border-radius: 2px;
+      color: var(--terminal-green);
+      cursor: pointer;
+      font-family: var(--font-terminal);
+      font-size: 0.9rem;
+      letter-spacing: 0.07em;
+      min-height: 44px;
+      padding: 0.55rem 0.35rem;
+      text-transform: uppercase;
+      touch-action: manipulation;
+    }
+
+    .invaders-mobile-actions button:hover,
+    .invaders-mobile-actions button:focus-visible {
+      background: rgb(199 240 139 / 12%);
+      border-color: var(--terminal-green-dim);
+      color: var(--terminal-green-bright);
+    }
+
+    .invaders-mobile-actions button:disabled {
+      cursor: default;
+      opacity: 0.38;
+    }
+
+    .invaders-mobile-help {
+      color: var(--terminal-green-dim);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      margin: 0;
+      max-width: none;
+      text-align: center;
+    }
+
+    .landing-wrapper.invaders-mode :global(.invaders-help) {
       display: none;
     }
   }

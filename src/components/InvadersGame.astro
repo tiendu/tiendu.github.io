@@ -1,0 +1,1137 @@
+<section
+  class="invaders-panel"
+  data-invaders-game
+  aria-label="Space Invaders game"
+  hidden
+>
+  <div class="invaders-scoreboard" aria-live="polite">
+    <span>SCORE <output data-invaders-score>0000</output></span>
+    <span>HIGH <output data-invaders-high-score>0000</output></span>
+    <span>WAVE <output data-invaders-wave>01</output></span>
+    <span>LIVES <output data-invaders-lives>3</output></span>
+  </div>
+
+  <div class="invaders-board-frame">
+    <canvas
+      class="invaders-board"
+      data-invaders-canvas
+      width="480"
+      height="560"
+      tabindex="0"
+      aria-label="Space Invaders game board. Use left and right arrows or A and D to move. Press Space to fire."
+    ></canvas>
+
+    <div class="invaders-overlay" data-invaders-overlay>
+      <strong data-invaders-state>PRESS FIRE OR MOVE</strong>
+      <span data-invaders-message>ARROWS / A D / SPACE / SWIPE</span>
+    </div>
+  </div>
+
+  <div class="invaders-pad" aria-label="Space Invaders controls">
+    <button type="button" data-invaders-control="left" aria-label="Move left">◀</button>
+    <button type="button" data-invaders-control="fire" aria-label="Fire">FIRE</button>
+    <button type="button" data-invaders-control="right" aria-label="Move right">▶</button>
+  </div>
+
+  <p class="invaders-help">
+    ← → / A D MOVE · SPACE FIRE · P PAUSE · R RESTART · ESC EXIT
+  </p>
+</section>
+
+<script is:inline data-astro-rerun>
+  (() => {
+    const root = document.querySelector("[data-invaders-game]");
+
+    if (!root || root.dataset.invadersInitialized === "true") {
+      return;
+    }
+
+    root.dataset.invadersInitialized = "true";
+
+    const canvas = root.querySelector("[data-invaders-canvas]");
+    const scoreOutput = root.querySelector("[data-invaders-score]");
+    const highScoreOutput = root.querySelector("[data-invaders-high-score]");
+    const waveOutput = root.querySelector("[data-invaders-wave]");
+    const livesOutput = root.querySelector("[data-invaders-lives]");
+    const overlay = root.querySelector("[data-invaders-overlay]");
+    const stateLabel = root.querySelector("[data-invaders-state]");
+    const messageLabel = root.querySelector("[data-invaders-message]");
+    const controlButtons = Array.from(
+      root.querySelectorAll("[data-invaders-control]"),
+    );
+
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return;
+    }
+
+    const BOARD_WIDTH = 480;
+    const BOARD_HEIGHT = 560;
+    const PLAYER_Y = 510;
+    const PLAYER_WIDTH = 36;
+    const PLAYER_HEIGHT = 18;
+    const PLAYER_SPEED = 255;
+    const PLAYER_FIRE_COOLDOWN = 250;
+    const HIGH_SCORE_KEY = "tiendu-invaders-high-score";
+    const STARTING_LIVES = 3;
+
+    const wavePresets = [
+      { rows: 3, columns: 8, speed: 22, fireDelay: 1180, maxShots: 1, shields: 4 },
+      { rows: 4, columns: 8, speed: 28, fireDelay: 980, maxShots: 2, shields: 4 },
+      { rows: 4, columns: 9, speed: 34, fireDelay: 820, maxShots: 2, shields: 3 },
+      { rows: 5, columns: 9, speed: 42, fireDelay: 690, maxShots: 3, shields: 3 },
+      { rows: 5, columns: 10, speed: 52, fireDelay: 570, maxShots: 4, shields: 2 },
+    ];
+
+    let active = false;
+    let started = false;
+    let paused = false;
+    let gameOver = false;
+    let transitionLocked = false;
+    let score = 0;
+    let highScore = 0;
+    let wave = 1;
+    let lives = STARTING_LIVES;
+    let player = { x: BOARD_WIDTH / 2 - PLAYER_WIDTH / 2, y: PLAYER_Y };
+    let invaders = [];
+    let playerShots = [];
+    let enemyShots = [];
+    let shields = [];
+    let mothership = null;
+    let formationDirection = 1;
+    let fireAccumulator = 0;
+    let playerCooldown = 0;
+    let mothershipTimer = 0;
+    let nextMothershipAt = 16000;
+    let previousTime = 0;
+    let animationFrame = null;
+    let transitionTimer = null;
+    let pointerStart = null;
+    let pointerDirection = 0;
+
+    const keys = {
+      left: false,
+      right: false,
+      fire: false,
+    };
+
+    const formatScore = (value) => String(value).padStart(4, "0");
+    const formatWave = (value) => String(value).padStart(2, "0");
+
+    const getWaveConfig = () => {
+      const presetIndex = (wave - 1) % wavePresets.length;
+      const loop = Math.floor((wave - 1) / wavePresets.length) + 1;
+      const preset = wavePresets[presetIndex];
+      const loopBoost = Math.max(0, loop - 1);
+
+      return {
+        ...preset,
+        loop,
+        speed: preset.speed * (1 + loopBoost * 0.2),
+        fireDelay: Math.max(300, preset.fireDelay - loopBoost * 90),
+        maxShots: Math.min(7, preset.maxShots + loopBoost),
+      };
+    };
+
+    const readHighScore = () => {
+      try {
+        const saved = Number(window.localStorage.getItem(HIGH_SCORE_KEY));
+        return Number.isFinite(saved) && saved > 0 ? saved : 0;
+      } catch {
+        return 0;
+      }
+    };
+
+    const saveHighScore = () => {
+      if (score <= highScore) {
+        return;
+      }
+
+      highScore = score;
+
+      try {
+        window.localStorage.setItem(HIGH_SCORE_KEY, String(highScore));
+      } catch {
+        // Browser storage may be unavailable.
+      }
+    };
+
+    const updateScoreboard = () => {
+      if (scoreOutput) {
+        scoreOutput.textContent = formatScore(score);
+      }
+
+      if (highScoreOutput) {
+        highScoreOutput.textContent = formatScore(highScore);
+      }
+
+      if (waveOutput) {
+        waveOutput.textContent = formatWave(wave);
+      }
+
+      if (livesOutput) {
+        livesOutput.textContent = String(lives);
+      }
+    };
+
+    const setOverlay = (title, message, visible = true) => {
+      if (stateLabel) {
+        stateLabel.textContent = title;
+      }
+
+      if (messageLabel) {
+        messageLabel.textContent = message;
+      }
+
+      if (overlay) {
+        overlay.hidden = !visible;
+      }
+    };
+
+    const configureCanvas = () => {
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+
+      canvas.width = Math.round(BOARD_WIDTH * ratio);
+      canvas.height = Math.round(BOARD_HEIGHT * ratio);
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    };
+
+    const intersects = (a, b) =>
+      a.x < b.x + b.width &&
+      a.x + a.width > b.x &&
+      a.y < b.y + b.height &&
+      a.y + a.height > b.y;
+
+    const createInvaders = () => {
+      const config = getWaveConfig();
+      const width = 28;
+      const height = 18;
+      const gapX = 12;
+      const gapY = 14;
+      const formationWidth = config.columns * width + (config.columns - 1) * gapX;
+      const startX = (BOARD_WIDTH - formationWidth) / 2;
+      const startY = 72;
+
+      invaders = [];
+
+      for (let row = 0; row < config.rows; row += 1) {
+        for (let column = 0; column < config.columns; column += 1) {
+          invaders.push({
+            x: startX + column * (width + gapX),
+            y: startY + row * (height + gapY),
+            width,
+            height,
+            row,
+            column,
+            alive: true,
+          });
+        }
+      }
+
+      formationDirection = 1;
+    };
+
+    const createShields = () => {
+      const config = getWaveConfig();
+      const pattern = [
+        "011110",
+        "111111",
+        "111111",
+        "110011",
+      ];
+      const block = 6;
+      const bunkerWidth = pattern[0].length * block;
+      const totalWidth = config.shields * bunkerWidth;
+      const gap = (BOARD_WIDTH - totalWidth) / (config.shields + 1);
+
+      shields = [];
+
+      for (let bunker = 0; bunker < config.shields; bunker += 1) {
+        const originX = gap + bunker * (bunkerWidth + gap);
+        const originY = 438;
+
+        pattern.forEach((row, rowIndex) => {
+          [...row].forEach((cell, columnIndex) => {
+            if (cell !== "1") {
+              return;
+            }
+
+            shields.push({
+              x: originX + columnIndex * block,
+              y: originY + rowIndex * block,
+              width: block,
+              height: block,
+              hp: 2,
+            });
+          });
+        });
+      }
+    };
+
+    const resetWave = () => {
+      player = {
+        x: BOARD_WIDTH / 2 - PLAYER_WIDTH / 2,
+        y: PLAYER_Y,
+        width: PLAYER_WIDTH,
+        height: PLAYER_HEIGHT,
+      };
+      playerShots = [];
+      enemyShots = [];
+      mothership = null;
+      fireAccumulator = 0;
+      playerCooldown = 0;
+      mothershipTimer = 0;
+      nextMothershipAt = 14000 + Math.random() * 9000;
+      createInvaders();
+      createShields();
+      updateScoreboard();
+    };
+
+    const resetGame = () => {
+      if (transitionTimer !== null) {
+        window.clearTimeout(transitionTimer);
+        transitionTimer = null;
+      }
+
+      score = 0;
+      wave = 1;
+      lives = STARTING_LIVES;
+      started = false;
+      paused = false;
+      gameOver = false;
+      transitionLocked = false;
+      previousTime = 0;
+      keys.left = false;
+      keys.right = false;
+      keys.fire = false;
+      resetWave();
+      setOverlay("PRESS FIRE OR MOVE", "ARROWS / A D / SPACE / SWIPE");
+      draw();
+    };
+
+    const drawGrid = () => {
+      context.strokeStyle = "rgba(199, 240, 139, 0.035)";
+      context.lineWidth = 1;
+
+      for (let x = 24; x < BOARD_WIDTH; x += 24) {
+        context.beginPath();
+        context.moveTo(x + 0.5, 0);
+        context.lineTo(x + 0.5, BOARD_HEIGHT);
+        context.stroke();
+      }
+
+      for (let y = 24; y < BOARD_HEIGHT; y += 24) {
+        context.beginPath();
+        context.moveTo(0, y + 0.5);
+        context.lineTo(BOARD_WIDTH, y + 0.5);
+        context.stroke();
+      }
+    };
+
+    const drawPlayer = () => {
+      context.save();
+      context.fillStyle = "#e7ffb0";
+      context.shadowColor = "rgba(231, 255, 176, 0.48)";
+      context.shadowBlur = 8;
+
+      context.fillRect(player.x + 14, player.y, 8, 4);
+      context.fillRect(player.x + 10, player.y + 4, 16, 4);
+      context.fillRect(player.x + 4, player.y + 8, 28, 5);
+      context.fillRect(player.x, player.y + 13, 36, 5);
+      context.restore();
+    };
+
+    const drawInvader = (invader) => {
+      const x = Math.round(invader.x);
+      const y = Math.round(invader.y);
+      const topRow = invader.row === 0;
+      const color = topRow ? "#e7ffb0" : "#9fcf71";
+
+      context.save();
+      context.fillStyle = color;
+      context.shadowColor = topRow
+        ? "rgba(231, 255, 176, 0.42)"
+        : "rgba(199, 240, 139, 0.24)";
+      context.shadowBlur = topRow ? 7 : 4;
+
+      context.fillRect(x + 8, y, 12, 3);
+      context.fillRect(x + 4, y + 3, 20, 3);
+      context.fillRect(x + 1, y + 6, 26, 7);
+      context.fillRect(x + 4, y + 13, 5, 3);
+      context.fillRect(x + 19, y + 13, 5, 3);
+
+      context.fillStyle = "#020704";
+      context.shadowBlur = 0;
+      context.fillRect(x + 7, y + 8, 3, 3);
+      context.fillRect(x + 18, y + 8, 3, 3);
+      context.restore();
+    };
+
+    const drawMothership = () => {
+      if (!mothership) {
+        return;
+      }
+
+      context.save();
+      context.fillStyle = "#d9805d";
+      context.shadowColor = "rgba(217, 128, 93, 0.65)";
+      context.shadowBlur = 10;
+      context.fillRect(mothership.x + 8, mothership.y, 24, 4);
+      context.fillRect(mothership.x + 3, mothership.y + 4, 34, 5);
+      context.fillRect(mothership.x, mothership.y + 9, 40, 5);
+      context.restore();
+    };
+
+    const drawShields = () => {
+      shields.forEach((shield) => {
+        context.fillStyle = shield.hp > 1 ? "#7fa45c" : "#4f6130";
+        context.shadowColor = "rgba(199, 240, 139, 0.13)";
+        context.shadowBlur = 3;
+        context.fillRect(shield.x, shield.y, shield.width, shield.height);
+      });
+    };
+
+    const drawShots = () => {
+      context.shadowBlur = 6;
+
+      playerShots.forEach((shot) => {
+        context.fillStyle = "#e7ffb0";
+        context.shadowColor = "rgba(231, 255, 176, 0.65)";
+        context.fillRect(shot.x, shot.y, shot.width, shot.height);
+      });
+
+      enemyShots.forEach((shot) => {
+        context.fillStyle = "#d9805d";
+        context.shadowColor = "rgba(217, 128, 93, 0.65)";
+        context.fillRect(shot.x, shot.y, shot.width, shot.height);
+      });
+
+      context.shadowBlur = 0;
+    };
+
+    const draw = () => {
+      context.clearRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+      context.fillStyle = "#020704";
+      context.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+      drawGrid();
+      drawMothership();
+      drawShields();
+      invaders.filter((invader) => invader.alive).forEach(drawInvader);
+      drawShots();
+      drawPlayer();
+    };
+
+    const startPlaying = () => {
+      if (!active || gameOver || transitionLocked) {
+        return;
+      }
+
+      if (!started) {
+        started = true;
+        paused = false;
+        setOverlay("RUNNING", "", false);
+        previousTime = performance.now();
+      }
+    };
+
+    const firePlayerShot = () => {
+      if (!active || gameOver || paused || transitionLocked) {
+        return;
+      }
+
+      startPlaying();
+
+      if (playerCooldown > 0 || playerShots.length >= 2) {
+        return;
+      }
+
+      playerShots.push({
+        x: player.x + PLAYER_WIDTH / 2 - 1.5,
+        y: player.y - 10,
+        width: 3,
+        height: 10,
+        velocity: -360,
+      });
+      playerCooldown = PLAYER_FIRE_COOLDOWN;
+    };
+
+    const getEnemyShooters = () => {
+      const byColumn = new Map();
+
+      invaders
+        .filter((invader) => invader.alive)
+        .forEach((invader) => {
+          const current = byColumn.get(invader.column);
+
+          if (!current || invader.y > current.y) {
+            byColumn.set(invader.column, invader);
+          }
+        });
+
+      return Array.from(byColumn.values());
+    };
+
+    const fireEnemyShot = () => {
+      const config = getWaveConfig();
+
+      if (enemyShots.length >= config.maxShots) {
+        return;
+      }
+
+      const shooters = getEnemyShooters();
+
+      if (shooters.length === 0) {
+        return;
+      }
+
+      const shooter = shooters[Math.floor(Math.random() * shooters.length)];
+      enemyShots.push({
+        x: shooter.x + shooter.width / 2 - 1.5,
+        y: shooter.y + shooter.height,
+        width: 3,
+        height: 10,
+        velocity: 190 + wave * 7,
+      });
+    };
+
+    const damageShield = (shot) => {
+      const index = shields.findIndex((shield) => intersects(shot, shield));
+
+      if (index === -1) {
+        return false;
+      }
+
+      shields[index].hp -= 1;
+
+      if (shields[index].hp <= 0) {
+        shields.splice(index, 1);
+      }
+
+      return true;
+    };
+
+    const finishGame = () => {
+      gameOver = true;
+      started = false;
+      paused = false;
+      transitionLocked = false;
+      saveHighScore();
+      updateScoreboard();
+      setOverlay(
+        "GAME OVER",
+        `${formatScore(score)} · R RESTART · ESC EXIT`,
+      );
+    };
+
+    const loseLife = () => {
+      if (transitionLocked || gameOver) {
+        return;
+      }
+
+      lives -= 1;
+      updateScoreboard();
+
+      if (lives <= 0) {
+        finishGame();
+        return;
+      }
+
+      transitionLocked = true;
+      started = false;
+      enemyShots = [];
+      playerShots = [];
+      player.x = BOARD_WIDTH / 2 - PLAYER_WIDTH / 2;
+      setOverlay("SHIP LOST", `${lives} LIVES REMAIN`);
+
+      transitionTimer = window.setTimeout(() => {
+        transitionLocked = false;
+        setOverlay("PRESS FIRE OR MOVE", "ARROWS / A D / SPACE / SWIPE");
+        draw();
+      }, 900);
+    };
+
+    const clearWave = () => {
+      if (transitionLocked || gameOver) {
+        return;
+      }
+
+      transitionLocked = true;
+      started = false;
+      saveHighScore();
+      updateScoreboard();
+      setOverlay(`WAVE ${formatWave(wave)} CLEARED`, "NEXT SIGNAL IN 2...");
+
+      transitionTimer = window.setTimeout(() => {
+        wave += 1;
+        transitionLocked = false;
+        resetWave();
+        setOverlay("PRESS FIRE OR MOVE", "ARROWS / A D / SPACE / SWIPE");
+        draw();
+      }, 1500);
+    };
+
+    const updatePlayer = (delta) => {
+      const direction = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + pointerDirection;
+
+      if (direction !== 0) {
+        startPlaying();
+      }
+
+      player.x += direction * PLAYER_SPEED * delta;
+      player.x = Math.max(4, Math.min(BOARD_WIDTH - PLAYER_WIDTH - 4, player.x));
+
+      if (keys.fire) {
+        firePlayerShot();
+      }
+    };
+
+    const updateFormation = (delta) => {
+      const alive = invaders.filter((invader) => invader.alive);
+
+      if (alive.length === 0) {
+        clearWave();
+        return;
+      }
+
+      const config = getWaveConfig();
+      const left = Math.min(...alive.map((invader) => invader.x));
+      const right = Math.max(...alive.map((invader) => invader.x + invader.width));
+      const edgeReached =
+        (formationDirection < 0 && left <= 8) ||
+        (formationDirection > 0 && right >= BOARD_WIDTH - 8);
+
+      if (edgeReached) {
+        formationDirection *= -1;
+        alive.forEach((invader) => {
+          invader.y += 14;
+        });
+      } else {
+        const remainingRatio = alive.length / invaders.length;
+        const pressure = 1 + (1 - remainingRatio) * 1.55;
+        const movement = formationDirection * config.speed * pressure * delta;
+
+        alive.forEach((invader) => {
+          invader.x += movement;
+        });
+      }
+
+      const lowest = Math.max(...alive.map((invader) => invader.y + invader.height));
+
+      if (lowest >= PLAYER_Y - 12) {
+        finishGame();
+      }
+
+      shields = shields.filter((shield) =>
+        !alive.some((invader) => intersects(invader, shield)),
+      );
+    };
+
+    const updateShots = (delta) => {
+      playerShots.forEach((shot) => {
+        shot.y += shot.velocity * delta;
+      });
+      enemyShots.forEach((shot) => {
+        shot.y += shot.velocity * delta;
+      });
+
+      for (let shotIndex = playerShots.length - 1; shotIndex >= 0; shotIndex -= 1) {
+        const shot = playerShots[shotIndex];
+
+        if (shot.y + shot.height < 0) {
+          playerShots.splice(shotIndex, 1);
+          continue;
+        }
+
+        if (damageShield(shot)) {
+          playerShots.splice(shotIndex, 1);
+          continue;
+        }
+
+        if (mothership && intersects(shot, mothership)) {
+          score += 150 + Math.floor(Math.random() * 3) * 50;
+          mothership = null;
+          playerShots.splice(shotIndex, 1);
+          saveHighScore();
+          updateScoreboard();
+          continue;
+        }
+
+        const invader = invaders.find(
+          (candidate) => candidate.alive && intersects(shot, candidate),
+        );
+
+        if (invader) {
+          invader.alive = false;
+          score += invader.row === 0 ? 30 : invader.row < 3 ? 20 : 10;
+          playerShots.splice(shotIndex, 1);
+          saveHighScore();
+          updateScoreboard();
+        }
+      }
+
+      for (let shotIndex = enemyShots.length - 1; shotIndex >= 0; shotIndex -= 1) {
+        const shot = enemyShots[shotIndex];
+
+        if (shot.y > BOARD_HEIGHT) {
+          enemyShots.splice(shotIndex, 1);
+          continue;
+        }
+
+        if (damageShield(shot)) {
+          enemyShots.splice(shotIndex, 1);
+          continue;
+        }
+
+        if (intersects(shot, player)) {
+          enemyShots.splice(shotIndex, 1);
+          loseLife();
+          break;
+        }
+      }
+    };
+
+    const updateMothership = (delta, milliseconds) => {
+      if (mothership) {
+        mothership.x += mothership.velocity * delta;
+
+        if (
+          mothership.x > BOARD_WIDTH + mothership.width ||
+          mothership.x + mothership.width < 0
+        ) {
+          mothership = null;
+          mothershipTimer = 0;
+          nextMothershipAt = 15000 + Math.random() * 10000;
+        }
+
+        return;
+      }
+
+      mothershipTimer += milliseconds;
+
+      if (mothershipTimer < nextMothershipAt) {
+        return;
+      }
+
+      const fromLeft = Math.random() >= 0.5;
+      mothership = {
+        x: fromLeft ? -44 : BOARD_WIDTH + 4,
+        y: 28,
+        width: 40,
+        height: 14,
+        velocity: fromLeft ? 72 : -72,
+      };
+      mothershipTimer = 0;
+    };
+
+    const update = (delta, milliseconds) => {
+      playerCooldown = Math.max(0, playerCooldown - milliseconds);
+      updatePlayer(delta);
+      updateFormation(delta);
+
+      if (transitionLocked || gameOver) {
+        return;
+      }
+
+      fireAccumulator += milliseconds;
+      const config = getWaveConfig();
+
+      if (fireAccumulator >= config.fireDelay) {
+        fireAccumulator = 0;
+        fireEnemyShot();
+      }
+
+      updateShots(delta);
+      updateMothership(delta, milliseconds);
+    };
+
+    const gameLoop = (time) => {
+      if (!active) {
+        return;
+      }
+
+      if (!previousTime) {
+        previousTime = time;
+      }
+
+      const milliseconds = Math.min(time - previousTime, 50);
+      const delta = milliseconds / 1000;
+      previousTime = time;
+
+      if (started && !paused && !gameOver && !transitionLocked) {
+        update(delta, milliseconds);
+      }
+
+      draw();
+      animationFrame = window.requestAnimationFrame(gameLoop);
+    };
+
+    const togglePause = () => {
+      if (!active || !started || gameOver || transitionLocked) {
+        return;
+      }
+
+      paused = !paused;
+
+      if (paused) {
+        setOverlay("PAUSED", "P TO RESUME");
+      } else {
+        previousTime = performance.now();
+        setOverlay("RUNNING", "", false);
+      }
+    };
+
+    const pauseGame = () => {
+      if (!active || !started || paused || gameOver || transitionLocked) {
+        return;
+      }
+
+      paused = true;
+      setOverlay("PAUSED", "P TO RESUME");
+    };
+
+    const startGame = () => {
+      active = true;
+      root.hidden = false;
+      highScore = readHighScore();
+      configureCanvas();
+      resetGame();
+
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+
+      animationFrame = window.requestAnimationFrame(gameLoop);
+      window.setTimeout(() => canvas.focus({ preventScroll: true }), 0);
+    };
+
+    const exitGame = () => {
+      if (!active) {
+        return;
+      }
+
+      active = false;
+      started = false;
+      paused = false;
+      saveHighScore();
+      updateScoreboard();
+      root.hidden = true;
+
+      if (transitionTimer !== null) {
+        window.clearTimeout(transitionTimer);
+        transitionTimer = null;
+      }
+
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("tiendu:invaders-exit", {
+          detail: { score, highScore, wave },
+        }),
+      );
+    };
+
+    const onKeyDown = (event) => {
+      if (!active) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (event.key === "ArrowLeft" || key === "a") {
+        event.preventDefault();
+        keys.left = true;
+        startPlaying();
+        return;
+      }
+
+      if (event.key === "ArrowRight" || key === "d") {
+        event.preventDefault();
+        keys.right = true;
+        startPlaying();
+        return;
+      }
+
+      if (event.key === " " || key === "f") {
+        event.preventDefault();
+        keys.fire = true;
+        firePlayerShot();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        exitGame();
+        return;
+      }
+
+      if (key === "r") {
+        event.preventDefault();
+        resetGame();
+        return;
+      }
+
+      if (key === "p") {
+        event.preventDefault();
+        togglePause();
+      }
+    };
+
+    const onKeyUp = (event) => {
+      if (!active) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (event.key === "ArrowLeft" || key === "a") {
+        keys.left = false;
+      }
+
+      if (event.key === "ArrowRight" || key === "d") {
+        keys.right = false;
+      }
+
+      if (event.key === " " || key === "f") {
+        keys.fire = false;
+      }
+    };
+
+    const setPointerMovement = (direction) => {
+      pointerDirection = direction;
+      startPlaying();
+    };
+
+    controlButtons.forEach((button) => {
+      const control = button.dataset.invadersControl;
+
+      if (control === "fire") {
+        button.addEventListener("click", () => {
+          firePlayerShot();
+          canvas.focus({ preventScroll: true });
+        });
+        return;
+      }
+
+      const direction = control === "left" ? -1 : 1;
+
+      button.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        button.setPointerCapture?.(event.pointerId);
+        setPointerMovement(direction);
+      });
+
+      const stop = () => {
+        if (pointerDirection === direction) {
+          pointerDirection = 0;
+        }
+      };
+
+      button.addEventListener("pointerup", stop);
+      button.addEventListener("pointercancel", stop);
+      button.addEventListener("lostpointercapture", stop);
+    });
+
+    canvas.addEventListener("pointerdown", (event) => {
+      if (!active) {
+        return;
+      }
+
+      pointerStart = { x: event.clientX, y: event.clientY };
+    });
+
+    canvas.addEventListener("pointerup", (event) => {
+      if (!active || !pointerStart) {
+        return;
+      }
+
+      const deltaX = event.clientX - pointerStart.x;
+      const deltaY = event.clientY - pointerStart.y;
+      pointerStart = null;
+
+      if (Math.abs(deltaX) > 24 && Math.abs(deltaX) > Math.abs(deltaY)) {
+        player.x += deltaX > 0 ? 36 : -36;
+        player.x = Math.max(4, Math.min(BOARD_WIDTH - PLAYER_WIDTH - 4, player.x));
+        startPlaying();
+      } else if (Math.abs(deltaY) < 18) {
+        firePlayerShot();
+      }
+    });
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+
+    window.addEventListener("blur", pauseGame);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        pauseGame();
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      if (active) {
+        configureCanvas();
+        draw();
+      }
+    });
+
+    window.addEventListener("tiendu:invaders-start", startGame);
+  })();
+</script>
+
+<style>
+  .invaders-panel[hidden],
+  .invaders-overlay[hidden] {
+    display: none;
+  }
+
+  .invaders-panel {
+    display: grid;
+    gap: 0.8rem;
+    margin-inline: auto;
+    max-width: 480px;
+    width: 100%;
+  }
+
+  .invaders-scoreboard {
+    color: var(--terminal-green-dim);
+    display: grid;
+    font-size: 0.9rem;
+    gap: 0.3rem 1rem;
+    grid-template-columns: repeat(4, auto);
+    justify-content: space-between;
+    letter-spacing: 0.09em;
+  }
+
+  .invaders-scoreboard output {
+    color: var(--terminal-green-bright);
+    font-family: inherit;
+  }
+
+  .invaders-board-frame {
+    background: #020704;
+    border: 1px solid rgb(199 240 139 / 25%);
+    box-shadow:
+      inset 0 0 28px rgb(0 0 0 / 60%),
+      0 0 16px rgb(199 240 139 / 7%);
+    display: grid;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .invaders-board,
+  .invaders-overlay {
+    grid-area: 1 / 1;
+  }
+
+  .invaders-board {
+    aspect-ratio: 6 / 7;
+    display: block;
+    max-width: none;
+    touch-action: none;
+    width: 100%;
+  }
+
+  .invaders-board:focus-visible {
+    outline: 1px solid var(--terminal-green-dim);
+    outline-offset: -3px;
+  }
+
+  .invaders-overlay {
+    align-content: center;
+    align-items: center;
+    background: rgb(2 7 4 / 68%);
+    display: grid;
+    justify-items: center;
+    padding: 1rem;
+    pointer-events: none;
+    text-align: center;
+    z-index: 1;
+  }
+
+  .invaders-overlay strong {
+    color: var(--terminal-green-bright);
+    font-size: clamp(1.05rem, 4vw, 1.45rem);
+    font-weight: 400;
+    letter-spacing: 0.11em;
+    text-shadow: 0 0 8px rgb(199 240 139 / 34%);
+  }
+
+  .invaders-overlay span {
+    color: var(--terminal-green-dim);
+    font-size: 0.82rem;
+    letter-spacing: 0.07em;
+    margin-top: 0.35rem;
+  }
+
+  .invaders-pad {
+    display: none;
+    gap: 0.5rem;
+    grid-template-columns: 54px minmax(86px, 1fr) 54px;
+    justify-content: center;
+    margin-inline: auto;
+    max-width: 260px;
+    width: 100%;
+  }
+
+  .invaders-pad button {
+    background: rgb(199 240 139 / 5%);
+    border: 1px solid rgb(199 240 139 / 25%);
+    border-radius: 2px;
+    color: var(--terminal-green);
+    cursor: pointer;
+    font-family: var(--font-terminal);
+    font-size: 0.92rem;
+    min-height: 44px;
+    padding: 0.4rem;
+    touch-action: manipulation;
+  }
+
+  .invaders-pad button:hover,
+  .invaders-pad button:focus-visible {
+    background: rgb(199 240 139 / 12%);
+    border-color: var(--terminal-green-dim);
+    color: var(--terminal-green-bright);
+  }
+
+  .invaders-help {
+    color: var(--terminal-green-dim);
+    font-size: 0.75rem;
+    letter-spacing: 0.065em;
+    line-height: 1.45;
+    margin: 0;
+    max-width: none;
+    text-align: center;
+  }
+
+  @media (max-width: 620px), (pointer: coarse) {
+    .invaders-pad {
+      display: grid;
+    }
+
+    .invaders-help {
+      display: none;
+    }
+
+    .invaders-scoreboard {
+      font-size: 0.78rem;
+      gap: 0.25rem 0.65rem;
+      grid-template-columns: repeat(2, auto);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .invaders-board-frame,
+    .invaders-overlay strong {
+      box-shadow: none;
+      text-shadow: none;
+    }
+  }
+</style>
