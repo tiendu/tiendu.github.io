@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Vim: The 20 Keystrokes That Matter"
 date: 2026-06-25
 categories: ["Automation, Systems & Engineering"]
@@ -265,4 +264,3 @@ Close the current buffer:
 ```text
 :bd
 ```
-

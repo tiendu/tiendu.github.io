@@ -1,18 +1,17 @@
 ---
-layout: post
 title: "Podman Container Builds: Simple vs Multi-Stage"
 date: 2026-04-09
 categories: ["Automation, Systems & Engineering"]
 ---
 
-A lot of posts frame this as **bad vs good**.  
+A lot of posts frame this as **bad vs good**.
 That is too simplistic.
 
 Both approaches have a place. The real question is what you need **right now**.
 
 ## 1) Simple one-stage build
 
-```Dockerfile
+```dockerfile
 FROM node:latest
 WORKDIR /app
 COPY . .
@@ -43,7 +42,7 @@ CMD ["node", "server.js"]
 
 ## 2) Multi-stage build
 
-```Dockerfile
+```dockerfile
 FROM node:18-alpine3.18 AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -86,7 +85,7 @@ CMD ["node", "dist/server.js"]
 
 ## A practical middle ground
 
-```Dockerfile
+```dockerfile
 FROM docker.io/library/node:20 AS builder
 WORKDIR /app
 

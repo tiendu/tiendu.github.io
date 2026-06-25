@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "The Office Building Guide to Web Development: A Technical Reference Manual"
 date: 2025-05-25
 categories: ["Web Development"]

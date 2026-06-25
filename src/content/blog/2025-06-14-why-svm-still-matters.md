@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Margins, Kernels, and Control: Why Support Vector Machines Are Still Worth Learning"
 date: 2025-06-14
 categories: ["Statistics and Probability"]

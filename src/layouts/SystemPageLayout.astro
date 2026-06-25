@@ -1,0 +1,44 @@
+---
+import SystemHeader from "../components/SystemHeader.astro";
+import BaseLayout from "./BaseLayout.astro";
+import type { NavigationKey } from "../config/site";
+
+interface Props {
+  title: string;
+  description?: string;
+  moduleCode?: string;
+  counter?: string;
+  active?: NavigationKey;
+}
+
+const {
+  title,
+  description,
+  moduleCode = title.toUpperCase().replace(/[^A-Z0-9]+/g, "-"),
+  counter,
+  active,
+} = Astro.props;
+---
+
+<BaseLayout title={title} description={description} system>
+  <div class="system-page-shell">
+    <SystemHeader active={active} />
+
+    <section class="system-console" aria-labelledby="system-page-title">
+      <header class="system-page-header">
+        <p class="system-module-code">{moduleCode}</p>
+        <h1 id="system-page-title">{title}</h1>
+        {description && <p class="system-description">{description}</p>}
+      </header>
+
+      <div class="system-document-body">
+        <slot />
+      </div>
+
+      <footer class="system-module-footer">
+        {counter && <span>{counter}</span>}
+        <a href="/">TERMINAL HOME</a>
+      </footer>
+    </section>
+  </div>
+</BaseLayout>

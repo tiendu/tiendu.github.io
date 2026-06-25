@@ -1,45 +1,72 @@
 ---
-import PageLayout from "../layouts/PageLayout.astro";
+import { CONTACT_LINKS } from "../config/site";
+import SystemPageLayout from "../layouts/SystemPageLayout.astro";
 ---
 
-<PageLayout
+<SystemPageLayout
   title="About"
-  fileCode="OPERATOR-NOTES"
-  description=""
+  moduleCode="OPERATOR-RECORD"
+  description="Background, interests, and the route that led me toward systems engineering."
+  counter="4 SECTIONS"
 >
-  <div class="about-layout">
-    <aside class="about-facts" aria-label="About Tien Du">
+  <div class="operator-record">
+    <aside class="operator-panel" aria-label="Operator summary">
+      <div class="operator-avatar" aria-hidden="true">
+        <span>TD</span>
+      </div>
+
+      <div class="operator-identity">
+        <p>OPERATOR RECORD</p>
+        <h2>TIEN DU</h2>
+      </div>
+
       <dl>
-        <div>
-          <dt>NAME</dt>
-          <dd>Tien Du</dd>
-        </div>
         <div>
           <dt>BASE</dt>
           <dd>Vietnam</dd>
         </div>
         <div>
-          <dt>WORK</dt>
+          <dt>DOMAIN</dt>
           <dd>Platform operations</dd>
         </div>
         <div>
           <dt>SYSTEMS</dt>
-          <dd>Linux / Cloud</dd>
+          <dd>Linux / Cloud / Distributed workloads</dd>
+        </div>
+        <div>
+          <dt>FOCUS</dt>
+          <dd>Reliability / Automation / Tooling</dd>
         </div>
       </dl>
+
+      <nav class="operator-links" aria-label="Profile and contact links">
+        {
+          CONTACT_LINKS.map(({ href, label, external }) => (
+            <a
+              href={href}
+              target={external ? "_blank" : undefined}
+              rel={external ? "noopener noreferrer" : undefined}
+            >
+              {label}
+            </a>
+          ))
+        }
+      </nav>
     </aside>
 
     <div class="about-copy">
-      <section aria-labelledby="intro-heading">
-        <h2 id="intro-heading">A little about me</h2>
-        <p>
+      <section aria-labelledby="profile-heading">
+        <p class="system-section-code">01 / PROFILE</p>
+        <h2 id="profile-heading">A little about me</h2>
+        <p class="about-lead">
           I'm a platform operations engineer based in Vietnam. I'm interested in
           dependable systems, useful tools, and understanding why things fail.
         </p>
       </section>
 
-      <section aria-labelledby="path-heading">
-        <h2 id="path-heading">How I got here</h2>
+      <section aria-labelledby="route-heading">
+        <p class="system-section-code">02 / ROUTE</p>
+        <h2 id="route-heading">How I got here</h2>
 
         <p>
           My background is in biotechnology and bioinformatics rather than
@@ -76,20 +103,21 @@ import PageLayout from "../layouts/PageLayout.astro";
       </section>
 
       <section aria-labelledby="work-heading">
+        <p class="system-section-code">03 / SYSTEMS</p>
         <h2 id="work-heading">The work underneath the science</h2>
 
         <p>
-          I started around scientific research, biological data, and computational
+          I started in scientific research, biological data, and computational
           workflows. Over time, I became increasingly interested in the engineering
           underneath them:
         </p>
 
         <ul class="question-list">
-          <li>Why did this job fail after running for two days?</li>
-          <li>Why can nobody reproduce this environment?</li>
-          <li>Where did the storage disappear?</li>
-          <li>Why is this process still retrying after a month?</li>
-          <li>How do we make the system easier to operate next time?</li>
+          <li><span>&gt;</span> Why did this job fail after running for two days?</li>
+          <li><span>&gt;</span> Why can nobody reproduce this environment?</li>
+          <li><span>&gt;</span> Where did the storage disappear?</li>
+          <li><span>&gt;</span> Why is this process still retrying after a month?</li>
+          <li><span>&gt;</span> How do we make the system easier to operate next time?</li>
         </ul>
 
         <p>
@@ -108,12 +136,13 @@ import PageLayout from "../layouts/PageLayout.astro";
       </section>
 
       <section aria-labelledby="outside-heading">
+        <p class="system-section-code">04 / OUTSIDE WORK</p>
         <h2 id="outside-heading">Outside work</h2>
 
         <p>
           I like coffee, photography, and simple things that reward attention.
           I especially like sunlight passing through leaves—the Japanese word
-          <em> komorebi </em>describes it better than I can.
+          <em>komorebi</em> describes it better than I can.
         </p>
 
         <p>
@@ -123,22 +152,6 @@ import PageLayout from "../layouts/PageLayout.astro";
           dependable, maintainable, and honest about how they work.
         </p>
       </section>
-
-      <section class="contact-note" aria-labelledby="contact-heading">
-        <p class="contact-prompt">COMMUNICATIONS / CHANNEL OPEN</p>
-        <h2 id="contact-heading">Open to thoughtful conversations</h2>
-        <p>
-          I'm happy to hear from people working on platform operations,
-          reliability, Linux and cloud infrastructure, scientific software,
-          automation, developer tooling, technical writing, or small open-source
-          projects.
-        </p>
-        <p class="contact-links">
-          <a href="mailto:tiendu107@gmail.com">Email</a>
-          <a href="https://github.com/tiendu" target="_blank" rel="noopener noreferrer">GitHub</a>
-          <a href="https://www.linkedin.com/in/tienhdu" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-        </p>
-      </section>
     </div>
   </div>
-</PageLayout>
+</SystemPageLayout>

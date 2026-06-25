@@ -1,24 +1,55 @@
 # tiendu.github.io
 
-Astro-based source for <https://tiendu.github.io>.
+Astro source for <https://tiendu.github.io>.
+
+The site uses three related interfaces:
+
+- `/` — full-screen interactive terminal with small retro games
+- `/posts/`, `/projects/`, `/tags/`, `/about/` — a shared minimal dark interface
+- individual posts — the same minimal chrome with a paper reading surface
 
 ## Development
 
 ```bash
-npm install
-npm run dev
+make install
+make hot
+```
+
+To expose the development server on the local network for phone testing:
+
+```bash
+make host
 ```
 
 Run the production checks before pushing:
 
 ```bash
-npm run check
-npm run build
+make verify
+```
+
+Build and preview the production output:
+
+```bash
+make preview
+```
+
+## Repository structure
+
+```text
+src/
+├── components/       Shared UI and game components
+├── config/           Site metadata and navigation
+├── content/blog/     Markdown posts
+├── data/             Structured project data
+├── layouts/          Base, system-page, and article layouts
+├── pages/            Astro routes
+├── styles/           Global, system, and article styles
+└── utils/            Post routing and formatting helpers
 ```
 
 ## Posts
 
-Place Markdown posts in `src/content/blog/`. Existing Jekyll-style frontmatter is supported:
+Place Markdown posts in `src/content/blog/`. Use this frontmatter format:
 
 ```yaml
 ---
@@ -37,15 +68,15 @@ Post URLs retain the legacy format:
 
 The filename should normally remain `YYYY-MM-DD-post-filename.md`.
 
-## Static downloads
+The build runs `scripts/fix-html-routes.mjs` after Astro so legacy `.html`
+routes are emitted as files rather than directories.
 
-Files in `public/` are copied to the built site unchanged. Downloadable scripts and generated GIFs remain under:
+## Static files
 
-```text
-public/assets/scripts/
-public/assets/images/
-```
+Files in `public/` are copied to the built site unchanged. Downloadable scripts,
+images, and favicons live there.
 
 ## Deployment
 
-The workflow in `.github/workflows/deploy.yml` deploys `dist/` to GitHub Pages. In the repository settings, set **Pages → Source** to **GitHub Actions**.
+`.github/workflows/deploy.yml` builds and deploys `dist/` to GitHub Pages.
+Repository settings should use **Pages → Source → GitHub Actions**.

@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Running Spark Data Jobs on Slurm"
 date: 2026-04-29
 categories: ["Automation, Systems & Engineering"]

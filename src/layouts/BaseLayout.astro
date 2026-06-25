@@ -1,43 +1,39 @@
 ---
-import Header from "../components/Header.astro";
-import Footer from "../components/Footer.astro";
-import BackToTop from "../components/BackToTop.astro";
+import { SITE } from "../config/site";
 import "../styles/global.css";
+import "../styles/system.css";
+import "../styles/article.css";
+
 interface Props {
   title?: string;
   description?: string;
   image?: string;
   imageAlt?: string;
   article?: boolean;
+  terminal?: boolean;
+  system?: boolean;
 }
+
 const {
   title,
-  description = "Notes on platform operations, reliability, automation, scientific software, and engineering.",
+  description = SITE.description,
   image,
   imageAlt,
   article = false,
+  terminal = false,
+  system = false,
 } = Astro.props;
-const siteTitle = "Tien's notes";
-const pageTitle = title ? `${title} · ${siteTitle}` : siteTitle;
-/*
- * Astro.site is used in production when `site` is configured in astro.config.mjs.
- * Astro.url.origin keeps local development working if `site` is unavailable.
- */
+
+const pageTitle = title ? `${title} · ${SITE.title}` : SITE.title;
 const siteBase = Astro.site ?? Astro.url.origin;
-/*
- * Normalize old-style post URLs so Open Graph and canonical metadata never
- * point to a nonexistent `.html/` address.
- */
 const canonicalPath = Astro.url.pathname.replace(/\.html\/$/, ".html");
 const canonical = new URL(canonicalPath, siteBase);
-/*
- * A social image is optional. Image metadata is only emitted when a page
- * passes an `image` prop, so there is no broken reference to a missing file.
- */
 const socialImage = image ? new URL(image, siteBase) : undefined;
 const resolvedImageAlt =
-  imageAlt ?? (title ? `${title} — ${siteTitle}` : siteTitle);
+  imageAlt ?? (title ? `${title} — ${SITE.title}` : SITE.title);
+const usesSystemChrome = system || article;
 ---
+
 <!doctype html>
 <html lang="en">
   <head>
@@ -45,6 +41,7 @@ const resolvedImageAlt =
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
+    <meta name="theme-color" content={terminal || usesSystemChrome ? "#030805" : "#f3efe5"} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -56,8 +53,9 @@ const resolvedImageAlt =
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600;700&family=VT323&display=swap"
       rel="stylesheet"
     />
+
     <meta property="og:type" content={article ? "article" : "website"} />
-    <meta property="og:site_name" content={siteTitle} />
+    <meta property="og:site_name" content={SITE.title} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
@@ -69,6 +67,7 @@ const resolvedImageAlt =
         </>
       )
     }
+
     <meta
       name="twitter:card"
       content={socialImage ? "summary_large_image" : "summary"}
@@ -83,25 +82,34 @@ const resolvedImageAlt =
         </>
       )
     }
+
     <link
       rel="alternate"
       type="application/rss+xml"
-      title={siteTitle}
+      title={SITE.title}
       href="/feed.xml"
     />
     <title>{pageTitle}</title>
   </head>
-  <body>
-    <a class="skip-link" href="#main-content">
-      Skip to content
-    </a>
-    <Header />
-    <main class="page-content" id="main-content">
-      <div class="wrapper">
-        <slot />
-      </div>
+  <body
+    class:list={{
+      "terminal-home": terminal,
+      "system-interface": usesSystemChrome,
+      "article-interface": article,
+    }}
+  >
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <main
+      class:list={[
+        "page-content",
+        {
+          "terminal-page-content": terminal,
+          "system-page-content": usesSystemChrome,
+        },
+      ]}
+      id="main-content"
+    >
+      <slot />
     </main>
-    <BackToTop />
-    <Footer />
   </body>
 </html>

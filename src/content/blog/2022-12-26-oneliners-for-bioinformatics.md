@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Useful Bioinformatics One-liners"
 date: 2022-12-26
 categories: ["Bioinformatics & Scientific Tools"]
@@ -669,4 +668,3 @@ For everyday bioinformatics command-line work, I now prefer this order:
 5. **Save complicated one-liners into scripts.**
 
 A good one-liner should be easy to read, easy to test, and easy to throw away.
-

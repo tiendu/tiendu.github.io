@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "How Genome Search Became Fast: From K-mers to FM-Indexes"
 date: 2026-02-07
 categories: ["Bioinformatics & Scientific Tools"]

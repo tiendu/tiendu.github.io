@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Master Algorithms by Learning Traversal Patterns"
 date: 2025-06-15
 categories: ["Automation, Systems & Engineering"]

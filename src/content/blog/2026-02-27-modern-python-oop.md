@@ -1,6 +1,5 @@
 ---
 title: "Modern Python OOP: When to Use Protocol, ABC, and Dataclass"
-layout: post
 date: 2026-02-27
 categories: ["Automation, Systems & Engineering"]
 ---

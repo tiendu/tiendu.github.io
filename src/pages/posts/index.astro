@@ -1,7 +1,8 @@
 ---
 import { getCollection } from "astro:content";
-import PageLayout from "../../layouts/PageLayout.astro";
+import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
 import {
+  formatCompactDate,
   getPostLabels,
   getPostRoute,
   readingTime,
@@ -14,46 +15,50 @@ const posts = sortPosts(
 const pinned = posts.filter(({ data }) => data.pinned);
 const normalPosts = posts.filter(({ data }) => !data.pinned);
 
-const compactDate = (date: Date) =>
-  new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    timeZone: "UTC",
-  }).format(date).replaceAll("-", ".");
-
 const labelLine = (post: (typeof posts)[number]) => {
   const labels = getPostLabels(post);
   return labels.length > 0 ? labels.join(" / ") : "GENERAL NOTES";
 };
 ---
 
-<PageLayout
+<SystemPageLayout
   title="Posts"
-  fileCode="LOG-ARCHIVE"
+  moduleCode="LOG-ARCHIVE"
   description="Field notes, engineering references, and lessons from systems that failed."
+  counter={`${posts.length} RECORDS`}
 >
   {
     pinned.length > 0 && (
       <section class="archive-section priority" aria-labelledby="priority-title">
         <header class="archive-section-header">
-          <h2 id="priority-title">Pinned notes</h2>
-          <span>{pinned.length} records</span>
+          <div>
+            <p class="system-section-code">PRIORITY / PINNED</p>
+            <h2 id="priority-title">Pinned notes</h2>
+          </div>
+          <span>{pinned.length} RECORDS</span>
         </header>
+
+        <div class="log-table-head" aria-hidden="true">
+          <span>PIN</span>
+          <span>DATE</span>
+          <span>SUBJECT</span>
+          <span>CLASS / RUNTIME</span>
+        </div>
 
         <ol class="log-list">
           {pinned.map((post, index) => (
             <li class="log-entry">
-              <span class="log-number">P-{String(index + 1).padStart(2, "0")}</span>
+              <span class="log-number">P{String(index + 1).padStart(2, "0")}</span>
               <time class="log-date" datetime={post.data.date.toISOString()}>
-                {compactDate(post.data.date)}
+                {formatCompactDate(post.data.date)}
               </time>
               <div class="log-main">
                 <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
-                <p class="log-subline">
-                  {labelLine(post)} · {readingTime(post.body ?? "")} MIN
-                </p>
               </div>
+              <p class="log-subline">
+                {labelLine(post)}<br />
+                <span>{readingTime(post.body ?? "")} MIN READ</span>
+              </p>
             </li>
           ))}
         </ol>
@@ -63,31 +68,44 @@ const labelLine = (post: (typeof posts)[number]) => {
 
   <section class="archive-section" aria-labelledby="all-records-title">
     <header class="archive-section-header">
-      <h2 id="all-records-title">Complete archive</h2>
-      <span>{normalPosts.length} records</span>
+      <div>
+        <p class="system-section-code">STORAGE / COMPLETE</p>
+        <h2 id="all-records-title">Complete archive</h2>
+      </div>
+      <span>{normalPosts.length} RECORDS</span>
     </header>
 
     {
       normalPosts.length > 0 ? (
-        <ol class="log-list">
-          {normalPosts.map((post, index) => (
-            <li class="log-entry">
-              <span class="log-number">{String(index + 1).padStart(3, "0")}</span>
-              <time class="log-date" datetime={post.data.date.toISOString()}>
-                {compactDate(post.data.date)}
-              </time>
-              <div class="log-main">
-                <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
+        <>
+          <div class="log-table-head" aria-hidden="true">
+            <span>ID</span>
+            <span>DATE</span>
+            <span>SUBJECT</span>
+            <span>CLASS / RUNTIME</span>
+          </div>
+
+          <ol class="log-list">
+            {normalPosts.map((post, index) => (
+              <li class="log-entry">
+                <span class="log-number">{String(index + 1).padStart(3, "0")}</span>
+                <time class="log-date" datetime={post.data.date.toISOString()}>
+                  {formatCompactDate(post.data.date)}
+                </time>
+                <div class="log-main">
+                  <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
+                </div>
                 <p class="log-subline">
-                  {labelLine(post)} · {readingTime(post.body ?? "")} MIN
+                  {labelLine(post)}<br />
+                  <span>{readingTime(post.body ?? "")} MIN READ</span>
                 </p>
-              </div>
-            </li>
-          ))}
-        </ol>
+              </li>
+            ))}
+          </ol>
+        </>
       ) : (
-        <p>No records yet.</p>
+        <p class="system-empty-state">NO RECORDS FOUND.</p>
       )
     }
   </section>
-</PageLayout>
+</SystemPageLayout>

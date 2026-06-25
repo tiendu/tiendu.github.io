@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "A Quiet Farewell to Bioinformatics"
 date: 2026-06-17
 categories: ["Bioinformatics & Scientific Tools", "Automation, Systems & Engineering", "Personal Notes & Reflections"]

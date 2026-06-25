@@ -6,7 +6,6 @@ interface Props {
 }
 
 const { headings } = Astro.props;
-
 const visibleHeadings = headings.filter(
   ({ depth }) => depth === 2 || depth === 3,
 );
@@ -15,7 +14,13 @@ const visibleHeadings = headings.filter(
 {
   visibleHeadings.length > 0 && (
     <nav class="toc" aria-label="Table of contents">
-      <strong>Contents</strong>
+      <header class="toc-header">
+        <div>
+          <span>DOCUMENT INDEX</span>
+          <strong>CONTENTS</strong>
+        </div>
+        <small>{String(visibleHeadings.length).padStart(2, "0")}</small>
+      </header>
 
       <ol>
         {visibleHeadings.map((heading) => (

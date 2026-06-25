@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Statistics Made Simple: Mnemonics, Analogies, and Practical Notes"
 date: 2025-08-17
 categories: ["Statistics and Probability"]

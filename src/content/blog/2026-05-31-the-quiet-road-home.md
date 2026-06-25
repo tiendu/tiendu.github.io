@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "The Quiet Road Home"
 date: 2026-05-31
 categories: ["Personal Notes & Reflections"]

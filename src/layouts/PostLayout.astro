@@ -1,14 +1,17 @@
 ---
 import type { MarkdownHeading } from "astro";
-import BaseLayout from "./BaseLayout.astro";
+import BackToTop from "../components/BackToTop.astro";
+import SystemHeader from "../components/SystemHeader.astro";
 import TableOfContents from "../components/TableOfContents.astro";
 import {
   formatDate,
+  getLabelRoute,
   getPostLabels,
   getPostSlug,
   readingTime,
   type BlogPost,
 } from "../utils/posts";
+import BaseLayout from "./BaseLayout.astro";
 
 interface Props {
   post: BlogPost;
@@ -25,46 +28,70 @@ const description =
 const year = post.data.date.getUTCFullYear();
 const month = String(post.data.date.getUTCMonth() + 1).padStart(2, "0");
 const day = String(post.data.date.getUTCDate()).padStart(2, "0");
-const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUpperCase()}`;
+const docId = `LOG-${year}${month}${day}-${getPostSlug(post)
+  .slice(0, 12)
+  .toUpperCase()}`;
 ---
 
 <BaseLayout title={post.data.title} description={description} article>
-  <div class:list={["post-layout", { "no-toc": !hasToc }]}>
-    {hasToc && <TableOfContents headings={headings} />}
+  <div class="system-page-shell article-page-shell">
+    <SystemHeader active="posts" />
 
-    <article class="post h-entry manual-sheet">
-      <header class="post-header">
-        <p class="post-doc-strip">DOCUMENT / {docId}</p>
-        <h1 class="post-title p-name">{post.data.title}</h1>
+    <section class="article-console" aria-labelledby="article-title">
+      <header class="article-system-header">
+        <p class="article-doc-strip">DOCUMENT / {docId}</p>
+        <h1 id="article-title" class="article-title p-name">
+          {post.data.title}
+        </h1>
+
+        {post.data.description && (
+          <p class="article-description">{post.data.description}</p>
+        )}
 
         <div class="post-meta" aria-label="Document metadata">
-          <time datetime={post.data.date.toISOString()}>
+          <time class="dt-published" datetime={post.data.date.toISOString()}>
             {formatDate(post.data.date)}
           </time>
           <span aria-hidden="true">·</span>
           <span>{readingTime(post.body ?? "")} min read</span>
+          {post.data.updatedDate && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>updated {formatDate(post.data.updatedDate)}</span>
+            </>
+          )}
         </div>
 
-        {
-          labels.length > 0 && (
-            <ul class="post-labels" aria-label="Post tags">
-              {labels.map((label) => (
-                <li>
-                  <a href={`/tags/#${encodeURIComponent(label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""))}`}>
-                    {label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )
-        }
+        {labels.length > 0 && (
+          <ul class="post-labels" aria-label="Post tags">
+            {labels.map((label) => (
+              <li>
+                <a href={getLabelRoute(label)}>{label}</a>
+              </li>
+            ))}
+          </ul>
+        )}
       </header>
 
-      <div class="post-content e-content">
-        <slot />
+      <div class:list={["post-layout", { "no-toc": !hasToc }]}>
+        {hasToc && <TableOfContents headings={headings} />}
+
+        <article class="post h-entry article-sheet">
+          <div class="post-content e-content">
+            <slot />
+          </div>
+        </article>
       </div>
-    </article>
+
+      <footer class="article-system-footer">
+        <a href="/posts/">LOG ARCHIVE</a>
+        <span>{docId}</span>
+        <a href="/">TERMINAL HOME</a>
+      </footer>
+    </section>
   </div>
+
+  <BackToTop />
 
   <script>
     let removeTocScrollSpy = () => {};
@@ -79,7 +106,6 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
       if (!toc || !article) return;
 
       const tocElement = toc;
-
       const links = Array.from(
         tocElement.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'),
       );
@@ -122,7 +148,6 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
         const padding = 12;
         const tocRect = tocElement.getBoundingClientRect();
         const linkRect = link.getBoundingClientRect();
-
         const behavior: ScrollBehavior = reducedMotion.matches
           ? "auto"
           : "smooth";
@@ -147,7 +172,6 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
 
         for (const { link, heading } of entries) {
           const active = heading.id === id;
-
           link.classList.toggle("is-active", active);
 
           if (active) {
@@ -161,9 +185,7 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
 
       function updateActiveSection() {
         frame = null;
-
-        const readingOffset = 140;
-
+        const readingOffset = 150;
         const atDocumentBottom =
           window.scrollY + window.innerHeight >=
           document.documentElement.scrollHeight - 4;
@@ -193,7 +215,6 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
 
       window.addEventListener("scroll", requestUpdate, { passive: true });
       window.addEventListener("resize", requestUpdate);
-
       updateActiveSection();
 
       removeTocScrollSpy = () => {
@@ -213,11 +234,7 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post).slice(0, 10).toUppe
     }
 
     initTocScrollSpy();
-
     document.addEventListener("astro:page-load", initTocScrollSpy);
-
-    document.addEventListener("astro:before-swap", () => {
-      removeTocScrollSpy();
-    });
+    document.addEventListener("astro:before-swap", () => removeTocScrollSpy());
   </script>
 </BaseLayout>

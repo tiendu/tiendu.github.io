@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Compliance by Design in Bioinformatics Platforms: An Implementation Manual"
 categories: ["Bioinformatics & Scientific Tools"]
 date: 2026-06-08

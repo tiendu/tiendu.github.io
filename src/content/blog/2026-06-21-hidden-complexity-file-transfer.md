@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "The Hidden Complexity of File Transfers"
 date: 2026-06-21
 categories: ["Automation, Systems & Engineering"]

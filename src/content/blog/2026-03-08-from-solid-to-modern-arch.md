@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "From SOLID to Modern Architecture: Why Behavior Matters More Than Inheritance"
 categories: ["Automation, Systems & Engineering"]
 date: 2026-03-08

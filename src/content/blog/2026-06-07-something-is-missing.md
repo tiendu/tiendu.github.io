@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "That Strange Feeling That Something Is Missing"
 date: 2026-06-07
 categories: ["Personal Notes & Reflections"]
@@ -91,13 +90,13 @@ There is something psychologically satisfying about reality being tangible.
 
 Modern life increasingly isn't.
 
-Money is abstract. 
+Money is abstract.
 
-Work is abstract. 
+Work is abstract.
 
-Communities are abstract. 
+Communities are abstract.
 
-Friendships are partially abstract, kept alive through messages, reactions, and the occasional promise to meet up soon. 
+Friendships are partially abstract, kept alive through messages, reactions, and the occasional promise to meet up soon.
 
 Even identity has become strangely abstract, split between who you are and who you appear to be.
 

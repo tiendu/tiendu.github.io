@@ -1,7 +1,13 @@
 ---
 import { getCollection } from "astro:content";
-import PageLayout from "../../layouts/PageLayout.astro";
-import { getPostLabels, getPostRoute, sortPosts } from "../../utils/posts";
+import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
+import {
+  formatCompactDate,
+  getPostLabels,
+  getPostRoute,
+  slugifyLabel,
+  sortPosts,
+} from "../../utils/posts";
 
 const posts = sortPosts(await getCollection("blog", ({ data }) => !data.draft));
 const grouped = new Map<string, typeof posts>();
@@ -15,48 +21,88 @@ for (const post of posts) {
 }
 
 const groups = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
-const slugify = (value: string) =>
-  value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-
-const compactDate = (date: Date) =>
-  new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    timeZone: "UTC",
-  }).format(date).replaceAll("-", ".");
 ---
 
-<PageLayout
+<SystemPageLayout
   title="Tags"
-  fileCode="SUBJECT-INDEX"
-  description=""
+  moduleCode="SUBJECT-FILESYSTEM"
+  description="Subjects and categories across the archive."
+  counter={`${groups.length} DIRECTORIES`}
 >
   {
     groups.length > 0 ? (
-      <div class="tag-index">
-        {groups.map(([label, taggedPosts]) => (
-          <section class="tag-drawer" id={slugify(label)}>
-            <header class="tag-drawer-header">
-              <h2>{label}</h2>
-              <span class="tag-count">{taggedPosts.length} FILES</span>
-            </header>
+      <>
+        <nav class="tag-directory" aria-label="Subject directory">
+          <p class="tag-directory-path">/ARCHIVE/SUBJECTS/</p>
+          <ol>
+            {groups.map(([label, taggedPosts], index) => {
+              const slug = slugifyLabel(label);
 
-            <ol class="tag-drawer-list">
-              {taggedPosts.map((post) => (
+              return (
                 <li>
-                  <time datetime={post.data.date.toISOString()}>
-                    {compactDate(post.data.date)}
-                  </time>
-                  <a href={getPostRoute(post)}>{post.data.title}</a>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <a href={`#${slug}`}>/{slug}/</a>
+                  <span>{taggedPosts.length} FILES</span>
                 </li>
-              ))}
-            </ol>
-          </section>
-        ))}
-      </div>
+              );
+            })}
+          </ol>
+        </nav>
+
+        <div class="tag-index">
+          {groups.map(([label, taggedPosts], index) => {
+            const slug = slugifyLabel(label);
+
+            return (
+              <details class="tag-drawer" id={slug} open={index === 0}>
+                <summary class="tag-drawer-header">
+                  <span class="tag-toggle" aria-hidden="true">+</span>
+                  <span class="tag-drawer-title">
+                    <small>DIRECTORY</small>
+                    <strong>/{slug}/</strong>
+                  </span>
+                  <span class="tag-count">{taggedPosts.length} FILES</span>
+                </summary>
+
+                <div class="tag-file-head" aria-hidden="true">
+                  <span>DATE</span>
+                  <span>FILE NAME</span>
+                </div>
+
+                <ol class="tag-drawer-list">
+                  {taggedPosts.map((post) => (
+                    <li>
+                      <time datetime={post.data.date.toISOString()}>
+                        {formatCompactDate(post.data.date)}
+                      </time>
+                      <a href={getPostRoute(post)}>{post.data.title}</a>
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            );
+          })}
+        </div>
+
+        <script is:inline>
+          (() => {
+            const revealTarget = () => {
+              const id = window.location.hash.slice(1);
+              if (!id) return;
+
+              const target = document.getElementById(id);
+              if (target instanceof HTMLDetailsElement) {
+                target.open = true;
+              }
+            };
+
+            revealTarget();
+            window.addEventListener("hashchange", revealTarget);
+          })();
+        </script>
+      </>
     ) : (
-      <p>No tags yet.</p>
+      <p class="system-empty-state">NO SUBJECT DIRECTORIES FOUND.</p>
     )
   }
-</PageLayout>
+</SystemPageLayout>

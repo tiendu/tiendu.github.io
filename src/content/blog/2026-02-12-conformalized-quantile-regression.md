@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Conformalized Quantile Regression (CQR): Prediction Intervals That Breathe With Your Data"
 date: 2026-02-12
 categories: ["Statistics and Probability"]

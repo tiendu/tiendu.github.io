@@ -1,0 +1,49 @@
+---
+import {
+  getSystemRevision,
+  PRIMARY_NAVIGATION,
+  type NavigationKey,
+} from "../config/site";
+
+interface Props {
+  active?: NavigationKey | "home";
+}
+
+const { active } = Astro.props;
+const pathname = Astro.url.pathname;
+const revision = getSystemRevision();
+
+const isActive = (key: NavigationKey | "home", href: string) => {
+  if (active) return active === key;
+  if (key === "home") return pathname === "/";
+  return pathname === href || pathname.startsWith(href);
+};
+---
+
+<header class="system-topbar">
+  <div class="system-topbar-inner">
+    <a class="system-brand" href="/" aria-label="Tien's notes, terminal home">
+      <span class="system-brand-name">TIEN'S NOTES</span>
+      <span class="system-brand-model">PERSONAL SYSTEM / REV. {revision}</span>
+    </a>
+
+    <nav class="system-nav" aria-label="Primary navigation">
+      {
+        PRIMARY_NAVIGATION.map(({ key, href, label, index }) => (
+          <a href={href} aria-current={isActive(key, href) ? "page" : undefined}>
+            <span aria-hidden="true">{index}</span>
+            {label}
+          </a>
+        ))
+      }
+      <a
+        href="/"
+        class="system-home-link"
+        aria-current={isActive("home", "/") ? "page" : undefined}
+      >
+        <span aria-hidden="true">00</span>
+        HOME
+      </a>
+    </nav>
+  </div>
+</header>

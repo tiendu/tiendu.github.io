@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Rust Without the Headache: Ownership, Lifetimes, and Memory Safety"
 date: 2024-12-15
 categories: ["Automation, Systems & Engineering"]

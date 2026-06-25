@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "The Python Engineer Checklist: Lessons From Real Systems"
 date: 2025-06-20
 categories: ["Automation, Systems & Engineering"]

@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Bringing Pixi to Nextflow: A Practical Alternative to Conda"
 date: 2025-05-10
 categories: ["Bioinformatics & Scientific Tools"]
@@ -109,7 +108,7 @@ Nextflow will not install Pixi automatically.
 
 Example:
 
-```Dockerfile
+```dockerfile
 FROM ubuntu:22.04
 
 RUN curl -fsSL https://pixi.sh/install.sh | bash

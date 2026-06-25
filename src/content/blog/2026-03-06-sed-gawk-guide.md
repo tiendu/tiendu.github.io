@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "sed & gawk Survival Guide: Practical Unix Stream Processing"
 categories: ["Automation, Systems & Engineering"]
 date: 2026-03-06
@@ -543,7 +542,7 @@ NR > 5      → wait until at least five lines have been read
 
 Why `% 6`?
 
-To print everything except the last five lines, the program must keep five lines of look-ahead.  
+To print everything except the last five lines, the program must keep five lines of look-ahead.
 The buffer therefore needs **N + 1 slots**.
 
 ```text
@@ -560,7 +559,7 @@ This creates a circular buffer that always holds the most recent lines while pri
 
 Both commands solve the same problem.
 
-The sed version relies on pattern space manipulation and cycle control.  
+The sed version relies on pattern space manipulation and cycle control.
 The awk version expresses the logic directly using state and indexing.
 
 When transformations become stateful or algorithmic, awk is usually easier to read and maintain.

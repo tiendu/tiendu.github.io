@@ -89,4 +89,3 @@ make_gif(
     out_dir="svm_moons_gamma_frames",
     out_gif="svm_moons_gamma_evolution.gif"
 )
-

@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Git: The Minimal Modern Cheat Sheet"
 date: 2026-01-22
 categories: ["Automation, Systems & Engineering"]
@@ -511,7 +510,7 @@ Verify the recovery commit before updating the remote branch.
 
 ## Minimal `.gitignore`
 
-```gitignore
+```text
 .DS_Store
 *.log
 .env

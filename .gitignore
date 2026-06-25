@@ -1,5 +1,10 @@
 node_modules/
 dist/
 .astro/
-.DS_Store
+.cache/
+*.tsbuildinfo
 *.log
+.DS_Store
+.env
+.env.*
+!.env.example

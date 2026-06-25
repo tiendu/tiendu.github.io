@@ -1,12 +1,23 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+import SystemPageLayout from "../layouts/SystemPageLayout.astro";
 ---
 
-<BaseLayout title="Page not found">
-  <article class="not-found">
-    <p class="not-found-code">SYSTEM NOTE / 404</p>
-    <h1>Record not found.</h1>
-    <p>The route may have moved, expired, or never existed.</p>
-    <p><a href="/">Return to the main page</a></p>
-  </article>
-</BaseLayout>
+<SystemPageLayout
+  title="404"
+  moduleCode="RECORD-NOT-FOUND"
+  description="The requested route may have moved, expired, or never existed."
+  counter="ROUTE FAILED"
+>
+  <section class="system-error-panel" aria-labelledby="error-heading">
+    <p class="system-section-code">ERROR / UNRESOLVED PATH</p>
+    <h2 id="error-heading">No record exists at this address.</h2>
+    <p>
+      Return to the terminal, inspect the log archive, or choose another system
+      module.
+    </p>
+    <nav aria-label="Recovery links">
+      <a href="/">OPEN TERMINAL</a>
+      <a href="/posts/">OPEN LOG ARCHIVE</a>
+    </nav>
+  </section>
+</SystemPageLayout>

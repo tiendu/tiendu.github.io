@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "The Future Keeps Asking for a Deposit"
 date: 2026-02-09
 categories: ["Personal Notes & Reflections"]

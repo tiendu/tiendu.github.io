@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Maybe Average Is Enough"
 date: 2025-05-18
 categories: ["Personal Notes & Reflections"]

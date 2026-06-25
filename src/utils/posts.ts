@@ -17,6 +17,7 @@ export function getPostRoute(post: BlogPost): string {
 
 export function getPostRouteParts(post: BlogPost) {
   const date = post.data.date;
+
   return {
     year: String(date.getUTCFullYear()),
     month: String(date.getUTCMonth() + 1).padStart(2, "0"),
@@ -26,7 +27,22 @@ export function getPostRouteParts(post: BlogPost) {
 }
 
 export function getPostLabels(post: BlogPost): string[] {
-  return post.data.tags.length > 0 ? post.data.tags : post.data.categories;
+  const labels = post.data.tags.length > 0
+    ? post.data.tags
+    : post.data.categories;
+
+  return [...new Set(labels.map((label) => label.trim()).filter(Boolean))];
+}
+
+export function slugifyLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function getLabelRoute(label: string): string {
+  return `/tags/#${encodeURIComponent(slugifyLabel(label))}`;
 }
 
 export function readingTime(body: string): number {
@@ -49,9 +65,19 @@ export function formatDate(date: Date): string {
   }).format(date);
 }
 
+export function formatCompactDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "UTC",
+  })
+    .format(date)
+    .replaceAll("-", ".");
+}
+
 export function sortPosts(posts: BlogPost[]): BlogPost[] {
   return [...posts].sort(
     (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
   );
 }
-
