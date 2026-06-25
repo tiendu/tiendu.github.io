@@ -3,7 +3,6 @@ layout: post
 title: "Compliance for Bioinformatics Engineers: HIPAA, GDPR, NIH GDS, ISO 27001, FISMA, NIST 800-53, and FDA Software Guidance"
 categories: ["Bioinformatics & Scientific Tools"]
 date: 2026-05-21
-pinned: true
 ---
 
 There is a strange moment that happens in bioinformatics once the work moves out of a personal laptop, a university server, or a friendly research group.
