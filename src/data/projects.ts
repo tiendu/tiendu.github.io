@@ -5,7 +5,6 @@ export interface Project {
   tech: string;
   summary: string;
   details: string;
-  featured?: boolean;
 }
 
 export const PROJECTS: Project[] = [
@@ -18,7 +17,6 @@ export const PROJECTS: Project[] = [
       "A lightweight Linux service and process monitor built for operational visibility without requiring a full observability stack.",
     details:
       "Tracks process trees, CPU, memory, disk I/O, file descriptors, TCP/UDP connections, Unix sockets, and HTTP health checks. Includes structured JSON logs, OpenMetrics output, strict TOML configuration, atomic writes, and persistent monitoring through systemd.",
-    featured: true,
   },
   {
     name: "depviz",

@@ -354,148 +354,102 @@ body.system-interface a[target="_blank"]::after {
   color: rgb(199 240 139 / 48%);
 }
 
-/* Projects / program registry ------------------------------------------- */
+/* Projects -------------------------------------------------------------- */
 
-.registry-head,
-.project-entry {
-  display: grid;
-  gap: clamp(1rem, 3vw, 2.5rem);
-  grid-template-columns: 3.5rem minmax(0, 1fr) 11rem;
-}
-
-.registry-head {
-  border-bottom: 1px solid var(--system-line-strong);
-  color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.56rem;
-  letter-spacing: 0.08em;
-  padding-bottom: 0.65rem;
-}
-
-.project-catalogue {
+.project-list {
   list-style: none;
   margin: 0;
   max-width: none;
   padding: 0;
 }
 
-.project-entry {
+.project-row {
   border-bottom: 1px solid var(--system-line);
-  padding: clamp(1.5rem, 4vw, 2.5rem) 0;
+  display: grid;
+  gap: clamp(0.9rem, 2.8vw, 2.25rem);
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  padding: clamp(1.7rem, 4vw, 2.75rem) 0;
 }
 
-.project-index {
+.project-row:first-child {
+  padding-top: 0;
+}
+
+.project-number {
   color: var(--system-text);
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  padding-top: 0.25rem;
+  letter-spacing: 0.04em;
+  padding-top: 0.22rem;
 }
 
-.project-main {
+.project-content {
   min-width: 0;
 }
 
-.project-header {
-  align-items: start;
-  display: flex;
-  gap: 1.25rem;
-  justify-content: space-between;
-}
-
-.project-kicker {
+.project-category {
   color: var(--system-dim);
   font-family: var(--font-mono);
   font-size: 0.61rem;
-  letter-spacing: 0.07em;
-  margin: 0 0 0.35rem;
+  letter-spacing: 0.075em;
+  line-height: 1.45;
+  margin: 0 0 0.45rem;
   text-transform: uppercase;
 }
 
-.project-header h2 {
-  color: var(--system-bright);
-  font-size: clamp(1.5rem, 3.5vw, 2.35rem);
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+.project-content h2 {
+  font-size: clamp(1.55rem, 3.5vw, 2.35rem);
+  letter-spacing: -0.035em;
+  line-height: 1.08;
   margin: 0;
 }
 
-.project-state {
-  color: var(--system-dim);
-  flex: 0 0 auto;
-  font-family: var(--font-mono);
-  font-size: 0.56rem;
-  letter-spacing: 0.07em;
-  padding-top: 0.25rem;
+.project-content h2 a,
+.project-content h2 a:visited {
+  color: var(--system-bright);
+  text-decoration: none;
 }
 
-.project-state.featured {
-  color: var(--system-amber);
+.project-content h2 a:hover,
+.project-content h2 a:focus-visible {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+}
+
+.external-mark {
+  color: var(--system-text);
+  font-family: var(--font-mono);
+  font-size: 0.48em;
+  margin-left: 0.22em;
+  vertical-align: 0.48em;
 }
 
 .project-summary {
   color: var(--system-bright);
-  font-size: clamp(1rem, 1.8vw, 1.15rem);
+  font-size: clamp(1rem, 1.7vw, 1.14rem);
   font-weight: 550;
   line-height: 1.55;
-  margin: 1.1rem 0 0;
+  margin: 1rem 0 0;
   max-width: 68ch;
 }
 
 .project-details {
   color: var(--system-dim);
+  font-size: 0.96rem;
   line-height: 1.65;
-  margin: 0.85rem 0 0;
+  margin: 0.75rem 0 0;
   max-width: 74ch;
 }
 
-.project-runtime {
-  display: grid;
-  gap: 0.35rem;
-  margin-top: 1.25rem;
-}
-
-.project-runtime > span {
-  color: rgb(199 240 139 / 45%);
+.project-tech {
+  color: rgb(199 240 139 / 62%);
   font-family: var(--font-mono);
-  font-size: 0.54rem;
-  letter-spacing: 0.08em;
-}
-
-.project-runtime p {
-  color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   letter-spacing: 0.025em;
-  margin: 0;
-}
-
-.project-actions {
-  align-content: start;
-  display: grid;
-  gap: 0.45rem;
-  justify-items: start;
-  padding-top: 0.15rem;
-}
-
-.project-actions a,
-.project-actions a:visited {
-  color: var(--system-amber);
-  font-family: var(--font-mono);
-  font-size: 0.63rem;
-  letter-spacing: 0.07em;
-  text-decoration: none;
-}
-
-.project-actions a:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
-
-.project-actions span {
-  color: rgb(199 240 139 / 40%);
-  font-family: var(--font-mono);
-  font-size: 0.52rem;
-  letter-spacing: 0.06em;
+  line-height: 1.65;
+  margin: 1.15rem 0 0;
+  max-width: 80ch;
 }
 
 /* Tags / filesystem ------------------------------------------------------ */
@@ -901,8 +855,7 @@ body.system-interface a[target="_blank"]::after {
 }
 
 @media (max-width: 760px) {
-  .log-table-head,
-  .registry-head {
+  .log-table-head {
     display: none;
   }
 
@@ -926,22 +879,35 @@ body.system-interface a[target="_blank"]::after {
     grid-row: 3;
   }
 
-  .project-entry {
-    gap: 0.75rem;
+  .project-row {
+    gap: 0.7rem;
     grid-template-columns: 2.5rem minmax(0, 1fr);
+    padding-block: 1.8rem;
   }
 
-  .project-actions {
-    grid-column: 2;
+  .project-content h2 {
+    font-size: clamp(1.55rem, 8vw, 2rem);
   }
 
-  .project-header {
-    display: block;
+  .project-summary {
+    font-size: 1rem;
   }
 
-  .project-state {
-    display: inline-block;
-    margin-top: 0.75rem;
+  .project-details {
+    font-size: 0.92rem;
+    line-height: 1.62;
+  }
+}
+
+@media (max-width: 420px) {
+  .project-row {
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+
+  .project-number,
+  .project-category,
+  .project-tech {
+    font-size: 0.58rem;
   }
 }
 

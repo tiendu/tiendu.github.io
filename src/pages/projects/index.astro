@@ -9,47 +9,33 @@ import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
   description="Small tools built to solve real problems."
   counter={`${PROJECTS.length} PROGRAMS`}
 >
-  <div class="registry-head" aria-hidden="true">
-    <span>ID</span>
-    <span>PROGRAM</span>
-    <span>INTERFACE</span>
-  </div>
-
-  <ol class="project-catalogue">
+  <ol class="project-list">
     {
       PROJECTS.map((project, index) => (
-        <li class:list={["project-entry", { featured: project.featured }]}>
-          <div class="project-index" aria-hidden="true">
+        <li class="project-row">
+          <span class="project-number" aria-hidden="true">
             {String(index + 1).padStart(2, "0")}
-          </div>
+          </span>
 
-          <article class="project-main">
-            <header class="project-header">
-              <div>
-                <p class="project-kicker">{project.label}</p>
-                <h2>{project.name}</h2>
-              </div>
+          <article class="project-content">
+            <p class="project-category">{project.label}</p>
 
-              <span class:list={["project-state", { featured: project.featured }]}>
-                {project.featured ? "FEATURED" : "SOURCE AVAILABLE"}
-              </span>
-            </header>
+            <h2>
+              <a
+                href={project.repo}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${project.name} source repository (opens in a new tab)`}
+              >
+                {project.name}
+                <span class="external-mark" aria-hidden="true">↗</span>
+              </a>
+            </h2>
 
             <p class="project-summary">{project.summary}</p>
             <p class="project-details">{project.details}</p>
-
-            <div class="project-runtime">
-              <span>RUNTIME</span>
-              <p>{project.tech}</p>
-            </div>
+            <p class="project-tech">{project.tech}</p>
           </article>
-
-          <div class="project-actions">
-            <a href={project.repo} target="_blank" rel="noopener noreferrer">
-              OPEN SOURCE
-            </a>
-            <span>GITHUB / PUBLIC</span>
-          </div>
         </li>
       ))
     }
