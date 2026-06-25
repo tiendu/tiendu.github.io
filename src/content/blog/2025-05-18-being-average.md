@@ -45,7 +45,7 @@ Not charmingly bad.
 
 Just bad.
 
-During the physical examination, I almost failed because of it. I still remember standing there, trying to keep the shuttlecock in the air, knowing that this simple thing everyone else seemed able to do was somehow difficult for me.
+During a PE exam, I almost failed because of it. I still remember standing there, trying to keep the shuttlecock in the air, knowing that this simple thing everyone else seemed able to do was somehow difficult for me.
 
 It was not a life-defining tragedy.
 
