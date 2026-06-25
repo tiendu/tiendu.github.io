@@ -227,6 +227,16 @@ But life did not become straight.
 
 After about a year, I left.
 
+I returned to Vietnam on 30 April 2023.
+
+It was Reunification Day, marking the end of the war and the reunification of Vietnam in 1975. The official language is about liberation and independence.
+
+The timing was almost funny.
+
+Maybe I had liberated myself from academia too.
+
+There was another reason I came home.
+
 My mom's health was declining then.
 
 She got better later.
