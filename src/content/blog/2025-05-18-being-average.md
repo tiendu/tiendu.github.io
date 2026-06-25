@@ -13,17 +13,17 @@ Not collapsing.
 
 Just being ordinary.
 
-The kind of person who does not stand out. Does not dominate. Does not become exceptional in any obvious way.
+The kind of person who does not stand out, dominate, or become exceptional in any obvious way.
 
 For a long time, that felt like a quiet kind of failure.
 
 I did not say it that way back then. I probably would not have known how. But looking back, I think that fear shaped more of my life than I wanted to admit.
 
-I was afraid of becoming someone forgettable.
+I was afraid of becoming forgettable.
 
 Someone who passed through rooms without leaving much behind.
 
-Someone who tried a few things, did some of them poorly, did some of them okay, then quietly disappeared into a normal life.
+Someone who tried a few things, did some of them poorly, did some of them well enough, then quietly disappeared into a normal life.
 
 The funny thing is, when I look back at my childhood, maybe I was already that person.
 
@@ -37,7 +37,7 @@ Shuttlecock kicking.
 
 Đá cầu.
 
-A very normal thing. Other kids could do it casually. They would stand in small groups, kick it back and forth, laugh, miss, try again, get better without making a big story out of it.
+Most kids could do it casually. They stood in small groups, kicked it back and forth, laughed, missed, tried again, and got better without making a story out of it.
 
 I was terrible at it.
 
@@ -45,7 +45,7 @@ Not charmingly bad.
 
 Just bad.
 
-During the physical examination, I almost failed because of it. I still remember that feeling. Standing there, trying to keep the shuttlecock in the air, knowing that this simple thing that everyone else seemed able to do was somehow difficult for me.
+During the physical examination, I almost failed because of it. I still remember standing there, trying to keep the shuttlecock in the air, knowing that this simple thing everyone else seemed able to do was somehow difficult for me.
 
 It was not a life-defining tragedy.
 
@@ -61,53 +61,49 @@ I was not the kid everyone remembered.
 
 Around that time, Võ Lâm Truyền Kỳ was popular too.
 
-An online game.
+I played it for a few years before high school, but even there, I was not especially good. I remember only fragments now: a few images, a few names, the feeling of being inside a crowded digital world where everyone else seemed to know what they were doing.
 
-I played it for a few years before entering high school, but even there, I was not especially good. I do not remember much now. A few images, a few names, the feeling of being inside a crowded digital world where other people seemed to know what they were doing.
+I was not the strongest character.
 
-Even in a game, I was average.
+Not the richest player.
 
-Maybe below average.
-
-I was not the strongest character. Not the richest player. Not the person people gathered around. Not the one with a reputation.
+Not the person people gathered around.
 
 I was just there.
 
-A ghost, I would say.
-
-Disappearing into the crowd.
+A ghost in the crowd.
 
 And then, somehow, I got into medical school.
 
 Pham Ngoc Thach University of Medicine.
 
-I remember I was the only student from my high school who got into medical school that year.
+I was the only student from my high school who got into medical school that year.
 
 That should have felt like proof.
 
 Maybe for a while, it did.
 
-It looked like the kind of thing that could correct the old story. The kid who was bad at đá cầu. The kid who disappeared into Võ Lâm Truyền Kỳ. The ghost in the crowd. Suddenly there was a new sentence attached to him.
+It looked like the kind of achievement that could correct the old story. The kid who was bad at đá cầu. The kid who disappeared into Võ Lâm Truyền Kỳ. The ghost in the crowd.
 
-He got into med school.
+Suddenly there was a new sentence attached to him:
 
-That sounds like a main character moment.
+He got into medical school.
 
-But life is very good at ruining main character moments.
+That sounds like a main-character moment.
 
-I did not do well in med school.
+But life is very good at ruining main-character moments.
+
+I did not do well in medical school.
 
 In the second year, I failed.
 
-I had to redo it because my performance was bad.
+I had to repeat it because my performance was poor.
 
-There is no elegant way to write that sentence either.
+There is no elegant way to write that sentence.
 
 It is just what happened.
 
-Then I continued into the third year, but only halfway.
-
-By that point, something had already broken.
+I continued into the third year, but only halfway. By then, something had already broken.
 
 Maybe it was motivation.
 
@@ -115,25 +111,23 @@ Maybe it was fit.
 
 Maybe it was the quiet realization that I was forcing myself through a life that no longer felt like mine.
 
-Eventually, I dropped out completely.
+Eventually, I dropped out.
 
-I can dress it up with context. I can explain that the path was not right, that things changed, that life moved in another direction.
+I can dress that up with context. I can explain that the path was not right, that things changed, that life moved in another direction.
 
 All of that may be true.
 
-But the simple version is still there.
+But the simple version remains:
 
 I failed the second year.
 
-I redid it.
+I repeated it.
 
 I reached halfway through the third year.
 
 Then I left.
 
-Then I moved to Singapore for my bachelor's degree.
-
-That was another turn.
+After that, I moved to Singapore for my bachelor's degree.
 
 A new country.
 
@@ -141,59 +135,57 @@ A new school.
 
 A new version of myself, or at least I hoped so.
 
-But even in Singapore, things were not suddenly cinematic. I did not become a genius overnight. I did not transform into some extraordinary version of myself just because the country changed. I studied. I adjusted. I survived. I did some things well. I did some things badly. I kept going.
+But changing countries did not transform me into a genius. Life did not suddenly become cinematic. I studied. I adjusted. I survived. I did some things well and some things badly.
 
-It was somewhat ordinary.
-
-Average.
+I kept going.
 
 Later, I went to Ireland for my master's degree.
 
-That sounds like another impressive sentence.
+That sounds impressive from far away.
 
 A master's degree in Ireland.
 
 A clean line on a CV.
 
-The kind of detail that looks better from far away than it feels when you are actually living inside it.
+The kind of detail that looks better from the outside than it feels when you are living inside it.
 
-I finished my master's before COVID.
+I finished before COVID.
 
 Then I could not find a job in Ireland.
 
 I came back to Vietnam on 1 November 2019.
 
-I still remember the date because it felt like a line being drawn under a chapter I had hoped would continue.
+I remember the date because it felt like a line being drawn under a chapter I had expected to continue.
 
-And even after coming back, things were not suddenly easy either.
+Things did not become easy after I came home.
 
-I could not find a job immediately in Vietnam.
+I could not find a job immediately in Vietnam either.
 
 That was humbling.
 
-Not the motivational kind of humbling people talk about after the success is already secured.
+Not the polished kind of humbling people describe after success is already secure.
 
 Just plain humbling.
 
-The kind where you have a degree, a story, a few hopes, maybe even a little pride, and then the world looks at all of that and says nothing.
+The kind where you have a degree, a story, a few hopes, maybe even a little pride, and the world looks at all of it and says nothing.
 
 No music.
 
 No montage.
 
-No dramatic comeback scene.
+No dramatic comeback.
 
 Just silence.
 
-Just waiting.
+Applications.
 
-Just sending applications.
+Waiting.
 
-Just realizing that life does not care how the story is supposed to feel.
+And the realization that life does not care how the story is supposed to feel.
 
 Life will make you humble in every possible way.
 
-It will keep reminding you that you are not the main character in a movie.
+It keeps reminding you that you are not the main character in a movie.
 
 Not the chosen one in an anime.
 
@@ -205,15 +197,15 @@ One ordinary person among many.
 
 Trying to make something work.
 
-Then in 2022, I tried to get back into academia again.
+In 2022, I tried to return to academia.
 
 This time in Korea.
 
-Maybe part of me wanted it to mean that the academic door had not fully closed.
+Maybe part of me wanted the academic door to remain open.
 
 Maybe I wanted the story to become neat again.
 
-Med school did not work.
+Medical school did not work.
 
 Singapore worked enough.
 
@@ -229,7 +221,9 @@ After about a year, I left.
 
 I returned to Vietnam on 30 April 2023.
 
-It was Reunification Day, marking the end of the war and the reunification of Vietnam in 1975. The official language is about liberation and independence.
+Reunification Day.
+
+The official language is about liberation and independence.
 
 The timing was almost funny.
 
@@ -237,19 +231,17 @@ Maybe I had liberated myself from academia too.
 
 There was another reason I came home.
 
-My mom's health was declining then.
+My mom's health was declining.
 
-She got better later.
+She got better later. She is fine now.
 
-She is fine now.
-
-But at the time, it changed the weight of things.
+But at the time, it changed the weight of everything.
 
 Suddenly the question was not only career.
 
 Not only academia.
 
-Not only whether I could still build some impressive path.
+Not only whether I could still build an impressive path.
 
 There was family.
 
@@ -267,17 +259,15 @@ Another unfinished thing.
 
 Another turn.
 
-Another line on the CV that says one thing, while the real life behind it says something else.
+Another line on the CV that says one thing, while the life behind it says something else.
 
-For a long time, I hated that.
-
-I hated the unevenness.
+For a long time, I hated that unevenness.
 
 I hated how my life refused to become a clean story.
 
-Medical school, then failing the second year, redoing it, reaching halfway through the third year, then dropping out.
+Medical school, then failing, repeating a year, and dropping out.
 
-Singapore, then bachelor's.
+Singapore, then a bachelor's degree.
 
 Ireland, then no job.
 
@@ -285,7 +275,7 @@ Vietnam, then uncertainty.
 
 Korea, then leaving academia again.
 
-Every time I thought the plot was starting to make sense, life reminded me that there was no plot.
+Every time I thought the plot was beginning to make sense, life reminded me that there was no plot.
 
 Just decisions.
 
@@ -307,11 +297,17 @@ Duty.
 
 And the next thing that had to be done.
 
-Average.
+My life may sound unusual when reduced to countries, schools, and degrees.
 
-For a long time, that word sounded like a verdict.
+Living it rarely felt exceptional.
 
-It sounded like being placed in the middle of a crowd and being told, "This is where you belong."
+Most of the time, it felt like uncertainty, adjustment, and doing whatever came next.
+
+For years, the word *average* sounded like a verdict.
+
+It sounded like being placed in the middle of a crowd and told:
+
+This is where you belong.
 
 Not bad enough to be dramatic.
 
@@ -325,7 +321,7 @@ Not total failure.
 
 Not disaster.
 
-But a life that does not become remarkable.
+But a life that never becomes remarkable.
 
 A life with no applause.
 
@@ -355,17 +351,13 @@ As if the self needed constant software updates.
 
 As if staying the same for too long meant something had gone wrong.
 
-Standing still felt dangerous.
-
-Because standing still looked like mediocrity.
-
 But over time, I have started to suspect that the real problem was never average itself.
 
 It was the world I was measuring myself against.
 
 We live in an age of exposure.
 
-We do not compare ourselves to the people in the same room anymore. We compare ourselves to the most visible people on the planet.
+We do not compare ourselves only to the people in the same room anymore. We compare ourselves to the most visible people on the planet.
 
 Founders.
 
@@ -379,43 +371,43 @@ Prodigies.
 
 Polymaths.
 
-People who are already filtered by luck, timing, talent, money, beauty, algorithm, and survival.
+People already filtered by luck, timing, talent, money, beauty, algorithms, and survival.
 
 The brain does not always understand statistical rarity.
 
 It sees something often enough and assumes it is normal.
 
-So extraordinary starts to look like baseline.
+Extraordinary becomes the baseline.
 
-And ordinary starts to feel like failure.
+Ordinary begins to feel like failure.
 
 That is a dangerous trick.
 
-Because most people are ordinary most of the time.
+Most people are ordinary most of the time.
 
 Even exceptional people are ordinary in many areas.
 
-The athlete might be bad at relationships.
+The athlete may be bad at relationships.
 
-The founder might be bad at rest.
+The founder may be bad at rest.
 
-The genius might be bad at living.
+The genius may be bad at living.
 
-The person you admire might be impressive only from the angle you are allowed to see.
+The person you admire may be impressive only from the angle you are allowed to see.
 
-But the internet compresses people into highlights.
+The internet compresses people into highlights.
 
 It removes boredom.
 
 It removes repetition.
 
-It removes the years where nothing obvious happened.
+It removes the years when nothing obvious happened.
 
-It removes the quiet failures, the almost-failures, the awkward years, the dropped paths, the ordinary days, the private doubts.
+It removes quiet failures, awkward years, abandoned paths, ordinary days, and private doubt.
 
 Then it shows you the outcome.
 
-And asks you why you are not there yet.
+And asks why you are not there yet.
 
 No wonder average feels unbearable.
 
@@ -429,11 +421,9 @@ Podcasts.
 
 Frameworks.
 
-Productivity systems.
+Courses.
 
 Advice.
-
-Courses.
 
 Playbooks.
 
@@ -463,7 +453,7 @@ Doing the boring thing again looks average.
 
 But refinement is where mastery lives.
 
-That is something I did not understand when I was younger.
+I did not understand that when I was younger.
 
 I thought special meant visible.
 
@@ -485,85 +475,79 @@ A cron job running every day is not impressive until it stops.
 
 A backup system is boring until the main system fails.
 
-A train arriving on time is not exciting until it does not.
+A train arriving on time is unremarkable until it does not.
 
-A person showing up consistently is easy to overlook until they are gone.
+A person who shows up consistently is easy to overlook until they are gone.
 
 Reliability is rarely glamorous.
 
 But reliability is civilization.
 
-That sentence sounds too big, but I think it is true.
+That sentence sounds too large, but I think it is true.
 
 We publicly worship novelty.
 
 Privately, we depend on stability.
 
-We celebrate disruption, innovation, reinvention, speed, breakthrough, genius, scale.
+We celebrate disruption, reinvention, breakthroughs, speed, genius, and scale.
 
 But the systems we trust most are the ones that behave predictably.
 
-The planes that land safely.
+Planes that land safely.
 
-The trains that arrive on time.
+Power that stays on.
 
-The power that stays on.
+Water that runs.
 
-The water that runs.
+Servers that do not fail.
 
-The servers that do not fail.
+People who keep doing their part even when nobody is watching.
 
-The people who keep doing their part even when nobody is watching.
+The people maintaining those systems often look average.
 
-The people who maintain those systems often look average.
-
-But without them, nothing works.
+Without them, nothing works.
 
 There is a strange invisibility to useful work.
 
-If something functions well enough, people stop noticing it.
+When something functions well enough, people stop noticing it.
 
-If a system is maintained properly, there is no drama.
+When a system is maintained properly, there is no drama.
 
-If a person is reliable, they become part of the background.
+When a person is reliable, they become part of the background.
 
 That can feel unfair.
 
 Maybe it is unfair.
 
-But maybe it is also one of the quiet forms of meaning.
+But perhaps it is also one of the quiet forms of meaning.
 
 Not all meaning comes from applause.
 
 Some meaning comes from being part of why things keep working.
 
-I think about this more as I get older.
+I think about that more as I get older.
 
 Maybe because I am tired of constant reinvention.
 
-Maybe because I have reinvented myself enough to know that reinvention does not always solve the deeper fear.
+Maybe because I have reinvented myself enough to know that reinvention does not cure the deeper fear.
 
 You can get into medical school.
 
 You can drop out.
 
-You can change country.
+You can change countries.
 
-You can change major.
+You can change majors.
 
 You can collect degrees.
 
-You can move from Vietnam to Singapore.
+You can return home.
 
-You can move from Singapore to Ireland.
+You can try academia again.
 
-You can come back home again.
+You can leave again because family suddenly matters more than the path you were building.
 
-You can try Korea.
-
-You can leave again because family suddenly matters more than the path you were trying to build.
-
-And still carry the same question underneath everything.
+And still carry the same question underneath everything:
 
 What if I am still average?
 
@@ -571,61 +555,27 @@ What if this is all I am?
 
 I still hear that question sometimes.
 
-It usually comes quietly.
+Usually not during a crisis.
 
-Not during a crisis.
-
-More often during an ordinary day.
+More often on an ordinary day.
 
 When I see someone younger doing better.
 
-When I read about someone who seems to have found their path early.
+When I read about someone who found their path early.
 
-When I look at my own life and see how many detours there were.
+When I look at my life and see how many detours there were.
 
-The almost failed shuttlecock exam.
-
-The years disappearing into an online game without being good at it.
-
-The med school admission.
-
-Failing the second year.
-
-Redoing it.
-
-Reaching halfway through the third year.
-
-The med school dropout.
-
-The move to Singapore.
-
-The master's degree in Ireland.
-
-The flight back to Vietnam on 1 November 2019.
-
-The job search that did not become easy just because I had another line on my CV.
-
-The attempt to return to academia in Korea.
-
-The decision to leave again when my mom's health declined.
-
-The ordinary attempts.
-
-The average outcomes.
-
-The feeling of being a ghost in the crowd.
-
-For a long time, I treated those memories like evidence against myself.
-
-Proof that I was not special enough.
+For a long time, I treated those memories as evidence against myself.
 
 Proof that I was behind.
 
+Proof that I was not special enough.
+
 Proof that I had missed some train other people managed to catch.
 
-But I am not sure I see it that way anymore.
+I am not sure I see them that way anymore.
 
-Maybe those things were not evidence of failure.
+Maybe they were not evidence of failure.
 
 Maybe they were just life.
 
@@ -647,7 +597,7 @@ Often, it is not really about being average.
 
 It is about being unseen.
 
-About living a life that does not draw applause.
+About living a life that draws no applause.
 
 About building something no one celebrates.
 
@@ -659,17 +609,17 @@ We say we want to be exceptional.
 
 But often what we really want is to be noticed.
 
-And there is nothing wrong with that.
+There is nothing wrong with that.
 
 It is human.
 
 A child who almost fails đá cầu wants someone to see that he is trying.
 
-A student who drops out wants the story to not end there.
+A student who drops out wants the story not to end there.
 
 A person moving to another country wants the move to mean something.
 
-A graduate coming home without a job wants the degree to still count.
+A graduate returning home without a job wants the degree to still count.
 
 A son leaving a path because his mother is unwell wants that decision to make sense too.
 
@@ -677,7 +627,7 @@ A worker doing quiet work wants someone to know it took effort.
 
 Wanting recognition does not make us shallow.
 
-But needing recognition for meaning might make life harder than it has to be.
+But needing recognition in order for life to have meaning may make life harder than it has to be.
 
 Because so much of life will not be recognized.
 
@@ -687,15 +637,13 @@ Most discipline is invisible.
 
 Most growth is boring from the outside.
 
-Most people will not know what you overcame to appear ordinary.
-
-They will see the result and think it was normal.
+Most people will never know what you overcame to appear ordinary.
 
 They will see you functioning and assume it was easy.
 
 They will see you standing there and not know how many versions of yourself had to fail quietly for that version to exist.
 
-Maybe maturity is accepting that some of the most important parts of your life will not be legible to others.
+Maybe maturity is accepting that some of the most important parts of your life will never be fully legible to others.
 
 Maybe depth does not require spectacle.
 
@@ -703,15 +651,15 @@ Maybe a life can be profound without being loud.
 
 I used to think average meant settling.
 
-Now I am starting to think average can mean something else.
+Now I am beginning to think it can mean something else.
 
 It can mean stable.
 
-It can mean grounded.
+Grounded.
 
-It can mean no longer performing a constant emergency.
+No longer performing a constant emergency.
 
-It can mean staying long enough somewhere for depth to form.
+It can mean staying somewhere long enough for depth to form.
 
 It can mean building a life that does not need to impress strangers to be real.
 
@@ -727,9 +675,9 @@ I still want a better life.
 
 But I do not want improvement to come from panic all the time.
 
-I do not want every skill to be a rescue mission.
+I do not want every skill to become a rescue mission.
 
-I do not want every plan to be proof that I am not mediocre.
+I do not want every plan to serve as proof that I am not mediocre.
 
 There is a difference between growing and running away from yourself.
 
@@ -753,7 +701,7 @@ Always upgrading.
 
 Always escaping the shame of being seen as ordinary.
 
-But what looks average from the outside is often depth in progress.
+What looks average from the outside is often depth in progress.
 
 A farmer planting the same field each season is not exciting.
 
@@ -787,7 +735,7 @@ Maybe average is just average.
 
 Maybe ordinary is just ordinary.
 
-But maybe an ordinary life can still be honest.
+But an ordinary life can still be honest.
 
 It can still be useful.
 
@@ -805,27 +753,23 @@ I do not need to pretend the shuttlecock exam taught me greatness.
 
 I do not need to pretend Võ Lâm Truyền Kỳ shaped my destiny.
 
-I do not need to turn getting into med school into proof that I was chosen.
+I do not need to turn medical school into proof that I was chosen.
 
-I do not need to hide that I failed the second year.
+I do not need to hide that I failed.
 
-I do not need to pretend redoing it was just a minor detail.
+I do not need to turn dropping out into a cinematic comeback.
 
-I do not need to turn dropping out halfway through the third year into a cinematic comeback.
+I do not need to make Ireland heroic.
 
-I do not need to turn Ireland into a heroic chapter.
-
-I do not need to pretend coming back to Vietnam without a job was secretly glamorous.
+I do not need to pretend returning to Vietnam without a job was secretly glamorous.
 
 I do not need to turn Korea into another unfinished failure.
 
-Some things are just what happened.
+Some things are simply what happened.
 
 Some things are embarrassing.
 
 Some things are humbling.
-
-Some things are average.
 
 Some things are unfinished.
 
@@ -853,6 +797,6 @@ Maybe I can finally live without needing every part of my life to become proof.
 
 Maybe that does not make it exceptional.
 
-Maybe that makes it real.
+Maybe it makes it real.
 
 And maybe real is enough.
