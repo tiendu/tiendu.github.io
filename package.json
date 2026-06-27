@@ -12,6 +12,10 @@
     "preview": "astro preview"
   },
   "dependencies": {
+    "@fontsource-variable/figtree": "5.2.7",
+    "@fontsource-variable/nunito": "5.2.7",
+    "@fontsource-variable/source-code-pro": "5.2.7",
+    "@fontsource/vt323": "5.2.7",
     "astro": "7.0.0"
   },
   "devDependencies": {

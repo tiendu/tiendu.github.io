@@ -210,8 +210,12 @@
 .post-content {
   color: var(--article-text);
   font-family: var(--font-reading);
-  font-size: clamp(1rem, 1.4vw, 1.085rem);
-  line-height: 1.8;
+  font-feature-settings: normal;
+  font-size: clamp(1.05rem, 0.35vw + 0.98rem, 1.16rem);
+  font-variant-numeric: normal;
+  font-weight: 430;
+  letter-spacing: 0.002em;
+  line-height: 1.78;
   overflow-wrap: break-word;
 }
 
@@ -252,7 +256,7 @@
 .post-content ul,
 .post-content ol,
 .post-content blockquote {
-  max-width: 72ch;
+  max-width: 68ch;
 }
 
 .post-content p {
@@ -522,8 +526,8 @@
   }
 
   .post-content {
-    font-size: 1rem;
-    line-height: 1.72;
+    font-size: 1.05rem;
+    line-height: 1.75;
   }
 
   .back-to-top {

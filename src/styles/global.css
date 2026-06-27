@@ -1,7 +1,13 @@
 :root {
-  --font-ui: "IBM Plex Sans", system-ui, sans-serif;
-  --font-reading: "IBM Plex Serif", Georgia, serif;
-  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --font-ui: "Figtree Variable", "Figtree", system-ui, sans-serif;
+  --font-reading: "Nunito Variable", "Nunito", system-ui, sans-serif;
+  --font-mono:
+    "Source Code Pro Variable",
+    "Source Code Pro",
+    ui-monospace,
+    "SFMono-Regular",
+    Consolas,
+    monospace;
   --font-terminal: "VT323", var(--font-mono);
 
   --paper: #f3efe5;
@@ -109,6 +115,19 @@ kbd,
 pre,
 samp {
   font-family: var(--font-mono);
+  font-feature-settings: "zero" 1;
+  font-variant-numeric: slashed-zero;
+}
+
+/*
+ * Source Code Pro exposes its slashed zero through the OpenType `zero`
+ * feature. System and terminal screens inherit it; long-form article prose
+ * resets to normal numerals in article.css.
+ */
+.system-interface,
+.terminal-home {
+  font-feature-settings: "zero" 1;
+  font-variant-numeric: slashed-zero;
 }
 
 [hidden] {
