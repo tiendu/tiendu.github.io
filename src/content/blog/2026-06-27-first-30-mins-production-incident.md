@@ -36,8 +36,9 @@ During the first 30 minutes, the objective is simple:
 > Restore service without making the outage worse.
 
 The exact tools change between systems. One day it is Linux, another day
-it is Kubernetes, PostgreSQL, AWS, or a bad Git commit. The order of
-operations changes much less:
+it is Kubernetes, PostgreSQL, a cloud provider, or a bad Git commit.
+
+The order of operations changes much less:
 
 ```text
 Freeze
@@ -88,7 +89,7 @@ systemctl --failed
 # Which Kubernetes workloads are unhealthy?
 kubectl get pods -A
 
-# Do the EC2 instance and its underlying host report healthy?
+# What health status do the EC2 instance and its underlying host report?
 aws ec2 describe-instance-status \
     --include-all-instances \
     --query 'InstanceStatuses[*].[InstanceId,InstanceState.Name,SystemStatus.Status,InstanceStatus.Status]' \
@@ -106,6 +107,12 @@ the environment no longer resembles the one that triggered the alert.
 Treat production like a crime scene.
 
 Observe before moving anything.
+
+If several engineers are involved, assign one person to coordinate the
+incident and keep one shared timeline. Record each meaningful action,
+who performed it, when it happened, and why. This prevents conflicting
+changes and makes it possible to reconstruct what actually happened
+afterward.
 
 ---
 
@@ -184,6 +191,69 @@ a dashboard changed color.
 
 ---
 
+### When the Application Is Healthy but the Edge Is Broken
+
+Sometimes every application process is healthy and users still cannot
+reach the service.
+
+The failure may sit somewhere between them and the application: DNS, a
+CDN or edge proxy, a web application firewall, TLS certificate delivery,
+a load balancer, network routing, or an external identity provider.
+
+This is easy to misread because internal health checks can continue to
+pass. The origin may respond normally while the public hostname shows a
+certificate warning, redirects somewhere unexpected, or times out
+before the request reaches the application.
+
+Start with DNS:
+
+```bash
+# Where does the public hostname currently point?
+dig +short api.example.com
+
+# Do public resolvers return the same answer?
+dig @1.1.1.1 api.example.com
+dig @8.8.8.8 api.example.com
+```
+
+Then inspect the public HTTPS path:
+
+```bash
+# Does the failure happen before or after TLS is established?
+curl -vI https://api.example.com
+
+# Which certificate is actually being presented to users?
+openssl s_client \
+    -connect api.example.com:443 \
+    -servername api.example.com </dev/null 2>/dev/null |
+    openssl x509 -noout -subject -issuer -dates
+```
+
+If the origin address is known, compare it with the public edge without
+changing DNS:
+
+```bash
+# Does the origin work when the request keeps the correct hostname and SNI?
+curl -v \
+    --resolve api.example.com:443:ORIGIN_IP \
+    https://api.example.com/health
+```
+
+If the origin works but the public hostname does not, the application
+may be healthy while the edge path is broken.
+
+Check recent changes to DNS records, certificates, CDN or WAF
+configuration, origin mappings, load-balancer listeners, and redirect
+rules.
+
+Do not ask users to bypass a browser certificate or security warning
+until the hostname, certificate, and destination have been verified.
+
+A working origin does not mean the service is available. Users depend
+on the entire path between their browser and the application.
+
+---
+
 ## 3. Stop the Bleeding
 
 Once the scope is clear enough, prevent the failure from causing more
@@ -220,6 +290,7 @@ processes long enough to investigate:
 
 ```bash
 # Is Auto Scaling replacing instances before we can inspect them?
+# Temporarily suspend replacement while preserving the incident state.
 aws autoscaling suspend-processes \
     --auto-scaling-group-name app-asg \
     --scaling-processes Launch Terminate
@@ -254,6 +325,7 @@ Different failures need different responses.
 | Data corruption | Stop writes, isolate the damage, then restore |
 | External dependency failure | Degrade gracefully |
 | Regional outage | Fail over if the secondary environment is ready |
+| DNS, TLS, CDN, or edge failure | Restore the known-good edge configuration or fail over |
 
 Rollback is not automatically the safest option.
 
@@ -359,20 +431,34 @@ If data is corrupt, stop writes before trying to restore anything.
 Otherwise the system may continue producing bad data while recovery is
 already underway.
 
-### AWS instance failure
+### Cloud instance or node failure
 
-Before replacing an instance, confirm whether the problem belongs to the
-instance, the underlying host, or a shared dependency:
+Before replacing a cloud instance, determine whether the failure belongs
+to the workload, the virtual machine, the underlying host, the
+availability zone, or a shared dependency.
+
+Cloud providers expose this information through different tools. For
+example:
 
 ```bash
-# Does AWS report a failure in the instance or in the underlying host?
+# Does the EC2 instance or its underlying host report a failure?
 aws ec2 describe-instance-status \
     --instance-ids i-xxxxxxxxxxxxxxxxx \
     --include-all-instances
 ```
 
+Use the equivalent instance-health or node-health command for your cloud
+provider.
+
+Do not replace the instance merely because the application is unhealthy.
+
+First determine whether the problem is local to that instance or shared
+by every instance behind it. Replacement may remove the symptom while
+leaving the real failure untouched.
+
 How the instance should be replaced depends on whether it belongs to an
-Auto Scaling Group, carries local state, or serves traffic directly.
+Auto Scaling Group, Managed Instance Group, Virtual Machine Scale Set,
+or another managed pool, and whether it carries local state.
 
 The command is rarely the difficult part.
 
@@ -388,11 +474,15 @@ Not every incident is an outage.
 If an AWS access key, database password, API token, or private key is
 pushed to a public repository, assume it has already been copied.
 
-Deleting the file, removing the commit, or making the repository private
-is cleanup. It is not containment.
+The natural reaction is to delete the file, remove the commit, or make
+the repository private.
 
-Revoke or rotate the credential first. Rewriting Git history does not
-invalidate a key that still works.
+That is cleanup. It is not containment.
+
+Once a secret has been public, the first action is to revoke or rotate
+it. Public repositories are continuously scanned for credentials.
+Deleting a commit does not make the secret private again, and rewriting
+history does not invalidate a key that still works.
 
 Use Git to locate the offending change:
 
@@ -400,16 +490,26 @@ Use Git to locate the offending change:
 # Which recent commit first exposed the secret?
 git log --oneline -10
 
-# What exactly was added or changed in that commit?
-git show <commit>
+# Which files changed without printing their contents?
+git show --stat --oneline <commit>
+
+# Which paths were added or modified?
+git diff-tree \
+    --no-commit-id \
+    --name-only \
+    -r <commit>
 ```
 
 If the file has not been pushed, remove it from the index and amend the
 commit:
 
 ```bash
-# Has the secret not been pushed yet? Stop tracking the file.
+# Has the secret not been pushed yet? Prevent it from being staged again.
+printf '.env\n' >> .gitignore
+
+# Stop tracking the local secret file.
 git rm --cached .env
+git add .gitignore
 
 # Rewrite the latest local commit before it leaves the machine.
 git commit --amend
@@ -439,7 +539,7 @@ if necessary, and add secret scanning or pre-commit protection.
 
 The painful rule is simple:
 
-> Public once means compromised until proven otherwise.
+> Public once means compromised. Rotate first, investigate afterward.
 
 ---
 
