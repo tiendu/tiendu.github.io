@@ -6,333 +6,527 @@ categories: ["Automation, Systems & Engineering"]
 
 Production systems fail.
 
+After enough incidents, the pattern becomes painfully familiar. An alert
+fires. Someone notices a recent deployment. Another person sees a pod
+restarting. A database graph looks strange. Within minutes, several
+people are proposing different fixes.
+
+Restart the service.
+
+Scale the workers.
+
+Roll back the deployment.
+
+Restore the database.
+
+Run `terraform apply` again.
+
+Everyone is trying to help, but this is often the point where a
+recoverable failure becomes a larger incident. Too many things change at
+once. Logs disappear with restarted processes. Replacement instances
+take local evidence with them. A rollback introduces an incompatibility
+nobody checked. Five minutes later, production is still broken, but now
+the original failure is harder to see.
+
 What separates experienced engineers from everyone else is not how
-quickly they type commands -- it is how they decide what to do next.
+quickly they type commands. It is how they decide what to do next.
 
-When an incident begins, your objective is simple:
+During the first 30 minutes, the objective is simple:
 
-> Restore service **without making the outage worse.**
+> Restore service without making the outage worse.
 
-This is the checklist I keep in mind whenever production is burning.
-
-The examples below use common tools: Linux `systemctl`, Git, PostgreSQL,
-Kubernetes, and AWS CLI. The exact commands will differ between systems,
-but the order of operations should remain the same.
-
----
-
-## 1. Freeze
-
-Your first instinct is usually wrong.
-
-Do **not** immediately:
-
-- Restart every service
-- Redeploy
-- Scale everything
-- Restore backups
-- Run `terraform apply`
-
-Treat production like a crime scene.
-
-Preserve evidence before changing anything.
-
-Useful first checks:
-
-```bash
-# What changed recently?
-git log --oneline -5
-
-# What is running on this host?
-systemctl --failed
-
-# Which Kubernetes workloads are unhealthy?
-kubectl get pods -A
-
-# Any obvious AWS-level issue?
-aws ec2 describe-instance-status \
-    --include-all-instances \
-    --query '
-        InstanceStatuses[*].[
-            InstanceId,
-            InstanceState.Name,
-            SystemStatus.Status,
-            InstanceStatus.Status
-        ]
-    ' \
-    --output table
-```
-
-The goal here is not to fix the incident.
-
-The goal is to avoid destroying the evidence.
-
----
-
-## 2. Assess the Blast Radius
-
-Understand the scope before attempting a fix.
-
-Questions to answer:
-
-- Which services are affected?
-- Is every customer impacted?
-- Is this one host, one pod, one region, or one database?
-- Is data at risk?
-- Is the incident spreading?
-
-Useful commands:
-
-```bash
-# Linux service state
-systemctl status nginx
-systemctl status app.service
-
-# Recent system logs
-journalctl -u app.service -n 100 --no-pager
-
-# Kubernetes state
-kubectl get pods -A
-kubectl get events --sort-by=.metadata.creationTimestamp
-kubectl top nodes
-kubectl top pods
-
-# PostgreSQL connection and replication state
-psql -c "select now();"
-psql -c "select count(*) from pg_stat_activity;"
-psql -c "select pid, state, wait_event_type, wait_event from pg_stat_activity limit 20;"
-
-# Basic API health
-curl -fsS https://api.example.com/health
-```
-
-Metrics are more valuable than assumptions.
-
-Do not rely on one signal. A health endpoint may pass while a customer
-workflow is still broken.
-
----
-
-## 3. Stop the Bleeding
-
-Prevent the incident from becoming larger.
-
-This is not the same as fixing the root cause.
-
-Examples:
-
-```bash
-# Pause further Kubernetes rollouts
-kubectl rollout pause deployment/api
-
-# Stop workers from processing new jobs
-kubectl scale deployment/worker --replicas=0
-
-# Stop a noisy Linux service temporarily
-sudo systemctl stop app-worker.service
-
-# Suspend an AWS Auto Scaling process if it keeps replacing instances
-aws autoscaling suspend-processes   --auto-scaling-group-name app-asg   --scaling-processes Launch Terminate
-```
-
-Other options:
-
-- Disable a feature flag
-- Enable maintenance mode
-- Pause queue consumers
-- Rate-limit incoming traffic
-- Put a risky service in read-only mode
-
-The goal is stability, not recovery.
-
-You are closing the water valve before repairing the pipe.
-
----
-
-## 4. Choose the Recovery Strategy
-
-Not every outage should be handled the same way.
-
-| Failure | Recovery |
-|---|---|
-| Bad deployment | Roll back |
-| Bad configuration | Roll forward |
-| Bad host or service | Restart or replace carefully |
-| Hardware failure | Fail over |
-| Data corruption | Restore backup |
-| Database migration issue | Roll forward or restore |
-| External dependency | Graceful degradation |
-| Region outage | Fail over to another region |
-
-Do not roll back automatically.
-
-For example, if a deployment already migrated the database schema,
-rolling back only the application may create an even larger outage.
-
-Before choosing rollback, ask:
-
-- Did the database schema change?
-- Did background jobs already modify data?
-- Are messages in the queue still compatible?
-- Is the previous version still safe to run?
-
-A fast rollback is useful only when rollback is safe.
-
----
-
-## 5. Recover
-
-Make one controlled change at a time.
-
-### Kubernetes rollback
-
-```bash
-kubectl rollout history deployment/api
-kubectl rollout undo deployment/api
-kubectl rollout status deployment/api
-```
-
-### Linux service restart
-
-```bash
-sudo systemctl restart app.service
-sudo systemctl status app.service
-journalctl -u app.service -n 100 --no-pager
-```
-
-### Git revert
-
-```bash
-git log --oneline -5
-git revert <bad_commit>
-git push
-```
-
-### PostgreSQL quick checks
-
-```bash
-# Is the database accepting connections?
-psql -c "select 1;"
-
-# Is this node in recovery mode?
-psql -c "select pg_is_in_recovery();"
-
-# Replication lag, if applicable
-psql -c "select application_name, state, sync_state, replay_lag from pg_stat_replication;"
-```
-
-### AWS instance replacement
-
-```bash
-# Inspect instance health
-aws ec2 describe-instance-status   --instance-ids i-xxxxxxxxxxxxxxxxx   --include-all-instances
-
-# Detach a bad instance from an Auto Scaling Group
-aws autoscaling detach-instances   --instance-ids i-xxxxxxxxxxxxxxxxx   --auto-scaling-group-name app-asg   --should-decrement-desired-capacity
-```
-
-Avoid changing multiple systems simultaneously.
-
-If recovery fails, you should know exactly which change caused it.
-
----
-
-## 6. Validate
-
-Recovery is complete only when customers can successfully use the system
-again.
-
-Verify:
-
-- Error rates
-- Latency
-- Queue depth
-- Customer workflows
-- Database replication
-- Background jobs
-
-Useful checks:
-
-```bash
-# Health endpoint
-curl -fsS https://api.example.com/health
-
-# Simple customer-like request
-curl -fsS https://api.example.com/login
-
-# Kubernetes status
-kubectl get pods -A
-kubectl logs deploy/api --tail=100
-
-# Linux service status
-systemctl status app.service
-
-# PostgreSQL activity
-psql -c "select count(*) from pg_stat_activity;"
-```
-
-Infrastructure can appear healthy while users are still unable to
-complete their work.
-
-A green dashboard is not enough.
-
----
-
-## 7. Learn
-
-Once the incident is over, write the postmortem.
-
-Ask:
-
-1. What happened?
-2. Why did it happen?
-3. Why wasn't it detected sooner?
-4. What made recovery slower?
-5. How can we prevent it next time?
-
-Focus on improving the system -- not blaming people.
-
-A useful postmortem should create concrete follow-up work:
-
-- Add an alert
-- Improve a runbook
-- Add a rollback test
-- Make a migration backward-compatible
-- Add a feature flag
-- Improve deployment visibility
-
-The incident is wasted if nothing changes afterward.
-
----
-
-## Incident Runbook
+The exact tools change between systems. One day it is Linux, another day
+it is Kubernetes, PostgreSQL, AWS, or a bad Git commit. The order of
+operations changes much less:
 
 ```text
 Freeze
    |
    v
-Assess blast radius
+Understand the damage
    |
    v
-Stop the bleeding
+Contain it
    |
    v
-Choose recovery strategy
+Choose the safest recovery
    |
    v
-Recover
+Change one thing
    |
    v
-Validate
-   |
-   v
-Write the postmortem
+Validate as a user
 ```
 
-Keep this sequence simple.
+The difficult part is not remembering the commands. It is resisting the
+pressure to run them too early.
 
-Skipping steps usually creates a second incident.
+---
 
-Reliable engineers are not the ones who never experience outages.
+## 1. Freeze
 
-They are the ones who recover calmly, methodically, and predictably.
+The first useful action is often to stop.
+
+Not forever. Just long enough to understand what is happening.
+
+Do not immediately restart every service, redeploy the application,
+scale the cluster, restore a database, or run infrastructure changes.
+Those actions may be correct later, but they are poor substitutes for
+evidence.
+
+Start with the least destructive question:
+
+> What changed?
+
+```bash
+# What changed recently in the application?
+git log --oneline -5
+
+# Which services have failed on this host?
+systemctl --failed
+
+# Which Kubernetes workloads are unhealthy?
+kubectl get pods -A
+
+# Do the EC2 instance and its underlying host report healthy?
+aws ec2 describe-instance-status \
+    --include-all-instances \
+    --query 'InstanceStatuses[*].[InstanceId,InstanceState.Name,SystemStatus.Status,InstanceStatus.Status]' \
+    --output table
+```
+
+None of these commands fixes production. That is intentional.
+
+At this stage, the goal is to preserve the original failure long enough
+to understand it. A restart may clear the immediate symptom, but it may
+also erase the only useful logs. A new pod may start cleanly while the
+failed pod disappears. An Auto Scaling Group may replace instances until
+the environment no longer resembles the one that triggered the alert.
+
+Treat production like a crime scene.
+
+Observe before moving anything.
+
+---
+
+## 2. Assess the Blast Radius
+
+The first alert is rarely the whole incident.
+
+A failed health check may represent one broken endpoint. A database
+warning may be a symptom of an application opening too many
+connections. A pod in `Running` state may still return errors for every
+request. A customer may report that the platform is down when the
+failure affects only one workflow.
+
+The blast radius determines the recovery.
+
+If one worker is stuck, stopping the entire platform is unnecessary. If
+corrupt jobs are still consuming messages, restarting the API does
+nothing useful. If only one region is affected, a global rollback may
+damage healthy regions.
+
+Move from the customer-facing symptom inward.
+
+```bash
+# Can the customer-facing health check complete?
+curl -fsS https://api.example.com/health
+
+# Is the Linux service running, and what happened before it failed?
+systemctl status app.service
+journalctl -u app.service -n 100 --no-pager
+
+# Which Kubernetes workloads are unhealthy?
+kubectl get pods -A
+
+# Did the cluster record a recent scheduling or runtime failure?
+kubectl get events --sort-by=.metadata.creationTimestamp
+
+# Are nodes or pods under unusual resource pressure?
+kubectl top nodes
+kubectl top pods
+
+# Can PostgreSQL answer a basic query?
+psql -c "select now();"
+
+# Has the number of connected sessions grown unexpectedly?
+psql -c "select count(*) from pg_stat_activity;"
+
+# What are the current database sessions doing or waiting for?
+psql -c "
+    select pid, state, wait_event_type, wait_event
+    from pg_stat_activity
+    limit 20;
+"
+
+# Is this PostgreSQL node a primary or a standby?
+psql -c "select pg_is_in_recovery();"
+```
+
+Ask the questions that define the scope:
+
+- Which services are affected?
+- Is every customer impacted?
+- Is this one host, one pod, one database, or one region?
+- Is data at risk?
+- Is the failure still spreading?
+
+Do not trust one signal.
+
+A health endpoint may return `200 OK` while login is broken. A service
+may be `active (running)` while every request fails. PostgreSQL may
+accept connections while important queries are blocked behind a lock.
+Kubernetes may keep a pod alive even though the application inside it is
+useless.
+
+The blast radius is defined by what users cannot do, not by which box on
+a dashboard changed color.
+
+---
+
+## 3. Stop the Bleeding
+
+Once the scope is clear enough, prevent the failure from causing more
+damage.
+
+This is containment, not recovery.
+
+If a bad rollout is still progressing, pause it:
+
+```bash
+# Is a bad rollout still progressing? Pause it before more pods change.
+kubectl rollout pause deployment/api
+```
+
+If workers are consuming malformed messages or writing bad data, stop
+them:
+
+```bash
+# Are workers still processing harmful input? Stop them from taking new work.
+kubectl scale deployment/worker --replicas=0
+```
+
+If one Linux service is creating uncontrolled load, stop that service
+instead of rebooting the host:
+
+```bash
+# Is one worker creating uncontrolled load? Stop only that service.
+sudo systemctl stop app-worker.service
+```
+
+If an Auto Scaling Group is repeatedly replacing instances and
+destroying evidence faster than you can inspect it, suspend the relevant
+processes long enough to investigate:
+
+```bash
+# Is Auto Scaling replacing instances before we can inspect them?
+aws autoscaling suspend-processes \
+    --auto-scaling-group-name app-asg \
+    --scaling-processes Launch Terminate
+```
+
+Containment can also mean disabling a feature flag, pausing a queue,
+rate-limiting traffic, enabling maintenance mode, or making part of the
+system read-only.
+
+This often feels unsatisfying because the service is not yet recovered.
+
+But stability is progress.
+
+There is no point repairing the pipe while water is still pouring
+through it.
+
+---
+
+## 4. Choose the Recovery Strategy
+
+Only after the system is stable should you decide how to recover.
+
+Different failures need different responses.
+
+| Failure | Likely response |
+|---|---|
+| Bad application deployment | Roll back or revert |
+| Bad configuration | Restore a known-good configuration |
+| Failed host or instance | Replace or fail over |
+| Harmful background processing | Pause workers or consumers |
+| Database migration failure | Roll forward, restore, or run a compatible application version |
+| Data corruption | Stop writes, isolate the damage, then restore |
+| External dependency failure | Degrade gracefully |
+| Regional outage | Fail over if the secondary environment is ready |
+
+Rollback is not automatically the safest option.
+
+Imagine that the deployment introduced a new database column and a
+background worker has already written data using that schema. Rolling
+the application back may leave old code reading data it no longer
+understands.
+
+Before rolling back, ask:
+
+- Did the database schema change?
+- Did background jobs already modify data?
+- Are queued messages still compatible?
+- Is the previous application version still safe to run?
+- Can the recovery itself cause data loss?
+
+A fast rollback is useful only when rollback was designed to be safe.
+
+---
+
+## 5. Recover One Layer at a Time
+
+Once the recovery path is clear, make one controlled change.
+
+Do not restart the service, detach an instance, revert a commit, and
+change the database at the same time. If the system recovers, you will
+not know why. If it gets worse, you will not know which action caused
+it.
+
+### Kubernetes rollback
+
+Check the rollout history before undoing anything:
+
+```bash
+# Which deployment revisions are available?
+kubectl rollout history deployment/api
+
+# Is the previous revision known to be safe? Roll back deliberately.
+kubectl rollout undo deployment/api
+
+# Did the rollback complete successfully?
+kubectl rollout status deployment/api
+```
+
+### Linux service restart
+
+A restart can be appropriate when the process is wedged and its state is
+disposable. Restart the smallest possible unit, then inspect it
+immediately:
+
+```bash
+# Is the process wedged while its state remains disposable?
+sudo systemctl restart app.service
+
+# Did the service return to a healthy running state?
+sudo systemctl status app.service
+
+# What happened immediately after the restart?
+journalctl -u app.service -n 100 --no-pager
+```
+
+### Git revert
+
+For a bad change that has already been shared or deployed, `git revert`
+is usually safer than resetting history or force-pushing a branch.
+
+It creates a new commit that undoes the bad change while preserving an
+auditable history:
+
+```bash
+# Which recent commit introduced the bad change?
+git log --oneline -5
+
+# Create a new commit that safely undoes it.
+git revert <bad_commit>
+
+# Publish the revert through the normal deployment path.
+git push
+```
+
+This is technically a roll-forward recovery. Production moves forward
+to a new commit that neutralizes the broken one.
+
+### PostgreSQL
+
+A database restore should be a last resort, not the first reaction to an
+application failure.
+
+Before touching data, confirm the database state:
+
+```bash
+# Can the database still accept and answer a basic query?
+psql -c "select 1;"
+
+# Are replicas connected, synchronized, and catching up?
+psql -c "
+    select application_name, state, sync_state, replay_lag
+    from pg_stat_replication;
+"
+```
+
+If data is corrupt, stop writes before trying to restore anything.
+Otherwise the system may continue producing bad data while recovery is
+already underway.
+
+### AWS instance failure
+
+Before replacing an instance, confirm whether the problem belongs to the
+instance, the underlying host, or a shared dependency:
+
+```bash
+# Does AWS report a failure in the instance or in the underlying host?
+aws ec2 describe-instance-status \
+    --instance-ids i-xxxxxxxxxxxxxxxxx \
+    --include-all-instances
+```
+
+How the instance should be replaced depends on whether it belongs to an
+Auto Scaling Group, carries local state, or serves traffic directly.
+
+The command is rarely the difficult part.
+
+The difficult part is knowing whether the command removes the failure or
+removes the evidence.
+
+---
+
+## A Different Kind of Incident: Leaked Credentials
+
+Not every incident is an outage.
+
+If an AWS access key, database password, API token, or private key is
+pushed to a public repository, assume it has already been copied.
+
+Deleting the file, removing the commit, or making the repository private
+is cleanup. It is not containment.
+
+Revoke or rotate the credential first. Rewriting Git history does not
+invalidate a key that still works.
+
+Use Git to locate the offending change:
+
+```bash
+# Which recent commit first exposed the secret?
+git log --oneline -10
+
+# What exactly was added or changed in that commit?
+git show <commit>
+```
+
+If the file has not been pushed, remove it from the index and amend the
+commit:
+
+```bash
+# Has the secret not been pushed yet? Stop tracking the file.
+git rm --cached .env
+
+# Rewrite the latest local commit before it leaves the machine.
+git commit --amend
+```
+
+If it has already been pushed publicly, the order matters:
+
+```text
+Revoke or rotate
+   |
+   v
+Audit usage
+   |
+   v
+Remove the secret
+   |
+   v
+Clean Git history
+   |
+   v
+Add preventive controls
+```
+
+After rotating the credential, inspect where it was used and look for
+unexpected access. Then remove it from the repository, rewrite history
+if necessary, and add secret scanning or pre-commit protection.
+
+The painful rule is simple:
+
+> Public once means compromised until proven otherwise.
+
+---
+
+## 6. Validate as a User
+
+A successful command is not a successful recovery.
+
+`kubectl rollout status` may complete while customers still cannot log
+in. `systemctl` may report `active (running)` while the service returns
+errors. PostgreSQL may accept connections while important queries remain
+blocked.
+
+Validate from the outside in again:
+
+```bash
+# Does the basic service health check pass again?
+curl -fsS https://api.example.com/health
+
+# Can a small but real customer workflow complete?
+./scripts/smoke-test-production
+
+# Are the Kubernetes workloads stable after recovery?
+kubectl get pods -A
+
+# What is the application logging now?
+kubectl logs deployment/api --tail=100
+
+# Is the Linux service healthy from the host's point of view?
+systemctl status app.service
+
+# Is PostgreSQL activity returning to its normal range?
+psql -c "select count(*) from pg_stat_activity;"
+```
+
+The smoke test should exercise a small but complete workflow, not merely
+confirm that a process accepts TCP connections.
+
+Then watch the operational signals:
+
+- error rates are falling
+- latency is returning to normal
+- queues are draining
+- replication is healthy
+- background jobs are progressing
+- customer workflows complete successfully
+
+A green dashboard is useful.
+
+A successful customer workflow is better.
+
+---
+
+## After Recovery: Learn While the Details Are Fresh
+
+Once production is stable, the temptation is to move on.
+
+Everyone is tired. The service is back. The next task is already
+waiting.
+
+That is how the same incident returns.
+
+The most useful postmortems are not long documents written to satisfy a
+process. They capture the decisions that were difficult during the
+incident.
+
+What changed?
+
+Why did the failure spread?
+
+Why was the first alert misleading?
+
+What evidence disappeared?
+
+Which recovery step was unsafe or unclear?
+
+What required one specific person to remember something undocumented?
+
+The follow-up work should be concrete: improve the alert, write the
+missing runbook, test rollback before deployment, make the database
+migration backward-compatible, add a feature flag, preserve logs before
+restarts, add secret scanning, or remove long-lived credentials
+entirely.
+
+The point is not to identify who made the mistake.
+
+The point is to make the next incident less painful.
+
+The first 30 minutes are not about heroics. They are about keeping
+control.
+
