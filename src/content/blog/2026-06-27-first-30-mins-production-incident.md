@@ -189,8 +189,6 @@ useless.
 The blast radius is defined by what users cannot do, not by which box on
 a dashboard changed color.
 
----
-
 ### When the Application Is Healthy but the Edge Is Broken
 
 Sometimes every application process is healthy and users still cannot
@@ -306,6 +304,80 @@ But stability is progress.
 
 There is no point repairing the pipe while water is still pouring
 through it.
+
+### If the Incident Is a Leaked Credential
+
+Containment looks different when the incident is a credential pushed to
+a public repository.
+
+If an AWS access key, database password, API token, or private key is
+pushed to a public repository, assume it has already been copied.
+
+Deleting the file, removing the commit, or making the repository private
+is cleanup. It is not containment.
+
+Revoke or rotate the credential first.
+
+Public repositories are continuously scanned for credentials.
+Deleting a commit does not make the secret private again, and rewriting
+history does not invalidate a key that still works.
+
+Use Git to locate the offending change:
+
+```bash
+# Which recent commit first exposed the secret?
+git log --oneline -10
+
+# Which files changed without printing their contents?
+git show --stat --oneline <commit>
+
+# Which paths were added or modified?
+git diff-tree \
+    --no-commit-id \
+    --name-only \
+    -r <commit>
+```
+
+If the file has not been pushed, remove it from the index and amend the
+commit:
+
+```bash
+# Has the secret not been pushed yet? Prevent it from being staged again.
+printf '.env\n' >> .gitignore
+
+# Stop tracking the local secret file.
+git rm --cached .env
+git add .gitignore
+
+# Rewrite the latest local commit before it leaves the machine.
+git commit --amend
+```
+
+If it has already been pushed publicly, the order matters:
+
+```text
+Revoke or rotate
+   |
+   v
+Audit usage
+   |
+   v
+Remove the secret
+   |
+   v
+Clean Git history
+   |
+   v
+Add preventive controls
+```
+
+After rotating the credential, inspect where it was used and look for
+unexpected access. Then remove it from the repository, rewrite history
+if necessary, and add secret scanning or pre-commit protection.
+
+The painful rule is simple:
+
+> Public once means compromised. Rotate first, investigate afterward.
 
 ---
 
@@ -464,82 +536,6 @@ The command is rarely the difficult part.
 
 The difficult part is knowing whether the command removes the failure or
 removes the evidence.
-
----
-
-## A Different Kind of Incident: Leaked Credentials
-
-Not every incident is an outage.
-
-If an AWS access key, database password, API token, or private key is
-pushed to a public repository, assume it has already been copied.
-
-The natural reaction is to delete the file, remove the commit, or make
-the repository private.
-
-That is cleanup. It is not containment.
-
-Once a secret has been public, the first action is to revoke or rotate
-it. Public repositories are continuously scanned for credentials.
-Deleting a commit does not make the secret private again, and rewriting
-history does not invalidate a key that still works.
-
-Use Git to locate the offending change:
-
-```bash
-# Which recent commit first exposed the secret?
-git log --oneline -10
-
-# Which files changed without printing their contents?
-git show --stat --oneline <commit>
-
-# Which paths were added or modified?
-git diff-tree \
-    --no-commit-id \
-    --name-only \
-    -r <commit>
-```
-
-If the file has not been pushed, remove it from the index and amend the
-commit:
-
-```bash
-# Has the secret not been pushed yet? Prevent it from being staged again.
-printf '.env\n' >> .gitignore
-
-# Stop tracking the local secret file.
-git rm --cached .env
-git add .gitignore
-
-# Rewrite the latest local commit before it leaves the machine.
-git commit --amend
-```
-
-If it has already been pushed publicly, the order matters:
-
-```text
-Revoke or rotate
-   |
-   v
-Audit usage
-   |
-   v
-Remove the secret
-   |
-   v
-Clean Git history
-   |
-   v
-Add preventive controls
-```
-
-After rotating the credential, inspect where it was used and look for
-unexpected access. Then remove it from the repository, rewrite history
-if necessary, and add secret scanning or pre-commit protection.
-
-The painful rule is simple:
-
-> Public once means compromised. Rotate first, investigate afterward.
 
 ---
 
