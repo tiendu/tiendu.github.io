@@ -1,5 +1,5 @@
 ---
-title: The First 30 Minutes of a Production Incident
+title: "The First 30 Minutes of a Production Incident"
 date: 2026-06-27
 categories: ["Automation, Systems & Engineering"]
 ---
@@ -50,7 +50,17 @@ systemctl --failed
 kubectl get pods -A
 
 # Any obvious AWS-level issue?
-aws ec2 describe-instance-status   --include-all-instances   --query 'InstanceStatuses[*].[InstanceId,InstanceState.Name,SystemStatus.Status,InstanceStatus.Status]'   --output table
+aws ec2 describe-instance-status \
+    --include-all-instances \
+    --query '
+        InstanceStatuses[*].[
+            InstanceId,
+            InstanceState.Name,
+            SystemStatus.Status,
+            InstanceStatus.Status
+        ]
+    ' \
+    --output table
 ```
 
 The goal here is not to fix the incident.
