@@ -431,12 +431,22 @@ it.
 
 Check the rollout history before undoing anything:
 
+Kubernetes cannot roll back a paused Deployment. If the rollout was
+paused during containment, resume it immediately before applying the
+rollback.
+
 ```bash
 # Which deployment revisions are available?
 kubectl rollout history deployment/api
 
-# Is the previous revision known to be safe? Roll back deliberately.
-kubectl rollout undo deployment/api
+# What changed in the revision believed to be safe?
+kubectl rollout history deployment/api --revision=<revision>
+
+# Is the Deployment still paused? Resume it before rollback.
+kubectl rollout resume deployment/api
+
+# Roll back to the revision verified as safe.
+kubectl rollout undo deployment/api --to-revision=<revision>
 
 # Did the rollback complete successfully?
 kubectl rollout status deployment/api
@@ -585,6 +595,18 @@ Then watch the operational signals:
 A green dashboard is useful.
 
 A successful customer workflow is better.
+
+Once the service is stable, reverse any temporary containment actions:
+
+```bash
+# Is the incident stable? Restore normal Auto Scaling behavior.
+aws autoscaling resume-processes \
+    --auto-scaling-group-name app-asg \
+    --scaling-processes Launch Terminate
+```
+
+Any temporary containment action must have an owner and an explicit
+reversal step. A forgotten safety measure can become the next incident.
 
 ---
 
