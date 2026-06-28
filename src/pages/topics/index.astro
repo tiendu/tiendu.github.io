@@ -1,0 +1,37 @@
+---
+import { getCollection } from "astro:content";
+import { TOPIC_DETAILS, getTopicOrder } from "../../data/topics";
+import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
+import { getTopicRoute } from "../../utils/posts";
+
+const posts = await getCollection("blog", ({ data }) => !data.draft);
+const topics = [...new Set(posts.map((post) => post.data.topic))]
+  .map((topic) => ({
+    name: topic,
+    count: posts.filter((post) => post.data.topic === topic).length,
+    description:
+      topic in TOPIC_DETAILS
+        ? TOPIC_DETAILS[topic as keyof typeof TOPIC_DETAILS].description
+        : `Notes filed under ${topic}.`,
+  }))
+  .sort((a, b) => getTopicOrder(a.name) - getTopicOrder(b.name));
+---
+
+<SystemPageLayout
+  title="Topics"
+  moduleCode="TOPIC-DIRECTORY"
+  description="Browse the archive through six clear subject areas. Each note belongs to one topic."
+  counter={`${topics.length} TOPICS`}
+  active="topics"
+>
+  <div class="taxonomy-grid">
+    {topics.map((topic, index) => (
+      <article class="taxonomy-card">
+        <p>{String(index + 1).padStart(2, "0")} / TOPIC</p>
+        <h2><a href={getTopicRoute(topic.name)}>{topic.name}</a></h2>
+        <p>{topic.description}</p>
+        <span>{topic.count} POSTS</span>
+      </article>
+    ))}
+  </div>
+</SystemPageLayout>

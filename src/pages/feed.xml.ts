@@ -1,5 +1,6 @@
 import { getCollection } from "astro:content";
 import type { APIRoute } from "astro";
+import { SITE } from "../config/site";
 import { getPostRoute, sortPosts } from "../utils/posts";
 
 const escapeXml = (value: string) =>
@@ -16,24 +17,25 @@ export const GET: APIRoute = async ({ site }) => {
   const posts = sortPosts(await getCollection("blog", ({ data }) => !data.draft));
   const items = posts.map((post) => {
     const url = new URL(getPostRoute(post), site).href;
-    const description = post.data.description ?? "A note by Tien Du.";
 
     return `
       <item>
         <title>${escapeXml(post.data.title)}</title>
         <link>${url}</link>
-        <guid>${url}</guid>
+        <guid isPermaLink="true">${url}</guid>
         <pubDate>${post.data.date.toUTCString()}</pubDate>
-        <description>${escapeXml(description)}</description>
+        <description>${escapeXml(post.data.description)}</description>
+        <category>${escapeXml(post.data.topic)}</category>
       </item>`;
   }).join("");
 
   const xml = `<?xml version="1.0" encoding="UTF-8" ?>
     <rss version="2.0">
       <channel>
-        <title>Tien's notes</title>
+        <title>${escapeXml(SITE.title)}</title>
         <link>${site.href}</link>
-        <description>Notes on platform operations, reliability, automation, scientific software, and engineering.</description>
+        <description>${escapeXml(SITE.description)}</description>
+        <language>${SITE.language}</language>
         ${items}
       </channel>
     </rss>`;

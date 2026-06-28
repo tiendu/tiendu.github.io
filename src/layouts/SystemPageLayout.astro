@@ -3,12 +3,15 @@ import SystemHeader from "../components/SystemHeader.astro";
 import BaseLayout from "./BaseLayout.astro";
 import type { NavigationKey } from "../config/site";
 
+type StructuredData = Record<string, unknown>;
+
 interface Props {
   title: string;
   description?: string;
   moduleCode?: string;
   counter?: string;
   active?: NavigationKey;
+  structuredData?: StructuredData | StructuredData[];
 }
 
 const {
@@ -17,10 +20,16 @@ const {
   moduleCode = title.toUpperCase().replace(/[^A-Z0-9]+/g, "-"),
   counter,
   active,
+  structuredData,
 } = Astro.props;
 ---
 
-<BaseLayout title={title} description={description} system>
+<BaseLayout
+  title={title}
+  description={description}
+  structuredData={structuredData}
+  system
+>
   <div class="system-page-shell">
     <SystemHeader active={active} />
 

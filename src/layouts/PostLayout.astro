@@ -1,14 +1,19 @@
 ---
 import type { MarkdownHeading } from "astro";
+import { getCollection } from "astro:content";
 import BackToTop from "../components/BackToTop.astro";
 import SystemHeader from "../components/SystemHeader.astro";
 import TableOfContents from "../components/TableOfContents.astro";
+import { SITE } from "../config/site";
 import {
+  formatCompactDate,
   formatDate,
-  getLabelRoute,
-  getPostLabels,
+  getTopicRoute,
+  getPostRoute,
   getPostSlug,
+  getRelatedPosts,
   readingTime,
+  wordCount,
   type BlogPost,
 } from "../utils/posts";
 import BaseLayout from "./BaseLayout.astro";
@@ -19,11 +24,14 @@ interface Props {
 }
 
 const { post, headings } = Astro.props;
-const labels = getPostLabels(post);
 const hasToc = headings.some(({ depth }) => depth === 2 || depth === 3);
-const description =
-  post.data.description ??
-  `A note by Tien Du, published ${formatDate(post.data.date)}.`;
+const allPosts = await getCollection("blog", ({ data }) => !data.draft);
+const relatedPosts = getRelatedPosts(post, allPosts);
+const description = post.data.description;
+const articleUrl = new URL(
+  getPostRoute(post),
+  Astro.site ?? new URL(SITE.url),
+).href;
 
 const year = post.data.date.getUTCFullYear();
 const month = String(post.data.date.getUTCMonth() + 1).padStart(2, "0");
@@ -31,9 +39,73 @@ const day = String(post.data.date.getUTCDate()).padStart(2, "0");
 const docId = `LOG-${year}${month}${day}-${getPostSlug(post)
   .slice(0, 12)
   .toUpperCase()}`;
+const publishedDate = post.data.date.toISOString();
+const modifiedDate = (post.data.updatedDate ?? post.data.date).toISOString();
+const structuredData = [
+  {
+    "@type": "BlogPosting",
+    "@id": `${articleUrl}#article`,
+    headline: post.data.title,
+    description,
+    url: articleUrl,
+    mainEntityOfPage: articleUrl,
+    datePublished: publishedDate,
+    dateModified: modifiedDate,
+    inLanguage: SITE.language,
+    articleSection: post.data.topic,
+    keywords: post.data.keywords.join(", "),
+    wordCount: wordCount(post.body ?? ""),
+    author: { "@id": `${SITE.url}/#person` },
+    publisher: { "@id": `${SITE.url}/#person` },
+    isPartOf: { "@id": `${SITE.url}/#website` },
+  },
+  {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: SITE.url,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Posts",
+        item: `${SITE.url}/posts/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: post.data.topic,
+        item: new URL(getTopicRoute(post.data.topic), SITE.url).href,
+      },
+      {
+        "@type": "ListItem",
+        position: 4,
+        name: post.data.title,
+        item: articleUrl,
+      },
+    ],
+  },
+];
 ---
 
-<BaseLayout title={post.data.title} description={description} article>
+<BaseLayout
+  title={post.data.title}
+  description={description}
+  structuredData={structuredData}
+  article
+>
+  <Fragment slot="head">
+    <meta property="article:published_time" content={publishedDate} />
+    <meta property="article:modified_time" content={modifiedDate} />
+    <meta property="article:section" content={post.data.topic} />
+    {post.data.keywords.map((keyword) => (
+      <meta property="article:tag" content={keyword} />
+    ))}
+  </Fragment>
+
   <div class="system-page-shell article-page-shell">
     <SystemHeader active="posts" />
 
@@ -44,12 +116,10 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post)
           {post.data.title}
         </h1>
 
-        {post.data.description && (
-          <p class="article-description">{post.data.description}</p>
-        )}
+        <p class="article-description">{description}</p>
 
         <div class="post-meta" aria-label="Document metadata">
-          <time class="dt-published" datetime={post.data.date.toISOString()}>
+          <time class="dt-published" datetime={publishedDate}>
             {formatDate(post.data.date)}
           </time>
           <span aria-hidden="true">·</span>
@@ -62,15 +132,14 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post)
           )}
         </div>
 
-        {labels.length > 0 && (
-          <ul class="post-labels" aria-label="Post tags">
-            {labels.map((label) => (
-              <li>
-                <a href={getLabelRoute(label)}>{label}</a>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div class="post-taxonomy" aria-label="Post classification">
+          <p class="post-topic">
+            <span>TOPIC</span>
+            <a href={getTopicRoute(post.data.topic)}>
+              {post.data.topic}
+            </a>
+          </p>
+        </div>
       </header>
 
       <div class:list={["post-layout", { "no-toc": !hasToc }]}>
@@ -82,6 +151,30 @@ const docId = `LOG-${year}${month}${day}-${getPostSlug(post)
           </div>
         </article>
       </div>
+
+      {relatedPosts.length > 0 && (
+        <section class="related-posts" aria-labelledby="related-posts-title">
+          <header>
+            <p class="article-doc-strip">RELATED / SAME SYSTEM</p>
+            <h2 id="related-posts-title">Continue reading</h2>
+          </header>
+          <ol>
+            {relatedPosts.map((relatedPost) => (
+              <li>
+                <time datetime={relatedPost.data.date.toISOString()}>
+                  {formatCompactDate(relatedPost.data.date)}
+                </time>
+                <div>
+                  <a href={getPostRoute(relatedPost)}>
+                    {relatedPost.data.title}
+                  </a>
+                  <span>{relatedPost.data.topic}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <footer class="article-system-footer">
         <a href="/posts/">LOG ARCHIVE</a>

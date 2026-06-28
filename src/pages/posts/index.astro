@@ -3,7 +3,6 @@ import { getCollection } from "astro:content";
 import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
 import {
   formatCompactDate,
-  getPostLabels,
   getPostRoute,
   readingTime,
   sortPosts,
@@ -15,10 +14,7 @@ const posts = sortPosts(
 const pinned = posts.filter(({ data }) => data.pinned);
 const normalPosts = posts.filter(({ data }) => !data.pinned);
 
-const labelLine = (post: (typeof posts)[number]) => {
-  const labels = getPostLabels(post);
-  return labels.length > 0 ? labels.join(" / ") : "GENERAL NOTES";
-};
+const labelLine = (post: (typeof posts)[number]) => post.data.topic;
 ---
 
 <SystemPageLayout
@@ -42,7 +38,7 @@ const labelLine = (post: (typeof posts)[number]) => {
           <span>PIN</span>
           <span>DATE</span>
           <span>SUBJECT</span>
-          <span>CLASS / RUNTIME</span>
+          <span>TOPIC / RUNTIME</span>
         </div>
 
         <ol class="log-list">
@@ -82,7 +78,7 @@ const labelLine = (post: (typeof posts)[number]) => {
             <span>ID</span>
             <span>DATE</span>
             <span>SUBJECT</span>
-            <span>CLASS / RUNTIME</span>
+            <span>TOPIC / RUNTIME</span>
           </div>
 
           <ol class="log-list">

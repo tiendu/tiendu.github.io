@@ -1,0 +1,29 @@
+---
+import { getCollection } from "astro:content";
+import TopicArchive from "../../../components/TopicArchive.astro";
+import { getTopicDescription, getTopicOrder } from "../../../data/topics";
+import { slugifyLabel } from "../../../utils/posts";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog", ({ data }) => !data.draft);
+  const topics = [...new Set(posts.map((post) => post.data.topic))].sort(
+    (a, b) => getTopicOrder(a) - getTopicOrder(b) || a.localeCompare(b),
+  );
+
+  return topics.map((topic) => ({
+    params: { slug: slugifyLabel(topic) },
+    props: {
+      topic,
+      posts: posts.filter((post) => post.data.topic === topic),
+    },
+  }));
+}
+
+const { topic, posts } = Astro.props;
+---
+
+<TopicArchive
+  name={topic}
+  description={getTopicDescription(topic)}
+  posts={posts}
+/>

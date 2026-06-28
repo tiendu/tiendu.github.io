@@ -1,0 +1,108 @@
+---
+import { SITE } from "../config/site";
+import SystemPageLayout from "../layouts/SystemPageLayout.astro";
+import {
+  formatCompactDate,
+  getPostRoute,
+  getTopicRoute,
+  readingTime,
+  sortPosts,
+  type BlogPost,
+} from "../utils/posts";
+
+interface Props {
+  name: string;
+  description: string;
+  posts: BlogPost[];
+}
+
+const { name, description, posts } = Astro.props;
+const sortedPosts = sortPosts(posts);
+const route = getTopicRoute(name);
+const pageUrl = new URL(route, Astro.site ?? new URL(SITE.url)).href;
+const structuredData = [
+  {
+    "@type": "CollectionPage",
+    "@id": `${pageUrl}#collection`,
+    name: `${name} topic`,
+    description,
+    url: pageUrl,
+    inLanguage: SITE.language,
+    isPartOf: { "@id": `${SITE.url}/#website` },
+    about: name,
+  },
+  {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: SITE.url,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Topics",
+        item: `${SITE.url}/topics/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name,
+        item: pageUrl,
+      },
+    ],
+  },
+];
+---
+
+<SystemPageLayout
+  title={name}
+  moduleCode="TOPIC-ARCHIVE"
+  description={description}
+  counter={`${sortedPosts.length} RECORDS`}
+  structuredData={structuredData}
+  active="topics"
+>
+  <nav class="taxonomy-breadcrumb" aria-label="Breadcrumb">
+    <a href="/topics/">TOPIC INDEX</a>
+    <span aria-hidden="true">/</span>
+    <span>{name.toUpperCase()}</span>
+  </nav>
+
+  <section class="archive-section taxonomy-archive" aria-labelledby="topic-records-title">
+    <header class="archive-section-header">
+      <div>
+        <p class="system-section-code">INDEX / TOPIC</p>
+        <h2 id="topic-records-title">Notes about {name}</h2>
+      </div>
+      <span>{sortedPosts.length} RECORDS</span>
+    </header>
+
+    <div class="log-table-head" aria-hidden="true">
+      <span>ID</span>
+      <span>DATE</span>
+      <span>SUBJECT</span>
+      <span>TOPIC / RUNTIME</span>
+    </div>
+
+    <ol class="log-list">
+      {sortedPosts.map((post, index) => (
+        <li class="log-entry">
+          <span class="log-number">{String(index + 1).padStart(3, "0")}</span>
+          <time class="log-date" datetime={post.data.date.toISOString()}>
+            {formatCompactDate(post.data.date)}
+          </time>
+          <div class="log-main">
+            <h3><a href={getPostRoute(post)}>{post.data.title}</a></h3>
+          </div>
+          <p class="log-subline">
+            {post.data.topic}<br />
+            <span>{readingTime(post.body ?? "")} MIN READ</span>
+          </p>
+        </li>
+      ))}
+    </ol>
+  </section>
+</SystemPageLayout>

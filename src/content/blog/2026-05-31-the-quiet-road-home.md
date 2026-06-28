@@ -1,7 +1,15 @@
 ---
 title: "The Quiet Road Home"
 date: 2026-05-31
-categories: ["Personal Notes & Reflections"]
+description: "A personal essay about driving home late on a Sunday night, observing other lives in passing, and confronting loneliness, time, and ordinary existence."
+topic: "Essays & Career"
+keywords:
+  - "personal essay"
+  - "loneliness"
+  - "reflection"
+  - "life"
+  - "time"
+urlSlug: "the-quiet-road-home"
 ---
 
 It was around 11 PM when I was driving home.

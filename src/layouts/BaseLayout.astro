@@ -11,6 +11,8 @@ import "../styles/global.css";
 import "../styles/system.css";
 import "../styles/article.css";
 
+type StructuredData = Record<string, unknown>;
+
 interface Props {
   title?: string;
   description?: string;
@@ -19,6 +21,7 @@ interface Props {
   article?: boolean;
   terminal?: boolean;
   system?: boolean;
+  structuredData?: StructuredData | StructuredData[];
 }
 
 const {
@@ -29,24 +32,66 @@ const {
   article = false,
   terminal = false,
   system = false,
+  structuredData = [],
 } = Astro.props;
 
-const pageTitle = title ? `${title} · ${SITE.title}` : SITE.title;
-const siteBase = Astro.site ?? Astro.url.origin;
+const pageTitle = title
+  ? article
+    ? title
+    : `${title} · ${SITE.shortTitle}`
+  : SITE.title;
+const siteBase = Astro.site ?? new URL(SITE.url);
 const canonicalPath = Astro.url.pathname.replace(/\.html\/$/, ".html");
 const canonical = new URL(canonicalPath, siteBase);
 const socialImage = image ? new URL(image, siteBase) : undefined;
 const resolvedImageAlt =
   imageAlt ?? (title ? `${title} — ${SITE.title}` : SITE.title);
 const usesSystemChrome = system || article;
+const additionalStructuredData = Array.isArray(structuredData)
+  ? structuredData
+  : [structuredData];
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": `${SITE.url}/#person`,
+      name: SITE.author,
+      url: SITE.url,
+      jobTitle: SITE.role,
+      sameAs: [SITE.github, SITE.linkedin],
+      knowsAbout: [
+        "Platform operations",
+        "Site reliability engineering",
+        "Cloud infrastructure",
+        "Software engineering",
+        "Bioinformatics",
+        "Scientific computing",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE.url}/#website`,
+      url: SITE.url,
+      name: SITE.title,
+      alternateName: SITE.shortTitle,
+      description: SITE.description,
+      inLanguage: SITE.language,
+      publisher: { "@id": `${SITE.url}/#person` },
+    },
+    ...additionalStructuredData,
+  ],
+};
+const serializedJsonLd = JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={SITE.language}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
+    <meta name="author" content={SITE.author} />
     <meta name="description" content={description} />
     <meta name="theme-color" content={terminal || usesSystemChrome ? "#030805" : "#f3efe5"} />
     <link rel="canonical" href={canonical} />
@@ -59,6 +104,7 @@ const usesSystemChrome = system || article;
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="en_US" />
     {
       socialImage && (
         <>
@@ -89,6 +135,8 @@ const usesSystemChrome = system || article;
       title={SITE.title}
       href="/feed.xml"
     />
+    <script is:inline type="application/ld+json" set:html={serializedJsonLd}></script>
+    <slot name="head" />
     <title>{pageTitle}</title>
   </head>
   <body

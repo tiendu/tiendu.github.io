@@ -24,9 +24,13 @@ const blog = defineCollection({
     title: z.string(),
     date: z.coerce.date(),
     updatedDate: z.coerce.date().optional(),
-    description: z.string().optional(),
-    categories: stringList,
-    tags: stringList,
+    description: z.string().min(50),
+    topic: z.string().min(1),
+    keywords: stringList,
+    urlSlug: z
+      .string()
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+      .optional(),
     pinned: z.boolean().default(false),
     draft: z.boolean().default(false),
   }),
