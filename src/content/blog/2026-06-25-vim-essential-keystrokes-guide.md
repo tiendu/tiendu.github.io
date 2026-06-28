@@ -10,7 +10,6 @@ keywords:
   - "keyboard workflow"
   - "command line"
 urlSlug: "vim-crucial-keystrokes"
-pinned: true
 ---
 
 You do not need to memorize hundreds of Vim commands.

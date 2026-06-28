@@ -10,6 +10,7 @@ keywords:
   - "FM-index"
   - "Burrows-Wheeler transform"
 urlSlug: "genome-search"
+pinned: true
 ---
 
 Bioinformatics has a strange way of making simple problems enormous.

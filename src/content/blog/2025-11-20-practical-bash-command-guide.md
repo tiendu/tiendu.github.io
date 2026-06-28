@@ -10,7 +10,6 @@ keywords:
   - "command line"
   - "automation"
 urlSlug: "bash-useful-stuff"
-pinned: true
 ---
 
 A condensed, practical Bash reference for day-to-day scripting.

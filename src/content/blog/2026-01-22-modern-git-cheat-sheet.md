@@ -10,7 +10,6 @@ keywords:
   - "Git bisect"
   - "cheat sheet"
 urlSlug: "git-minimal-cheatsheet"
-pinned: true
 ---
 
 A condensed Git reference for day-to-day work. Focus: modern commands, clean commits, safe history, and recovery when things go wrong.

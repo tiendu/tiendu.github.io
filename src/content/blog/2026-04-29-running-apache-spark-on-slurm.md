@@ -10,6 +10,7 @@ keywords:
   - "distributed computing"
   - "bioinformatics"
 urlSlug: "spark-on-slurm"
+pinned: true
 ---
 
 Slurm is good at giving you machines.

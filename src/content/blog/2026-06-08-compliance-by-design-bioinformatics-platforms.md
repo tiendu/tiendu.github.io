@@ -10,6 +10,7 @@ keywords:
   - "data governance"
   - "platform engineering"
 urlSlug: "compliance-by-design-examples"
+pinned: true
 ---
 
 Compliance frameworks tell you what matters.

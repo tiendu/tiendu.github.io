@@ -10,7 +10,6 @@ keywords:
   - "FASTA"
   - "FASTQ"
 urlSlug: "oneliners-for-bioinformatics"
-pinned: true
 ---
 
 Bioinformatics work often involves small file transformations: counting reads, checking sequence lengths, converting between FASTQ and FASTA, joining tables, filtering BLAST output, or extracting a region from a sequence.

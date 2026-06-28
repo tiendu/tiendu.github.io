@@ -10,7 +10,6 @@ keywords:
   - "build automation"
   - "developer tools"
 urlSlug: "automation-makefile"
-pinned: true
 ---
 
 Every software project eventually grows a small layer of automation.
