@@ -1,750 +1,591 @@
 ---
-title: "How Genome Search Became Fast: From K-mers to FM-Indexes"
+title: "From HELLOWORLD to Genome Search: How String Indexes Work"
 date: 2026-02-07
-description: "How k-mers, hash tables, suffix arrays, the Burrows-Wheeler transform, and FM-indexes make large-scale genome and sequence search practical."
+description: "A simple explanation of how indexes, seeds, hash tables, FM-indexes, minimizers, and sketches make repeated string search fast."
 topic: "Bioinformatics Engineering"
 keywords:
   - "bioinformatics"
+  - "string search"
+  - "genome search"
   - "sequence search"
+  - "indexing"
   - "k-mers"
   - "FM-index"
-  - "Burrows-Wheeler transform"
 urlSlug: "genome-search"
 pinned: true
 ---
 
-Bioinformatics has a strange way of making simple problems enormous.
+Genome search sounds like a specialized biological problem.
 
-Searching for a short sequence inside a genome sounds easy.
+At its core, it is a string-search problem.
 
-A sequence is just text.
-
-A genome is just a very long string.
-
-So why not scan it from beginning to end?
-
-That works for small examples.
-
-It does not work well when the string has millions or billions of bases, when there are thousands of queries, when errors are allowed, or when the same reference genome must be searched again and again.
-
-At that scale, performance is not solved by deleting data.
-
-It is solved by organizing data so most of the search never happens.
-
-That idea sits behind many tools bioinformaticians use every day:
-
-- BLAST
-- BWA
-- Bowtie
-- minimap2
-- Kraken
-- Mash
-- DIAMOND
-- MMseqs2
-
-They look different from the outside, but many of them follow the same pattern:
+A DNA sequence is a very long string written with a four-character alphabet:
 
 ```text
-Index
-↓
-Find candidates
-↓
-Verify matches
+A C G T
 ```
 
-This post explains how genome search became fast, starting from brute force search and moving toward k-mers, hash tables, suffix arrays, FM-indexes, minimizers, and sketches.
+Before dealing with mutations, sequencing errors, or DNA strands, the basic engineering question is familiar:
+
+> How do we find a short string inside a much larger string without checking every position?
+
+We can understand that problem with ordinary text:
+
+```text
+HELLOWORLDHELLOTHEREHELLOWORLD
+```
+
+Suppose we want to find:
+
+```text
+WORLD
+```
+
+For one small search, scanning the whole string is fine.
+
+The problem changes when:
+
+- the text contains billions of characters
+- the same text is searched repeatedly
+- millions of queries must be processed
+- small differences are allowed
+
+At that scale, fast search is usually not about comparing characters faster.
+
+It is about organizing the data so most comparisons never happen.
 
 ---
 
 ## Table of Contents
 
-1. [The Naive Search](#the-naive-search)
-2. [The Phone Book Problem](#the-phone-book-problem)
-3. [First Idea: Break the Genome into K-mers](#first-idea-break-the-genome-into-k-mers)
-4. [Candidate Generation and Verification](#candidate-generation-and-verification)
-5. [Why K Matters](#why-k-matters)
-6. [How BLAST Uses This Idea](#how-blast-uses-this-idea)
-7. [Hash Tables: Fast Lookup, More Memory](#hash-tables-fast-lookup-more-memory)
-8. [Exact Matching Is Not Enough](#exact-matching-is-not-enough)
-9. [Reverse Complements](#reverse-complements)
-10. [Circular Sequences](#circular-sequences)
-11. [Suffix Arrays: Sorting All Suffixes](#suffix-arrays-sorting-all-suffixes)
-12. [Burrows-Wheeler Transform](#burrows-wheeler-transform)
-13. [FM-Index: Searching Backward](#fm-index-searching-backward)
-14. [Why BWA and Bowtie Use This Idea](#why-bwa-and-bowtie-use-this-idea)
-15. [Hash Index vs FM-Index](#hash-index-vs-fm-index)
-16. [Minimizers: Index Fewer K-mers](#minimizers-index-fewer-k-mers)
-17. [Sketches: Comparing Without Full Alignment](#sketches-comparing-without-full-alignment)
-18. [The Pattern Behind Many Tools](#the-pattern-behind-many-tools)
-19. [Why Deleting Data Is the Wrong Instinct](#why-deleting-data-is-the-wrong-instinct)
-20. [A Practical Mental Model](#a-practical-mental-model)
+1. [Start with a Linear Scan](#start-with-a-linear-scan)
+2. [Repeated Search Needs an Index](#repeated-search-needs-an-index)
+3. [Find Candidates, Then Verify Them](#find-candidates-then-verify-them)
+4. [Choose the Structure for the Question](#choose-the-structure-for-the-question)
+5. [Hash Indexes: Fast but Memory-Hungry](#hash-indexes-fast-but-memory-hungry)
+6. [Compact Exact Search: Suffix Arrays and FM-Indexes](#compact-exact-search-suffix-arrays-and-fm-indexes)
+7. [Store Less: Minimizers and Sketches](#store-less-minimizers-and-sketches)
+8. [How the Same Ideas Power Genome Search](#how-the-same-ideas-power-genome-search)
+9. [The General Engineering Pattern](#the-general-engineering-pattern)
 
 ---
 
-## The Naive Search
+## Start with a Linear Scan
 
-Imagine a tiny reference genome:
-
-```text
-ACGTTGACCTGACGTTGACCTGA
-```
-
-And a query:
+Consider:
 
 ```text
-TGACCT
+HELLOWORLDHELLOTHEREHELLOWORLD
 ```
 
-The simplest approach is:
+To find `WORLD`, the simplest method is to try every possible starting position:
 
 ```text
-Check position 1
-Check position 2
-Check position 3
-Check position 4
-...
+HELLO...
+ ELLOW...
+  LLOWO...
+   LOWOR...
+    OWORL...
+     WORLD...  <- match
 ```
 
-At every position, compare the query against the reference.
+This is a **linear scan**.
 
-This is easy to understand.
+It is simple, reliable, and often the correct solution for small inputs.
 
-It is also wasteful.
+But the amount of work grows with the length of the text. If the text becomes twice as long, the search may require roughly twice as much work.
 
-For a 3-billion-base genome, even one query can require billions of comparisons. For millions of reads, this becomes impossible without better organization.
+For one query, that may not matter.
 
-The problem is not that the computer cannot compare letters.
+For millions of queries against the same large text, repeatedly scanning from the beginning becomes wasteful.
 
-The problem is that it is looking almost everywhere.
+The important question is not:
+
+> Can the computer compare the characters?
+
+It can.
+
+The better question is:
+
+> How much of the text must it inspect for every query?
 
 ---
 
-## The Phone Book Problem
+## Repeated Search Needs an Index
 
-Think about searching for a surname in a phone book.
+An index stores extra information that helps us jump to likely matches.
 
-If you want to find:
-
-```text
-Nguyen
-```
-
-you do not start at page one and read every name.
-
-You use the fact that the book is ordered.
-
-You jump near the section for `N`.
-
-Then you narrow down:
+For example, we could record where every `W` appears:
 
 ```text
-N
-↓
-Ng
-↓
-Ngu
-↓
-...
-↓
-Nguyen
+W -> [6, 26]
 ```
 
-Nothing was deleted.
+Because `WORLD` starts with `W`, we only need to check those two positions.
 
-The data was organized so you could ignore most of it.
+We have changed the search from:
 
-Genome search follows the same idea.
+```text
+Check every position
+         |
+         v
+  Find the matches
+```
 
-A slow search asks:
+into:
 
-> Where is this sequence?
+```text
+Look up likely positions
+          |
+          v
+Check only those positions
+```
 
-A better search asks:
+This is the same trade-off used by database indexes:
 
-> How should the genome be organized so most positions are never checked?
+```text
+Spend time and storage building the index
+                    |
+                    v
+    Make later searches much cheaper
+```
+
+Scanning is usually fine when data is searched once.
+
+Indexing becomes valuable when stable data is searched again and again.
 
 ---
 
-## First Idea: Break the Genome into K-mers
+## Find Candidates, Then Verify Them
 
-A k-mer is a substring of length `k`.
+Indexing single characters helps, but a common character may still appear too often.
 
-For example, with `k = 5`:
+A better approach is to index short fixed-length pieces.
+
+Take:
 
 ```text
-ACGTTGACCT
+HELLOWORLD
 ```
 
-becomes:
+With a piece length of `3`, the overlapping substrings are:
 
 ```text
-ACGTT
-CGTTG
-GTTGA
-TTGAC
-TGACC
-GACCT
+HEL
+ELL
+LLO
+LOW
+OWO
+WOR
+ORL
+RLD
 ```
 
-Instead of scanning the whole genome every time, we can build a lookup table:
+In bioinformatics, a substring of length `k` is called a **k-mer**.
+
+Outside bioinformatics, the same idea may be called an **n-gram**.
+
+For our longer text, an index may contain:
 
 ```text
-ACGTT -> positions 1, 12
-CGTTG -> positions 2, 13
-GTTGA -> positions 3, 14
-TTGAC -> positions 4, 15
-TGACC -> positions 5, 16
-GACCT -> positions 6, 17
+HEL -> [1, 11, 21]
+WOR -> [6, 26]
+RLD -> [8, 28]
 ```
 
-Now, if the query is:
+To search for `WORLD`, we choose one of its pieces:
 
 ```text
-TGACCT
+WOR
 ```
 
-we can look up one of its k-mers:
+The index gives us two candidate positions:
 
 ```text
-TGACC
+6
+26
 ```
 
-and immediately get candidate positions.
+We then verify the full query only at those locations.
 
-Then we only verify those positions.
-
-This changes the search from:
+This gives us the common **seed-and-extend** pattern:
 
 ```text
-Check everything
-```
-
-to:
-
-```text
-Check only places that have a promising seed
-```
-
-That is the basic seed-and-extend idea.
-
----
-
-## Candidate Generation and Verification
-
-Many sequence search tools use two phases.
-
-```text
-Phase 1: Find candidate locations quickly
-Phase 2: Verify candidates carefully
-```
-
-The candidate step is allowed to be rough.
-
-It only needs to find places worth checking.
-
-The verification step can be more precise:
-
-- exact comparison
-- local alignment
-- edit distance
-- Smith-Waterman alignment
-- affine gap scoring
-- mapping quality estimation
-
-This split is one of the most important ideas in bioinformatics search.
-
-Do not align everywhere.
-
-Find promising places first.
-
-Then align only there.
-
----
-
-## Why K Matters
-
-The value of `k` matters.
-
-If `k` is too small, many locations match.
-
-Example:
-
-```text
-AAA
-```
-
-In a large genome, short k-mers appear everywhere.
-
-That produces too many candidate positions.
-
-If `k` is too large, the search becomes fragile.
-
-Example:
-
-```text
-ACGTGCTAGCTAGCTA
-```
-
-One sequencing error or mutation may destroy the seed match.
-
-So k-mer length is a trade-off:
-
-```text
-Small k
-↓
-More sensitive, less specific
-
-Large k
-↓
-More specific, less sensitive
-```
-
-This is why sequence search tools often use carefully chosen seed lengths.
-
-They want seeds that are rare enough to be useful, but short enough to survive errors.
-
----
-
-## How BLAST Uses This Idea
-
-BLAST is often introduced as an alignment tool.
-
-Conceptually, it is also a search strategy.
-
-BLAST does not fully align the query against every position in the database.
-
-Instead, it looks for short matching words.
-
-Then it extends those matches.
-
-Simplified:
-
-```text
-Find short word matches
-↓
-Extend promising hits
-↓
-Score alignments
-```
-
-This is why BLAST is fast enough to search large databases.
-
-It avoids spending full alignment effort on positions that have no chance of matching.
-
-The same idea appears again and again:
-
-```text
-Seed
-↓
-Extend
-↓
-Score
-```
-
----
-
-## Hash Tables: Fast Lookup, More Memory
-
-A k-mer index is often implemented with a hash table.
-
-Conceptually:
-
-```text
-TGACC -> [105, 8904, 42019]
-GACCT -> [106, 8905, 42020]
-ACCTG -> [107, 8906]
-```
-
-Searching becomes very fast:
-
-```text
-Take k-mer from query
-Look it up in the hash table
+ Find a short matching seed
+             |
+             v
 Retrieve candidate positions
-Verify candidates
+             |
+             v
+ Verify the full query
 ```
 
-Hash tables are fast because lookup is close to constant time.
+The seed does not prove that the whole query matches.
 
-But they can use a lot of memory.
+For example:
 
-For small genomes, this is fine.
+```text
+WORRYWORLD
+```
 
-For massive references or huge read sets, memory becomes important.
+The seed `WOR` appears twice, but only one location contains `WORLD`.
 
-This is one reason bioinformatics has many different indexing strategies. There is no single best structure for every problem.
+The index answers:
+
+> Where might the query belong?
+
+The verifier answers:
+
+> How well does it actually match?
+
+This split matters when imperfect matches are allowed:
+
+```text
+Expected: HELLOWORLD
+Observed: HELLOXORLD
+```
+
+A full exact lookup would fail, but shorter seeds such as `HEL` or `RLD` may still find the correct region. A more expensive comparison can then handle the difference.
+
+Seed length is a trade-off:
+
+| Seed choice | Typical result |
+|---|---|
+| Shorter seed | More candidates, more verification, better tolerance of differences |
+| Longer seed | Fewer candidates, less verification, easier to miss imperfect matches |
+
+There is no universally correct seed length.
+
+It depends on the text, the alphabet, the query length, the amount of repetition, and the expected error rate.
 
 ---
 
-## Exact Matching Is Not Enough
+## Choose the Structure for the Question
 
-Real biological data is messy.
+Not every search system needs the same result.
 
-There may be:
+Some systems must report every exact position.
 
-- sequencing errors
-- mutations
-- insertions
-- deletions
-- repeats
-- paralogs
-- contamination
-- low-complexity regions
+Some only need promising regions for a slower comparison.
 
-A perfect k-mer match may be missing even when the sequence is biologically related.
+Others only need to estimate whether two large strings are broadly similar.
 
-This is why tools often use multiple seeds, spaced seeds, minimizers, or approximate matching strategies.
+The data structure should preserve only the information required by the final question.
 
-The index finds candidates.
+| Goal | Suitable approach |
+|---|---|
+| Find exact occurrences | Full substring index, suffix array, or FM-index |
+| Find promising regions | Seeds or minimizers |
+| Estimate broad similarity | Sketch |
 
-The aligner decides whether the candidate is real.
+This distinction matters because these structures are not simply faster or slower versions of one another.
 
----
-
-## Reverse Complements
-
-DNA has two strands.
-
-If the query is:
-
-```text
-TGACCT
-```
-
-the matching sequence may appear on the reverse complement strand.
-
-A search tool usually needs to consider both:
-
-```text
-Forward query
-Reverse-complement query
-```
-
-For short examples, this feels like a detail.
-
-At genome scale, it is essential.
+They answer different questions.
 
 ---
 
-## Circular Sequences
+## Hash Indexes: Fast but Memory-Hungry
 
-Some genomes are circular.
-
-Examples:
-
-- plasmids
-- bacterial chromosomes
-- viral genomes
-- mitochondrial genomes
-
-A match may cross the artificial boundary where the sequence file starts and ends.
-
-One simple conceptual trick is to duplicate the sequence:
+A substring index is often stored in a hash table:
 
 ```text
-ATCGTA
+"HEL" -> [1, 11, 21]
+"WOR" -> [6, 26]
+"RLD" -> [8, 28]
 ```
 
-becomes:
+Searching is straightforward:
 
 ```text
-ATCGTAATCGTA
+Take a seed from the query
+            |
+            v
+ Look it up in the table
+            |
+            v
+Retrieve candidate positions
+            |
+            v
+     Verify the query
 ```
 
-Then boundary-spanning matches can be found normally.
+Hash-table lookup is usually very fast.
 
-Production tools handle this more carefully, but the idea is the same: circular sequences require thinking beyond a simple linear string.
+The cost is memory.
+
+Storing every substring and every position may require much more space than the original text.
+
+Implementations can encode substrings compactly, but the basic trade-off remains:
+
+| Choice | Benefit | Cost |
+|---|---|---|
+| Store more index entries | Fast, direct lookup | More memory |
+| Store fewer entries | Smaller index | More work during search |
+
+Hash indexes are useful when fast lookup matters and the index fits comfortably in memory.
+
+For enormous references, more compact structures may be better.
 
 ---
 
-## Suffix Arrays: Sorting All Suffixes
+## Compact Exact Search: Suffix Arrays and FM-Indexes
 
-A different way to search text is to sort all suffixes.
+A **suffix** is the part of a string beginning at a particular position.
 
-The classic teaching example is:
+For:
 
 ```text
-banana
+HELLO
 ```
 
-All suffixes are:
+the suffixes are:
 
 ```text
-banana
-anana
-nana
-ana
-na
-a
+HELLO
+ELLO
+LLO
+LO
+O
 ```
 
 Sorted:
 
 ```text
-a
-ana
-anana
-banana
-na
-nana
+ELLO
+HELLO
+LLO
+LO
+O
 ```
 
-Once suffixes are sorted, a query can be found by binary search.
+Because the suffixes are sorted, we can use binary search to find a query such as `LO`.
 
-Instead of scanning the original text, we search the sorted suffix list.
+A suffix array does not normally copy and store every suffix as a separate string.
 
-For genomes, suffix arrays make exact substring search efficient.
+It stores their starting positions in sorted order.
 
-The problem is memory.
+That supports general substring search, but the array can still be large for enormous texts.
 
-A full suffix array for a large genome can be expensive.
+The **Burrows-Wheeler Transform**, or BWT, rearranges the text into a form that is often easier to compress. The transformation is reversible, so no information is lost.
 
-This leads to more compact indexes.
+An **FM-index** adds counting information around the BWT so the compressed representation can also be searched.
 
----
-
-## Burrows-Wheeler Transform
-
-The Burrows-Wheeler Transform, or BWT, is often explained mathematically.
-
-For practical intuition, the key idea is this:
-
-> Rearrange the text so similar characters become easier to compress and search.
-
-The BWT does not lose information.
-
-It transforms the text into another form that can be reversed.
-
-This transformed representation often contains long runs of similar characters, which makes it compact.
-
-That compactness becomes very useful for genome indexing.
-
----
-
-## FM-Index: Searching Backward
-
-The FM-index builds on the Burrows-Wheeler Transform.
-
-It allows exact search using a compressed representation of the reference.
-
-The strange part is that searching happens backward.
-
-If the query is:
+For a query such as:
 
 ```text
-TGACCT
+WORLD
 ```
 
-the FM-index can search from the end:
+the search processes characters from right to left:
 
 ```text
-T
-CT
-CCT
-ACCT
-GACCT
-TGACCT
+D
+LD
+RLD
+ORLD
+WORLD
 ```
 
-Each added character narrows a range of possible matches.
+Each added character narrows the range of suffixes that could contain the query.
 
-The index is not jumping around randomly through the genome.
+The mechanism is more involved than the hash-index example. The useful idea is simpler:
 
-It is shrinking an interval.
+> An FM-index stores enough information to repeatedly narrow the possible match range without scanning the whole text.
 
-That is why FM-indexes can be both fast and memory-efficient.
+This makes it valuable when the reference is enormous and keeping the index in memory matters.
 
 ---
 
-## Why BWA and Bowtie Use This Idea
+## Store Less: Minimizers and Sketches
 
-Short-read aligners such as BWA and Bowtie became popular partly because FM-index-based search made large genome alignment practical on ordinary machines.
+Sometimes even a compact exact index contains more detail than we need.
 
-A human genome has billions of bases.
+### Minimizers: keep fewer landmarks
 
-A naive index can become large.
+A minimizer index stores selected k-mers instead of every k-mer.
 
-An FM-index is compact enough to keep search practical.
-
-The core advantage is:
+Imagine moving overlapping windows across:
 
 ```text
-Small index
-↓
-Fast exact seed search
-↓
-Efficient candidate narrowing
+HELLOWORLDHELLOTHEREHELLOWORLD
 ```
 
-Then the aligner deals with mismatches, gaps, and mapping quality.
+Within each window, choose one representative k-mer using a consistent rule.
 
----
-
-## Hash Index vs FM-Index
-
-A rough comparison:
-
-| Index Type | Strength | Weakness |
-|---|---|---|
-| Hash table | Very fast lookup | Can use lots of memory |
-| Suffix array | Powerful exact search | Large memory footprint |
-| FM-index | Compact and efficient | More complex |
-| Minimizer index | Good for long reads | Less exhaustive |
-| Sketch | Extremely fast comparison | Approximate, not positional |
-
-Different tools choose different structures because they solve different problems.
-
-There is no universal best index.
-
-There is only the right index for the task.
-
----
-
-## Minimizers: Index Fewer K-mers
-
-Long-read tools often use minimizers.
-
-The idea is simple.
-
-Instead of indexing every k-mer, choose representative k-mers from windows.
-
-Example:
+Those selected pieces act like landmarks:
 
 ```text
-Window 1 -> choose smallest k-mer
-Window 2 -> choose smallest k-mer
-Window 3 -> choose smallest k-mer
+Choose representative pieces
+            |
+            v
+ Store fewer index entries
+            |
+            v
+Find promising regions quickly
 ```
 
-These chosen k-mers are called minimizers.
+Nearby windows often choose the same representative, so the index can be much smaller.
 
-They reduce the size of the index while preserving enough signal to find good candidate matches.
+The trade-off is that some detail is deliberately discarded.
 
-This is one reason minimap2 is efficient for long reads and assembly-to-assembly mapping.
+Minimizers are useful when searching or aligning long sequences, where indexing every k-mer would be excessive.
 
-It does not try to index or compare everything.
+### Sketches: keep only a fingerprint
 
-It keeps enough landmarks to find where alignment should happen.
+Sometimes we do not need matching positions at all.
 
----
+We may only need to know whether two large strings are probably similar.
 
-## Sketches: Comparing Without Full Alignment
+A **sketch** stores a small deterministic fingerprint derived from the string's k-mers.
 
-Sometimes we do not need exact locations.
-
-We only need to know whether two genomes are similar.
-
-This is where sketches are useful.
-
-A sketch is a small fingerprint of a much larger sequence.
-
-Instead of storing all k-mers, keep a small representative subset.
-
-Then compare sketches.
-
-This is the idea behind tools such as Mash.
-
-A sketch can answer questions like:
+We compare the fingerprints instead of the complete strings:
 
 ```text
-Are these genomes similar?
-How close are they approximately?
-Should we compare them more deeply?
+Build compact fingerprints
+           |
+           v
+  Compare them quickly
+           |
+           v
+Run full comparison only when needed
 ```
 
-This is extremely useful for:
+Sketches are useful for fast screening, clustering, and similarity search.
 
-- genome clustering
-- contamination checks
-- fast database screening
-- large-scale similarity search
+They are approximate and normally cannot report exact matching coordinates.
 
-The trade-off is that sketches are approximate.
+The difference is:
 
-They are not a replacement for alignment when exact coordinates matter.
-
----
-
-## The Pattern Behind Many Tools
-
-Many tools follow the same engineering pattern:
-
-```text
-Build a compact summary
-↓
-Use it to avoid most comparisons
-↓
-Spend expensive work only on promising candidates
-```
-
-Examples:
-
-| Tool Type | Candidate Strategy |
+| Structure | Main question |
 |---|---|
-| BLAST | word hits |
-| BWA | FM-index seeds |
-| Bowtie | FM-index seeds |
-| minimap2 | minimizers |
-| Mash | sketches |
-| Kraken | exact k-mer classification |
-| DIAMOND | seed-based protein search |
-| MMseqs2 | fast prefiltering |
-
-The details differ.
-
-The core idea is similar:
-
-> Do not look everywhere.
+| Full index | Where does this query occur? |
+| Minimizer index | Which regions are promising? |
+| Sketch | Are these large strings probably similar? |
 
 ---
 
-## Why Deleting Data Is the Wrong Instinct
+## How the Same Ideas Power Genome Search
 
-When a system is slow, it is tempting to reduce the data.
+A DNA sequence is simply a very large string over a small alphabet:
 
-That can help a little.
+```text
+A C G T
+```
 
-If you cut 200,000 records down to 100,000, a linear scan may become twice as fast.
+The terminology changes, but the engineering pattern remains familiar:
+
+| General string search | Genome search |
+|---|---|
+| Large text | Reference genome or sequence database |
+| Query string | DNA, RNA, or protein sequence |
+| Fixed-length substring | k-mer |
+| Candidate position | Possible mapping location |
+| Detailed comparison | Sequence alignment |
+| Character replacement | Substitution or sequencing error |
+| Missing or extra character | Deletion or insertion |
+
+Many bioinformatics tools use some variation of:
+
+```text
+       Build an index
+              |
+              v
+   Find candidate regions
+              |
+              v
+Align or score those regions
+```
+
+Examples include:
+
+| Tool | Simplified strategy |
+|---|---|
+| BLAST | Find short word matches, then extend them |
+| BWA | Use an FM-index to find short-read candidates |
+| Bowtie | Use an FM-index for compact seed search |
+| minimap2 | Use minimizers as sequence landmarks |
+| Kraken | Classify sequences using exact k-mer matches |
+| Mash | Compare compact sequence sketches |
+
+Biological data adds several complications.
+
+### Reverse complements
+
+DNA has two strands. A query may match in its original direction or as its reverse complement.
+
+### Repetitive regions
+
+The same seed may occur thousands of times, producing many candidate positions.
+
+### Mutations and sequencing errors
+
+The query may differ from the reference even when it comes from the same biological region.
+
+### Insertions and deletions
+
+Characters may be missing or added, so verification may require alignment rather than simple equality.
+
+### Circular sequences
+
+Some genomes are circular. A match may cross the arbitrary point where the sequence file begins and ends.
+
+These details make genome search harder, but they do not change the underlying strategy.
+
+First, avoid searching everywhere.
+
+Then spend detailed alignment work only where a real match may exist.
+
+---
+
+## The General Engineering Pattern
+
+The main lesson is larger than bioinformatics:
+
+```text
+       Preprocess stable data
+                 |
+                 v
+    Build a searchable summary
+                 |
+                 v
+      Find likely candidates
+                 |
+                 v
+Run expensive work only there
+```
+
+The same pattern appears in:
+
+- database indexes
+- full-text search engines
+- log search
+- spell checking
+- plagiarism detection
+- document similarity
+- malware signature matching
+- genome alignment
+
+This is why deleting data is often a weak first response to slow search.
+
+Deleting half the data may make a linear scan roughly twice as fast.
 
 But it is still a linear scan.
 
-The better question is:
+A better question is:
 
-> Why are we scanning at all?
+> Why are we checking everything for every query?
 
-Genome search teaches this lesson clearly.
+When evaluating a search system, ask:
 
-Rare variants matter.
+1. What data is indexed?
+2. How expensive is the index to build?
+3. How much memory does it use?
+4. How are candidate matches found?
+5. How are candidates verified?
+6. Are differences allowed?
+7. Is the result exact or approximate?
+8. Do we need exact positions, or only similarity?
 
-Old samples may become useful later.
+Fast search is rarely about one clever comparison.
 
-Context matters.
-
-Reproducibility matters.
-
-Deleting data can make a system faster by destroying information.
-
-Indexing makes a system faster by preserving information and organizing it better.
-
-That is a much better trade-off.
-
----
-
-## A Practical Mental Model
-
-When looking at any bioinformatics search tool, ask:
-
-1. What is being indexed?
-2. What is the seed?
-3. How are candidates generated?
-4. How are candidates verified?
-5. What errors are tolerated?
-6. What is stored in memory?
-7. What is compressed?
-8. What is approximate?
-9. What is exact?
-10. What biological assumptions are being made?
-
-These questions are more useful than memorizing tool names.
-
-They help explain why one tool works well for short reads, another for long reads, another for protein search, and another for whole-genome comparison.
+It is about arranging the data so nearly all comparisons can be skipped.
