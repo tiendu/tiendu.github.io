@@ -114,6 +114,114 @@ who performed it, when it happened, and why. This prevents conflicting
 changes and makes it possible to reconstruct what actually happened
 afterward.
 
+### Preserve Evidence While You Recover
+
+Evidence preservation is not a separate phase that happens after the
+incident. It runs alongside the investigation, containment, and recovery.
+
+Logs and system state are temporary. A restarted process may clear local
+logs. A replaced instance may remove its filesystem. A rescheduled pod
+may take the previous container state with it. Dashboards may retain only
+a short window, and a configuration change may overwrite the exact state
+that caused the failure.
+
+Before every destructive action, collect the evidence that action may
+destroy. Then record what changed afterward.
+
+At minimum, preserve:
+
+- UTC timestamps
+- alerts and dashboard screenshots
+- application and system logs
+- deployment revisions and commit hashes
+- active configuration
+- affected resources
+- commands executed
+- who performed each action
+- why the action was taken
+- the result of that action
+
+A small evidence directory is better than relying on memory later:
+
+```bash
+# Create a timestamped directory for this incident.
+incident_dir="incident-$(date -u +%Y%m%dT%H%M%SZ)"
+mkdir -p "$incident_dir"
+
+# Record when evidence collection started.
+date -u +"%Y-%m-%dT%H:%M:%SZ" |
+    tee "$incident_dir/collection-started.txt"
+
+# Preserve the deployed Git revision and working-tree state.
+git rev-parse HEAD > "$incident_dir/git-revision.txt"
+git status --short > "$incident_dir/git-status.txt"
+
+# Preserve Linux service state and recent logs.
+systemctl status app.service --no-pager \
+    > "$incident_dir/systemctl-status.txt" 2>&1
+
+journalctl -u app.service \
+    --since "30 minutes ago" \
+    --no-pager \
+    > "$incident_dir/journal.txt"
+
+# Preserve Kubernetes state before pods are restarted or replaced.
+kubectl get pods -A -o wide \
+    > "$incident_dir/kubernetes-pods.txt"
+
+kubectl get events -A \
+    --sort-by=.metadata.creationTimestamp \
+    > "$incident_dir/kubernetes-events.txt"
+
+# Preserve logs from the affected pod.
+kubectl logs POD_NAME \
+    --all-containers \
+    --tail=-1 \
+    > "$incident_dir/pod-logs.txt" 2>&1
+```
+
+For a restarting container, the previous instance may contain the only
+useful failure log:
+
+```bash
+# Preserve logs from the previous container before they disappear.
+kubectl logs POD_NAME \
+    --previous \
+    --all-containers \
+    > "$incident_dir/previous-container-logs.txt" 2>&1
+```
+
+Create an integrity record before moving the evidence into approved
+central storage:
+
+```bash
+# Record checksums for the collected evidence.
+find "$incident_dir" \
+    -type f \
+    ! -name SHA256SUMS \
+    -print0 |
+    sort -z |
+    xargs -0 sha256sum \
+    > "$incident_dir/SHA256SUMS"
+```
+
+Do not leave the only copy on the machine being investigated. Move it to
+an approved location with restricted access and the required retention
+policy.
+
+Also avoid creating a second incident while collecting the first one.
+Logs may contain credentials, personal data, customer data, tokens, or
+internal identifiers. Do not paste raw evidence into public tickets,
+personal storage, or unrestricted chat channels.
+
+For compliance-sensitive systems, this evidence may later be needed to
+show what happened, what was affected, who changed production, why the
+action was taken, and whether the response followed the documented
+process.
+
+Fixing production is only half the job. You must preserve enough evidence
+to explain what happened after production is healthy again.
+
 ---
 
 ## 2. Assess the Blast Radius
@@ -422,6 +530,9 @@ A fast rollback is useful only when rollback was designed to be safe.
 
 Once the recovery path is clear, make one controlled change.
 
+Before every restart, rollback, replacement, or configuration change,
+preserve the evidence that the action may destroy.
+
 Do not restart the service, detach an instance, revert a commit, and
 change the database at the same time. If the system recovers, you will
 not know why. If it gets worse, you will not know which action caused
@@ -622,6 +733,9 @@ That is how the same incident returns.
 The most useful postmortems are not long documents written to satisfy a
 process. They capture the decisions that were difficult during the
 incident.
+
+Build the postmortem from the incident timeline and preserved evidence,
+not from memory.
 
 What changed?
 
