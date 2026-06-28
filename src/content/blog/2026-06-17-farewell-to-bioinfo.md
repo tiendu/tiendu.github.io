@@ -1,7 +1,7 @@
 ---
 title: "A Quiet Farewell to Bioinformatics"
 date: 2026-06-17
-categories: ["Bioinformatics & Scientific Tools", "Automation, Systems & Engineering", "Personal Notes & Reflections"]
+categories: ["Bioinformatics & Scientific Tools", "Personal Notes & Reflections"]
 pinned: false
 ---
 

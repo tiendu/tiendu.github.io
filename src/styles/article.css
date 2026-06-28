@@ -466,6 +466,63 @@
   color: var(--system-bg);
 }
 
+/* Desktop reading comfort ----------------------------------------------- */
+
+@media (min-width: 721px) {
+  .article-doc-strip,
+  .post-meta {
+    font-size: 0.72rem;
+  }
+
+  .article-description {
+    font-size: clamp(1.04rem, 1.7vw, 1.2rem);
+  }
+
+  .post-labels a,
+  .post-labels a:visited {
+    font-size: 0.68rem;
+  }
+
+  .post-content {
+    font-size: clamp(1.1rem, 0.35vw + 1.03rem, 1.2rem);
+  }
+
+  .post-content figcaption {
+    font-size: 0.84rem;
+  }
+
+  .post-content pre {
+    font-size: 0.88rem;
+  }
+
+  .post-content table {
+    font-size: 0.92rem;
+  }
+
+  .post-content th {
+    font-size: 0.74rem;
+  }
+
+  .article-system-footer {
+    font-size: 0.68rem;
+  }
+}
+
+@media (min-width: 961px) {
+  .toc {
+    font-size: 0.73rem;
+  }
+
+  .toc-header span,
+  .toc-header small {
+    font-size: 0.6rem;
+  }
+
+  .toc-header strong {
+    font-size: 0.69rem;
+  }
+}
+
 @media (max-width: 960px) {
   .post-layout {
     display: block;
@@ -525,9 +582,35 @@
     width: 100%;
   }
 
+  .article-doc-strip,
+  .post-meta {
+    font-size: 0.72rem;
+  }
+
+  .post-labels a,
+  .post-labels a:visited {
+    font-size: 0.7rem;
+  }
+
   .post-content {
-    font-size: 1.05rem;
-    line-height: 1.75;
+    font-size: 1.1rem;
+    line-height: 1.76;
+  }
+
+  .post-content pre {
+    font-size: 0.86rem;
+  }
+
+  .post-content table {
+    font-size: 0.9rem;
+  }
+
+  .post-content th {
+    font-size: 0.72rem;
+  }
+
+  .article-system-footer {
+    font-size: 0.7rem;
   }
 
   .back-to-top {

@@ -1485,6 +1485,28 @@ import SystemHeader from "../components/SystemHeader.astro";
   @media (max-width: 760px) {
   }
 
+  @media (min-width: 521px) {
+    .command-line {
+      font-size: clamp(1.18rem, 1.8vw, 1.46rem);
+    }
+
+    .terminal-response {
+      font-size: clamp(1.05rem, 1.55vw, 1.24rem);
+    }
+
+    .terminal-shell {
+      font-size: clamp(1.14rem, 1.75vw, 1.38rem);
+    }
+
+    .terminal-input-warning {
+      font-size: 0.96rem;
+    }
+
+    .terminal-footer {
+      font-size: 1rem;
+    }
+  }
+
   @media (max-width: 520px) {
 
     .terminal-content {
@@ -1493,16 +1515,16 @@ import SystemHeader from "../components/SystemHeader.astro";
     }
 
     .command-line {
-      font-size: 1.02rem;
+      font-size: 1.15rem;
       overflow: hidden;
     }
 
     .terminal-shell {
-      font-size: 1rem;
+      font-size: 1.12rem;
     }
 
     .terminal-response {
-      font-size: 0.92rem;
+      font-size: 1.05rem;
     }
 
     .output p,
@@ -1520,7 +1542,7 @@ import SystemHeader from "../components/SystemHeader.astro";
     .terminal-footer {
       align-items: flex-start;
       flex-wrap: wrap;
-      font-size: 0.76rem;
+      font-size: 0.88rem;
       gap: 0.3rem 0.8rem;
     }
   }
@@ -1547,7 +1569,7 @@ import SystemHeader from "../components/SystemHeader.astro";
       color: var(--terminal-green);
       cursor: pointer;
       font-family: var(--font-terminal);
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       letter-spacing: 0.07em;
       min-height: 44px;
       padding: 0.55rem 0.35rem;
@@ -1569,7 +1591,7 @@ import SystemHeader from "../components/SystemHeader.astro";
 
     .snake-mobile-help {
       color: var(--terminal-green-dim);
-      font-size: 0.72rem;
+      font-size: 0.8rem;
       letter-spacing: 0.08em;
       margin: 0;
       max-width: none;
@@ -1603,7 +1625,7 @@ import SystemHeader from "../components/SystemHeader.astro";
       color: var(--terminal-green);
       cursor: pointer;
       font-family: var(--font-terminal);
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       letter-spacing: 0.07em;
       min-height: 44px;
       padding: 0.55rem 0.35rem;
@@ -1625,7 +1647,7 @@ import SystemHeader from "../components/SystemHeader.astro";
 
     .invaders-mobile-help {
       color: var(--terminal-green-dim);
-      font-size: 0.72rem;
+      font-size: 0.8rem;
       letter-spacing: 0.08em;
       margin: 0;
       max-width: none;
@@ -1659,7 +1681,7 @@ import SystemHeader from "../components/SystemHeader.astro";
       color: var(--terminal-green);
       cursor: pointer;
       font-family: var(--font-terminal);
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       letter-spacing: 0.07em;
       min-height: 44px;
       padding: 0.55rem 0.35rem;
@@ -1681,7 +1703,7 @@ import SystemHeader from "../components/SystemHeader.astro";
 
     .breakout-mobile-help {
       color: var(--terminal-green-dim);
-      font-size: 0.72rem;
+      font-size: 0.8rem;
       letter-spacing: 0.08em;
       margin: 0;
       max-width: none;
