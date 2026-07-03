@@ -33,7 +33,7 @@ Treating those situations as equally reliable can lead to poor decisions.
 
 This is where **Conformalized Quantile Regression (CQR)** becomes useful.
 
-CQR produces prediction intervals that automatically widen in noisy regions and tighten in stable regions, while still providing statistical coverage guarantees.
+CQR produces prediction intervals that automatically widen in noisy regions and tighten in stable regions, while providing marginal coverage guarantees under the usual conformal assumptions.
 
 ---
 
@@ -257,6 +257,8 @@ For example:
 - alpha = 0.10
 - Desired coverage = 90%
 
+In zero-based Python indexing, use `k - 1` when selecting the sorted score.
+
 ---
 
 ### Step 5: Expand Future Intervals
@@ -268,12 +270,12 @@ Finally:
  q_high(x) + q_hat]
 ```
 
-This simple correction gives finite-sample coverage guarantees under standard conformal assumptions.
+This simple correction gives finite-sample marginal coverage under exchangeability.
 
 In short:
 
 - Quantile regression shapes the interval.
-- Conformal calibration makes it trustworthy.
+- Conformal calibration makes its overall coverage reliable.
 
 ---
 
@@ -317,7 +319,7 @@ The animation below compares:
 as a sliding window moves across the data.
 
 <p align="center">
-  <img src="/assets/images/local_coverage_cqr_vs_fixed.gif"
+  <img src="/assets/images/cqr_local_coverage_vs_fixed.gif"
        alt="Sliding-window local coverage: CQR vs fixed-width intervals"
        width="650">
 </p>
@@ -330,9 +332,38 @@ Notice what happens:
 
 The important lesson is:
 
-> Fixed-width intervals achieve coverage by being globally conservative.
+> Fixed-width intervals use the same uncertainty everywhere.
 >
-> CQR achieves coverage by adapting to where uncertainty actually exists.
+> CQR preserves the learned local shape while calibration corrects its overall coverage.
+
+---
+
+## Reproduce the Animation
+
+The complete Python script used to generate the animation is included with this post:
+
+<p>
+  <a href="/assets/scripts/cqr_local_coverage_vs_fixed.py" download>
+    Download the CQR animation script
+  </a>
+</p>
+
+After downloading the script, create an environment and run it with:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install numpy matplotlib scikit-learn pillow
+python cqr_local_coverage_vs_fixed.py
+```
+
+The script writes:
+
+```text
+cqr_local_coverage_vs_fixed.gif
+```
+
+The sliding window is a diagnostic visualization. It shows how empirical coverage changes across the input space, but it does not turn the marginal conformal guarantee into a local or conditional guarantee.
 
 ---
 
@@ -414,6 +445,7 @@ then recalibration may be necessary.
 import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
 
+
 def cqr_fit_predict_intervals(
     X_train, y_train,
     X_cal, y_cal,
@@ -478,15 +510,15 @@ CQR is a good choice when:
 - You need prediction intervals, not just point predictions.
 - Uncertainty changes across the input space.
 - You do not want strong distributional assumptions.
-- You want statistically valid coverage.
-- You need a model-agnostic solution.
+- You want statistically valid marginal coverage.
+- You can reserve representative data for calibration.
 
-It works with many underlying models, including:
+It works with many underlying quantile models, including:
 
 - Gradient boosting
-- Random forests
-- Neural networks
+- Quantile regression forests
+- Neural networks with quantile loss
 - XGBoost
 - LightGBM
 
-The conformal layer is separate from the predictive model.
+The conformal calibration layer is separate from the predictive model, but the underlying model still needs to estimate conditional quantiles.

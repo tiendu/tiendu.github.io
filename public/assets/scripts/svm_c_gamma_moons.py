@@ -77,7 +77,7 @@ make_gif(
     values=np.logspace(-2, 2, 20),
     fixed_gamma='scale',
     out_dir="svm_moons_C_frames",
-    out_gif="svm_moons_C_evolution.gif"
+    out_gif="svm_moons_c_evolution.gif"
 )
 
 # B. Fixed C, sweep gamma

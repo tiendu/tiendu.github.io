@@ -156,4 +156,4 @@ anim = FuncAnimation(fig, update, frames=frames, interval=120)
 plt.tight_layout()
 plt.show()
 
-anim.save("local_coverage_cqr_vs_fixed.gif", writer=PillowWriter(fps=8))
+anim.save("cqr_local_coverage_vs_fixed.gif", writer=PillowWriter(fps=8))

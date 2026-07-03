@@ -1,6 +1,7 @@
 ---
 title: "Margins, Kernels, and Control: Why Support Vector Machines Are Still Worth Learning"
 date: 2025-06-14
+last_modified_at: 2026-07-03
 description: "An intuitive guide to support vector machines, margins, support vectors, kernels, C, gamma, overfitting, and when SVMs remain a strong model choice."
 topic: "Statistics & Machine Learning"
 keywords:
@@ -196,7 +197,7 @@ Understanding these two values is often enough to get good performance.
 
 A small value allows some mistakes.
 
-The model prefers a wider margin.
+The model prefers a wider, softer margin.
 
 This usually produces a simpler classifier.
 
@@ -219,7 +220,7 @@ Benefits:
 Risks:
 
 - Overfitting
-- Complex boundaries
+- Reduced tolerance to noisy observations
 - Poor performance on unseen data
 
 A useful mental model:
@@ -264,10 +265,10 @@ A useful mental model:
 The animation below keeps `gamma` fixed while increasing `C`.
 
 <p align="center">
-  <img src="/assets/images/svm_moons_C_evolution.gif" alt="SVM C Evolution GIF" width="600">
+  <img src="/assets/images/svm_moons_c_evolution.gif" alt="SVM C evolution on the two-moons dataset" width="600">
 </p>
 
-*As `C` increases, the model tolerates fewer mistakes, the margin becomes tighter, and the risk of overfitting increases.*
+*As `C` increases, the model tolerates fewer mistakes, the soft margin becomes less forgiving, and the classifier can become more sensitive to the training data.*
 
 ---
 
@@ -276,7 +277,7 @@ The animation below keeps `gamma` fixed while increasing `C`.
 The animation below keeps `C = 1.0` fixed while varying `gamma`.
 
 <p align="center">
-  <img src="/assets/images/svm_moons_gamma_evolution.gif" alt="SVM Gamma Evolution GIF" width="600">
+  <img src="/assets/images/svm_moons_gamma_evolution.gif" alt="SVM gamma evolution on the two-moons dataset" width="600">
 </p>
 
 *As `gamma` increases, decision boundaries become more flexible and can eventually overfit the training data.*
@@ -353,13 +354,41 @@ For image recognition, speech recognition, and modern language models, neural ne
 
 ## Want to Try It Yourself?
 
-Here's the [script](/assets/scripts/svm_margin_moons.py) used to generate the visualizations.
+You can reproduce both animations using the same script used for this post:
 
-The script uses:
+<p>
+  <a href="/assets/scripts/svm_c_gamma_moons.py" download>
+    Download the script
+  </a>
+</p>
 
-- `scikit-learn`
-- `matplotlib`
-- `imageio`
+The script:
+
+- generates a noisy two-moons dataset
+- scales the features with `StandardScaler`
+- trains an RBF SVM
+- sweeps across different values of `C`
+- sweeps across different values of `gamma`
+- saves two GIFs showing how the decision boundary changes
+
+Install the dependencies:
+
+```bash
+python -m pip install numpy matplotlib imageio scikit-learn
+```
+
+Then run:
+
+```bash
+python svm_c_gamma_moons.py
+```
+
+The script will generate:
+
+```text
+svm_moons_c_evolution.gif
+svm_moons_gamma_evolution.gif
+```
 
 Try experimenting with:
 
@@ -367,6 +396,7 @@ Try experimenting with:
 - Different datasets
 - Different values of `C`
 - Different values of `gamma`
+- Different `noise` levels in `make_moons()`
 
 Watching the decision boundary evolve is one of the best ways to build intuition.
 
