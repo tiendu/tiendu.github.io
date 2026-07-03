@@ -1,0 +1,93 @@
+/* Desktop readability adjustments for the system interface. */
+
+@media (min-width: 761px) {
+  .system-brand-name {
+    font-size: 1rem;
+  }
+
+  .system-brand-model {
+    font-size: 0.68rem;
+  }
+
+  .system-nav a,
+  .system-nav a:visited {
+    font-size: 0.76rem;
+  }
+
+  .system-nav a span {
+    font-size: 0.62rem;
+  }
+
+  .system-module-code,
+  .system-section-code {
+    font-size: 0.7rem;
+  }
+
+  .system-description {
+    font-size: clamp(1.04rem, 1.7vw, 1.2rem);
+  }
+
+  .system-module-footer {
+    font-size: 0.7rem;
+  }
+
+  .archive-section-header > span {
+    font-size: 0.67rem;
+  }
+
+  .log-table-head {
+    font-size: 0.63rem;
+  }
+
+  .log-number,
+  .log-date,
+  .log-subline {
+    font-size: 0.7rem;
+  }
+
+  .log-main h3 {
+    font-size: clamp(1.04rem, 1.8vw, 1.18rem);
+  }
+
+  .project-number,
+  .project-category,
+  .project-tech {
+    font-size: 0.7rem;
+  }
+
+  .project-summary {
+    font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+  }
+
+  .project-details {
+    font-size: 1.02rem;
+  }
+
+  .operator-identity p,
+  .operator-panel dt {
+    font-size: 0.64rem;
+  }
+
+  .operator-panel dd {
+    font-size: 0.88rem;
+  }
+
+  .operator-links a,
+  .operator-links a:visited {
+    font-size: 0.68rem;
+  }
+
+  .about-copy p,
+  .about-copy li {
+    font-size: 1.03rem;
+  }
+
+  .timeline-row > span {
+    font-size: 0.7rem;
+  }
+
+  .system-error-panel nav a,
+  .system-error-panel nav a:visited {
+    font-size: 0.72rem;
+  }
+}

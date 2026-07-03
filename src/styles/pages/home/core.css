@@ -1,0 +1,272 @@
+/* Homepage terminal frame, intro, profile, and primary actions. */
+
+:root {
+  --terminal-screen: #030805;
+  --terminal-screen-deep: #030805;
+  --terminal-green: #bddf86;
+  --terminal-green-bright: #e2f8ad;
+  --terminal-green-dim: #789958;
+  --terminal-glow: rgb(199 240 139 / 12%);
+}
+
+html {
+  background: var(--terminal-screen-deep);
+}
+
+body.terminal-home {
+  background: var(--terminal-screen-deep);
+  color: var(--terminal-green);
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+body.terminal-home .terminal-page-content {
+  min-height: 100dvh;
+  padding: 0;
+}
+
+.landing-wrapper {
+  height: 100dvh;
+  margin: 0;
+  max-width: none;
+  min-height: 100dvh;
+  width: 100%;
+}
+
+.terminal-card {
+  background: transparent;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  width: 100%;
+}
+
+.terminal-screen {
+  background: transparent;
+  display: flex;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  position: relative;
+  scrollbar-color: var(--terminal-green-dim) var(--terminal-screen-deep);
+}
+
+
+
+.terminal-content {
+  color: var(--terminal-green);
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  font-family: var(--font-terminal);
+  font-synthesis: none;
+  gap: 1.3rem;
+  letter-spacing: 0.035em;
+  margin-inline: auto;
+  min-height: 100%;
+  padding:
+    clamp(1.3rem, 3.4vw, 2.65rem)
+    max(clamp(1rem, 4vw, 3.25rem), env(safe-area-inset-right))
+    max(clamp(1rem, 3vw, 2rem), env(safe-area-inset-bottom))
+    max(clamp(1rem, 4vw, 3.25rem), env(safe-area-inset-left));
+  position: relative;
+  text-shadow: 0 0 4px rgb(199 240 139 / 12%);
+  width: min(100%, 1280px);
+  z-index: 1;
+}
+
+.command-line {
+  align-items: baseline;
+  color: var(--terminal-green-dim);
+  display: flex;
+  font-size: clamp(1.12rem, 1.8vw, 1.4rem);
+  line-height: 1.2;
+  margin: 0;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.typed-command {
+  animation: command-typing 1.7s steps(24, end) forwards;
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+}
+
+.landing-wrapper.terminal-intro-seen .typed-command {
+  animation: none;
+  width: auto;
+}
+
+.prompt {
+  color: var(--terminal-green-bright);
+}
+
+.path {
+  color: var(--terminal-green);
+}
+
+.block-cursor {
+  animation: cursor-blink 0.85s steps(1, end) infinite;
+  background: var(--terminal-green-bright);
+  box-shadow: 0 0 6px var(--terminal-green);
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 0.9em;
+  margin-left: 0.2rem;
+  transform: translateY(0.1em);
+  transition: opacity 160ms ease;
+  width: 0.52em;
+}
+
+.block-cursor.cursor-dimmed {
+  opacity: 0.22;
+}
+
+.block-cursor.cursor-hidden {
+  display: none;
+}
+
+.profile-view {
+  max-width: 960px;
+}
+
+.output-stage {
+  display: grid;
+}
+
+.output-measure,
+.output {
+  grid-area: 1 / 1;
+}
+
+.output-measure {
+  visibility: hidden;
+}
+
+.landing-wrapper.terminal-typing-enabled .output [data-terminal-line] {
+  visibility: hidden;
+}
+
+.terminal-title {
+  color: var(--terminal-green-bright);
+  font-family: inherit;
+  font-size: clamp(2.6rem, 7vw, 4.8rem);
+  font-weight: 400;
+  letter-spacing: 0.075em;
+  line-height: 0.95;
+  margin: 0 0 1.35rem;
+  text-shadow: 0 0 6px rgb(199 240 139 / 18%);
+}
+
+.output p,
+.output-measure p {
+  color: var(--terminal-green);
+  font-size: clamp(1.24rem, 2.15vw, 1.65rem);
+  line-height: 1.42;
+  margin: 0 0 1rem;
+  max-width: 64ch;
+}
+
+.output .terminal-title,
+.output-measure .terminal-title {
+  color: var(--terminal-green-bright);
+  font-size: clamp(2.6rem, 7vw, 4.8rem);
+  line-height: 0.95;
+  margin-bottom: 1.35rem;
+}
+
+.output .is-typing::after {
+  animation: cursor-blink 0.85s steps(1, end) infinite;
+  background: var(--terminal-green-bright);
+  box-shadow: 0 0 5px var(--terminal-green);
+  content: "";
+  display: inline-block;
+  height: 0.76em;
+  margin-left: 0.16rem;
+  transform: translateY(0.08em);
+  width: 0.44em;
+}
+
+.profile-view[hidden],
+.terminal-shell[hidden],
+.terminal-response[hidden] {
+  display: none;
+}
+
+.terminal-skip {
+  background: transparent;
+  border: 1px solid rgb(199 240 139 / 24%);
+  color: var(--terminal-green-dim);
+  cursor: pointer;
+  display: none;
+  font-family: var(--font-terminal);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  padding: 0.38rem 0.55rem;
+  position: absolute;
+  right: max(clamp(1rem, 4vw, 3.25rem), env(safe-area-inset-right));
+  top: clamp(1.3rem, 3.4vw, 2.65rem);
+  z-index: 4;
+}
+
+.landing-wrapper.terminal-typing-enabled .terminal-skip {
+  display: block;
+}
+
+.terminal-skip:hover,
+.terminal-skip:focus-visible {
+  border-color: var(--terminal-green);
+  color: var(--terminal-green-bright);
+}
+
+.terminal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1.2rem;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.landing-wrapper.terminal-typing-enabled .terminal-actions {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.3rem);
+  visibility: hidden;
+}
+
+.terminal-actions a,
+.terminal-actions a:visited {
+  border: 1px solid rgb(199 240 139 / 26%);
+  color: var(--terminal-green);
+  font-size: clamp(0.96rem, 1.5vw, 1.08rem);
+  letter-spacing: 0.055em;
+  min-height: 42px;
+  padding: 0.55rem 0.75rem;
+  text-decoration: none;
+}
+
+.terminal-actions a:hover,
+.terminal-actions a:focus-visible {
+  background: rgb(199 240 139 / 9%);
+  border-color: var(--terminal-green);
+  color: var(--terminal-green-bright);
+}
+
+.terminal-response {
+  border-left: 2px solid rgb(199 240 139 / 28%);
+  color: var(--terminal-green-dim);
+  font-size: clamp(1rem, 1.55vw, 1.18rem);
+  line-height: 1.4;
+  margin: 0.25rem 0 0;
+  max-width: 72ch;
+  padding-left: 0.75rem;
+  white-space: pre-wrap;
+}

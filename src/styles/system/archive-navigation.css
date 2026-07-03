@@ -1,0 +1,105 @@
+/* Archive links and pagination ------------------------------------------ */
+
+.log-number,
+.log-number:visited {
+  color: var(--system-text);
+  text-decoration: none;
+}
+
+.log-number:hover,
+.log-number:focus-visible {
+  color: var(--system-bright);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.log-topic-link,
+.log-topic-link:visited {
+  color: inherit;
+  text-decoration: none;
+}
+
+.log-topic-link:hover,
+.log-topic-link:focus-visible {
+  color: var(--system-bright);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.archive-pagination {
+  align-items: center;
+  border-top: 1px solid var(--system-line-strong);
+  display: grid;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  gap: 1rem;
+  grid-template-columns: minmax(6.5rem, 1fr) auto minmax(6.5rem, 1fr);
+  letter-spacing: 0.06em;
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+}
+
+.archive-pagination a,
+.archive-pagination a:visited {
+  color: var(--system-text);
+  text-decoration: none;
+}
+
+.archive-pagination a:hover,
+.archive-pagination a:focus-visible {
+  color: var(--system-bright);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.pagination-edge span {
+  color: rgb(199 240 139 / 28%);
+}
+
+.pagination-edge-next {
+  text-align: right;
+}
+
+.pagination-pages {
+  display: flex;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pagination-pages a,
+.pagination-pages span {
+  display: block;
+  min-width: 2rem;
+  padding: 0.3rem 0.4rem;
+  text-align: center;
+}
+
+.pagination-pages span[aria-current="page"] {
+  background: var(--system-faint);
+  color: var(--system-bright);
+  outline: 1px solid var(--system-line-strong);
+}
+
+@media (min-width: 761px) {
+  .archive-pagination {
+    font-size: 0.74rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .archive-pagination {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pagination-pages {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-content: center;
+  }
+
+  .pagination-edge {
+    grid-row: 2;
+  }
+}

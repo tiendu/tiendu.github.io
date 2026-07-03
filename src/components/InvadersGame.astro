@@ -1,19 +1,24 @@
+---
+import "../styles/components/arcade.css";
+import "../styles/components/invaders-game.css";
+---
+
 <section
-  class="invaders-panel"
+  class="arcade-panel invaders-panel"
   data-invaders-game
   aria-label="Space Invaders game"
   hidden
 >
-  <div class="invaders-scoreboard" aria-live="polite">
+  <div class="arcade-scoreboard invaders-scoreboard" aria-live="polite">
     <span>SCORE <output data-invaders-score>0000</output></span>
     <span>HIGH <output data-invaders-high-score>0000</output></span>
     <span>WAVE <output data-invaders-wave>01</output></span>
     <span>LIVES <output data-invaders-lives>3</output></span>
   </div>
 
-  <div class="invaders-board-frame">
+  <div class="arcade-board-frame invaders-board-frame">
     <canvas
-      class="invaders-board"
+      class="arcade-board invaders-board"
       data-invaders-canvas
       width="480"
       height="560"
@@ -21,19 +26,19 @@
       aria-label="Space Invaders game board. Use left and right arrows or A and D to move. Press Space to fire."
     ></canvas>
 
-    <div class="invaders-overlay" data-invaders-overlay>
+    <div class="arcade-overlay invaders-overlay" data-invaders-overlay>
       <strong data-invaders-state>PRESS FIRE OR MOVE</strong>
       <span data-invaders-message>ARROWS / A D / SPACE / SWIPE</span>
     </div>
   </div>
 
-  <div class="invaders-pad" aria-label="Space Invaders controls">
+  <div class="arcade-pad invaders-pad" aria-label="Space Invaders controls">
     <button type="button" data-invaders-control="left" aria-label="Move left">◀</button>
     <button type="button" data-invaders-control="fire" aria-label="Fire">FIRE</button>
     <button type="button" data-invaders-control="right" aria-label="Move right">▶</button>
   </div>
 
-  <p class="invaders-help">
+  <p class="arcade-help invaders-help">
     ← → / A D MOVE · SPACE FIRE · P PAUSE · R RESTART · ESC EXIT
   </p>
 </section>
@@ -986,152 +991,3 @@
   })();
 </script>
 
-<style>
-  .invaders-panel[hidden],
-  .invaders-overlay[hidden] {
-    display: none;
-  }
-
-  .invaders-panel {
-    display: grid;
-    gap: 0.8rem;
-    margin-inline: auto;
-    max-width: 480px;
-    width: 100%;
-  }
-
-  .invaders-scoreboard {
-    color: var(--terminal-green-dim);
-    display: grid;
-    font-size: 0.9rem;
-    gap: 0.3rem 1rem;
-    grid-template-columns: repeat(4, auto);
-    justify-content: space-between;
-    letter-spacing: 0.09em;
-  }
-
-  .invaders-scoreboard output {
-    color: var(--terminal-green-bright);
-    font-family: inherit;
-  }
-
-  .invaders-board-frame {
-    background: #020704;
-    border: 1px solid rgb(199 240 139 / 25%);
-    box-shadow:
-      inset 0 0 28px rgb(0 0 0 / 60%),
-      0 0 16px rgb(199 240 139 / 7%);
-    display: grid;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .invaders-board,
-  .invaders-overlay {
-    grid-area: 1 / 1;
-  }
-
-  .invaders-board {
-    aspect-ratio: 6 / 7;
-    display: block;
-    max-width: none;
-    touch-action: none;
-    width: 100%;
-  }
-
-  .invaders-board:focus-visible {
-    outline: 1px solid var(--terminal-green-dim);
-    outline-offset: -3px;
-  }
-
-  .invaders-overlay {
-    align-content: center;
-    align-items: center;
-    background: rgb(2 7 4 / 68%);
-    display: grid;
-    justify-items: center;
-    padding: 1rem;
-    pointer-events: none;
-    text-align: center;
-    z-index: 1;
-  }
-
-  .invaders-overlay strong {
-    color: var(--terminal-green-bright);
-    font-size: clamp(1.05rem, 4vw, 1.45rem);
-    font-weight: 400;
-    letter-spacing: 0.11em;
-    text-shadow: 0 0 8px rgb(199 240 139 / 34%);
-  }
-
-  .invaders-overlay span {
-    color: var(--terminal-green-dim);
-    font-size: 0.82rem;
-    letter-spacing: 0.07em;
-    margin-top: 0.35rem;
-  }
-
-  .invaders-pad {
-    display: none;
-    gap: 0.5rem;
-    grid-template-columns: 54px minmax(86px, 1fr) 54px;
-    justify-content: center;
-    margin-inline: auto;
-    max-width: 260px;
-    width: 100%;
-  }
-
-  .invaders-pad button {
-    background: rgb(199 240 139 / 5%);
-    border: 1px solid rgb(199 240 139 / 25%);
-    border-radius: 2px;
-    color: var(--terminal-green);
-    cursor: pointer;
-    font-family: var(--font-terminal);
-    font-size: 0.92rem;
-    min-height: 44px;
-    padding: 0.4rem;
-    touch-action: manipulation;
-  }
-
-  .invaders-pad button:hover,
-  .invaders-pad button:focus-visible {
-    background: rgb(199 240 139 / 12%);
-    border-color: var(--terminal-green-dim);
-    color: var(--terminal-green-bright);
-  }
-
-  .invaders-help {
-    color: var(--terminal-green-dim);
-    font-size: 0.75rem;
-    letter-spacing: 0.065em;
-    line-height: 1.45;
-    margin: 0;
-    max-width: none;
-    text-align: center;
-  }
-
-  @media (max-width: 620px), (pointer: coarse) {
-    .invaders-pad {
-      display: grid;
-    }
-
-    .invaders-help {
-      display: none;
-    }
-
-    .invaders-scoreboard {
-      font-size: 0.78rem;
-      gap: 0.25rem 0.65rem;
-      grid-template-columns: repeat(2, auto);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .invaders-board-frame,
-    .invaders-overlay strong {
-      box-shadow: none;
-      text-shadow: none;
-    }
-  }
-</style>

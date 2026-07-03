@@ -1,0 +1,106 @@
+/* Posts / log archive ---------------------------------------------------- */
+
+.archive-section + .archive-section {
+  margin-top: clamp(3rem, 7vw, 5.5rem);
+}
+
+.archive-section-header {
+  align-items: end;
+  display: flex;
+  gap: 1.5rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.archive-section-header h2 {
+  color: var(--system-bright);
+  font-family: var(--font-ui);
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.archive-section-header > span {
+  color: var(--system-dim);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+
+.log-table-head,
+.log-entry {
+  display: grid;
+  gap: clamp(0.75rem, 2vw, 1.4rem);
+  grid-template-columns: 4rem 7rem minmax(0, 1fr) minmax(10rem, 0.35fr);
+}
+
+.log-table-head {
+  border-bottom: 1px solid var(--system-line-strong);
+  color: var(--system-dim);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  padding: 0 0 0.65rem;
+}
+
+.log-list {
+  list-style: none;
+  margin: 0;
+  max-width: none;
+  padding: 0;
+}
+
+.log-entry {
+  align-items: baseline;
+  border-bottom: 1px solid var(--system-line);
+  padding: 1rem 0;
+  transition: background-color 130ms ease;
+}
+
+.log-entry:hover {
+  background: var(--system-faint);
+}
+
+.log-number,
+.log-date,
+.log-subline {
+  color: var(--system-dim);
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.04em;
+}
+
+.log-number {
+  color: var(--system-text);
+}
+
+.log-main h3 {
+  font-size: clamp(0.98rem, 2vw, 1.12rem);
+  font-weight: 550;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.log-main a,
+.log-main a:visited {
+  color: var(--system-bright);
+  text-decoration: none;
+}
+
+.log-main a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.log-subline {
+  line-height: 1.5;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.log-subline span {
+  color: rgb(199 240 139 / 48%);
+}

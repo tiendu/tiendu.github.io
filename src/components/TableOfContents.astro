@@ -9,26 +9,45 @@ const { headings } = Astro.props;
 const visibleHeadings = headings.filter(
   ({ depth }) => depth === 2 || depth === 3,
 );
+const count = String(visibleHeadings.length).padStart(2, "0");
 ---
 
 {
   visibleHeadings.length > 0 && (
-    <nav class="toc" aria-label="Table of contents">
-      <header class="toc-header">
-        <div>
-          <span>DOCUMENT INDEX</span>
-          <strong>CONTENTS</strong>
-        </div>
-        <small>{String(visibleHeadings.length).padStart(2, "0")}</small>
-      </header>
+    <>
+      <nav class="toc-desktop" aria-label="Table of contents">
+        <header class="toc-header">
+          <div>
+            <span>DOCUMENT INDEX</span>
+            <strong>CONTENTS</strong>
+          </div>
+          <small>{count}</small>
+        </header>
 
-      <ol>
-        {visibleHeadings.map((heading) => (
-          <li class:list={{ "toc-level-3": heading.depth === 3 }}>
-            <a href={`#${heading.slug}`}>{heading.text}</a>
-          </li>
-        ))}
-      </ol>
-    </nav>
+        <ol>
+          {visibleHeadings.map((heading) => (
+            <li class:list={{ "toc-level-3": heading.depth === 3 }}>
+              <a data-toc-link href={`#${heading.slug}`}>{heading.text}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <details class="toc-mobile">
+        <summary>
+          <span>CONTENTS</span>
+          <small>{count}</small>
+        </summary>
+        <nav aria-label="Table of contents">
+          <ol>
+            {visibleHeadings.map((heading) => (
+              <li class:list={{ "toc-level-3": heading.depth === 3 }}>
+                <a data-toc-link href={`#${heading.slug}`}>{heading.text}</a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </details>
+    </>
   )
 }

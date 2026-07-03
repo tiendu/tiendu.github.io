@@ -43,9 +43,21 @@ src/
 ├── data/             Project and topic data
 ├── layouts/          Base, system-page, and article layouts
 ├── pages/            Astro routes
-├── styles/           Global, system, and article styles
+├── styles/           Layered external styles and import manifests
 └── utils/            Post routing, related-post, and formatting helpers
 ```
+
+## Styles
+
+Styles are externalized under `src/styles/` and loaded by the page or layout that
+owns them. Run the architecture guard directly with:
+
+```bash
+npm run check:styles
+```
+
+`make verify` includes this check. See [`docs/STYLES.md`](docs/STYLES.md) for the
+ownership map and maintenance rules.
 
 ## Posts
 

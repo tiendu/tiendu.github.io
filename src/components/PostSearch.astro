@@ -1,0 +1,317 @@
+---
+import {
+  formatCompactDate,
+  getPostRoute,
+  getTopicRoute,
+  readingTime,
+  sortPosts,
+  type BlogPost,
+} from "../utils/posts";
+
+interface Props {
+  posts: BlogPost[];
+}
+
+const { posts } = Astro.props;
+const sortedPosts = sortPosts(posts);
+const pinnedIds = new Map(
+  sortedPosts
+    .filter(({ data }) => data.pinned)
+    .map((post, index) => [post.id, `P${String(index + 1).padStart(2, "0")}`]),
+);
+const normalIds = new Map(
+  sortedPosts
+    .filter(({ data }) => !data.pinned)
+    .map((post, index) => [post.id, String(index + 1).padStart(3, "0")]),
+);
+const searchIndex = sortedPosts.map((post) => ({
+  id: pinnedIds.get(post.id) ?? normalIds.get(post.id) ?? "---",
+  title: post.data.title,
+  description: post.data.description,
+  topic: post.data.topic,
+  keywords: post.data.keywords,
+  route: getPostRoute(post),
+  topicRoute: getTopicRoute(post.data.topic),
+  date: formatCompactDate(post.data.date),
+  dateTime: post.data.date.toISOString(),
+  minutes: readingTime(post.body ?? ""),
+}));
+const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
+  "<",
+  "\\u003c",
+);
+---
+
+<section class="post-search" data-post-search aria-labelledby="post-search-label">
+  <div class="post-search-heading">
+    <div>
+      <p class="system-section-code">SEARCH</p>
+      <h2 id="post-search-label">Find a note</h2>
+    </div>
+    <span aria-hidden="true">/</span>
+  </div>
+
+  <div class="post-search-control">
+    <label class="sr-only" for="post-search-input">Search posts</label>
+    <input
+      id="post-search-input"
+      data-post-search-input
+      type="search"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="TITLE, TOPIC, OR KEYWORD"
+    />
+    <button type="button" data-post-search-clear hidden>CLEAR</button>
+  </div>
+
+  <p class="post-search-status" data-post-search-status role="status" aria-live="polite">
+    PRESS / TO SEARCH
+  </p>
+
+  <section class="post-search-results" data-post-search-results hidden aria-label="Search results">
+    <div class="archive-section-header">
+      <div>
+        <p class="system-section-code">RESULTS</p>
+        <h2>Matching notes</h2>
+      </div>
+      <span data-post-search-count>0 RECORDS</span>
+    </div>
+
+    <div class="log-table-head" aria-hidden="true">
+      <span>ID</span>
+      <span>DATE</span>
+      <span>SUBJECT</span>
+      <span>TOPIC</span>
+    </div>
+
+    <ol class="log-list" data-post-search-list></ol>
+    <p class="system-empty-state" data-post-search-empty hidden>
+      NO MATCHING NOTES FOUND.
+    </p>
+  </section>
+
+  <script
+    is:inline
+    type="application/json"
+    data-post-search-data
+    set:html={serializedSearchIndex}
+  ></script>
+</section>
+
+<script>
+  interface SearchRecord {
+    id: string;
+    title: string;
+    description: string;
+    topic: string;
+    keywords: string[];
+    route: string;
+    topicRoute: string;
+    date: string;
+    dateTime: string;
+    minutes: number;
+  }
+
+  function initPostSearch() {
+    const roots = document.querySelectorAll<HTMLElement>(
+      "[data-post-search]:not([data-search-ready])",
+    );
+
+    for (const root of roots) {
+      root.dataset.searchReady = "true";
+
+      const input = root.querySelector<HTMLInputElement>(
+        "[data-post-search-input]",
+      );
+      const clearButton = root.querySelector<HTMLButtonElement>(
+        "[data-post-search-clear]",
+      );
+      const status = root.querySelector<HTMLElement>(
+        "[data-post-search-status]",
+      );
+      const results = root.querySelector<HTMLElement>(
+        "[data-post-search-results]",
+      );
+      const count = root.querySelector<HTMLElement>(
+        "[data-post-search-count]",
+      );
+      const list = root.querySelector<HTMLOListElement>(
+        "[data-post-search-list]",
+      );
+      const empty = root.querySelector<HTMLElement>(
+        "[data-post-search-empty]",
+      );
+      const data = root.querySelector<HTMLScriptElement>(
+        "[data-post-search-data]",
+      );
+
+      if (
+        !input ||
+        !clearButton ||
+        !status ||
+        !results ||
+        !count ||
+        !list ||
+        !empty ||
+        !data
+      ) {
+        continue;
+      }
+
+      let records: SearchRecord[] = [];
+
+      try {
+        records = JSON.parse(data.textContent ?? "[]") as SearchRecord[];
+      } catch {
+        status.textContent = "SEARCH INDEX UNAVAILABLE";
+        input.disabled = true;
+        continue;
+      }
+
+      const documentBody = root.closest<HTMLElement>(".system-document-body");
+      const archiveSections = Array.from(
+        documentBody?.querySelectorAll<HTMLElement>(
+          ":scope > .archive-section",
+        ) ?? [],
+      );
+
+      const normalize = (value: string) =>
+        value
+          .toLocaleLowerCase()
+          .normalize("NFKD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, " ")
+          .trim();
+
+      const searchableRecords = records.map((record) => ({
+        record,
+        haystack: normalize(
+          [
+            record.title,
+            record.description,
+            record.topic,
+            ...record.keywords,
+          ].join(" "),
+        ),
+      }));
+
+      const createTextElement = <K extends keyof HTMLElementTagNameMap>(
+        tagName: K,
+        className: string,
+        text: string,
+      ) => {
+        const element = document.createElement(tagName);
+        element.className = className;
+        element.textContent = text;
+        return element;
+      };
+
+      const renderRecord = (record: SearchRecord) => {
+        const item = document.createElement("li");
+        item.className = "log-entry";
+
+        const number = createTextElement("a", "log-number", record.id);
+        number.href = record.route;
+        number.setAttribute("aria-label", `Open ${record.title}`);
+
+        const date = createTextElement("time", "log-date", record.date);
+        date.dateTime = record.dateTime;
+
+        const main = document.createElement("div");
+        main.className = "log-main";
+        const heading = document.createElement("h3");
+        const title = createTextElement("a", "", record.title);
+        title.href = record.route;
+        heading.append(title);
+        main.append(heading);
+
+        const subline = document.createElement("p");
+        subline.className = "log-subline";
+        const topic = createTextElement(
+          "a",
+          "log-topic-link",
+          record.topic,
+        );
+        topic.href = record.topicRoute;
+        const separator = document.createElement("br");
+        const runtime = createTextElement(
+          "span",
+          "",
+          `${record.minutes} MIN READ`,
+        );
+        subline.append(topic, separator, runtime);
+
+        item.append(number, date, main, subline);
+        return item;
+      };
+
+      const setArchiveVisibility = (visible: boolean) => {
+        for (const section of archiveSections) {
+          section.hidden = !visible;
+        }
+      };
+
+      const clearSearch = (focus = false) => {
+        input.value = "";
+        list.replaceChildren();
+        results.hidden = true;
+        empty.hidden = true;
+        clearButton.hidden = true;
+        status.textContent = "PRESS / TO SEARCH";
+        setArchiveVisibility(true);
+
+        if (focus) {
+          input.focus();
+        }
+      };
+
+      const updateResults = () => {
+        const normalizedQuery = normalize(input.value);
+        const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+
+        if (tokens.length === 0) {
+          clearSearch(false);
+          return;
+        }
+
+        const matches = searchableRecords
+          .filter(({ haystack }) =>
+            tokens.every((token) => haystack.includes(token)),
+          )
+          .map(({ record }) => record);
+
+        list.replaceChildren(...matches.map(renderRecord));
+        count.textContent = `${matches.length} ${matches.length === 1 ? "RECORD" : "RECORDS"}`;
+        status.textContent = `${matches.length} ${matches.length === 1 ? "MATCH" : "MATCHES"} FOR “${input.value.trim()}”`;
+        results.hidden = false;
+        empty.hidden = matches.length !== 0;
+        clearButton.hidden = false;
+        setArchiveVisibility(false);
+      };
+
+      input.addEventListener("input", updateResults);
+      clearButton.addEventListener("click", () => clearSearch(true));
+
+      document.addEventListener("keydown", (event) => {
+        const target = event.target;
+        const targetIsEditable =
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          (target instanceof HTMLElement && target.isContentEditable);
+
+        if (event.key === "/" && !targetIsEditable) {
+          event.preventDefault();
+          input.focus();
+          input.select();
+        } else if (event.key === "Escape" && document.activeElement === input) {
+          event.preventDefault();
+          clearSearch(true);
+        }
+      });
+    }
+  }
+
+  initPostSearch();
+  document.addEventListener("astro:page-load", initPostSearch);
+</script>

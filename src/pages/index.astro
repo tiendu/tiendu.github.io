@@ -4,6 +4,8 @@ import SnakeGame from "../components/SnakeGame.astro";
 import InvadersGame from "../components/InvadersGame.astro";
 import BreakoutGame from "../components/BreakoutGame.astro";
 import SystemHeader from "../components/SystemHeader.astro";
+import "../styles/system.css";
+import "../styles/pages/home.css";
 ---
 
 <BaseLayout
@@ -12,9 +14,22 @@ import SystemHeader from "../components/SystemHeader.astro";
 >
   <section class="landing-wrapper" aria-labelledby="home-title">
     <script is:inline data-astro-rerun>
-      document.currentScript?.parentElement?.classList.add(
-        "terminal-typing-enabled",
-      );
+      (() => {
+        const wrapper = document.currentScript?.parentElement;
+        if (!wrapper) return;
+
+        let introSeen = false;
+        try {
+          introSeen =
+            window.sessionStorage.getItem("tiendu-home-intro-seen") === "true";
+        } catch {
+          // Play the intro when session storage is unavailable.
+        }
+
+        wrapper.classList.add(
+          introSeen ? "terminal-intro-seen" : "terminal-typing-enabled",
+        );
+      })();
     </script>
 
 
@@ -23,6 +38,10 @@ import SystemHeader from "../components/SystemHeader.astro";
 
       <div class="terminal-screen" data-terminal-screen>
         <div class="terminal-content">
+          <button class="terminal-skip" data-terminal-skip type="button">
+            SKIP INTRO
+          </button>
+
           <p class="command-line" aria-label="Terminal command: profile">
             <span class="typed-command">
               <span class="prompt">TIENDU@HOME</span>
@@ -71,6 +90,16 @@ import SystemHeader from "../components/SystemHeader.astro";
                 </p>
               </section>
             </div>
+
+            <nav
+              class="terminal-actions"
+              data-terminal-actions
+              aria-label="Primary destinations"
+            >
+              <a href="/posts/">READ POSTS</a>
+              <a href="/topics/">BROWSE TOPICS</a>
+              <a href="/projects/">VIEW PROJECTS</a>
+            </nav>
 
             <p
               class="terminal-response"
@@ -181,6 +210,7 @@ import SystemHeader from "../components/SystemHeader.astro";
 
         const sessionCounter = wrapper.querySelector("[data-session-count]");
         const SESSION_STORAGE_KEY = "tiendu-home-session";
+        const INTRO_STORAGE_KEY = "tiendu-home-intro-seen";
         const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
         const updateSessionCounter = () => {
@@ -258,6 +288,8 @@ import SystemHeader from "../components/SystemHeader.astro";
           "[data-terminal-input-warning]",
         );
         const response = wrapper.querySelector("[data-terminal-response]");
+        const terminalActions = wrapper.querySelector("[data-terminal-actions]");
+        const skipButton = wrapper.querySelector("[data-terminal-skip]");
         const terminalScreen = wrapper.querySelector("[data-terminal-screen]");
         const snakeRoot = wrapper.querySelector("[data-snake-game]");
         const snakeOverlay = wrapper.querySelector("[data-snake-overlay]");
@@ -300,6 +332,11 @@ import SystemHeader from "../components/SystemHeader.astro";
         let snakeIsActive = false;
         let invadersIsActive = false;
         let breakoutIsActive = false;
+        let introFinished = false;
+        let introSkipRequested = false;
+        let wakeIntroSleep = () => {};
+        let introLines = [];
+        let introTextByLine = [];
 
         const setText = (element, value) => {
           if (element) {
@@ -308,7 +345,18 @@ import SystemHeader from "../components/SystemHeader.astro";
         };
 
         const sleep = (milliseconds) =>
-          new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+          new Promise((resolve) => {
+            const timer = window.setTimeout(() => {
+              wakeIntroSleep = () => {};
+              resolve();
+            }, milliseconds);
+
+            wakeIntroSleep = () => {
+              window.clearTimeout(timer);
+              wakeIntroSleep = () => {};
+              resolve();
+            };
+          });
 
         const showResponse = (message) => {
           if (!response) {
@@ -360,7 +408,20 @@ import SystemHeader from "../components/SystemHeader.astro";
         };
 
         const revealShell = () => {
+          if (introFinished) {
+            return;
+          }
+
+          introFinished = true;
           commandCursor?.classList.add("cursor-hidden");
+          terminalActions?.classList.add("is-visible");
+          skipButton?.setAttribute("hidden", "");
+
+          try {
+            window.sessionStorage.setItem(INTRO_STORAGE_KEY, "true");
+          } catch {
+            // The homepage remains usable when session storage is unavailable.
+          }
 
           if (shell) {
             shell.hidden = false;
@@ -390,6 +451,11 @@ import SystemHeader from "../components/SystemHeader.astro";
           element.classList.add("is-typing");
 
           for (const character of text) {
+            if (introSkipRequested) {
+              element.classList.remove("is-typing");
+              return;
+            }
+
             element.textContent += character;
 
             if (
@@ -412,6 +478,27 @@ import SystemHeader from "../components/SystemHeader.astro";
           element.classList.remove("is-typing");
         };
 
+        const restoreIntroText = () => {
+          introLines.forEach((line, index) => {
+            line.textContent = introTextByLine[index] ?? "";
+            line.style.visibility = "visible";
+            line.classList.remove("is-typing");
+          });
+        };
+
+        const requestIntroSkip = () => {
+          if (introFinished) {
+            return;
+          }
+
+          introSkipRequested = true;
+          wakeIntroSleep();
+          restoreIntroText();
+          output?.setAttribute("aria-busy", "false");
+          wrapper.classList.remove("terminal-typing-enabled");
+          revealShell();
+        };
+
         const startTerminalOutput = async () => {
           if (!output) {
             wrapper.classList.remove("terminal-typing-enabled");
@@ -419,34 +506,45 @@ import SystemHeader from "../components/SystemHeader.astro";
             return;
           }
 
-          const lines = Array.from(
+          introLines = Array.from(
             output.querySelectorAll("[data-terminal-line]"),
           );
+          introTextByLine = introLines.map((line) =>
+            (line.textContent ?? "").replace(/\s+/g, " ").trim(),
+          );
 
-          if (reducedMotion.matches) {
+          let introSeen = false;
+          try {
+            introSeen =
+              window.sessionStorage.getItem(INTRO_STORAGE_KEY) === "true";
+          } catch {
+            // Play the intro when session storage is unavailable.
+          }
+
+          if (reducedMotion.matches || introSeen) {
+            restoreIntroText();
             wrapper.classList.remove("terminal-typing-enabled");
             output.setAttribute("aria-busy", "false");
             revealShell();
             return;
           }
 
-          const textByLine = lines.map((line) =>
-            (line.textContent ?? "").replace(/\s+/g, " ").trim(),
-          );
-
           output.setAttribute("aria-busy", "true");
 
-          lines.forEach((line) => {
+          introLines.forEach((line) => {
             line.textContent = "";
             line.style.visibility = "hidden";
           });
 
-          await sleep(1850);
+          await sleep(1200);
+          if (introSkipRequested) return;
           commandCursor?.classList.add("cursor-dimmed");
 
-          for (let index = 0; index < lines.length; index += 1) {
-            await typeLine(lines[index], textByLine[index]);
-            await sleep(index === 0 ? 420 : 650);
+          for (let index = 0; index < introLines.length; index += 1) {
+            await typeLine(introLines[index], introTextByLine[index]);
+            if (introSkipRequested) return;
+            await sleep(index === 0 ? 320 : 480);
+            if (introSkipRequested) return;
           }
 
           output.setAttribute("aria-busy", "false");
@@ -1155,6 +1253,28 @@ import SystemHeader from "../components/SystemHeader.astro";
           );
         });
 
+        skipButton?.addEventListener("click", requestIntroSkip);
+
+        terminalScreen?.addEventListener(
+          "pointerdown",
+          () => {
+            if (!introFinished) requestIntroSkip();
+          },
+          { passive: true },
+        );
+
+        window.addEventListener("keydown", (event) => {
+          if (
+            !introFinished &&
+            (event.key === "Enter" ||
+              event.key === " " ||
+              event.key === "Escape")
+          ) {
+            event.preventDefault();
+            requestIntroSkip();
+          }
+        });
+
         startTerminalOutput().catch(() => {
           wrapper.classList.remove("terminal-typing-enabled");
 
@@ -1169,567 +1289,3 @@ import SystemHeader from "../components/SystemHeader.astro";
   </section>
 </BaseLayout>
 
-<style>
-  :root {
-    --terminal-screen: #030805;
-    --terminal-screen-deep: #030805;
-    --terminal-green: #bddf86;
-    --terminal-green-bright: #e2f8ad;
-    --terminal-green-dim: #789958;
-    --terminal-glow: rgb(199 240 139 / 12%);
-  }
-
-  :global(html) {
-    background: var(--terminal-screen-deep);
-  }
-
-  :global(body.terminal-home) {
-    background: var(--terminal-screen-deep);
-    color: var(--terminal-green);
-    min-height: 100dvh;
-    overflow: hidden;
-  }
-
-  :global(body.terminal-home .terminal-page-content) {
-    min-height: 100dvh;
-    padding: 0;
-  }
-
-  .landing-wrapper {
-    height: 100dvh;
-    margin: 0;
-    max-width: none;
-    min-height: 100dvh;
-    width: 100%;
-  }
-
-  .terminal-card {
-    background: transparent;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    height: 100dvh;
-    min-height: 100dvh;
-    overflow: hidden;
-    width: 100%;
-  }
-
-  .terminal-screen {
-    background: transparent;
-    display: flex;
-    min-height: 0;
-    overflow: auto;
-    overscroll-behavior: contain;
-    position: relative;
-    scrollbar-color: var(--terminal-green-dim) var(--terminal-screen-deep);
-  }
-
-
-
-  .terminal-content {
-    color: var(--terminal-green);
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    font-family: var(--font-terminal);
-    font-synthesis: none;
-    gap: 1.3rem;
-    letter-spacing: 0.035em;
-    margin-inline: auto;
-    min-height: 100%;
-    padding:
-      clamp(1.3rem, 3.4vw, 2.65rem)
-      max(clamp(1rem, 4vw, 3.25rem), env(safe-area-inset-right))
-      max(clamp(1rem, 3vw, 2rem), env(safe-area-inset-bottom))
-      max(clamp(1rem, 4vw, 3.25rem), env(safe-area-inset-left));
-    position: relative;
-    text-shadow: 0 0 4px rgb(199 240 139 / 12%);
-    width: min(100%, 1280px);
-    z-index: 1;
-  }
-
-  .command-line {
-    align-items: baseline;
-    color: var(--terminal-green-dim);
-    display: flex;
-    font-size: clamp(1.12rem, 1.8vw, 1.4rem);
-    line-height: 1.2;
-    margin: 0;
-    max-width: none;
-    white-space: nowrap;
-  }
-
-  .typed-command {
-    animation: command-typing 1.7s steps(24, end) forwards;
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    width: 0;
-  }
-
-  .prompt {
-    color: var(--terminal-green-bright);
-  }
-
-  .path {
-    color: var(--terminal-green);
-  }
-
-  .block-cursor {
-    animation: cursor-blink 0.85s steps(1, end) infinite;
-    background: var(--terminal-green-bright);
-    box-shadow: 0 0 6px var(--terminal-green);
-    display: inline-block;
-    flex: 0 0 auto;
-    height: 0.9em;
-    margin-left: 0.2rem;
-    transform: translateY(0.1em);
-    transition: opacity 160ms ease;
-    width: 0.52em;
-  }
-
-  .block-cursor.cursor-dimmed {
-    opacity: 0.22;
-  }
-
-  .block-cursor.cursor-hidden {
-    display: none;
-  }
-
-  .profile-view {
-    max-width: 960px;
-  }
-
-  .output-stage {
-    display: grid;
-  }
-
-  .output-measure,
-  .output {
-    grid-area: 1 / 1;
-  }
-
-  .output-measure {
-    visibility: hidden;
-  }
-
-  .landing-wrapper.terminal-typing-enabled .output [data-terminal-line] {
-    visibility: hidden;
-  }
-
-  .terminal-title {
-    color: var(--terminal-green-bright);
-    font-family: inherit;
-    font-size: clamp(2.6rem, 7vw, 4.8rem);
-    font-weight: 400;
-    letter-spacing: 0.075em;
-    line-height: 0.95;
-    margin: 0 0 1.35rem;
-    text-shadow: 0 0 6px rgb(199 240 139 / 18%);
-  }
-
-  .output p,
-  .output-measure p {
-    color: var(--terminal-green);
-    font-size: clamp(1.24rem, 2.15vw, 1.65rem);
-    line-height: 1.42;
-    margin: 0 0 1rem;
-    max-width: 64ch;
-  }
-
-  .output .terminal-title,
-  .output-measure .terminal-title {
-    color: var(--terminal-green-bright);
-    font-size: clamp(2.6rem, 7vw, 4.8rem);
-    line-height: 0.95;
-    margin-bottom: 1.35rem;
-  }
-
-  .output .is-typing::after {
-    animation: cursor-blink 0.85s steps(1, end) infinite;
-    background: var(--terminal-green-bright);
-    box-shadow: 0 0 5px var(--terminal-green);
-    content: "";
-    display: inline-block;
-    height: 0.76em;
-    margin-left: 0.16rem;
-    transform: translateY(0.08em);
-    width: 0.44em;
-  }
-
-  .profile-view[hidden],
-  .terminal-shell[hidden],
-  .terminal-response[hidden] {
-    display: none;
-  }
-
-  .terminal-response {
-    border-left: 2px solid rgb(199 240 139 / 28%);
-    color: var(--terminal-green-dim);
-    font-size: clamp(1rem, 1.55vw, 1.18rem);
-    line-height: 1.4;
-    margin: 0.25rem 0 0;
-    max-width: 72ch;
-    padding-left: 0.75rem;
-    white-space: pre-wrap;
-  }
-
-  .terminal-shell {
-    align-items: baseline;
-    color: var(--terminal-green-dim);
-    display: flex;
-    flex-wrap: wrap;
-    font-size: clamp(1.08rem, 1.75vw, 1.32rem);
-    gap: 0.28rem;
-    line-height: 1.25;
-    margin: 0;
-    min-width: 0;
-  }
-
-  .terminal-shell-entry {
-    align-items: baseline;
-    display: inline-flex;
-    min-width: 0;
-  }
-
-  .terminal-shell-input {
-    background: transparent;
-    border: 0;
-    caret-color: transparent;
-    color: var(--terminal-green-bright);
-    flex: 0 0 auto;
-    font-family: inherit;
-    font-size: inherit;
-    font-variant-ligatures: none;
-    letter-spacing: inherit;
-    line-height: inherit;
-    margin-left: 0.06rem;
-    max-width: 17.5ch;
-    min-width: 0.8ch;
-    outline: 0;
-    padding: 0;
-    text-transform: uppercase;
-    width: 0.8ch;
-  }
-
-  .shell-block-cursor {
-    animation: cursor-blink 0.85s steps(1, end) infinite;
-    background: var(--terminal-green-bright);
-    box-shadow: 0 0 6px var(--terminal-green);
-    display: inline-block;
-    flex: 0 0 auto;
-    height: 0.9em;
-    margin-left: 0.06rem;
-    transform: translateY(0.1em);
-    width: 0.52em;
-  }
-
-  .terminal-shell.is-at-limit .shell-block-cursor {
-    background: var(--amber-soft);
-    box-shadow: 0 0 6px rgb(214 170 114 / 55%);
-  }
-
-  .terminal-input-warning {
-    color: var(--amber-soft);
-    font-size: 0.88rem;
-    letter-spacing: 0.07em;
-    line-height: 1.25;
-    margin: -0.55rem 0 0;
-    max-width: none;
-  }
-
-  .terminal-input-warning[hidden] {
-    display: none;
-  }
-
-  .snake-mobile-controls,
-  .invaders-mobile-controls,
-  .breakout-mobile-controls {
-    display: none;
-  }
-
-  .terminal-footer {
-    align-items: center;
-    border-top: 1px solid rgb(199 240 139 / 15%);
-    color: var(--terminal-green-dim);
-    display: flex;
-    font-size: 0.92rem;
-    justify-content: space-between;
-    letter-spacing: 0.1em;
-    margin: auto 0 0;
-    max-width: none;
-    opacity: 0;
-    padding-top: 0.72rem;
-    transition: opacity 220ms ease;
-  }
-
-  .terminal-footer-visible {
-    opacity: 1;
-  }
-
-  @keyframes command-typing {
-    from {
-      width: 0;
-    }
-
-    to {
-      width: 24ch;
-    }
-  }
-
-  @keyframes cursor-blink {
-    50% {
-      opacity: 0;
-    }
-  }
-
-  @media (max-width: 760px) {
-  }
-
-  @media (min-width: 521px) {
-    .command-line {
-      font-size: clamp(1.18rem, 1.8vw, 1.46rem);
-    }
-
-    .terminal-response {
-      font-size: clamp(1.05rem, 1.55vw, 1.24rem);
-    }
-
-    .terminal-shell {
-      font-size: clamp(1.14rem, 1.75vw, 1.38rem);
-    }
-
-    .terminal-input-warning {
-      font-size: 0.96rem;
-    }
-
-    .terminal-footer {
-      font-size: 1rem;
-    }
-  }
-
-  @media (max-width: 520px) {
-
-    .terminal-content {
-      gap: 1.05rem;
-      padding-block: 1.1rem max(0.95rem, env(safe-area-inset-bottom));
-    }
-
-    .command-line {
-      font-size: 1.15rem;
-      overflow: hidden;
-    }
-
-    .terminal-shell {
-      font-size: 1.12rem;
-    }
-
-    .terminal-response {
-      font-size: 1.05rem;
-    }
-
-    .output p,
-    .output-measure p {
-      font-size: 1.16rem;
-      line-height: 1.4;
-    }
-
-    .output .terminal-title,
-    .output-measure .terminal-title {
-      font-size: 2.45rem;
-      letter-spacing: 0.055em;
-    }
-
-    .terminal-footer {
-      align-items: flex-start;
-      flex-wrap: wrap;
-      font-size: 0.88rem;
-      gap: 0.3rem 0.8rem;
-    }
-  }
-
-  @media (max-width: 620px), (pointer: coarse) {
-    .landing-wrapper.snake-mode .snake-mobile-controls {
-      display: grid;
-      gap: 0.55rem;
-      margin: -0.15rem auto 0;
-      max-width: 430px;
-      width: 100%;
-    }
-
-    .snake-mobile-actions {
-      display: grid;
-      gap: 0.5rem;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .snake-mobile-actions button {
-      background: rgb(199 240 139 / 5%);
-      border: 1px solid rgb(199 240 139 / 25%);
-      border-radius: 2px;
-      color: var(--terminal-green);
-      cursor: pointer;
-      font-family: var(--font-terminal);
-      font-size: 0.95rem;
-      letter-spacing: 0.07em;
-      min-height: 44px;
-      padding: 0.55rem 0.35rem;
-      text-transform: uppercase;
-      touch-action: manipulation;
-    }
-
-    .snake-mobile-actions button:hover,
-    .snake-mobile-actions button:focus-visible {
-      background: rgb(199 240 139 / 12%);
-      border-color: var(--terminal-green-dim);
-      color: var(--terminal-green-bright);
-    }
-
-    .snake-mobile-actions button:disabled {
-      cursor: default;
-      opacity: 0.38;
-    }
-
-    .snake-mobile-help {
-      color: var(--terminal-green-dim);
-      font-size: 0.8rem;
-      letter-spacing: 0.08em;
-      margin: 0;
-      max-width: none;
-      text-align: center;
-    }
-
-    .landing-wrapper.snake-mode :global(.snake-help) {
-      display: none;
-    }
-  }
-
-  @media (max-width: 620px), (pointer: coarse) {
-    .landing-wrapper.invaders-mode .invaders-mobile-controls {
-      display: grid;
-      gap: 0.55rem;
-      margin: -0.15rem auto 0;
-      max-width: 480px;
-      width: 100%;
-    }
-
-    .invaders-mobile-actions {
-      display: grid;
-      gap: 0.5rem;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .invaders-mobile-actions button {
-      background: rgb(199 240 139 / 5%);
-      border: 1px solid rgb(199 240 139 / 25%);
-      border-radius: 2px;
-      color: var(--terminal-green);
-      cursor: pointer;
-      font-family: var(--font-terminal);
-      font-size: 0.95rem;
-      letter-spacing: 0.07em;
-      min-height: 44px;
-      padding: 0.55rem 0.35rem;
-      text-transform: uppercase;
-      touch-action: manipulation;
-    }
-
-    .invaders-mobile-actions button:hover,
-    .invaders-mobile-actions button:focus-visible {
-      background: rgb(199 240 139 / 12%);
-      border-color: var(--terminal-green-dim);
-      color: var(--terminal-green-bright);
-    }
-
-    .invaders-mobile-actions button:disabled {
-      cursor: default;
-      opacity: 0.38;
-    }
-
-    .invaders-mobile-help {
-      color: var(--terminal-green-dim);
-      font-size: 0.8rem;
-      letter-spacing: 0.08em;
-      margin: 0;
-      max-width: none;
-      text-align: center;
-    }
-
-    .landing-wrapper.invaders-mode :global(.invaders-help) {
-      display: none;
-    }
-  }
-
-  @media (max-width: 620px), (pointer: coarse) {
-    .landing-wrapper.breakout-mode .breakout-mobile-controls {
-      display: grid;
-      gap: 0.55rem;
-      margin: -0.15rem auto 0;
-      max-width: 480px;
-      width: 100%;
-    }
-
-    .breakout-mobile-actions {
-      display: grid;
-      gap: 0.5rem;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .breakout-mobile-actions button {
-      background: rgb(199 240 139 / 5%);
-      border: 1px solid rgb(199 240 139 / 25%);
-      border-radius: 2px;
-      color: var(--terminal-green);
-      cursor: pointer;
-      font-family: var(--font-terminal);
-      font-size: 0.95rem;
-      letter-spacing: 0.07em;
-      min-height: 44px;
-      padding: 0.55rem 0.35rem;
-      text-transform: uppercase;
-      touch-action: manipulation;
-    }
-
-    .breakout-mobile-actions button:hover,
-    .breakout-mobile-actions button:focus-visible {
-      background: rgb(199 240 139 / 12%);
-      border-color: var(--terminal-green-dim);
-      color: var(--terminal-green-bright);
-    }
-
-    .breakout-mobile-actions button:disabled {
-      cursor: default;
-      opacity: 0.38;
-    }
-
-    .breakout-mobile-help {
-      color: var(--terminal-green-dim);
-      font-size: 0.8rem;
-      letter-spacing: 0.08em;
-      margin: 0;
-      max-width: none;
-      text-align: center;
-    }
-
-    .landing-wrapper.breakout-mode :global(.breakout-help) {
-      display: none;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .typed-command {
-      animation: none;
-      width: auto;
-    }
-
-    .block-cursor,
-    .shell-block-cursor,
-    .output .is-typing::after {
-      animation: none;
-    }
-
-    .terminal-footer {
-      opacity: 1;
-      transition: none;
-    }
-  }
-</style>

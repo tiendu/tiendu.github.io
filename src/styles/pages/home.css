@@ -1,0 +1,12 @@
+/*
+ * Homepage stylesheet manifest.
+ *
+ * The order is intentional: terminal frame, prompt, game orchestration,
+ * status footer, then responsive and reduced-motion overrides.
+ */
+
+@import "./home/core.css";
+@import "./home/shell.css";
+@import "./home/games.css";
+@import "./home/footer.css";
+@import "./home/responsive.css";

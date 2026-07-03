@@ -1,0 +1,116 @@
+/* Shared visual shell for homepage arcade games. */
+
+.arcade-panel[hidden],
+.arcade-overlay[hidden] {
+  display: none;
+}
+
+.arcade-panel {
+  display: grid;
+  gap: 0.8rem;
+  margin-inline: auto;
+  max-width: 480px;
+  width: 100%;
+}
+
+.arcade-scoreboard {
+  color: var(--terminal-green-dim);
+}
+
+.arcade-scoreboard output {
+  color: var(--terminal-green-bright);
+  font-family: inherit;
+}
+
+.arcade-board-frame {
+  background: #020704;
+  border: 1px solid rgb(199 240 139 / 25%);
+  box-shadow:
+    inset 0 0 28px rgb(0 0 0 / 60%),
+    0 0 16px rgb(199 240 139 / 7%);
+  display: grid;
+  overflow: hidden;
+  position: relative;
+}
+
+.arcade-board,
+.arcade-overlay {
+  grid-area: 1 / 1;
+}
+
+.arcade-board {
+  display: block;
+  max-width: none;
+  touch-action: none;
+  width: 100%;
+}
+
+.arcade-board:focus-visible {
+  outline: 1px solid var(--terminal-green-dim);
+  outline-offset: -3px;
+}
+
+.arcade-overlay {
+  align-content: center;
+  align-items: center;
+  background: rgb(2 7 4 / 68%);
+  display: grid;
+  justify-items: center;
+  padding: 1rem;
+  pointer-events: none;
+  text-align: center;
+  z-index: 1;
+}
+
+.arcade-overlay strong {
+  color: var(--terminal-green-bright);
+  font-size: clamp(1.05rem, 4vw, 1.45rem);
+  font-weight: 400;
+  letter-spacing: 0.11em;
+  text-shadow: 0 0 8px rgb(199 240 139 / 34%);
+}
+
+.arcade-overlay span {
+  color: var(--terminal-green-dim);
+  font-size: 0.82rem;
+  letter-spacing: 0.07em;
+  margin-top: 0.35rem;
+}
+
+.arcade-pad {
+  display: none;
+  justify-content: center;
+  margin-inline: auto;
+  width: 100%;
+}
+
+.arcade-pad button {
+  background: rgb(199 240 139 / 5%);
+  border: 1px solid rgb(199 240 139 / 25%);
+  border-radius: 2px;
+  color: var(--terminal-green);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.arcade-pad button:hover,
+.arcade-pad button:focus-visible {
+  background: rgb(199 240 139 / 12%);
+  border-color: var(--terminal-green-dim);
+  color: var(--terminal-green-bright);
+}
+
+.arcade-help {
+  color: var(--terminal-green-dim);
+  margin: 0;
+  max-width: none;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-board-frame,
+  .arcade-overlay strong {
+    box-shadow: none;
+    text-shadow: none;
+  }
+}

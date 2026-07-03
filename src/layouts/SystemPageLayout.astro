@@ -1,5 +1,6 @@
 ---
 import SystemHeader from "../components/SystemHeader.astro";
+import "../styles/system.css";
 import BaseLayout from "./BaseLayout.astro";
 import type { NavigationKey } from "../config/site";
 
@@ -46,7 +47,10 @@ const {
 
       <footer class="system-module-footer">
         {counter && <span>{counter}</span>}
-        <a href="/">TERMINAL HOME</a>
+        <nav aria-label="Site resources">
+          <a href="/feed.xml">RSS</a>
+          <a href="/">TERMINAL HOME</a>
+        </nav>
       </footer>
     </section>
   </div>

@@ -1,0 +1,152 @@
+/* Snake-specific board, mode picker, and direction controls. */
+
+.snake-panel {
+  max-width: 430px;
+}
+
+.snake-scoreboard {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.98rem;
+  gap: 0.35rem 1rem;
+  justify-content: space-between;
+  letter-spacing: 0.11em;
+}
+
+.snake-bonus-indicator[hidden] {
+  display: none;
+}
+
+.snake-bonus-indicator {
+  color: #d9a35f;
+  text-shadow: 0 0 7px rgb(217 163 95 / 42%);
+}
+
+.snake-bonus-indicator output {
+  color: #f0c36f;
+}
+
+.snake-board-frame {
+  box-shadow:
+    inset 0 0 24px rgb(0 0 0 / 58%),
+    0 0 16px rgb(199 240 139 / 7%);
+}
+
+.snake-board {
+  aspect-ratio: 1;
+}
+
+.snake-overlay {
+  background: rgb(2 7 4 / 66%);
+}
+
+.snake-overlay strong {
+  font-size: clamp(1.15rem, 4vw, 1.55rem);
+  letter-spacing: 0.12em;
+}
+
+.snake-overlay > span {
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+}
+
+.snake-mode-picker {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1rem;
+  max-width: 300px;
+  pointer-events: auto;
+  width: 100%;
+}
+
+.snake-mode-picker[hidden] {
+  display: none;
+}
+
+.snake-mode-picker button {
+  background: rgb(199 240 139 / 7%);
+  border: 1px solid rgb(199 240 139 / 32%);
+  border-radius: 2px;
+  color: var(--terminal-green-bright);
+  cursor: pointer;
+  font-family: var(--font-terminal);
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  min-height: 52px;
+  padding: 0.55rem 0.4rem;
+  text-transform: uppercase;
+  touch-action: manipulation;
+}
+
+.snake-mode-picker button:hover,
+.snake-mode-picker button:focus-visible {
+  background: rgb(199 240 139 / 15%);
+  border-color: var(--terminal-green);
+}
+
+.snake-mode-picker small {
+  color: var(--terminal-green-dim);
+  display: block;
+  font-family: inherit;
+  font-size: 0.64rem;
+  letter-spacing: 0.05em;
+  margin-top: 0.2rem;
+}
+
+.snake-pad {
+  gap: 0.45rem;
+  grid-template-areas:
+    ". up ."
+    "left down right";
+  grid-template-columns: repeat(3, 44px);
+  max-width: none;
+}
+
+.snake-pad button {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  height: 38px;
+  padding: 0;
+  width: 44px;
+}
+
+.snake-pad button[data-snake-direction="up"] {
+  grid-area: up;
+}
+
+.snake-pad button[data-snake-direction="left"] {
+  grid-area: left;
+}
+
+.snake-pad button[data-snake-direction="down"] {
+  grid-area: down;
+}
+
+.snake-pad button[data-snake-direction="right"] {
+  grid-area: right;
+}
+
+.snake-help {
+  font-size: 0.78rem;
+  letter-spacing: 0.075em;
+}
+
+@media (max-width: 620px), (pointer: coarse) {
+  .snake-mode-picker {
+    max-width: 260px;
+  }
+
+  .snake-mode-picker button {
+    min-height: 48px;
+  }
+
+  .snake-pad {
+    display: grid;
+  }
+
+  .snake-help {
+    font-size: 0.7rem;
+    line-height: 1.45;
+  }
+}

@@ -13,10 +13,13 @@ import {
   getPostSlug,
   getRelatedPosts,
   readingTime,
+  sortPosts,
   wordCount,
   type BlogPost,
 } from "../utils/posts";
 import BaseLayout from "./BaseLayout.astro";
+import "../styles/system.css";
+import "../styles/article.css";
 
 interface Props {
   post: BlogPost;
@@ -26,7 +29,15 @@ interface Props {
 const { post, headings } = Astro.props;
 const hasToc = headings.some(({ depth }) => depth === 2 || depth === 3);
 const allPosts = await getCollection("blog", ({ data }) => !data.draft);
-const relatedPosts = getRelatedPosts(post, allPosts);
+const sortedPosts = sortPosts(allPosts);
+const relatedPosts = getRelatedPosts(post, sortedPosts);
+const currentPostIndex = sortedPosts.findIndex(({ id }) => id === post.id);
+const newerPost =
+  currentPostIndex > 0 ? sortedPosts[currentPostIndex - 1] : undefined;
+const olderPost =
+  currentPostIndex >= 0 && currentPostIndex < sortedPosts.length - 1
+    ? sortedPosts[currentPostIndex + 1]
+    : undefined;
 const description = post.data.description;
 const articleUrl = new URL(
   getPostRoute(post),
@@ -108,6 +119,9 @@ const structuredData = [
 
   <div class="system-page-shell article-page-shell">
     <SystemHeader active="posts" />
+    <div class="reading-progress" aria-hidden="true">
+      <span data-reading-progress></span>
+    </div>
 
     <section class="article-console" aria-labelledby="article-title">
       <header class="article-system-header">
@@ -176,6 +190,29 @@ const structuredData = [
         </section>
       )}
 
+      <nav class="post-navigation" aria-label="More notes">
+        <a class="post-navigation-topic" href={getTopicRoute(post.data.topic)}>
+          ← ALL {post.data.topic.toUpperCase()} NOTES
+        </a>
+
+        {(newerPost || olderPost) && (
+          <div class="post-navigation-chronology">
+            {newerPost && (
+              <a href={getPostRoute(newerPost)}>
+                <span>NEWER NOTE</span>
+                <strong>{newerPost.data.title}</strong>
+              </a>
+            )}
+            {olderPost && (
+              <a href={getPostRoute(olderPost)}>
+                <span>OLDER NOTE</span>
+                <strong>{olderPost.data.title}</strong>
+              </a>
+            )}
+          </div>
+        )}
+      </nav>
+
       <footer class="article-system-footer">
         <a href="/posts/">LOG ARCHIVE</a>
         <span>{docId}</span>
@@ -187,147 +224,272 @@ const structuredData = [
   <BackToTop />
 
   <script>
-    let removeTocScrollSpy = () => {};
+    let removeArticleUx = () => {};
 
-    function initTocScrollSpy() {
-      removeTocScrollSpy();
+    function initArticleUx() {
+      removeArticleUx();
 
+      const cleanupFunctions: Array<() => void> = [];
       const layout = document.querySelector<HTMLElement>(".post-layout");
-      const toc = layout?.querySelector<HTMLElement>(".toc");
-      const article = layout?.querySelector<HTMLElement>(".post-content");
+      const article = document.querySelector<HTMLElement>(".article-sheet");
+      const content = article?.querySelector<HTMLElement>(".post-content");
 
-      if (!toc || !article) return;
-
-      const tocElement = toc;
-      const links = Array.from(
-        tocElement.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'),
+      const progress = document.querySelector<HTMLElement>(
+        "[data-reading-progress]",
       );
 
-      const entries = links
-        .map((link) => {
+      if (progress && article) {
+        let progressFrame: number | null = null;
+
+        const updateProgress = () => {
+          progressFrame = null;
+          const articleTop =
+            article.getBoundingClientRect().top + window.scrollY;
+          const articleEnd = articleTop + article.offsetHeight;
+          const readableDistance = Math.max(
+            articleEnd - articleTop - window.innerHeight * 0.35,
+            1,
+          );
+          const amount = Math.min(
+            1,
+            Math.max(0, (window.scrollY - articleTop) / readableDistance),
+          );
+
+          progress.style.transform = `scaleX(${amount})`;
+        };
+
+        const requestProgressUpdate = () => {
+          if (progressFrame === null) {
+            progressFrame = window.requestAnimationFrame(updateProgress);
+          }
+        };
+
+        window.addEventListener("scroll", requestProgressUpdate, {
+          passive: true,
+        });
+        window.addEventListener("resize", requestProgressUpdate);
+        updateProgress();
+
+        cleanupFunctions.push(() => {
+          window.removeEventListener("scroll", requestProgressUpdate);
+          window.removeEventListener("resize", requestProgressUpdate);
+          if (progressFrame !== null) {
+            window.cancelAnimationFrame(progressFrame);
+          }
+        });
+      }
+
+      if (layout && content) {
+        const desktopToc = layout.querySelector<HTMLElement>(".toc-desktop");
+        const mobileToc = layout.querySelector<HTMLDetailsElement>(".toc-mobile");
+        const links = Array.from(
+          layout.querySelectorAll<HTMLAnchorElement>("[data-toc-link]"),
+        );
+        const groupedEntries = new Map<
+          string,
+          { heading: HTMLElement; links: HTMLAnchorElement[] }
+        >();
+
+        for (const link of links) {
           let id: string;
 
           try {
             id = decodeURIComponent(link.hash.slice(1));
           } catch {
-            return null;
+            continue;
           }
 
-          const heading = article.querySelector<HTMLElement>(
+          const heading = content.querySelector<HTMLElement>(
             `#${CSS.escape(id)}`,
           );
+          if (!heading) continue;
 
-          return heading ? { link, heading } : null;
-        })
-        .filter(
-          (
-            entry,
-          ): entry is {
-            link: HTMLAnchorElement;
-            heading: HTMLElement;
-          } => entry !== null,
-        );
-
-      if (entries.length === 0) return;
-
-      const reducedMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      );
-
-      let activeId = "";
-      let frame: number | null = null;
-
-      function keepLinkVisible(link: HTMLAnchorElement) {
-        const padding = 12;
-        const tocRect = tocElement.getBoundingClientRect();
-        const linkRect = link.getBoundingClientRect();
-        const behavior: ScrollBehavior = reducedMotion.matches
-          ? "auto"
-          : "smooth";
-
-        if (linkRect.top < tocRect.top + padding) {
-          tocElement.scrollBy({
-            top: linkRect.top - tocRect.top - padding,
-            behavior,
-          });
-        } else if (linkRect.bottom > tocRect.bottom - padding) {
-          tocElement.scrollBy({
-            top: linkRect.bottom - tocRect.bottom + padding,
-            behavior,
-          });
-        }
-      }
-
-      function setActive(id: string) {
-        if (id === activeId) return;
-
-        activeId = id;
-
-        for (const { link, heading } of entries) {
-          const active = heading.id === id;
-          link.classList.toggle("is-active", active);
-
-          if (active) {
-            link.setAttribute("aria-current", "location");
-            keepLinkVisible(link);
+          const existing = groupedEntries.get(id);
+          if (existing) {
+            existing.links.push(link);
           } else {
-            link.removeAttribute("aria-current");
+            groupedEntries.set(id, { heading, links: [link] });
           }
         }
-      }
 
-      function updateActiveSection() {
-        frame = null;
-        const readingOffset = 150;
-        const atDocumentBottom =
-          window.scrollY + window.innerHeight >=
-          document.documentElement.scrollHeight - 4;
+        const entries = Array.from(groupedEntries.values());
 
-        let current = entries[0];
+        if (entries.length > 0) {
+          const reducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)",
+          );
+          let activeId = "";
+          let tocFrame: number | null = null;
 
-        if (atDocumentBottom) {
-          current = entries[entries.length - 1];
-        } else {
-          for (const entry of entries) {
-            if (entry.heading.getBoundingClientRect().top <= readingOffset) {
-              current = entry;
-            } else {
-              break;
+          const keepLinkVisible = (link: HTMLAnchorElement) => {
+            if (!desktopToc || !desktopToc.contains(link)) return;
+
+            const padding = 12;
+            const tocRect = desktopToc.getBoundingClientRect();
+            const linkRect = link.getBoundingClientRect();
+            const behavior: ScrollBehavior = reducedMotion.matches
+              ? "auto"
+              : "smooth";
+
+            if (linkRect.top < tocRect.top + padding) {
+              desktopToc.scrollBy({
+                top: linkRect.top - tocRect.top - padding,
+                behavior,
+              });
+            } else if (linkRect.bottom > tocRect.bottom - padding) {
+              desktopToc.scrollBy({
+                top: linkRect.bottom - tocRect.bottom + padding,
+                behavior,
+              });
             }
+          };
+
+          const setActive = (id: string) => {
+            if (id === activeId) return;
+            activeId = id;
+
+            for (const entry of entries) {
+              const active = entry.heading.id === id;
+
+              for (const link of entry.links) {
+                link.classList.toggle("is-active", active);
+                if (active) {
+                  link.setAttribute("aria-current", "location");
+                } else {
+                  link.removeAttribute("aria-current");
+                }
+              }
+
+              if (active) {
+                const desktopLink = entry.links.find((link) =>
+                  desktopToc?.contains(link),
+                );
+                if (desktopLink) keepLinkVisible(desktopLink);
+              }
+            }
+          };
+
+          const updateActiveSection = () => {
+            tocFrame = null;
+            const readingOffset = 150;
+            const atDocumentBottom =
+              window.scrollY + window.innerHeight >=
+              document.documentElement.scrollHeight - 4;
+            let current = entries[0];
+
+            if (atDocumentBottom) {
+              current = entries[entries.length - 1];
+            } else {
+              for (const entry of entries) {
+                if (
+                  entry.heading.getBoundingClientRect().top <= readingOffset
+                ) {
+                  current = entry;
+                } else {
+                  break;
+                }
+              }
+            }
+
+            setActive(current.heading.id);
+          };
+
+          const requestTocUpdate = () => {
+            if (tocFrame === null) {
+              tocFrame = window.requestAnimationFrame(updateActiveSection);
+            }
+          };
+
+          const mobileLinkHandlers = links
+            .filter((link) => mobileToc?.contains(link))
+            .map((link) => {
+              const handler = () => {
+                if (mobileToc) mobileToc.open = false;
+              };
+              link.addEventListener("click", handler);
+              return { link, handler };
+            });
+
+          window.addEventListener("scroll", requestTocUpdate, {
+            passive: true,
+          });
+          window.addEventListener("resize", requestTocUpdate);
+          updateActiveSection();
+
+          cleanupFunctions.push(() => {
+            window.removeEventListener("scroll", requestTocUpdate);
+            window.removeEventListener("resize", requestTocUpdate);
+            if (tocFrame !== null) window.cancelAnimationFrame(tocFrame);
+
+            for (const { link, handler } of mobileLinkHandlers) {
+              link.removeEventListener("click", handler);
+            }
+          });
+        }
+      }
+
+      if (content) {
+        const copyButtons: Array<{
+          button: HTMLButtonElement;
+          handler: () => void;
+        }> = [];
+
+        const copyText = async (text: string) => {
+          if (!navigator.clipboard?.writeText) {
+            throw new Error("Clipboard API unavailable");
           }
+
+          await navigator.clipboard.writeText(text);
+        };
+
+        for (const pre of content.querySelectorAll<HTMLPreElement>("pre")) {
+          if (pre.dataset.copyEnhanced === "true") continue;
+          pre.dataset.copyEnhanced = "true";
+
+          const wrapper = document.createElement("div");
+          wrapper.className = "code-block";
+          pre.before(wrapper);
+          wrapper.append(pre);
+
+          const button = document.createElement("button");
+          button.className = "code-copy-button";
+          button.type = "button";
+          button.textContent = "COPY";
+          button.setAttribute("aria-label", "Copy code to clipboard");
+          wrapper.prepend(button);
+
+          const handler = async () => {
+            const code = pre.querySelector("code")?.textContent ?? pre.textContent;
+            try {
+              await copyText(code ?? "");
+              button.textContent = "COPIED";
+            } catch {
+              button.textContent = "FAILED";
+            }
+
+            window.setTimeout(() => {
+              button.textContent = "COPY";
+            }, 1400);
+          };
+
+          button.addEventListener("click", handler);
+          copyButtons.push({ button, handler });
         }
 
-        setActive(current.heading.id);
+        cleanupFunctions.push(() => {
+          for (const { button, handler } of copyButtons) {
+            button.removeEventListener("click", handler);
+          }
+        });
       }
 
-      function requestUpdate() {
-        if (frame === null) {
-          frame = window.requestAnimationFrame(updateActiveSection);
-        }
-      }
-
-      window.addEventListener("scroll", requestUpdate, { passive: true });
-      window.addEventListener("resize", requestUpdate);
-      updateActiveSection();
-
-      removeTocScrollSpy = () => {
-        window.removeEventListener("scroll", requestUpdate);
-        window.removeEventListener("resize", requestUpdate);
-
-        if (frame !== null) {
-          window.cancelAnimationFrame(frame);
-          frame = null;
-        }
-
-        for (const { link } of entries) {
-          link.classList.remove("is-active");
-          link.removeAttribute("aria-current");
-        }
+      removeArticleUx = () => {
+        for (const cleanup of cleanupFunctions) cleanup();
       };
     }
 
-    initTocScrollSpy();
-    document.addEventListener("astro:page-load", initTocScrollSpy);
-    document.addEventListener("astro:before-swap", () => removeTocScrollSpy());
+    initArticleUx();
+    document.addEventListener("astro:page-load", initArticleUx);
+    document.addEventListener("astro:before-swap", () => removeArticleUx());
   </script>
 </BaseLayout>

@@ -26,12 +26,15 @@ const topics = [...new Set(posts.map((post) => post.data.topic))]
 >
   <div class="taxonomy-grid">
     {topics.map((topic, index) => (
-      <article class="taxonomy-card">
+      <a class="taxonomy-card" href={getTopicRoute(topic.name)}>
         <p>{String(index + 1).padStart(2, "0")} / TOPIC</p>
-        <h2><a href={getTopicRoute(topic.name)}>{topic.name}</a></h2>
+        <h2>{topic.name}</h2>
         <p>{topic.description}</p>
-        <span>{topic.count} POSTS</span>
-      </article>
+        <span class="taxonomy-card-footer">
+          <span>{topic.count} POSTS</span>
+          <span>OPEN TOPIC →</span>
+        </span>
+      </a>
     ))}
   </div>
 </SystemPageLayout>

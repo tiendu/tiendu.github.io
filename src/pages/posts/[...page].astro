@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import type { GetStaticPaths } from "astro";
+import PostSearch from "../../components/PostSearch.astro";
 import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
 import {
   formatCompactDate,
@@ -18,6 +19,7 @@ interface Props {
   totalNormalPosts: number;
   pinned: BlogPost[];
   posts: BlogPost[];
+  searchPosts: BlogPost[];
   firstRecordNumber: number;
 }
 
@@ -43,6 +45,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
         totalNormalPosts: normalPosts.length,
         pinned,
         posts: normalPosts.slice(start, start + pageSize),
+        searchPosts: allPosts,
         firstRecordNumber: start + 1,
       },
     };
@@ -56,6 +59,7 @@ const {
   totalNormalPosts,
   pinned,
   posts,
+  searchPosts,
   firstRecordNumber,
 } = Astro.props;
 
@@ -73,6 +77,8 @@ const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`)
   description={pageDescription}
   counter={`${totalPosts} RECORDS`}
 >
+  <PostSearch posts={searchPosts} />
+
   {
     currentPage === 1 && pinned.length > 0 && (
       <section class="archive-section priority" aria-labelledby="pinned-title">

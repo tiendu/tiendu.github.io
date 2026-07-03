@@ -7,7 +7,9 @@
     "dev": "astro dev",
     "dev:host": "astro dev --host",
     "start": "astro dev",
-    "check": "astro check",
+    "check:styles": "node scripts/check-styles.mjs",
+    "check:astro": "astro check",
+    "check": "npm run check:styles && npm run check:astro",
     "build": "astro build && node scripts/fix-html-routes.mjs",
     "preview": "astro preview"
   },

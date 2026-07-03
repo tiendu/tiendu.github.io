@@ -1,0 +1,110 @@
+/* Page frame ------------------------------------------------------------- */
+
+.system-console {
+  margin-inline: auto;
+  max-width: 1280px;
+  min-height: calc(100svh - 73px);
+  padding:
+    clamp(2.25rem, 6vw, 5rem)
+    max(clamp(1rem, 4vw, 3rem), env(safe-area-inset-right))
+    max(1.5rem, env(safe-area-inset-bottom))
+    max(clamp(1rem, 4vw, 3rem), env(safe-area-inset-left));
+  width: 100%;
+}
+
+.system-page-header {
+  border-bottom: 1px solid var(--system-line);
+  margin-bottom: clamp(2.5rem, 6vw, 4.75rem);
+  padding-bottom: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.system-module-code,
+.system-section-code {
+  color: var(--system-dim);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  margin: 0 0 0.7rem;
+  max-width: none;
+  text-transform: uppercase;
+}
+
+body.system-interface .system-page-header h1 {
+  color: var(--system-bright);
+  font-family: var(--font-ui);
+  font-size: clamp(2.65rem, 7.5vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  margin: 0;
+  max-width: 16ch;
+  text-wrap: balance;
+}
+
+.system-description {
+  color: var(--system-dim);
+  font-size: clamp(1rem, 1.8vw, 1.15rem);
+  line-height: 1.55;
+  margin: 1.1rem 0 0;
+  max-width: 68ch;
+}
+
+.system-document-body {
+  min-width: 0;
+}
+
+.system-document-body p,
+.system-document-body ul,
+.system-document-body ol {
+  max-width: none;
+}
+
+body.system-interface a,
+body.system-interface a:visited {
+  color: var(--system-text);
+  text-decoration-color: rgb(199 240 139 / 30%);
+}
+
+body.system-interface a:hover {
+  color: var(--system-bright);
+  text-decoration-color: currentColor;
+}
+
+body.system-interface a[target="_blank"]::after {
+  content: none;
+}
+
+.system-module-footer {
+  align-items: center;
+  border-top: 1px solid var(--system-line);
+  color: var(--system-dim);
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  gap: 1rem;
+  justify-content: space-between;
+  letter-spacing: 0.07em;
+  margin-top: clamp(3.5rem, 8vw, 6.5rem);
+  padding-top: 1rem;
+  text-transform: uppercase;
+}
+
+.system-module-footer a,
+.system-module-footer a:visited {
+  color: var(--system-amber);
+  text-decoration: none;
+}
+
+.system-module-footer a:hover {
+  color: #f0c994;
+}
+
+.system-empty-state {
+  border-top: 1px solid var(--system-line);
+  color: var(--system-dim);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  padding: 1.25rem 0;
+  text-transform: uppercase;
+}

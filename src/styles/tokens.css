@@ -1,0 +1,33 @@
+/* Site-wide design tokens. Keep raw colors, type stacks, and radii here. */
+
+:root {
+  --font-ui: "Figtree Variable", "Figtree", system-ui, sans-serif;
+  --font-reading: "Nunito Variable", "Nunito", system-ui, sans-serif;
+  --font-mono:
+    "Source Code Pro Variable",
+    "Source Code Pro",
+    ui-monospace,
+    "SFMono-Regular",
+    Consolas,
+    monospace;
+  --font-terminal: "VT323", var(--font-mono);
+
+  --paper: #f3efe5;
+  --paper-light: #fbf8f1;
+  --paper-deep: #e7e0d2;
+  --ink: #262821;
+  --ink-soft: #454740;
+  --muted: #73746d;
+  --line: #cbc6b8;
+  --line-dark: #9e9a8f;
+
+  --green: #667a3d;
+  --green-dark: #4f6130;
+  --amber: #a7602f;
+  --amber-soft: #d6aa72;
+  --red: #a64e3d;
+
+  --screen: #07120b;
+  --screen-text: #d9f277;
+  --radius: 3px;
+}

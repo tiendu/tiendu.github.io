@@ -1,0 +1,176 @@
+/* Shared responsive adjustments for system pages. */
+
+@media (max-width: 860px) {
+  .system-topbar-inner {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .system-nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.1rem;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+
+  .system-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .operator-record {
+    display: block;
+  }
+
+  .operator-panel {
+    margin-bottom: 3rem;
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .log-table-head {
+    display: none;
+  }
+
+  .log-entry {
+    gap: 0.35rem 0.8rem;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+  }
+
+  .log-date {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .log-main {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .log-subline {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .project-row {
+    gap: 0.7rem;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    padding-block: 1.8rem;
+  }
+
+  .project-content h2 {
+    font-size: clamp(1.55rem, 8vw, 2rem);
+  }
+
+  .project-summary {
+    font-size: 1rem;
+  }
+
+  .project-details {
+    font-size: 0.92rem;
+    line-height: 1.62;
+  }
+}
+
+@media (max-width: 420px) {
+  .project-row {
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+
+  .project-number,
+  .project-category,
+  .project-tech {
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .system-topbar-inner {
+    min-height: 0;
+    padding-block: max(0.7rem, env(safe-area-inset-top)) 0.65rem;
+  }
+
+  .system-brand-name {
+    font-size: 0.95rem;
+  }
+
+  .system-brand-model {
+    font-size: 0.68rem;
+  }
+
+  .system-nav {
+    gap: 0.95rem;
+  }
+
+  .system-nav a,
+  .system-nav a:visited {
+    font-size: 0.78rem;
+  }
+
+  .system-nav a span {
+    display: none;
+  }
+
+  .system-console {
+    padding-top: 2rem;
+  }
+
+  body.system-interface .system-page-header h1 {
+    font-size: clamp(2.45rem, 15vw, 4rem);
+  }
+
+  .archive-section-header {
+    align-items: start;
+    display: block;
+  }
+
+  .archive-section-header > span {
+    display: block;
+    margin-top: 0.5rem;
+  }
+
+  .operator-panel dl div {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+
+  .system-module-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  /* Keep compact interface labels readable on narrow screens. */
+  .system-module-code,
+  .system-section-code,
+  .archive-section-header > span,
+  .log-number,
+  .log-date,
+  .log-subline,
+  .project-number,
+  .project-category,
+  .project-tech,
+  .operator-identity p,
+  .operator-panel dt,
+  .timeline-row > span {
+    font-size: 0.72rem;
+  }
+
+  .operator-links a,
+  .system-error-panel nav a,
+  .system-module-footer {
+    font-size: 0.76rem;
+  }
+
+  .project-summary {
+    font-size: 1.05rem;
+  }
+
+  .project-details {
+    font-size: 1rem;
+  }
+
+  .operator-panel dd {
+    font-size: 0.9rem;
+  }
+}

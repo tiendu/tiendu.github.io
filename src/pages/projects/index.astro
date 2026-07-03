@@ -33,8 +33,12 @@ import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
             </h2>
 
             <p class="project-summary">{project.summary}</p>
-            <p class="project-details">{project.details}</p>
             <p class="project-tech">{project.tech}</p>
+
+            <details class="project-details-panel">
+              <summary>DETAILS</summary>
+              <p class="project-details">{project.details}</p>
+            </details>
           </article>
         </li>
       ))

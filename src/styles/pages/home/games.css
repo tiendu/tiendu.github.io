@@ -1,0 +1,83 @@
+/* Homepage-only controls that orchestrate the three arcade components. */
+
+.snake-mobile-controls,
+.invaders-mobile-controls,
+.breakout-mobile-controls {
+  display: none;
+}
+
+@media (max-width: 620px), (pointer: coarse) {
+  .landing-wrapper.snake-mode .snake-mobile-controls,
+  .landing-wrapper.invaders-mode .invaders-mobile-controls,
+  .landing-wrapper.breakout-mode .breakout-mobile-controls {
+    display: grid;
+    gap: 0.55rem;
+    margin: -0.15rem auto 0;
+    max-width: 480px;
+    width: 100%;
+  }
+
+  .landing-wrapper.snake-mode .snake-mobile-controls {
+    max-width: 430px;
+  }
+
+  .snake-mobile-actions,
+  .invaders-mobile-actions,
+  .breakout-mobile-actions {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .snake-mobile-actions button,
+  .invaders-mobile-actions button,
+  .breakout-mobile-actions button {
+    background: rgb(199 240 139 / 5%);
+    border: 1px solid rgb(199 240 139 / 25%);
+    border-radius: 2px;
+    color: var(--terminal-green);
+    cursor: pointer;
+    font-family: var(--font-terminal);
+    font-size: 0.95rem;
+    letter-spacing: 0.07em;
+    min-height: 44px;
+    padding: 0.55rem 0.35rem;
+    text-transform: uppercase;
+    touch-action: manipulation;
+  }
+
+  .snake-mobile-actions button:hover,
+  .snake-mobile-actions button:focus-visible,
+  .invaders-mobile-actions button:hover,
+  .invaders-mobile-actions button:focus-visible,
+  .breakout-mobile-actions button:hover,
+  .breakout-mobile-actions button:focus-visible {
+    background: rgb(199 240 139 / 12%);
+    border-color: var(--terminal-green-dim);
+    color: var(--terminal-green-bright);
+  }
+
+  .snake-mobile-actions button:disabled,
+  .invaders-mobile-actions button:disabled,
+  .breakout-mobile-actions button:disabled {
+    cursor: default;
+    opacity: 0.38;
+  }
+
+  .snake-mobile-help,
+  .invaders-mobile-help,
+  .breakout-mobile-help {
+    color: var(--terminal-green-dim);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    margin: 0;
+    max-width: none;
+    text-align: center;
+  }
+
+  .landing-wrapper.snake-mode .snake-help,
+  .landing-wrapper.invaders-mode .invaders-help,
+  .landing-wrapper.breakout-mode .breakout-help {
+    display: none;
+  }
+}

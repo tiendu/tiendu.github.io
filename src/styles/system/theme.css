@@ -1,0 +1,47 @@
+/* Minimal shared system interface ----------------------------------------- */
+
+body.system-interface,
+body.terminal-home {
+  --system-bg: #030805;
+  --system-text: #bddf86;
+  --system-bright: #e2f8ad;
+  --system-dim: #789958;
+  --system-faint: rgb(199 240 139 / 7%);
+  --system-line: rgb(199 240 139 / 15%);
+  --system-line-strong: rgb(199 240 139 / 28%);
+  --system-amber: #d6aa72;
+  --system-red: #d47d69;
+
+  background: var(--system-bg);
+  color: var(--system-text);
+  font-family: var(--font-ui);
+  min-height: 100svh;
+}
+
+body.system-interface ::selection,
+body.terminal-home ::selection {
+  background: var(--system-bright);
+  color: var(--system-bg);
+}
+
+body.system-interface :focus-visible,
+body.terminal-home :focus-visible {
+  outline-color: var(--system-amber);
+}
+
+body.system-interface .skip-link,
+body.terminal-home .skip-link {
+  background: var(--system-bright);
+  border-color: var(--system-bright);
+  color: var(--system-bg);
+}
+
+.system-page-content {
+  min-height: 100svh;
+  padding: 0;
+}
+
+.system-page-shell {
+  background: var(--system-bg);
+  min-height: 100svh;
+}
