@@ -122,13 +122,19 @@ That is the main value of a multi-stage build: it creates a clear boundary betwe
 
 ## Benchmark result
 
-| Build | Local image size | Compressed archive | Python distributions |
-|---|---:|---:|---:|
-| One-stage | 363.6 MiB | 147.6 MiB | 22 |
-| Multi-stage | 312.5 MiB | 97.2 MiB | 22 |
+Each number below is the mean of three builds. The source-only rebuild changed `app.py` without changing the dependency files.
+
+| Build | Cold build | Source-only rebuild | Local image | Compressed archive |
+|---|---:|---:|---:|---:|
+| One-stage | 91.7 s | 58.7 s | 363.6 MiB | 147.6 MiB |
+| Multi-stage | 127.2 s | 72.6 s | 312.5 MiB | 97.2 MiB |
+
+The one-stage image built faster in this test. The multi-stage build had more filesystem work to do because it created a builder stage and copied the installed Python environment into the runtime stage.
 
 The multi-stage image was:
 
+- **35.5 seconds slower on a cold build**
+- **13.9 seconds slower on a source-only rebuild**
 - **51.1 MiB smaller locally**
 - **50.4 MiB smaller when compressed**
 - **14.1% smaller as a local image**
@@ -136,7 +142,9 @@ The multi-stage image was:
 
 Both images contained the same 22 Python distributions and returned the same API results.
 
-The difference did not come from removing application dependencies. It came mainly from keeping the wheelhouse and other build-only material out of the runtime image history.
+These timings came from a constrained Podman runner using the VFS storage driver, so the absolute seconds should not be treated as universal. The useful result is the trade-off: the one-stage build was faster, while the multi-stage build produced a substantially smaller runtime image.
+
+The size difference did not come from removing application dependencies. It came mainly from keeping the wheelhouse and other build-only material out of the runtime image history.
 
 ## Why deleting files is not enough
 
@@ -171,6 +179,7 @@ Use a simple one-stage build when:
 - The application is small
 - Build and runtime requirements are nearly identical
 - There are no large build-only files
+- Faster and simpler builds matter more than the smallest possible image
 - The resulting image size is acceptable
 - The shorter Containerfile is easier for the team to maintain
 
@@ -180,6 +189,7 @@ Use a multi-stage build when:
 - Wheels, source archives, or frontend assets are build inputs only
 - Tests and development tools must not reach production
 - The build produces a small set of runtime artifacts
+- A smaller runtime image is worth some additional build work
 - Image transfer size matters
 
 The more different the build environment is from the runtime environment, the more useful multi-stage construction becomes.
@@ -213,9 +223,11 @@ The one-stage image was not wrong.
 
 It was already cache-aware, used only production dependencies, and ran as a non-root user.
 
-The multi-stage image was better here for one specific reason: the wheelhouse was needed to build the environment, but it was not needed to run the application.
+The multi-stage image created a cleaner runtime boundary for one specific reason: the wheelhouse was needed to build the environment, but it was not needed to run the application.
 
-That reduced the final image from **363.6 MiB to 312.5 MiB** and the compressed archive from **147.6 MiB to 97.2 MiB**.
+That boundary was not free. In this benchmark, the one-stage image built faster: **91.7 seconds versus 127.2 seconds** from cold, and **58.7 seconds versus 72.6 seconds** after a source-only change.
+
+In exchange, the multi-stage build reduced the final image from **363.6 MiB to 312.5 MiB** and the compressed archive from **147.6 MiB to 97.2 MiB**.
 
 So the rule is not:
 
