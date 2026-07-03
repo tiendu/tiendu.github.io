@@ -1,9 +1,11 @@
 ---
 title: "The Modern Data Stack for Systems Engineers"
 date: 2026-07-03
-description: "A practical guide to data warehouses, lakes, lakehouses, Parquet, Iceberg, ETL, orchestration, and data products for engineers coming from infrastructure, DevOps, or scientific computing."
+description: "A systems-oriented guide to data warehouses, lakes, lakehouses, Parquet, Iceberg, ETL, orchestration, and the modern data stack."
 topic: "Infrastructure & Automation"
 keywords:
+  - "modern data stack"
+  - "data engineering for systems engineers"
   - "data engineering"
   - "data lake"
   - "data warehouse"
@@ -96,7 +98,81 @@ Who owns it?
 
 This is the map I wished I had when moving from infrastructure and scientific computing into the data engineering world.
 
-## Start with the workload
+## The stack at a glance
+
+A useful way to read a modern data platform is from source to consumer:
+
+```text
+operational sources
+        |
+        v
+ingestion and CDC
+        |
+        v
+durable storage
+        |
+        +---- file format
+        +---- table format
+        +---- catalog
+        |
+        v
+processing and transformation
+        |
+        v
+serving and consumption
+```
+
+Two concerns sit across the whole stack:
+
+```text
+orchestration
+    -> coordinates when work runs and what depends on what
+
+governance, quality, and ownership
+    -> determine whether the resulting data can be trusted and used safely
+```
+
+A concrete implementation might be:
+
+```text
+Postgres
+    -> source system
+
+Kafka or a connector
+    -> ingestion
+
+S3
+    -> durable storage
+
+Parquet
+    -> file format
+
+Iceberg
+    -> table format
+
+catalog
+    -> table names and metadata
+
+Spark or DuckDB
+    -> transformation
+
+Trino or a warehouse
+    -> analytical access
+
+Airflow
+    -> orchestration
+
+dbt
+    -> SQL models and tests
+```
+
+Not every platform needs every layer.
+
+The point is to know which responsibility each component owns.
+
+## 1. Workloads: OLTP and OLAP
+
+### Start with the workload
 
 Most data systems serve one of two broad workload families:
 
@@ -109,7 +185,7 @@ They have different shapes.
 
 ---
 
-## OLTP: running the application
+### OLTP: running the application
 
 Online transaction processing, or OLTP, handles operational activity.
 
@@ -158,7 +234,7 @@ It is not automatically the best place to scan ten years of history for a compan
 
 ---
 
-## OLAP: analysing the business
+### OLAP: analysing the business
 
 Online analytical processing, or OLAP, handles larger analytical queries.
 
@@ -210,7 +286,7 @@ The workload distinction remains useful.
 
 ---
 
-## A database is not a data warehouse merely because it supports SQL
+### A database is not a data warehouse merely because it supports SQL
 
 SQL is a language.
 
@@ -249,9 +325,11 @@ Choose it from the workload.
 
 ---
 
-## What is a data warehouse?
+## 2. Storage and compute: warehouses, lakes, lakehouses, and engines
 
-A data warehouse is an analytical data system containing integrated, structured data for reporting and analysis.
+### What is a data warehouse?
+
+A data warehouse is a managed analytical system that brings data from multiple sources into tables designed for reporting, exploration, and large-scale SQL analysis.
 
 A traditional flow looks like:
 
@@ -303,21 +381,25 @@ central governance
 limited infrastructure work
 ```
 
-It may become expensive or restrictive for:
+A warehouse may become expensive, restrictive, or awkward when the platform needs to:
 
 ```text
-very large raw datasets
-unstructured data
-custom file processing
-multiple non-SQL engines
-machine-learning workloads
+retain enormous raw datasets
+process non-tabular files directly
+use several independent compute engines
+support custom scientific workflows
+integrate deeply with machine-learning systems
 ```
 
-That is one reason data lakes became popular.
+Modern warehouses increasingly support semi-structured data and external tables, so this is not a hard boundary.
+
+It is a trade-off between an integrated managed system and a more open collection of storage and compute layers.
+
+That trade-off is one reason data lakes became popular.
 
 ---
 
-## What is a data lake?
+### What is a data lake?
 
 A data lake is a repository for storing large amounts of data in files, usually on scalable storage.
 
@@ -396,7 +478,7 @@ The problem is unmanaged data.
 
 ---
 
-## Schema-on-write and schema-on-read
+#### Schema-on-write and schema-on-read
 
 These terms describe when structure is enforced.
 
@@ -418,7 +500,7 @@ This usually gives consumers cleaner data.
 
 It may reject or delay unexpected input.
 
-### Schema-on-read
+#### Schema-on-read
 
 Data is stored first and interpreted when it is read.
 
@@ -448,7 +530,7 @@ enforce schemas for published datasets
 
 ---
 
-## What is a lakehouse?
+### What is a lakehouse?
 
 A lakehouse is an architectural pattern that tries to provide warehouse-like table management over data stored in a lake.
 
@@ -525,7 +607,7 @@ Each layer must be compatible, secured, monitored, and upgraded.
 
 ---
 
-## A lakehouse is not just Parquet on S3
+### A lakehouse is not just Parquet on S3
 
 This is only a collection of files:
 
@@ -552,7 +634,7 @@ A table format addresses many of these questions.
 
 ---
 
-## File format versus table format
+#### File format versus table format
 
 This distinction is one of the most important in modern data engineering.
 
@@ -586,7 +668,7 @@ A Parquet file does not know the complete history of a table.
 
 It is one file.
 
-### Table format
+#### Table format
 
 A table format manages a collection of data files as a logical table.
 
@@ -626,7 +708,7 @@ It organizes files into a reliable table.
 
 ---
 
-## What does ACID mean here?
+### What does ACID mean here?
 
 ACID stands for:
 
@@ -670,7 +752,7 @@ It gives analytical tables stronger publication and metadata guarantees.
 
 ---
 
-## What is a catalog?
+### What is a catalog?
 
 A catalog helps engines find named tables and their current metadata.
 
@@ -726,7 +808,7 @@ It is a coordination and naming layer.
 
 ---
 
-## Metastore, catalog, and data catalog
+### Metastore, catalog, and data catalog
 
 These terms overlap.
 
@@ -761,7 +843,7 @@ Do not assume every tool called a catalog performs governance.
 
 ---
 
-## Storage is not compute
+### Storage is not compute
 
 Object storage keeps durable data.
 
@@ -814,7 +896,7 @@ It is not free architecture.
 
 ---
 
-## Query engine versus execution engine
+### Query engine versus execution engine
 
 These terms are often used loosely.
 
@@ -860,9 +942,13 @@ Trino can query databases and files.
 
 That does not make it a transactional database.
 
+For a deeper comparison of DuckDB, Spark, Dask, Trino, MPI, Slurm, and Kubernetes, see [A Practical Guide to Distributed Data Processing](/2026/07/01/practical-guide-distributed-data-processing.html)
+
 ---
 
-## Ingestion, transformation, and serving
+## 3. Pipelines: ingestion, transformation, and orchestration
+
+#### Ingestion, transformation, and serving
 
 A data pipeline usually contains at least three broad activities.
 
@@ -880,7 +966,7 @@ capture database changes
 call an API
 ```
 
-### Transformation
+#### Transformation
 
 Convert data into a more useful form.
 
@@ -895,7 +981,7 @@ apply business rules
 aggregate
 ```
 
-### Serving
+#### Serving
 
 Expose data to its consumer.
 
@@ -916,7 +1002,7 @@ A pipeline does not need one tool to perform everything.
 
 ---
 
-## ETL versus ELT
+### ETL versus ELT
 
 ETL means:
 
@@ -988,7 +1074,7 @@ Do not redesign a pipeline merely to make the acronym modern.
 
 ---
 
-## What is dbt?
+### What is dbt?
 
 dbt is primarily a transformation and modelling tool.
 
@@ -1031,7 +1117,7 @@ The engine still performs the computation.
 
 ---
 
-## Batch, streaming, and CDC
+#### Batch, streaming, and CDC
 
 ### Batch
 
@@ -1044,7 +1130,7 @@ write the result
 stop
 ```
 
-### Streaming
+#### Streaming
 
 Stream processing handles continuing input.
 
@@ -1055,7 +1141,7 @@ emit results
 continue
 ```
 
-### Change data capture
+#### Change data capture
 
 Change data capture, or CDC, records changes made to a source database.
 
@@ -1099,9 +1185,11 @@ This uses CDC as input but still processes the destination in batches.
 
 The source mechanism and processing model are separate decisions.
 
+Stream processing introduces a separate set of concerns, including state, event time, watermarks, checkpoints, and replay. Those are covered in [A Practical Guide to Stream Processing](/posts/practical-guide-stream-processing/).
+
 ---
 
-## What is orchestration?
+### What is orchestration?
 
 Orchestration coordinates work.
 
@@ -1164,7 +1252,7 @@ They are not substitutes.
 
 ---
 
-## What is a DAG?
+### What is a DAG?
 
 DAG means directed acyclic graph.
 
@@ -1193,7 +1281,7 @@ Different layers can have different DAGs.
 
 ---
 
-## Bronze, silver, and gold
+### Bronze, silver, and gold
 
 The medallion pattern organizes data by refinement.
 
@@ -1247,7 +1335,7 @@ Layers should represent meaningful contracts.
 
 ---
 
-## Raw does not mean lawless
+### Raw does not mean lawless
 
 A raw layer may preserve source values.
 
@@ -1277,7 +1365,9 @@ That is archaeology.
 
 ---
 
-## What is a data mart?
+## 4. Data organization: marts, models, products, and governance
+
+### What is a data mart?
 
 A data mart is a focused analytical dataset for a department, domain, or use case.
 
@@ -1316,11 +1406,11 @@ It describes purpose and scope more than storage technology.
 
 ---
 
-## Facts, dimensions, and star schemas
+### Facts, dimensions, and star schemas
 
 Dimensional modelling organizes analytical data around measurable events and descriptive context.
 
-### Fact table
+#### Fact table
 
 A fact table records events or measurements.
 
@@ -1339,7 +1429,7 @@ cost
 status
 ```
 
-### Dimension table
+#### Dimension table
 
 A dimension describes an entity.
 
@@ -1356,7 +1446,7 @@ memory_gib
 storage_type
 ```
 
-### Star schema
+#### Star schema
 
 A star schema places a fact table at the centre with dimensions around it.
 
@@ -1380,7 +1470,7 @@ Choose the model for the consumers.
 
 ---
 
-## What is a slowly changing dimension?
+### What is a slowly changing dimension?
 
 A dimension may change over time.
 
@@ -1426,7 +1516,7 @@ It is a business decision about history.
 
 ---
 
-## What is a semantic layer?
+### What is a semantic layer?
 
 A semantic layer defines business meaning above raw tables.
 
@@ -1466,7 +1556,7 @@ It makes agreed analytical meaning reusable.
 
 ---
 
-## Metadata, lineage, governance, and quality
+#### Metadata, lineage, governance, and quality
 
 These terms are related but different.
 
@@ -1486,7 +1576,7 @@ updated time
 storage location
 ```
 
-### Lineage
+#### Lineage
 
 How data moved or changed.
 
@@ -1511,7 +1601,7 @@ Where did this number come from?
 Which outputs used the bad input?
 ```
 
-### Governance
+#### Governance
 
 The policies and controls around data.
 
@@ -1525,7 +1615,7 @@ who owns it
 how sensitive fields are handled
 ```
 
-### Data quality
+#### Data quality
 
 Whether data meets defined expectations.
 
@@ -1548,7 +1638,7 @@ Each requires ownership and operational action.
 
 ---
 
-## What is a data product?
+### What is a data product?
 
 A data product is an analytical dataset or service treated as a supported product for consumers.
 
@@ -1582,7 +1672,7 @@ The product idea matters when a team accepts responsibility for usability and re
 
 ---
 
-## What is data mesh?
+### What is data mesh?
 
 Data mesh is mainly an organizational and architectural approach.
 
@@ -1631,7 +1721,7 @@ Do not solve a technical storage problem with an organizational slogan.
 
 ---
 
-## Data fabric is usually a broader integration term
+### Data fabric is usually a broader integration term
 
 Data fabric is used to describe an integrated layer across distributed data systems.
 
@@ -1662,7 +1752,9 @@ A name is not an implementation.
 
 ---
 
-## One stack, layer by layer
+## Putting the layers together
+
+### One stack, layer by layer
 
 Consider this architecture:
 
@@ -1708,7 +1800,7 @@ The layers help remove fashion from the decision.
 
 ---
 
-## A warehouse stack may be much smaller
+### A warehouse stack may be much smaller
 
 A managed warehouse may combine several layers:
 
@@ -1749,7 +1841,7 @@ Neither is universally more modern.
 
 ---
 
-## A small lake can also be enough
+### A small lake can also be enough
 
 Not every lake needs a catalog, table format, Spark cluster, and governance portal.
 
@@ -1786,9 +1878,9 @@ Do not install an architecture all at once.
 
 ---
 
-## Common category mistakes
+### Common category mistakes
 
-### Comparing Parquet with Iceberg
+#### Comparing Parquet with Iceberg
 
 Incorrect:
 
@@ -1803,7 +1895,7 @@ Should the Iceberg table store data in Parquet?
 Do plain Parquet directories already meet the requirement?
 ```
 
-### Comparing S3 with Snowflake
+#### Comparing S3 with Snowflake
 
 Incorrect:
 
@@ -1818,7 +1910,7 @@ Object storage plus which metadata and compute layers
 versus a managed analytical system?
 ```
 
-### Comparing Airflow with Spark
+#### Comparing Airflow with Spark
 
 Incorrect:
 
@@ -1832,7 +1924,7 @@ Better:
 Should Airflow coordinate a Spark job?
 ```
 
-### Comparing Kafka with Flink
+#### Comparing Kafka with Flink
 
 Incorrect:
 
@@ -1847,13 +1939,13 @@ Do we need a durable event log?
 Do we need stateful processing over that log?
 ```
 
-### Calling every object-storage platform a lakehouse
+#### Calling every object-storage platform a lakehouse
 
 A lakehouse needs more than a bucket.
 
 Ask where the reliable table abstraction comes from.
 
-### Calling every curated table a data product
+#### Calling every curated table a data product
 
 A product needs ownership, documentation, quality, and consumers.
 
