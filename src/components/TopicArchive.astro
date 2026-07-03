@@ -84,13 +84,19 @@ const structuredData = [
       <span>ID</span>
       <span>DATE</span>
       <span>SUBJECT</span>
-      <span>TOPIC / RUNTIME</span>
+      <span>TOPIC</span>
     </div>
 
     <ol class="log-list">
       {sortedPosts.map((post, index) => (
         <li class="log-entry">
-          <span class="log-number">{String(index + 1).padStart(3, "0")}</span>
+          <a
+            class="log-number"
+            href={getPostRoute(post)}
+            aria-label={`Open ${post.data.title}`}
+          >
+            {String(index + 1).padStart(3, "0")}
+          </a>
           <time class="log-date" datetime={post.data.date.toISOString()}>
             {formatCompactDate(post.data.date)}
           </time>

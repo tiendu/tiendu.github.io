@@ -1,0 +1,231 @@
+---
+import { getCollection } from "astro:content";
+import type { GetStaticPaths } from "astro";
+import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
+import {
+  formatCompactDate,
+  getPostRoute,
+  getTopicRoute,
+  readingTime,
+  sortPosts,
+  type BlogPost,
+} from "../../utils/posts";
+
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  totalPosts: number;
+  totalNormalPosts: number;
+  pinned: BlogPost[];
+  posts: BlogPost[];
+  firstRecordNumber: number;
+}
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  const pageSize = 12;
+  const allPosts = sortPosts(
+    await getCollection("blog", ({ data }) => !data.draft),
+  );
+  const pinned = allPosts.filter(({ data }) => data.pinned);
+  const normalPosts = allPosts.filter(({ data }) => !data.pinned);
+  const totalPages = Math.max(1, Math.ceil(normalPosts.length / pageSize));
+
+  return Array.from({ length: totalPages }, (_, index) => {
+    const currentPage = index + 1;
+    const start = index * pageSize;
+
+    return {
+      params: { page: currentPage === 1 ? undefined : String(currentPage) },
+      props: {
+        currentPage,
+        totalPages,
+        totalPosts: allPosts.length,
+        totalNormalPosts: normalPosts.length,
+        pinned,
+        posts: normalPosts.slice(start, start + pageSize),
+        firstRecordNumber: start + 1,
+      },
+    };
+  });
+};
+
+const {
+  currentPage,
+  totalPages,
+  totalPosts,
+  totalNormalPosts,
+  pinned,
+  posts,
+  firstRecordNumber,
+} = Astro.props;
+
+const pageTitle = currentPage === 1 ? "Posts" : `Posts — Page ${currentPage}`;
+const pageDescription =
+  currentPage === 1
+    ? "Field notes, engineering references, and lessons from systems that failed."
+    : `Page ${currentPage} of the complete notes archive.`;
+const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`);
+---
+
+<SystemPageLayout
+  title={pageTitle}
+  moduleCode="LOG-ARCHIVE"
+  description={pageDescription}
+  counter={`${totalPosts} RECORDS`}
+>
+  {
+    currentPage === 1 && pinned.length > 0 && (
+      <section class="archive-section priority" aria-labelledby="pinned-title">
+        <header class="archive-section-header">
+          <div>
+            <p class="system-section-code">PINNED</p>
+            <h2 id="pinned-title">Pinned notes</h2>
+          </div>
+          <span>{pinned.length} RECORDS</span>
+        </header>
+
+        <div class="log-table-head" aria-hidden="true">
+          <span>PIN</span>
+          <span>DATE</span>
+          <span>SUBJECT</span>
+          <span>TOPIC</span>
+        </div>
+
+        <ol class="log-list">
+          {pinned.map((post, index) => {
+            const postRoute = getPostRoute(post);
+
+            return (
+              <li class="log-entry">
+                <a
+                  class="log-number"
+                  href={postRoute}
+                  aria-label={`Open ${post.data.title}`}
+                >
+                  P{String(index + 1).padStart(2, "0")}
+                </a>
+                <time class="log-date" datetime={post.data.date.toISOString()}>
+                  {formatCompactDate(post.data.date)}
+                </time>
+                <div class="log-main">
+                  <h3><a href={postRoute}>{post.data.title}</a></h3>
+                </div>
+                <p class="log-subline">
+                  <a class="log-topic-link" href={getTopicRoute(post.data.topic)}>
+                    {post.data.topic}
+                  </a><br />
+                  <span>{readingTime(post.body ?? "")} MIN READ</span>
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    )
+  }
+
+  <section class="archive-section" aria-labelledby="complete-title">
+    <header class="archive-section-header">
+      <div>
+        <p class="system-section-code">COMPLETE</p>
+        <h2 id="complete-title">Complete archive</h2>
+      </div>
+      <span>{totalNormalPosts} RECORDS</span>
+    </header>
+
+    {
+      posts.length > 0 ? (
+        <>
+          <div class="log-table-head" aria-hidden="true">
+            <span>ID</span>
+            <span>DATE</span>
+            <span>SUBJECT</span>
+            <span>TOPIC</span>
+          </div>
+
+          <ol class="log-list" start={firstRecordNumber}>
+            {posts.map((post, index) => {
+              const recordNumber = firstRecordNumber + index;
+              const postRoute = getPostRoute(post);
+
+              return (
+                <li class="log-entry">
+                  <a
+                    class="log-number"
+                    href={postRoute}
+                    aria-label={`Open ${post.data.title}`}
+                  >
+                    {String(recordNumber).padStart(3, "0")}
+                  </a>
+                  <time class="log-date" datetime={post.data.date.toISOString()}>
+                    {formatCompactDate(post.data.date)}
+                  </time>
+                  <div class="log-main">
+                    <h3><a href={postRoute}>{post.data.title}</a></h3>
+                  </div>
+                  <p class="log-subline">
+                    <a class="log-topic-link" href={getTopicRoute(post.data.topic)}>
+                      {post.data.topic}
+                    </a><br />
+                    <span>{readingTime(post.body ?? "")} MIN READ</span>
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+        </>
+      ) : (
+        <p class="system-empty-state">NO RECORDS FOUND.</p>
+      )
+    }
+
+    {
+      totalPages > 1 && (
+        <nav class="archive-pagination" aria-label="Posts pagination">
+          <div class="pagination-edge pagination-edge-previous">
+            {currentPage > 1 ? (
+              <a href={pageRoute(currentPage - 1)} rel="prev">
+                ← PREVIOUS
+              </a>
+            ) : (
+              <span aria-hidden="true">← PREVIOUS</span>
+            )}
+          </div>
+
+          <ol class="pagination-pages">
+            {Array.from({ length: totalPages }, (_, index) => {
+              const pageNumber = index + 1;
+
+              return (
+                <li>
+                  {pageNumber === currentPage ? (
+                    <span aria-current="page">
+                      {String(pageNumber).padStart(2, "0")}
+                    </span>
+                  ) : (
+                    <a
+                      href={pageRoute(pageNumber)}
+                      aria-label={`Go to posts page ${pageNumber}`}
+                    >
+                      {String(pageNumber).padStart(2, "0")}
+                    </a>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+
+          <div class="pagination-edge pagination-edge-next">
+            {currentPage < totalPages ? (
+              <a href={pageRoute(currentPage + 1)} rel="next">
+                NEXT →
+              </a>
+            ) : (
+              <span aria-hidden="true">NEXT →</span>
+            )}
+          </div>
+        </nav>
+      )
+    }
+  </section>
+</SystemPageLayout>
