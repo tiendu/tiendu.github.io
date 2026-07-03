@@ -1,50 +1,55 @@
 ---
-title: "Understanding Docker-in-Docker (DinD): Power, Risks, and Better Alternatives"
+title: "Understanding Docker-in-Docker: Power, Risks, and Safer Alternatives"
 date: 2025-04-18
-description: "How Docker-in-Docker works, why CI pipelines use it, its security and reliability risks, and safer alternatives such as BuildKit, Kaniko, and Podman."
+last_modified_at: 2026-07-03
+description: "How Docker-in-Docker and Docker socket binding work, how an ordinary CI job can become a host breach, and how to design safer container build pipelines."
 topic: "Infrastructure & Automation"
 keywords:
   - "Docker"
+  - "Docker-in-Docker"
   - "containers"
   - "CI/CD"
   - "container security"
   - "BuildKit"
+  - "Podman"
 urlSlug: "dind"
 ---
 
-Docker-in-Docker (DinD) is a common technique used in CI/CD systems, automated testing, and container build pipelines. It allows Docker commands to run from inside a container.
+Docker-in-Docker is common in CI because it solves an obvious problem: the job needs Docker, but the job is already running inside a container.
 
-While DinD is convenient, it is also one of the most misunderstood parts of the container ecosystem. Many teams use it without realizing the security and operational risks involved.
+It works. The problem is that it often gives the build much more access than people realise.
 
-This article explains:
+A container with access to the host Docker socket is not truly isolated from the host. It may be able to start privileged containers, mount the host filesystem, read credentials, or interfere with other jobs.
 
-- What Docker-in-Docker is
-- Why people use it
-- Common DinD approaches
-- Security and reliability concerns
-- Safer alternatives such as Podman, BuildKit, and Kaniko
+So the real question is not whether Docker-in-Docker works.
+
+It does.
+
+The question is what happens when the code running inside that job is malicious, compromised, or simply wrong.
 
 ---
 
-## What Is Docker-in-Docker?
+## Two Different Patterns Are Commonly Called DinD
 
-Docker-in-Docker (DinD) means running Docker from inside a container.
+The term **Docker-in-Docker**, or **DinD**, is often used for two related but technically different designs.
 
-There are two common approaches.
+### Pattern 1: Run Docker Inside the Container
 
-### Option 1: Run a Docker Daemon Inside a Container
-
-A container starts its own Docker daemon (`dockerd`) and manages containers internally.
+A container starts its own Docker daemon:
 
 ```bash
 docker run --privileged docker:dind
 ```
 
-This creates a separate Docker environment inside the container.
+The inner daemon manages its own images, containers, networks, and storage.
 
-### Option 2: Use the Host Docker Socket
+This is true Docker-in-Docker.
 
-Instead of running a new daemon, the container connects directly to the host Docker daemon.
+It usually requires privileged mode because the inner daemon needs access to kernel features that normal containers do not receive.
+
+### Pattern 2: Mount the Host Docker Socket
+
+Instead of starting another daemon, the job container connects to the Docker daemon already running on the host:
 
 ```bash
 docker run \
@@ -52,297 +57,406 @@ docker run \
   docker
 ```
 
-This is the most common approach in CI systems because it is faster and simpler.
+The Docker CLI is inside the container, but the daemon is outside it.
+
+This is often called Docker socket binding or Docker-outside-of-Docker. It is still commonly grouped under the DinD name because the job can run familiar commands such as `docker build` and `docker run`.
+
+The difference matters.
+
+With true DinD, the job controls a separate inner daemon.
+
+With socket binding, the job controls the host daemon.
 
 ---
 
-## Why Do People Use DinD?
+## Why Teams Use It
 
-DinD is popular because many build pipelines need to create container images.
+Many CI pipelines need to build, test, and publish container images.
 
-Common use cases include:
+A typical job may:
 
-- CI/CD pipelines
-- Automated image builds
-- Integration testing
-- Temporary build environments
-- Training and demonstrations
+1. Check out the source code.
+2. Build an image.
+3. Start it for integration tests.
+4. Push it to a registry.
 
-For example, a GitLab or Jenkins job may build and test an image before pushing it to a registry.
-
----
-
-## Benefits of DinD
-
-| Benefit | Description |
-|----------|-------------|
-| Clean environments | Every build starts fresh |
-| Portable pipelines | Build logic stays inside containers |
-| Easy automation | Works well in CI/CD systems |
-| Flexible | Containers can create other containers |
-
-For short-lived build jobs, DinD can be convenient and easy to manage.
-
----
-
-## The Biggest Problem: Docker Socket Access
-
-Many people think a container is isolated from the host.
-
-That assumption becomes false when the Docker socket is mounted.
+DinD and socket binding make this easy:
 
 ```bash
--v /var/run/docker.sock:/var/run/docker.sock
+docker build -t registry.example.com/myapp:$CI_COMMIT_SHA .
+docker run --rm registry.example.com/myapp:$CI_COMMIT_SHA ./run-tests
+docker push registry.example.com/myapp:$CI_COMMIT_SHA
 ```
 
-The Docker socket is effectively an administrative interface to the host Docker daemon.
+Socket binding is especially attractive because it can reuse the host's image cache, registry login, networking, and already-running daemon.
 
-Anyone who can access that socket can control the host.
+That is also the problem.
 
-In practice, this is very close to granting root access.
-
----
-
-## Example: Access the Host Filesystem
-
-Once a container has access to the Docker socket, it can start another container that mounts the host filesystem.
-
-```bash
-docker run \
-  -v /:/host \
-  --rm -it alpine
-```
-
-The entire host filesystem is now visible inside the container.
-
-You can inspect system files, application data, and user directories.
+The job is not receiving a small, private build service. It is sharing a powerful host service.
 
 ---
 
-## Example: Read Sensitive Files
+## The Core Security Problem
 
-If the host filesystem is mounted, sensitive files become accessible.
+Docker is normally controlled through this Unix socket:
 
-```bash
-cat /host/etc/shadow
-```
-
-Depending on permissions and configuration, this may expose password hashes and other sensitive information.
-
----
-
-## Example: Start a Privileged Container
-
-A container with socket access can launch highly privileged containers.
-
-```bash
-docker run \
-  --privileged \
-  -v /:/mnt \
-  alpine
-```
-
-This provides access to devices, kernel interfaces, and other host resources.
-
-At this point, container isolation is largely gone.
-
----
-
-## Example: Accidentally Remove Host Resources
-
-A build script may accidentally clean up resources on the host.
-
-```bash
-docker system prune -a
-```
-
-When using the host Docker socket, this command affects the host Docker environment, not just the current container.
-
-This can remove:
-
-- Images
-- Containers
-- Networks
-- Volumes
-
-A simple mistake can disrupt other workloads.
-
----
-
-## Operational Problems with DinD
-
-Security is not the only concern.
-
-DinD can also introduce operational issues.
-
-### Storage Overhead
-
-Running Docker inside Docker creates additional image layers and storage usage.
-
-Build caches can grow quickly.
-
-### Slower Builds
-
-Nested container environments add complexity and overhead.
-
-### Debugging Complexity
-
-When something fails, it can be difficult to determine whether the issue is:
-
-- The host
-- The outer container
-- The inner Docker daemon
-- The build process itself
-
-### Privileged Containers
-
-Many DinD deployments require:
-
-```bash
---privileged
-```
-
-This weakens container isolation and increases risk.
-
----
-
-## A Better Alternative: Podman
-
-Podman is a container engine designed with security in mind.
-
-Unlike Docker, Podman does not require a long-running daemon.
-
-Key advantages include:
-
-- Daemonless architecture
-- Rootless operation
-- Docker-compatible CLI
-- Better security defaults
-
----
-
-## Why Podman Is Safer
-
-### No Docker Socket
-
-Podman does not depend on:
-
-```bash
+```text
 /var/run/docker.sock
 ```
 
-This removes one of the largest security risks in traditional DinD setups.
+That socket is an administrative interface to the Docker daemon.
 
-### Rootless by Default
+A process with access to a rootful Docker daemon can usually ask it to:
 
-Containers can run without root privileges.
+- Start containers as root
+- Mount host directories
+- Add Linux capabilities
+- Use host networking
+- Attach host devices
+- Read or modify Docker volumes
+- Stop other containers
+
+The daemon performs the privileged action, but the caller decides what action to perform.
+
+For that reason, access to a rootful Docker socket should be treated as root-equivalent access to the Docker host.
+
+Running the CI job as a non-root user does not change much once that user can instruct a root daemon.
+
+---
+
+## How a Normal CI Job Becomes a Host Breach
+
+The realistic threat begins with a normal CI feature: automatically executing repository-controlled code.
+
+Consider a company with this setup:
+
+- It uses a self-hosted CI runner.
+- The runner is reused across jobs.
+- Build containers receive `/var/run/docker.sock`.
+- Pull requests automatically run tests.
+- Release jobs later use the same runner pool.
+- The runner can reach the internal registry and network.
+
+Nothing here looks especially unusual.
+
+### Step 1: Untrusted Code Reaches CI
+
+An attacker opens a pull request that appears to update a dependency.
+
+The change also modifies code that CI runs automatically:
 
 ```bash
-podman run -it alpine
+npm install
+npm test
 ```
 
-Even if a process appears to be root inside the container, it is mapped to an unprivileged user outside.
+The same problem can come from:
 
-### Podman-in-Podman
+- A compromised package
+- A malicious CI action
+- A modified base image
+- A compromised developer account
+- Code from an untrusted fork
 
-Running Podman inside containers is generally easier and safer than traditional DinD.
+The attacker does not need to break Docker.
 
-You can:
+The pipeline has already arranged for their code to run inside a job with access to the Docker socket.
 
-- Build images
-- Run containers
-- Execute CI jobs
+### Step 2: The Job Mounts the Host
 
-without giving containers broad host privileges.
+The malicious process asks the host daemon to start another container:
+
+```bash
+docker run --rm \
+  -v /:/host \
+  alpine
+```
+
+The new container is created by the host daemon, not by the restricted process inside the original job.
+
+The original build container may be non-root, read-only, and stripped of capabilities. Those restrictions apply only to that container.
+
+They do not stop the host daemon from starting a different container with the host filesystem mounted.
+
+At that point, the job has crossed from controlling its own build environment to controlling the runner host.
+
+### Step 3: Credentials and Build Material Are Exposed
+
+The attacker can now search the runner for things such as:
+
+- CI runner configuration
+- Registry credentials
+- Cached repositories
+- Cloud configuration files
+- Deployment scripts
+- SSH keys
+- API tokens
+- Docker volumes
+- Files left by previous jobs
+
+The runner may also be able to reach internal services that are not exposed to the public internet.
+
+The pull-request job itself may have received very few secrets. The compromised host can expose a much larger trust domain.
+
+### Step 4: A Later Job Brings Better Secrets
+
+The most valuable credentials may not be present during the first attack.
+
+The attacker can modify the runner or a shared build component and wait.
+
+Later, a trusted release job runs on the same machine and receives:
+
+- A registry push token
+- A signing key
+- A production deployment credential
+- A cloud role
+- A repository token with write access
+
+A compromised runner can capture those credentials when they appear.
+
+Cleaning environment variables after each job is not enough. The machine itself can no longer be trusted.
+
+### Step 5: The Breach Spreads
+
+The attacker may now be able to:
+
+- Read other private repositories
+- Push a modified image
+- Tamper with future builds
+- Replace build artifacts
+- Reach internal services
+- Steal cloud credentials
+- Change deployment inputs
+
+A small convenience in the CI configuration has become a path from one pull request to the runner host and possibly to production.
+
+No Docker zero-day was required.
+
+Docker did exactly what it was designed to do.
+
+The security failure was architectural:
+
+> Untrusted code was given access to an administrative host interface.
 
 ---
 
-## Podman Compatibility Notes
+## The Less Dramatic Failure: Breaking Other Jobs
 
-Podman works well for most container workflows, but it is not a perfect replacement for every Docker setup.
+Not every incident is malicious.
 
-### Works Well
+A cleanup command intended for a disposable build environment may run against the shared host daemon:
 
-| Feature | Support |
-|----------|----------|
-| Dockerfile builds | Yes |
-| Container images | Yes |
-| Pull and push operations | Yes |
-| Basic CI pipelines | Yes |
-| Most Docker CLI commands | Yes |
+```bash
+docker system prune -a --volumes
+```
 
-### Potential Differences
+The engineer may think this cleans only the current job.
 
-| Area | Notes |
-|--------|--------|
-| Docker socket | Not available by default |
-| Docker Compose | May require additional tooling |
-| BuildKit features | Some features differ |
-| Docker Swarm | Not supported |
-| Docker plugins | Limited support |
-| Some Docker APIs | May require compatibility layers |
+Instead, it can remove cached images, volumes, networks, or containers used by other pipelines.
 
-Always test your workflow before migrating.
+Another example is:
+
+```bash
+docker rm -f $(docker ps -aq)
+```
+
+On a shared daemon, that can stop unrelated workloads.
+
+A shared daemon creates a shared failure domain, even when nobody is attacking it.
 
 ---
 
-## Other Alternatives
+## What About True Docker-in-Docker?
 
-Depending on your environment, you may not need DinD at all.
+True DinD avoids sharing the host Docker daemon directly.
 
-### BuildKit
+The inner daemon has its own images, containers, networks, and build cache.
 
-Modern image builder developed by Docker.
+That is better separation than socket binding.
 
-Advantages:
+The problem is that the usual setup looks like this:
 
-- Faster builds
-- Better caching
-- Improved security
-- Secret management support
+```bash
+docker run --privileged docker:dind
+```
+
+Privileged mode weakens many of the isolation controls that containers normally rely on.
+
+If untrusted code compromises the inner daemon or abuses the privileged environment, the outer host may still be exposed.
+
+So true DinD is not automatically safe. Its risk depends on the worker, the runtime, mounted paths, device access, and whether the whole environment is disposable.
+
+A privileged DinD job on a long-lived shared runner is still a dangerous design.
+
+---
+
+## Operational Problems
+
+DinD also creates problems that have nothing to do with attackers.
+
+### Storage Gets Messy
+
+The outer runtime stores the DinD container, while the inner daemon stores another set of image layers and container data.
+
+Disk usage can grow quickly, and it may not be obvious which layer is consuming the space.
+
+### Debugging Gets Harder
+
+When a build fails, the problem may be in:
+
+- The runner host
+- The outer container runtime
+- The DinD service
+- The inner Docker daemon
+- The build container
+- The registry
+
+Each extra layer makes failure analysis slower.
+
+### Shared Cleanup Becomes Dangerous
+
+Socket binding makes images, volumes, caches, and containers part of a shared host environment.
+
+A cleanup command from one job can damage another.
+
+That may be acceptable on a disposable single-job runner. It is much harder to justify on a long-lived shared machine.
+
+---
+
+## Podman Helps, but It Does Not Fix the Architecture
+
+Podman is daemonless for normal local use and has strong rootless support.
+
+That can reduce the impact of a compromise because container operations run under an unprivileged host user rather than a central root daemon.
+
+But Podman can also expose an API socket.
+
+A job with access to that socket may control the user's containers, images, volumes, mounted files, and build credentials.
+
+Rootless operation narrows the blast radius. It does not make the socket harmless.
+
+It also does not protect files and secrets that belong to the same CI account.
+
+Podman is useful, but the real security boundary still comes from isolated workers, restricted credentials, and not reusing a compromised host.
+
+---
+
+## What to Do Instead
+
+There is no single command that makes every container build pipeline safe.
+
+The design matters more than the tool.
+
+### Use Disposable Workers
+
+Create the worker for one job and destroy it afterward.
+
+Do not try to clean and reuse a machine that may have executed untrusted code.
+
+Destroying the whole worker is simpler and more reliable than proving that every trace of a compromise has been removed.
+
+### Separate Pull Requests From Releases
+
+Untrusted pull-request jobs should not share a host with trusted jobs that receive registry, signing, cloud, or deployment credentials.
+
+Use separate runner pools and separate trust boundaries.
+
+A useful rule is:
+
+> The machine that tests an untrusted pull request should never later receive production secrets.
+
+### Avoid General-Purpose Runtime Sockets
+
+Do not mount a rootful Docker or Podman socket into arbitrary build jobs.
+
+Use a builder that exposes only the functions required to build an image, and isolate it from the runner host.
+
+### Prefer Rootless or Isolated Builders
+
+Rootless BuildKit, Podman, and Buildah can reduce host privilege.
+
+A dedicated remote builder can also separate image construction from the CI runner.
+
+These are not magic solutions, but they are easier to secure than handing every job control of a rootful host daemon.
+
+### Use Short-Lived Credentials
+
+CI jobs should receive temporary, narrowly scoped credentials.
+
+Avoid long-lived keys stored on runner disks.
+
+A build job should get only what it needs, for only as long as it needs it.
+
+---
+
+## Better Options
+
+### Rootless BuildKit
+
+BuildKit is purpose-built for image construction and supports:
+
+- Efficient caching
+- Secret mounts
+- Remote cache
+- OCI image output
+- Rootless operation
+- Dedicated remote builders
+
+A strong setup runs BuildKit on an isolated, disposable worker, avoids the host Docker socket, and uses short-lived registry credentials.
+
+### Dedicated Remote Builders
+
+A remote builder separates image construction from the CI host.
+
+The CI job submits a build instead of receiving general control over the runner runtime.
+
+The builder is still sensitive infrastructure, but the boundary is narrower and easier to reason about.
+
+### Podman and Buildah
+
+Podman and Buildah work well when rootless operation is practical and the workflow does not require full Docker daemon compatibility.
+
+They are safest when each job receives its own isolated user or disposable worker and no shared API socket is mounted.
+
+### Managed Build Services
+
+Managed builders can remove much of the operational burden.
+
+They may cost more and introduce platform coupling, but they also avoid running privileged builder infrastructure on long-lived CI hosts.
 
 ### Kaniko
 
-Designed specifically for container image builds inside Kubernetes.
+Kaniko was widely used for daemonless image builds in Kubernetes.
 
-Advantages:
+However, the original `GoogleContainerTools/kaniko` repository was archived on June 3, 2025.
 
-- No privileged containers
-- No Docker daemon required
-- Popular in cloud-native environments
-
-### Buildah
-
-Part of the Podman ecosystem.
-
-Focused on image creation without requiring a daemon.
+Existing deployments may continue to use pinned versions, but Kaniko should not be presented as the default actively maintained choice without evaluating a maintained successor or fork.
 
 ---
 
-## Example: Podman in CI
+## When DinD May Still Be Acceptable
 
-```yaml
-image: quay.io/podman/stable
+DinD is not automatically forbidden.
 
-before_script:
-  - podman info
-  - podman build -t myapp .
+It can be reasonable when:
 
-script:
-  - podman run myapp
-```
+- The worker exists for one job only.
+- The worker is destroyed immediately afterward.
+- The job runs trusted code.
+- No other project shares the machine.
+- Credentials are short-lived and narrowly scoped.
+- Network access is restricted.
+- Privileged mode is an explicit, reviewed trade-off.
 
-This avoids Docker socket exposure and does not require privileged mode.
+The dangerous combination is not simply “Docker inside a container.”
 
----
+It is:
 
-## Quick Comparison
+- Untrusted code
+- Administrative runtime access
+- Long-lived hosts
+- Shared workers
+- Valuable credentials
+- Broad internal network access
 
-| Feature | Docker-in-Docker | Podman |
-|----------|-----------------|---------|
-| Requires daemon | Yes | No |
-| Docker socket risk | Yes | No |
-| Rootless support | Limited | Yes |
-| Requires privileged mode | Often | Usually No |
-| CI/CD friendly | Yes | Yes |
-| Security posture | Moderate to High Risk | Better Defaults |
+Remove enough of those conditions, and the risk becomes much easier to manage.
