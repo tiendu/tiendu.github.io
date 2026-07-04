@@ -8,8 +8,10 @@
     "dev:host": "astro dev --host",
     "start": "astro dev",
     "check:styles": "node scripts/check-styles.mjs",
+    "check:games": "node scripts/check-games.mjs",
+    "test:games": "node scripts/test-games.mjs",
     "check:astro": "astro check",
-    "check": "npm run check:styles && npm run check:astro",
+    "check": "npm run check:styles && npm run check:games && npm run test:games && npm run check:astro",
     "build": "astro build && node scripts/fix-html-routes.mjs",
     "preview": "astro preview"
   },

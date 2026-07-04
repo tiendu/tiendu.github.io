@@ -3,7 +3,7 @@ SHELL := /bin/sh
 
 NPM ?= npm
 
-.PHONY: install dev hot run host styles check build verify preview clean distclean reinstall ci help
+.PHONY: install dev hot run host styles games check build verify preview clean distclean reinstall ci help
 
 install:
 	$(NPM) ci
@@ -16,6 +16,10 @@ host:
 
 styles:
 	$(NPM) run check:styles
+
+games:
+	$(NPM) run check:games
+	$(NPM) run test:games
 
 check:
 	$(NPM) run check
@@ -49,6 +53,7 @@ help:
 		'  run        Alias for dev' \
 		'  host       Start Astro on the local network' \
 		'  styles     Check stylesheet ownership and imports' \
+		'  games      Check arcade boundaries, registration, and runner rules' \
 		'  check      Run style, Astro, and TypeScript checks' \
 		'  build      Build the production site' \
 		'  verify     Run check and build' \

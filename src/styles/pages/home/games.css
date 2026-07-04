@@ -1,15 +1,17 @@
-/* Homepage-only controls that orchestrate the three arcade components. */
+/* Homepage-only controls that orchestrate the arcade components. */
 
 .snake-mobile-controls,
 .invaders-mobile-controls,
-.breakout-mobile-controls {
+.breakout-mobile-controls,
+.chicken-mobile-controls {
   display: none;
 }
 
 @media (max-width: 620px), (pointer: coarse) {
   .landing-wrapper.snake-mode .snake-mobile-controls,
   .landing-wrapper.invaders-mode .invaders-mobile-controls,
-  .landing-wrapper.breakout-mode .breakout-mobile-controls {
+  .landing-wrapper.breakout-mode .breakout-mobile-controls,
+  .landing-wrapper.chicken-mode .chicken-mobile-controls {
     display: grid;
     gap: 0.55rem;
     margin: -0.15rem auto 0;
@@ -21,9 +23,14 @@
     max-width: 430px;
   }
 
+  .landing-wrapper.chicken-mode .chicken-mobile-controls {
+    max-width: 640px;
+  }
+
   .snake-mobile-actions,
   .invaders-mobile-actions,
-  .breakout-mobile-actions {
+  .breakout-mobile-actions,
+  .chicken-mobile-actions {
     display: grid;
     gap: 0.5rem;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -31,7 +38,8 @@
 
   .snake-mobile-actions button,
   .invaders-mobile-actions button,
-  .breakout-mobile-actions button {
+  .breakout-mobile-actions button,
+  .chicken-mobile-actions button {
     background: rgb(199 240 139 / 5%);
     border: 1px solid rgb(199 240 139 / 25%);
     border-radius: 2px;
@@ -51,7 +59,9 @@
   .invaders-mobile-actions button:hover,
   .invaders-mobile-actions button:focus-visible,
   .breakout-mobile-actions button:hover,
-  .breakout-mobile-actions button:focus-visible {
+  .breakout-mobile-actions button:focus-visible,
+  .chicken-mobile-actions button:hover,
+  .chicken-mobile-actions button:focus-visible {
     background: rgb(199 240 139 / 12%);
     border-color: var(--terminal-green-dim);
     color: var(--terminal-green-bright);
@@ -59,14 +69,16 @@
 
   .snake-mobile-actions button:disabled,
   .invaders-mobile-actions button:disabled,
-  .breakout-mobile-actions button:disabled {
+  .breakout-mobile-actions button:disabled,
+  .chicken-mobile-actions button:disabled {
     cursor: default;
     opacity: 0.38;
   }
 
   .snake-mobile-help,
   .invaders-mobile-help,
-  .breakout-mobile-help {
+  .breakout-mobile-help,
+  .chicken-mobile-help {
     color: var(--terminal-green-dim);
     font-size: 0.8rem;
     letter-spacing: 0.08em;
@@ -77,7 +89,8 @@
 
   .landing-wrapper.snake-mode .snake-help,
   .landing-wrapper.invaders-mode .invaders-help,
-  .landing-wrapper.breakout-mode .breakout-help {
+  .landing-wrapper.breakout-mode .breakout-help,
+  .landing-wrapper.chicken-mode .chicken-help {
     display: none;
   }
 }

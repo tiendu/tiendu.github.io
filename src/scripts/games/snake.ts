@@ -1,0 +1,935 @@
+import { configureFixedCanvas } from "./shared/canvas";
+import { dispatchGameExit, GAME_EVENTS } from "./shared/events";
+import { mountAllGames } from "./shared/mount";
+import { readStoredScore, writeStoredScore } from "./shared/storage";
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+type SnakeMode = "free" | "maze";
+type DirectionName = "up" | "down" | "left" | "right";
+
+export function mountSnakeGames(): void {
+  mountAllGames("[data-snake-game]", "snakeInitialized", mountSnakeGame);
+}
+
+function mountSnakeGame(root: HTMLElement): void {
+  const canvas = root.querySelector<HTMLCanvasElement>("[data-snake-canvas]");
+  const modeOutput = root.querySelector<HTMLOutputElement>("[data-snake-mode]");
+  const scoreOutput =
+    root.querySelector<HTMLOutputElement>("[data-snake-score]");
+  const highScoreOutput = root.querySelector<HTMLOutputElement>(
+    "[data-snake-high-score]",
+  );
+  const bonusIndicator = root.querySelector<HTMLElement>(
+    "[data-snake-bonus-indicator]",
+  );
+  const bonusTimeOutput = root.querySelector<HTMLOutputElement>(
+    "[data-snake-bonus-time]",
+  );
+  const overlay = root.querySelector<HTMLElement>("[data-snake-overlay]");
+  const stateLabel = root.querySelector<HTMLElement>("[data-snake-state]");
+  const messageLabel = root.querySelector<HTMLElement>("[data-snake-message]");
+  const modePicker = root.querySelector<HTMLElement>(
+    "[data-snake-mode-picker]",
+  );
+  const modeButtons = Array.from(
+    root.querySelectorAll<HTMLButtonElement>("[data-snake-mode]"),
+  );
+  const directionButtons = Array.from(
+    root.querySelectorAll<HTMLButtonElement>("[data-snake-direction]"),
+  );
+
+  if (!canvas) {
+    return;
+  }
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return;
+  }
+
+  const GRID_SIZE = 20;
+  const BOARD_SIZE = 400;
+  const CELL_SIZE = BOARD_SIZE / GRID_SIZE;
+  const START_SPEED = 132;
+  const MIN_SPEED = 72;
+  const BONUS_TRIGGER_FOODS = 5;
+  const BONUS_DURATION_MS = 5000;
+  const BONUS_MIN_SCORE = 40;
+  const BONUS_MAX_SCORE = 120;
+  const MAZE_SEGMENTS = 7;
+  const MAZE_MIN_REACHABLE_RATIO = 0.72;
+  const HIGH_SCORE_KEY = "tiendu-snake-high-score";
+
+  const directions: Record<DirectionName, Point> = {
+    up: { x: 0, y: -1 },
+    down: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+  };
+
+  let active = false;
+  let started = false;
+  let paused = false;
+  let gameOver = false;
+  let mode: SnakeMode | null = null;
+  let snake: Point[] = [];
+  let food: Point | null = null;
+  let obstacles = new Set<string>();
+  let mazeReachableCells: Point[] = [];
+  let bonusFood: Point | null = null;
+  let bonusRemainingMs = 0;
+  let regularFoodsEaten = 0;
+  let direction = directions.right;
+  let queuedDirection = directions.right;
+  let score = 0;
+  let highScore = 0;
+  let speed = START_SPEED;
+  let animationFrame: number | null = null;
+  let previousTime = 0;
+  let accumulator = 0;
+  let pointerStart: Point | null = null;
+
+  const formatScore = (value: number): string => String(value).padStart(4, "0");
+
+  const readHighScore = (): number => readStoredScore(HIGH_SCORE_KEY);
+
+  const saveHighScore = () => {
+    if (score <= highScore) {
+      return;
+    }
+
+    highScore = score;
+
+    writeStoredScore(HIGH_SCORE_KEY, highScore);
+  };
+
+  const updateScoreboard = () => {
+    if (modeOutput) {
+      modeOutput.textContent = mode ? mode.toUpperCase() : "--";
+    }
+
+    if (scoreOutput) {
+      scoreOutput.textContent = formatScore(score);
+    }
+
+    if (highScoreOutput) {
+      highScoreOutput.textContent = formatScore(highScore);
+    }
+  };
+
+  const updateBonusIndicator = () => {
+    const visible = bonusFood && bonusRemainingMs > 0;
+
+    if (bonusIndicator) {
+      bonusIndicator.hidden = !visible;
+    }
+
+    if (visible && bonusTimeOutput) {
+      bonusTimeOutput.textContent = String(
+        Math.max(1, Math.ceil(bonusRemainingMs / 1000)),
+      );
+    }
+  };
+
+  const clearBonusFood = () => {
+    bonusFood = null;
+    bonusRemainingMs = 0;
+    updateBonusIndicator();
+  };
+
+  const setOverlay = (
+    title: string,
+    message: string,
+    visible = true,
+    showModePicker = false,
+  ): void => {
+    if (stateLabel) {
+      stateLabel.textContent = title;
+    }
+
+    if (messageLabel) {
+      messageLabel.textContent = message;
+    }
+
+    if (modePicker) {
+      modePicker.hidden = !showModePicker;
+    }
+
+    if (overlay) {
+      overlay.hidden = !visible;
+    }
+  };
+
+  const cellKey = (x: number, y: number): string => `${x},${y}`;
+
+  const isInsideBoard = (x: number, y: number): boolean =>
+    x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
+
+  const isObstacle = (x: number, y: number): boolean =>
+    obstacles.has(cellKey(x, y));
+
+  const isSnakeCell = (x: number, y: number): boolean =>
+    snake.some((segment) => segment.x === x && segment.y === y);
+
+  const startingSnake = (): Point[] => [
+    { x: 9, y: 10 },
+    { x: 8, y: 10 },
+    { x: 7, y: 10 },
+    { x: 6, y: 10 },
+  ];
+
+  const isReservedStartCell = (x: number, y: number): boolean =>
+    x >= 4 && x <= 13 && y >= 8 && y <= 12;
+
+  const floodFill = (blockedCells: Set<string>): Set<string> => {
+    const start = { x: 9, y: 10 };
+    const visited = new Set([cellKey(start.x, start.y)]);
+    const queue = [start];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+
+      if (!current) {
+        break;
+      }
+
+      const neighbors = [
+        { x: current.x + 1, y: current.y },
+        { x: current.x - 1, y: current.y },
+        { x: current.x, y: current.y + 1 },
+        { x: current.x, y: current.y - 1 },
+      ];
+
+      for (const neighbor of neighbors) {
+        const key = cellKey(neighbor.x, neighbor.y);
+
+        if (
+          !isInsideBoard(neighbor.x, neighbor.y) ||
+          blockedCells.has(key) ||
+          visited.has(key)
+        ) {
+          continue;
+        }
+
+        visited.add(key);
+        queue.push(neighbor);
+      }
+    }
+
+    return visited;
+  };
+
+  const generateMaze = () => {
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      const candidate = new Set<string>();
+
+      for (
+        let segmentIndex = 0;
+        segmentIndex < MAZE_SEGMENTS;
+        segmentIndex += 1
+      ) {
+        const horizontal = Math.random() < 0.5;
+        const length = 3 + Math.floor(Math.random() * 4);
+        const maxX = horizontal ? GRID_SIZE - length - 1 : GRID_SIZE - 2;
+        const maxY = horizontal ? GRID_SIZE - 2 : GRID_SIZE - length - 1;
+        const startX = 1 + Math.floor(Math.random() * Math.max(1, maxX));
+        const startY = 1 + Math.floor(Math.random() * Math.max(1, maxY));
+        const cells = [];
+
+        for (let offset = 0; offset < length; offset += 1) {
+          const x = horizontal ? startX + offset : startX;
+          const y = horizontal ? startY : startY + offset;
+          cells.push({ x, y });
+        }
+
+        if (cells.some(({ x, y }) => isReservedStartCell(x, y))) {
+          continue;
+        }
+
+        cells.forEach(({ x, y }) => candidate.add(cellKey(x, y)));
+      }
+
+      const reachable = floodFill(candidate);
+      const freeCellCount = GRID_SIZE * GRID_SIZE - candidate.size;
+
+      if (
+        candidate.size >= 14 &&
+        reachable.size >= freeCellCount * MAZE_MIN_REACHABLE_RATIO
+      ) {
+        obstacles = candidate;
+        mazeReachableCells = Array.from(reachable, (key) => {
+          const [x = 0, y = 0] = key.split(",").map(Number);
+          return { x, y };
+        });
+        return;
+      }
+    }
+
+    /*
+     * Deterministic fallback. It keeps the starting corridor open and
+     * cannot divide the board into isolated food regions.
+     */
+    const fallbackSegments = [
+      [
+        { x: 2, y: 4 },
+        { x: 3, y: 4 },
+        { x: 4, y: 4 },
+        { x: 5, y: 4 },
+      ],
+      [
+        { x: 14, y: 3 },
+        { x: 14, y: 4 },
+        { x: 14, y: 5 },
+        { x: 14, y: 6 },
+      ],
+      [
+        { x: 3, y: 15 },
+        { x: 4, y: 15 },
+        { x: 5, y: 15 },
+        { x: 6, y: 15 },
+      ],
+      [
+        { x: 15, y: 14 },
+        { x: 16, y: 14 },
+        { x: 17, y: 14 },
+      ],
+      [
+        { x: 11, y: 17 },
+        { x: 11, y: 18 },
+      ],
+    ];
+
+    obstacles = new Set(
+      fallbackSegments.flat().map(({ x, y }) => cellKey(x, y)),
+    );
+
+    mazeReachableCells = Array.from(floodFill(obstacles), (key) => {
+      const [x = 0, y = 0] = key.split(",").map(Number);
+      return { x, y };
+    });
+  };
+
+  const getSpawnCells = () => {
+    const candidates =
+      mode === "maze"
+        ? mazeReachableCells
+        : Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, index) => ({
+            x: index % GRID_SIZE,
+            y: Math.floor(index / GRID_SIZE),
+          }));
+
+    return candidates.filter(({ x, y }) => {
+      const occupiedByFood = food && food.x === x && food.y === y;
+      const occupiedByBonus =
+        bonusFood && bonusFood.x === x && bonusFood.y === y;
+
+      return (
+        !isObstacle(x, y) &&
+        !isSnakeCell(x, y) &&
+        !occupiedByFood &&
+        !occupiedByBonus
+      );
+    });
+  };
+
+  const configureCanvas = (): void => {
+    configureFixedCanvas(canvas, context, BOARD_SIZE, BOARD_SIZE);
+  };
+
+  const drawGrid = () => {
+    context.strokeStyle = "rgba(199, 240, 139, 0.055)";
+    context.lineWidth = 1;
+
+    for (let index = 1; index < GRID_SIZE; index += 1) {
+      const position = index * CELL_SIZE + 0.5;
+
+      context.beginPath();
+      context.moveTo(position, 0);
+      context.lineTo(position, BOARD_SIZE);
+      context.stroke();
+
+      context.beginPath();
+      context.moveTo(0, position);
+      context.lineTo(BOARD_SIZE, position);
+      context.stroke();
+    }
+  };
+
+  const drawFood = () => {
+    if (!food) {
+      return;
+    }
+
+    const centerX = food.x * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = food.y * CELL_SIZE + CELL_SIZE / 2;
+    const radius = CELL_SIZE * 0.32;
+
+    context.save();
+    context.translate(centerX, centerY);
+    context.rotate(Math.PI / 4);
+    context.fillStyle = "#d9805d";
+    context.shadowColor = "rgba(217, 128, 93, 0.75)";
+    context.shadowBlur = 10;
+    context.fillRect(-radius, -radius, radius * 2, radius * 2);
+    context.restore();
+  };
+
+  const drawBonusFood = () => {
+    if (!bonusFood) {
+      return;
+    }
+
+    const originX = bonusFood.x * CELL_SIZE;
+    const originY = bonusFood.y * CELL_SIZE;
+    const flashing =
+      bonusRemainingMs <= 2000 && Math.floor(bonusRemainingMs / 160) % 2 === 0;
+
+    context.save();
+    context.globalAlpha = flashing ? 0.34 : 1;
+    context.fillStyle = "#f0c36f";
+    context.shadowColor = "rgba(240, 195, 111, 0.9)";
+    context.shadowBlur = 15;
+
+    /*
+     * A large pixel-style meal: visibly different from the normal diamond,
+     * while still occupying one logical grid cell.
+     */
+    context.fillRect(originX + 6, originY + 1, 8, 18);
+    context.fillRect(originX + 1, originY + 6, 18, 8);
+
+    context.shadowBlur = 0;
+    context.fillStyle = "#07120b";
+    context.fillRect(originX + 8, originY + 8, 4, 4);
+    context.restore();
+  };
+
+  const drawObstacles = () => {
+    if (mode !== "maze") {
+      return;
+    }
+
+    context.save();
+
+    obstacles.forEach((key) => {
+      const [x = 0, y = 0] = key.split(",").map(Number);
+      const originX = x * CELL_SIZE;
+      const originY = y * CELL_SIZE;
+
+      context.fillStyle = "#536b3d";
+      context.shadowColor = "rgba(127, 164, 92, 0.28)";
+      context.shadowBlur = 5;
+      context.fillRect(originX + 2, originY + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+
+      context.shadowBlur = 0;
+      context.strokeStyle = "rgba(231, 255, 176, 0.18)";
+      context.lineWidth = 1;
+      context.strokeRect(
+        originX + 4.5,
+        originY + 4.5,
+        CELL_SIZE - 9,
+        CELL_SIZE - 9,
+      );
+    });
+
+    context.restore();
+  };
+
+  const drawSnake = () => {
+    snake.forEach((segment, index) => {
+      const inset = index === 0 ? 2 : 3;
+      const size = CELL_SIZE - inset * 2;
+
+      context.fillStyle = index === 0 ? "#e7ffb0" : "#9fcf71";
+      context.shadowColor =
+        index === 0 ? "rgba(231, 255, 176, 0.55)" : "rgba(199, 240, 139, 0.22)";
+      context.shadowBlur = index === 0 ? 8 : 4;
+      context.fillRect(
+        segment.x * CELL_SIZE + inset,
+        segment.y * CELL_SIZE + inset,
+        size,
+        size,
+      );
+    });
+
+    const head = snake[0];
+
+    if (!head) {
+      return;
+    }
+
+    const eyeSize = 2.5;
+    const baseX = head.x * CELL_SIZE;
+    const baseY = head.y * CELL_SIZE;
+    let eyes;
+
+    if (direction.x > 0) {
+      eyes = [
+        [baseX + 14, baseY + 5],
+        [baseX + 14, baseY + 12],
+      ];
+    } else if (direction.x < 0) {
+      eyes = [
+        [baseX + 4, baseY + 5],
+        [baseX + 4, baseY + 12],
+      ];
+    } else if (direction.y < 0) {
+      eyes = [
+        [baseX + 5, baseY + 4],
+        [baseX + 12, baseY + 4],
+      ];
+    } else {
+      eyes = [
+        [baseX + 5, baseY + 14],
+        [baseX + 12, baseY + 14],
+      ];
+    }
+
+    context.shadowBlur = 0;
+    context.fillStyle = "#07120b";
+
+    eyes.forEach(([x, y]) => {
+      context.fillRect(x, y, eyeSize, eyeSize);
+    });
+  };
+
+  const draw = () => {
+    context.clearRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+    context.fillStyle = "#020704";
+    context.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+    drawGrid();
+    drawObstacles();
+    drawFood();
+    drawBonusFood();
+    drawSnake();
+  };
+
+  const placeFood = () => {
+    const freeCells = getSpawnCells();
+
+    if (freeCells.length === 0) {
+      finishGame(true);
+      return;
+    }
+
+    food = freeCells[Math.floor(Math.random() * freeCells.length)];
+  };
+
+  const placeBonusFood = () => {
+    const freeCells = getSpawnCells();
+
+    if (freeCells.length === 0) {
+      return;
+    }
+
+    bonusFood = freeCells[Math.floor(Math.random() * freeCells.length)];
+    bonusRemainingMs = BONUS_DURATION_MS;
+    updateBonusIndicator();
+  };
+
+  const finishGame = (won = false) => {
+    gameOver = true;
+    started = false;
+    clearBonusFood();
+    saveHighScore();
+    updateScoreboard();
+    setOverlay(
+      won ? "SYSTEM CLEARED" : "GAME OVER",
+      `${formatScore(score)} · R RESTART · SELECT MODE · ESC EXIT`,
+      true,
+      true,
+    );
+  };
+
+  const resetGame = () => {
+    if (!mode) {
+      setOverlay("SELECT MODE", "FREE WRAPS · MAZE HAS WALLS", true, true);
+      draw();
+      return;
+    }
+
+    snake = startingSnake();
+    obstacles = new Set();
+    mazeReachableCells = [];
+
+    if (mode === "maze") {
+      generateMaze();
+    }
+
+    direction = directions.right;
+    queuedDirection = directions.right;
+    score = 0;
+    regularFoodsEaten = 0;
+    speed = START_SPEED;
+    clearBonusFood();
+    started = false;
+    paused = false;
+    gameOver = false;
+    previousTime = 0;
+    accumulator = 0;
+    placeFood();
+    updateScoreboard();
+    setOverlay(
+      "PRESS A DIRECTION",
+      `${mode.toUpperCase()} MODE · ARROWS / WASD / SWIPE`,
+    );
+    draw();
+  };
+
+  const selectMode = (nextMode: string | undefined): void => {
+    if (!active || (nextMode !== "free" && nextMode !== "maze")) {
+      return;
+    }
+
+    mode = nextMode;
+    resetGame();
+    window.setTimeout(() => canvas.focus({ preventScroll: true }), 0);
+  };
+
+  const isOpposite = (nextDirection: Point): boolean =>
+    nextDirection.x + direction.x === 0 && nextDirection.y + direction.y === 0;
+
+  const setDirection = (nextDirection: Point): void => {
+    if (!active || !mode || gameOver || isOpposite(nextDirection)) {
+      return;
+    }
+
+    queuedDirection = nextDirection;
+
+    if (!started) {
+      started = true;
+      paused = false;
+      setOverlay("", "", false);
+      previousTime = performance.now();
+    }
+  };
+
+  const tick = () => {
+    direction = queuedDirection;
+
+    const currentHead = snake[0];
+
+    if (!currentHead) {
+      finishGame();
+      return;
+    }
+
+    let nextHead: Point = {
+      x: currentHead.x + direction.x,
+      y: currentHead.y + direction.y,
+    };
+
+    const outsideBoard = !isInsideBoard(nextHead.x, nextHead.y);
+
+    if (mode === "free") {
+      nextHead = {
+        x: (nextHead.x + GRID_SIZE) % GRID_SIZE,
+        y: (nextHead.y + GRID_SIZE) % GRID_SIZE,
+      };
+    }
+
+    const hitWall = mode === "maze" && outsideBoard;
+    const hitObstacle =
+      mode === "maze" &&
+      isInsideBoard(nextHead.x, nextHead.y) &&
+      isObstacle(nextHead.x, nextHead.y);
+
+    const eatingRegularFood =
+      food && nextHead.x === food.x && nextHead.y === food.y;
+    const eatingBonusFood =
+      bonusFood && nextHead.x === bonusFood.x && nextHead.y === bonusFood.y;
+    const collisionBody = eatingRegularFood ? snake : snake.slice(0, -1);
+    const hitSelf = collisionBody.some(
+      (segment) => segment.x === nextHead.x && segment.y === nextHead.y,
+    );
+
+    if (hitWall || hitObstacle || hitSelf) {
+      finishGame();
+      return;
+    }
+
+    snake.unshift(nextHead);
+
+    if (eatingRegularFood) {
+      score += 10;
+      regularFoodsEaten += 1;
+      saveHighScore();
+      speed = Math.max(MIN_SPEED, START_SPEED - regularFoodsEaten * 4.5);
+      placeFood();
+
+      if (regularFoodsEaten % BONUS_TRIGGER_FOODS === 0 && !bonusFood) {
+        placeBonusFood();
+      }
+
+      updateScoreboard();
+    } else if (eatingBonusFood) {
+      const remainingRatio = Math.max(
+        0,
+        Math.min(1, bonusRemainingMs / BONUS_DURATION_MS),
+      );
+      const rawBonus =
+        BONUS_MIN_SCORE + (BONUS_MAX_SCORE - BONUS_MIN_SCORE) * remainingRatio;
+      const bonusPoints = Math.max(
+        BONUS_MIN_SCORE,
+        Math.ceil(rawBonus / 10) * 10,
+      );
+
+      score += bonusPoints;
+      snake.pop(); // Nokia-style bonus: points only, no extra length.
+      clearBonusFood();
+      saveHighScore();
+      updateScoreboard();
+    } else {
+      snake.pop();
+    }
+
+    draw();
+  };
+
+  const gameLoop = (time: number): void => {
+    if (!active) {
+      return;
+    }
+
+    if (!previousTime) {
+      previousTime = time;
+    }
+
+    const elapsed = Math.min(time - previousTime, 250);
+    previousTime = time;
+
+    if (started && !paused && !gameOver) {
+      if (bonusFood) {
+        bonusRemainingMs = Math.max(0, bonusRemainingMs - elapsed);
+
+        if (bonusRemainingMs === 0) {
+          clearBonusFood();
+          draw();
+        } else {
+          updateBonusIndicator();
+        }
+      }
+
+      accumulator += elapsed;
+
+      while (accumulator >= speed) {
+        tick();
+        accumulator -= speed;
+
+        if (gameOver) {
+          break;
+        }
+      }
+
+      /*
+       * Redraw while the bonus exists so its final two-second warning
+       * can flash even between snake movement ticks.
+       */
+      if (bonusFood) {
+        draw();
+      }
+    }
+
+    animationFrame = window.requestAnimationFrame(gameLoop);
+  };
+
+  const pauseGame = (message = "P TO RESUME") => {
+    if (!active || !started || gameOver || paused) {
+      return;
+    }
+
+    paused = true;
+    setOverlay("PAUSED", message);
+  };
+
+  const togglePause = () => {
+    if (!active || !started || gameOver) {
+      return;
+    }
+
+    paused = !paused;
+
+    if (paused) {
+      setOverlay("PAUSED", "P TO RESUME");
+    } else {
+      previousTime = performance.now();
+      accumulator = 0;
+      setOverlay("", "", false);
+    }
+  };
+
+  const startGame = () => {
+    active = true;
+    root.hidden = false;
+    highScore = readHighScore();
+    mode = null;
+    snake = [];
+    food = null;
+    obstacles = new Set();
+    mazeReachableCells = [];
+    clearBonusFood();
+    configureCanvas();
+    updateScoreboard();
+    setOverlay("SELECT MODE", "FREE WRAPS · MAZE HAS WALLS", true, true);
+    draw();
+
+    if (animationFrame !== null) {
+      window.cancelAnimationFrame(animationFrame);
+    }
+
+    animationFrame = window.requestAnimationFrame(gameLoop);
+    window.setTimeout(() => canvas.focus({ preventScroll: true }), 0);
+  };
+
+  const exitGame = () => {
+    if (!active) {
+      return;
+    }
+
+    active = false;
+    started = false;
+    paused = false;
+    mode = null;
+    saveHighScore();
+    updateScoreboard();
+    root.hidden = true;
+
+    if (animationFrame !== null) {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    }
+
+    dispatchGameExit(GAME_EVENTS.snake.exit, { score, highScore });
+  };
+
+  const directionForKey = (key: string): Point | null => {
+    const normalized = key.toLowerCase();
+
+    if (normalized === "arrowup" || normalized === "w") {
+      return directions.up;
+    }
+
+    if (normalized === "arrowdown" || normalized === "s") {
+      return directions.down;
+    }
+
+    if (normalized === "arrowleft" || normalized === "a") {
+      return directions.left;
+    }
+
+    if (normalized === "arrowright" || normalized === "d") {
+      return directions.right;
+    }
+
+    return null;
+  };
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (!active) {
+      return;
+    }
+
+    const normalizedKey = event.key.toLowerCase();
+
+    if (!mode && (normalizedKey === "f" || normalizedKey === "m")) {
+      event.preventDefault();
+      selectMode(normalizedKey === "f" ? "free" : "maze");
+      return;
+    }
+
+    const nextDirection = directionForKey(event.key);
+
+    if (nextDirection) {
+      event.preventDefault();
+      setDirection(nextDirection);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      exitGame();
+      return;
+    }
+
+    if (event.key.toLowerCase() === "r") {
+      event.preventDefault();
+      resetGame();
+      return;
+    }
+
+    if (event.key.toLowerCase() === "p" || event.key === " ") {
+      event.preventDefault();
+      togglePause();
+    }
+  };
+
+  const onPointerDown = (event: PointerEvent): void => {
+    if (!active) {
+      return;
+    }
+
+    pointerStart = { x: event.clientX, y: event.clientY };
+  };
+
+  const onPointerUp = (event: PointerEvent): void => {
+    if (!active || !pointerStart) {
+      return;
+    }
+
+    const deltaX = event.clientX - pointerStart.x;
+    const deltaY = event.clientY - pointerStart.y;
+    pointerStart = null;
+
+    if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 20) {
+      return;
+    }
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      setDirection(deltaX > 0 ? directions.right : directions.left);
+    } else {
+      setDirection(deltaY > 0 ? directions.down : directions.up);
+    }
+  };
+
+  modeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      selectMode(button.dataset.snakeMode);
+    });
+  });
+
+  directionButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const name = button.dataset.snakeDirection as DirectionName | undefined;
+      const nextDirection = name ? directions[name] : undefined;
+
+      if (nextDirection) {
+        setDirection(nextDirection);
+        canvas.focus({ preventScroll: true });
+      }
+    });
+  });
+
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointerup", onPointerUp);
+  document.addEventListener("keydown", onKeyDown);
+
+  window.addEventListener("blur", () => pauseGame("P TO RESUME"));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      pauseGame("P TO RESUME");
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    if (active) {
+      configureCanvas();
+      draw();
+    }
+  });
+
+  window.addEventListener(GAME_EVENTS.snake.start, startGame);
+}

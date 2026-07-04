@@ -1,0 +1,48 @@
+---
+import "../../styles/components/arcade.css";
+import "../../styles/components/chicken-run-game.css";
+---
+
+<section
+  class="arcade-panel chicken-panel"
+  data-chicken-game
+  aria-label="Free Range chicken runner game"
+  hidden
+>
+  <div class="arcade-scoreboard chicken-scoreboard" aria-live="polite">
+    <span>SCORE <output data-chicken-score>0000</output></span>
+    <span>HIGH <output data-chicken-high-score>0000</output></span>
+    <span>EGG <output data-chicken-egg>00</output></span>
+    <span>SPEED <output data-chicken-speed>01</output></span>
+  </div>
+
+  <div class="arcade-board-frame chicken-board-frame">
+    <canvas
+      class="arcade-board chicken-board"
+      data-chicken-canvas
+      width="640"
+      height="320"
+      tabindex="0"
+      aria-label="Free Range game board. Press Space, Up, W, or tap to jump. Press again in the air to flap, collect corn arcs and eggs, and outrun the fox at night."
+    ></canvas>
+
+    <div class="arcade-overlay chicken-overlay" data-chicken-overlay>
+      <strong data-chicken-state>PRESS JUMP</strong>
+      <span data-chicken-message>SPACE / UP / TAP · PRESS AGAIN TO FLAP</span>
+    </div>
+  </div>
+
+  <div class="arcade-pad chicken-pad" aria-label="Free Range controls">
+    <button type="button" data-chicken-control="jump" aria-label="Jump">JUMP</button>
+  </div>
+
+  <p class="arcade-help chicken-help">
+    SPACE/UP/W/TAP JUMP · AGAIN TO FLAP · EGG = ONE SAVE · OUTRUN THE FOX AT NIGHT · P PAUSE · R RESTART · ESC EXIT
+  </p>
+</section>
+
+<script>
+  import { mountChickenRunGames } from "../../scripts/games/chicken-run";
+
+  mountChickenRunGames();
+</script>
