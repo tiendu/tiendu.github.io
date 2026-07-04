@@ -343,8 +343,8 @@ function mountChickenRunGame(root: HTMLElement): void {
     updateScoreboard();
     updateJumpButton();
     setOverlay(
-      "PRESS JUMP",
-      "SPACE / UP / TAP · FLAP ONCE · HILLS, WIND, RAIN & NIGHT",
+      "SPACE / TAP TO JUMP",
+      "PRESS AGAIN IN AIR TO FLAP",
     );
     draw();
   };
@@ -952,7 +952,7 @@ function mountChickenRunGame(root: HTMLElement): void {
   const togglePause = (): void => {
     if (!active || !started || gameOver || crash) return;
     paused = !paused;
-    if (paused) setOverlay("PAUSED", "P TO RESUME");
+    if (paused) setOverlay("PAUSED", "P / TAP TO RESUME · R RESTART · ESC EXIT");
     else {
       previousTime = performance.now();
       setOverlay("RUNNING", "", false);
@@ -963,7 +963,7 @@ function mountChickenRunGame(root: HTMLElement): void {
   const pauseGame = (): void => {
     if (!active || !started || paused || gameOver || crash) return;
     paused = true;
-    setOverlay("PAUSED", "P TO RESUME");
+    setOverlay("PAUSED", "P / TAP TO RESUME · R RESTART · ESC EXIT");
     updateJumpButton();
   };
 
