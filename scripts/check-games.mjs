@@ -16,6 +16,12 @@ const chickenModules = [
   "chicken-run-renderer.ts",
   "chicken-run-cycle.ts",
   "chicken-run-sky.ts",
+  "chicken-run-terrain.ts",
+  "chicken-run-weather.ts",
+  "chicken-run-environment-renderer.ts",
+  "chicken-run-background.ts",
+  "chicken-run-background-renderer.ts",
+  "chicken-run-landmark-renderer.ts",
 ];
 
 const failures = [];

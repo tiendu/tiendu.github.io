@@ -34,6 +34,15 @@ const cycle = await importTypeScript(
 const sky = await importTypeScript(
   "../src/scripts/games/chicken-run-sky.ts",
 );
+const terrain = await importTypeScript(
+  "../src/scripts/games/chicken-run-terrain.ts",
+);
+const weather = await importTypeScript(
+  "../src/scripts/games/chicken-run-weather.ts",
+);
+const background = await importTypeScript(
+  "../src/scripts/games/chicken-run-background.ts",
+);
 
 assert.equal(rules.speedForScore(0), 220);
 assert.equal(rules.speedForScore(179), 220);
@@ -60,6 +69,10 @@ assert.deepEqual(
 );
 assert.equal(
   rules.availablePatternsForScore(120).some((pattern) => pattern.id === "single-mud"),
+  true,
+);
+assert.equal(
+  rules.availablePatternsForScore(180).some((pattern) => pattern.id === "single-log"),
   true,
 );
 assert.equal(
@@ -238,6 +251,171 @@ assert.equal(
   false,
 );
 
+
+
+const terrainBaseline = 264;
+assert.equal(terrain.terrainHeightAt(0, terrainBaseline), terrainBaseline);
+assert.equal(terrain.terrainSegmentAt(450).kind, "flat");
+
+const terrainSamples = Array.from({ length: 401 }, (_, index) =>
+  terrain.terrainHeightAt(index * 50, terrainBaseline),
+);
+assert.ok(Math.max(...terrainSamples) <= terrainBaseline + 25);
+assert.ok(Math.min(...terrainSamples) >= terrainBaseline - 25);
+
+const terrainSlopes = Array.from({ length: 401 }, (_, index) =>
+  terrain.terrainSlopeAt(index * 50, terrainBaseline),
+);
+assert.ok(terrainSlopes.some((slope) => slope > 0.025));
+assert.ok(terrainSlopes.some((slope) => slope < -0.025));
+assert.ok(Math.max(...terrainSlopes.map(Math.abs)) < 0.055);
+
+const terrainSegments = new Map();
+for (let worldX = 0; worldX <= 20_000; worldX += 100) {
+  const segment = terrain.terrainSegmentAt(worldX);
+  terrainSegments.set(`${segment.startX}:${segment.endX}`, segment);
+}
+const sampledSegments = [...terrainSegments.values()];
+assert.ok(sampledSegments.some((segment) => segment.kind === "plateau"));
+assert.ok(sampledSegments.some((segment) => segment.kind === "uphill"));
+assert.ok(sampledSegments.some((segment) => segment.kind === "downhill"));
+assert.ok(
+  sampledSegments
+    .filter((segment) => segment.kind === "uphill" || segment.kind === "downhill")
+    .every((segment) => segment.endX - segment.startX >= 800),
+);
+assert.ok(
+  sampledSegments
+    .filter((segment) => segment.kind === "flat" || segment.kind === "plateau")
+    .every((segment) => segment.endX - segment.startX >= 320),
+);
+
+let terrainDirectionChanges = 0;
+let previousDirection = 0;
+for (const slope of terrainSlopes) {
+  const direction = slope > 0.002 ? 1 : slope < -0.002 ? -1 : 0;
+  if (direction !== 0 && previousDirection !== 0 && direction !== previousDirection) {
+    terrainDirectionChanges += 1;
+  }
+  if (direction !== 0) previousDirection = direction;
+}
+assert.ok(terrainDirectionChanges <= 12);
+
+assert.ok(terrain.terrainSpeedMultiplier(0.06) > 1);
+assert.ok(terrain.terrainSpeedMultiplier(-0.06) < 1);
+assert.equal(terrain.environmentSpeedMultiplier(1.2, 1.2), 1.1);
+assert.equal(terrain.environmentSpeedMultiplier(0.8, 0.8), 0.9);
+
+const safeTerrainStart = terrain.findSafeTerrainStart({
+  requestedWorldX: 500,
+  span: 132,
+  baselineY: terrainBaseline,
+  maxSlope: 0.08,
+  maxHeightChange: 12,
+});
+assert.ok(safeTerrainStart >= 500);
+assert.ok(
+  Math.abs(terrain.terrainSlopeAt(safeTerrainStart, terrainBaseline)) <= 0.081,
+);
+
+
+const backgroundTerrainAt = (worldX) => {
+  const zone = Math.floor(worldX / 5_000) % 5;
+  if (zone === 0) return { kind: "flat", offset: 0, slope: 0 };
+  if (zone === 1) return { kind: "uphill", offset: -12, slope: -0.025 };
+  if (zone === 2) return { kind: "plateau", offset: -18, slope: 0 };
+  if (zone === 3) return { kind: "downhill", offset: 8, slope: 0.024 };
+  return { kind: "valley", offset: 18, slope: 0 };
+};
+const backgroundWorld = background.createBackgroundWorld(backgroundTerrainAt);
+const backgroundChunks = backgroundWorld.chunksInRange(0, 60_000);
+assert.ok(backgroundChunks.length >= 20);
+assert.ok(
+  backgroundChunks.every(
+    (chunk) => chunk.endX - chunk.startX >= 1_800 && chunk.endX - chunk.startX <= 3_300,
+  ),
+);
+assert.ok(
+  backgroundChunks.every(
+    (chunk) => chunk.transitionLength >= 400 && chunk.transitionLength <= 700,
+  ),
+);
+for (let index = 1; index < backgroundChunks.length; index += 1) {
+  assert.notEqual(backgroundChunks[index].kind, backgroundChunks[index - 1].kind);
+}
+const backgroundKinds = new Set(backgroundChunks.map((chunk) => chunk.kind));
+assert.ok(backgroundKinds.has("open-field"));
+assert.ok(backgroundKinds.has("farmstead"));
+assert.ok(backgroundKinds.has("wooded-ridge"));
+assert.ok(backgroundKinds.has("high-plateau"));
+assert.ok(backgroundKinds.has("wet-valley"));
+assert.ok(
+  backgroundChunks
+    .filter((chunk) => chunk.landmark)
+    .every(
+      (chunk) =>
+        chunk.landmark.worldX > chunk.startX &&
+        chunk.landmark.worldX < chunk.endX,
+    ),
+);
+const transitionChunk = backgroundChunks[1];
+assert.ok(transitionChunk);
+const transitionStart = backgroundWorld.sceneAt(transitionChunk.startX + 1);
+const transitionEnd = backgroundWorld.sceneAt(
+  transitionChunk.startX + transitionChunk.transitionLength + 1,
+);
+assert.ok(transitionStart.blend < 0.01);
+assert.equal(transitionEnd.blend, 1);
+const farProfileSamples = Array.from({ length: 80 }, (_, index) =>
+  backgroundWorld.farProfileAt(index * 700),
+);
+const middleProfileSamples = Array.from({ length: 80 }, (_, index) =>
+  backgroundWorld.middleProfileAt(index * 350),
+);
+assert.ok(Math.max(...farProfileSamples) - Math.min(...farProfileSamples) > 20);
+assert.ok(Math.max(...middleProfileSamples) - Math.min(...middleProfileSamples) > 12);
+
+const weatherDurations = weather.weatherDurationsForCycle(0);
+const clearWeather = weather.weatherStateForElapsed(0);
+const cloudyWeather = weather.weatherStateForElapsed(weatherDurations.clear + 0.5);
+const rainWeather = weather.weatherStateForElapsed(
+  weatherDurations.clear + weatherDurations.cloudy + weatherDurations.rain * 0.5,
+);
+const clearingWeather = weather.weatherStateForElapsed(
+  weatherDurations.clear +
+    weatherDurations.cloudy +
+    weatherDurations.rain +
+    weatherDurations.clearing * 0.5,
+);
+assert.equal(clearWeather.phase, "clear");
+assert.equal(cloudyWeather.phase, "cloudy");
+assert.equal(rainWeather.phase, "rain");
+assert.equal(clearingWeather.phase, "clearing");
+assert.ok(rainWeather.rainIntensity > 0.9);
+assert.ok(rainWeather.cloudFactor >= cloudyWeather.cloudFactor);
+assert.ok(weather.courseGapMultiplierForWeather(rainWeather) > 1.08);
+assert.ok(
+  weather.mudPatternWeightMultiplier(rainWeather) >
+    weather.mudPatternWeightMultiplier(clearWeather),
+);
+assert.ok(
+  weather.logPatternWeightMultiplier(rainWeather) >
+    weather.logPatternWeightMultiplier(clearWeather),
+);
+assert.ok(weather.foxWeatherMultiplier(rainWeather) < 1);
+assert.equal(cycle.cycleStateForElapsed(21).phase, "day");
+assert.equal(weather.weatherStateForElapsed(21).phase, "rain");
+assert.equal(cycle.cycleStateForElapsed(30).phase, "night");
+assert.equal(weather.weatherStateForElapsed(30).phase, "rain");
+assert.ok(clearWeather.speedMultiplier >= 0.94);
+assert.ok(clearWeather.speedMultiplier <= 1.055);
+
+const rainyDayPalette = sky.paletteForEnvironment(start, rainWeather);
+assert.ok(
+  sky.relativeLuminance(rainyDayPalette.sky) <
+    sky.relativeLuminance(dayPalette.sky),
+);
+
 console.log(
-  "Game rules OK: movement, course patterns, egg reserve, day/night pacing, fox pressure, phase palettes, and the fixed chicken sprite palette.",
+  "Game rules OK: movement, weather, long terrain, terrain-aware background scenes, course patterns, egg reserve, day/night pacing, fox pressure, and fixed sprite contrast.",
 );

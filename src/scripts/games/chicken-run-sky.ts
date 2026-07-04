@@ -1,4 +1,5 @@
 import type { RunCycleState } from "./chicken-run-cycle";
+import type { RunWeatherState } from "./chicken-run-weather";
 
 export interface RgbColor {
   r: number;
@@ -262,6 +263,27 @@ export function paletteForCycle(cycle: RunCycleState): ChickenWorldPalette {
   );
 }
 
+export function paletteForEnvironment(
+  cycle: RunCycleState,
+  weather: RunWeatherState,
+): ChickenWorldPalette {
+  const base = paletteForCycle(cycle);
+  const stormAmount = Math.min(0.34, weather.cloudFactor * 0.12 + weather.rainIntensity * 0.22);
+  const stormSky = cycle.nightFactor > 0.5
+    ? { r: 4, g: 11, b: 8 }
+    : { r: 92, g: 119, b: 87 };
+  const wetAmount = Math.min(0.3, weather.wetness * 0.3);
+
+  const adjusted = { ...base };
+  adjusted.sky = mixColor(base.sky, stormSky, stormAmount);
+  adjusted.cloud = mixColor(base.cloud, base.cloudShadow, weather.cloudFactor * 0.22);
+  adjusted.ground = mixColor(base.ground, base.mudDetail, wetAmount);
+  adjusted.groundMark = mixColor(base.groundMark, base.mudHighlight, wetAmount * 0.55);
+  adjusted.mud = mixColor(base.mud, base.mudDetail, weather.wetness * 0.18);
+  adjusted.text = mixColor(base.text, base.particle, weather.rainIntensity * 0.08);
+  return adjusted;
+}
+
 export function rgbCss(color: RgbColor): string {
   return `rgb(${color.r} ${color.g} ${color.b})`;
 }
@@ -347,4 +369,12 @@ export function cloudOpacityForCycle(cycle: RunCycleState): number {
     return 0.92 - smoothstep(cycle.phaseProgress) * 0.78;
   }
   return 0.1 + smoothstep(cycle.phaseProgress) * 0.82;
+}
+
+export function cloudOpacityForEnvironment(
+  cycle: RunCycleState,
+  weather: RunWeatherState,
+): number {
+  const cycleOpacity = cloudOpacityForCycle(cycle);
+  return clamp01(Math.max(cycleOpacity * 0.72, weather.cloudFactor));
 }

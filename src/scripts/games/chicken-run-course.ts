@@ -4,11 +4,23 @@ import {
 } from "./chicken-run-cycle";
 import {
   OBSTACLE_DIMENSIONS,
+  availablePatternsForScore,
   patternSpan,
   patternTravelDistance,
-  selectPatternForScore,
   type ObstacleKind,
+  type RunPattern,
 } from "./chicken-run-rules";
+import {
+  findSafeTerrainStart,
+  terrainHeightAt,
+  terrainSlopeAt,
+} from "./chicken-run-terrain";
+import {
+  courseGapMultiplierForWeather,
+  logPatternWeightMultiplier,
+  mudPatternWeightMultiplier,
+  type RunWeatherState,
+} from "./chicken-run-weather";
 import type {
   ChickenObstacle,
   CornKernel,
@@ -30,11 +42,12 @@ export interface SpawnedCoursePattern {
 }
 
 interface CornArcOptions {
-  startX: number;
-  endX: number;
+  startWorldX: number;
+  endWorldX: number;
   peakHeight: number;
   count: number;
-  groundY: number;
+  baselineY: number;
+  distance: number;
   groupId: number;
 }
 
@@ -45,12 +58,14 @@ function createCornArc(options: CornArcOptions): {
   const kernels: CornKernel[] = [];
   for (let index = 0; index < options.count; index += 1) {
     const t = (index + 1) / (options.count + 1);
+    const worldX =
+      options.startWorldX + (options.endWorldX - options.startWorldX) * t;
+    const heightAboveGround = 28 + Math.sin(Math.PI * t) * options.peakHeight;
     kernels.push({
-      x: options.startX + (options.endX - options.startX) * t,
-      y:
-        options.groundY -
-        28 -
-        Math.sin(Math.PI * t) * options.peakHeight,
+      worldX,
+      x: worldX - options.distance,
+      y: terrainHeightAt(worldX, options.baselineY) - heightAboveGround,
+      heightAboveGround,
       groupId: options.groupId,
       collected: false,
       phase: Math.random() * Math.PI * 2,
@@ -74,6 +89,7 @@ function cornSettings(kind: ObstacleKind): {
 } {
   if (kind === "fence") return { padding: 48, peak: 104, count: 5 };
   if (kind === "mud") return { padding: 56, peak: 106, count: 7 };
+  if (kind === "log") return { padding: 48, peak: 84, count: 5 };
   return { padding: 46, peak: 76, count: 5 };
 }
 
@@ -87,14 +103,74 @@ function effectivePatternScore(
   return score;
 }
 
+function conditionedPatternWeight(
+  pattern: RunPattern,
+  weather: RunWeatherState,
+): number {
+  let multiplier = 1;
+  if (pattern.obstacles.some((obstacle) => obstacle.kind === "mud")) {
+    multiplier *= mudPatternWeightMultiplier(weather);
+  }
+  if (pattern.obstacles.some((obstacle) => obstacle.kind === "log")) {
+    multiplier *= logPatternWeightMultiplier(weather);
+  }
+  return pattern.weight * multiplier;
+}
+
+function selectPatternForConditions(
+  score: number,
+  weather: RunWeatherState,
+  randomUnit: number,
+): RunPattern {
+  const patterns = availablePatternsForScore(score);
+  const weights = patterns.map((pattern) =>
+    conditionedPatternWeight(pattern, weather),
+  );
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  let cursor = Math.min(1, Math.max(0, randomUnit)) * totalWeight;
+
+  for (let index = 0; index < patterns.length; index += 1) {
+    cursor -= weights[index] ?? 0;
+    if (cursor <= 0) return patterns[index] ?? patterns[0];
+  }
+
+  return patterns[patterns.length - 1] ?? availablePatternsForScore(0)[0];
+}
+
+function terrainLimitsForPattern(pattern: RunPattern): {
+  maxSlope: number;
+  maxHeightChange: number;
+} {
+  if (pattern.obstacles.some((entry) => entry.kind === "mud")) {
+    return { maxSlope: 0.028, maxHeightChange: 7 };
+  }
+  if (pattern.obstacles.length >= 2) {
+    return { maxSlope: 0.04, maxHeightChange: 12 };
+  }
+  return { maxSlope: 0.052, maxHeightChange: 17 };
+}
+
 export function createEggPickup(options: {
+  distance: number;
   boardWidth: number;
-  groundY: number;
+  baselineY: number;
   cycleIndex: number;
 }): EggPickup {
+  const requestedWorldX = options.distance + options.boardWidth + 44;
+  const worldX = findSafeTerrainStart({
+    requestedWorldX,
+    span: 36,
+    baselineY: options.baselineY,
+    maxSlope: 0.032,
+    maxHeightChange: 5,
+    searchDistance: 520,
+  });
+  const heightAboveGround = 83;
   return {
-    x: options.boardWidth + 44,
-    y: options.groundY - 83,
+    worldX,
+    x: worldX - options.distance,
+    y: terrainHeightAt(worldX, options.baselineY) - heightAboveGround,
+    heightAboveGround,
     phase: options.cycleIndex * 1.37,
   };
 }
@@ -106,24 +182,41 @@ export function eggPickupTravelDistance(speed: number): number {
 export function spawnCoursePattern(options: {
   score: number;
   speed: number;
+  distance: number;
   boardWidth: number;
-  groundY: number;
+  baselineY: number;
   nextCornGroupId: number;
   cycle: RunCycleState;
+  weather: RunWeatherState;
 }): SpawnedCoursePattern {
-  const pattern = selectPatternForScore(
+  const pattern = selectPatternForConditions(
     effectivePatternScore(options.score, options.cycle),
+    options.weather,
     Math.random(),
   );
-  const baseX = options.boardWidth + 28;
+  const requestedWorldX = options.distance + options.boardWidth + 28;
+  const span = patternSpan(pattern);
+  const terrainLimits = terrainLimitsForPattern(pattern);
+  const baseWorldX = findSafeTerrainStart({
+    requestedWorldX,
+    span,
+    baselineY: options.baselineY,
+    ...terrainLimits,
+  });
+  const placementShift = baseWorldX - requestedWorldX;
+
   const obstacles = pattern.obstacles.map((entry) => {
     const dimensions = OBSTACLE_DIMENSIONS[entry.kind];
+    const worldX = baseWorldX + entry.offset;
+    const groundY = terrainHeightAt(worldX + dimensions.width * 0.5, options.baselineY);
     return {
       kind: entry.kind,
-      x: baseX + entry.offset,
-      y: options.groundY - dimensions.height,
+      worldX,
+      x: worldX - options.distance,
+      y: groundY - dimensions.height,
       width: dimensions.width,
       height: dimensions.height,
+      slope: terrainSlopeAt(worldX + dimensions.width * 0.5, options.baselineY),
       passed: false,
     } satisfies ChickenObstacle;
   });
@@ -133,17 +226,18 @@ export function spawnCoursePattern(options: {
   let groupId = options.nextCornGroupId;
 
   const addArc = (
-    startX: number,
-    endX: number,
+    startWorldX: number,
+    endWorldX: number,
     peakHeight: number,
     count: number,
   ): void => {
     const arc = createCornArc({
-      startX,
-      endX,
+      startWorldX,
+      endWorldX,
       peakHeight,
       count,
-      groundY: options.groundY,
+      baselineY: options.baselineY,
+      distance: options.distance,
       groupId,
     });
     corn.push(...arc.kernels);
@@ -152,11 +246,10 @@ export function spawnCoursePattern(options: {
   };
 
   if (pattern.cornLayout === "combined") {
-    const span = patternSpan(pattern);
     const isTrio = pattern.obstacles.length >= 3;
     addArc(
-      baseX - 48,
-      baseX + span + 48,
+      baseWorldX - 48,
+      baseWorldX + span + 48,
       isTrio ? 126 : 116,
       isTrio ? 10 : 8,
     );
@@ -164,8 +257,8 @@ export function spawnCoursePattern(options: {
     obstacles.forEach((obstacle) => {
       const settings = cornSettings(obstacle.kind);
       addArc(
-        obstacle.x - settings.padding,
-        obstacle.x + obstacle.width + settings.padding,
+        obstacle.worldX - settings.padding,
+        obstacle.worldX + obstacle.width + settings.padding,
         settings.peak,
         settings.count,
       );
@@ -178,7 +271,9 @@ export function spawnCoursePattern(options: {
     cornGroups,
     nextCornGroupId: groupId,
     travelDistance:
+      placementShift +
       patternTravelDistance(options.speed, pattern, Math.random()) *
-      courseGapMultiplierForCycle(options.cycle),
+        courseGapMultiplierForCycle(options.cycle) *
+        courseGapMultiplierForWeather(options.weather),
   };
 }

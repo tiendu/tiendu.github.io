@@ -38,6 +38,17 @@ import {
   speedLevelForVelocity,
   type CrashKind,
 } from "./chicken-run-rules";
+import {
+  environmentSpeedMultiplier,
+  terrainHeightAt,
+  terrainSlopeAt,
+  terrainSpeedMultiplier,
+} from "./chicken-run-terrain";
+import {
+  foxWeatherMultiplier,
+  weatherStateForElapsed,
+  type RunWeatherState,
+} from "./chicken-run-weather";
 import { configureFixedCanvas } from "./shared/canvas";
 import { dispatchGameExit, GAME_EVENTS } from "./shared/events";
 import { mountAllGames } from "./shared/mount";
@@ -62,7 +73,7 @@ const JUMP_VELOCITY = -610;
 const FLAP_VELOCITY = -430;
 const JUMP_BUFFER_MS = 110;
 const EGG_INVULNERABILITY_SECONDS = 1.15;
-const MAX_RUN_SPEED = 545;
+const MAX_RUN_SPEED = 565;
 const HIGH_SCORE_KEY = "tiendu-chicken-high-score";
 
 export function mountChickenRunGames(): void {
@@ -127,8 +138,11 @@ function mountChickenRunGame(root: HTMLElement): void {
   let runElapsed = 0;
   let cycle = cycleStateForElapsed(0);
   let previousPhase: RunPhase = cycle.phase;
+  let weather: RunWeatherState = weatherStateForElapsed(0);
+  let currentTerrainSlope = terrainSlopeAt(CHICKEN_X, GROUND_Y);
   let currentSpeed = speedForScore(0);
-  let chickenY = GROUND_Y - CHICKEN_HEIGHT;
+  let cameraOffsetY = 0;
+  let chickenY = terrainHeightAt(CHICKEN_X, GROUND_Y) - CHICKEN_HEIGHT;
   let chickenVelocityY = 0;
   let grounded = true;
   let flapAvailable = true;
@@ -243,13 +257,17 @@ function mountChickenRunGame(root: HTMLElement): void {
   const spawnNextCourse = (): void => {
     if (eggOfferPending && !eggCarried && !egg) {
       egg = createEggPickup({
+        distance,
         boardWidth: BOARD_WIDTH,
-        groundY: GROUND_Y,
+        baselineY: GROUND_Y,
         cycleIndex: cycle.cycleIndex,
       });
       eggOfferPending = false;
       offeredEggCycle = cycle.cycleIndex;
-      nextPatternDistance = distance + eggPickupTravelDistance(currentSpeed);
+      nextPatternDistance = Math.max(
+        distance + eggPickupTravelDistance(currentSpeed),
+        egg.worldX - CHICKEN_X + 170,
+      );
       setNotice("EGG AHEAD · ONE EXTRA LIFE", 1.15);
       return;
     }
@@ -257,10 +275,12 @@ function mountChickenRunGame(root: HTMLElement): void {
     const spawned = spawnCoursePattern({
       score,
       speed: currentSpeed,
+      distance,
       boardWidth: BOARD_WIDTH,
-      groundY: GROUND_Y,
+      baselineY: GROUND_Y,
       nextCornGroupId,
       cycle,
+      weather,
     });
     obstacles.push(...spawned.obstacles);
     corn.push(...spawned.corn);
@@ -284,8 +304,11 @@ function mountChickenRunGame(root: HTMLElement): void {
     runElapsed = 0;
     cycle = cycleStateForElapsed(0);
     previousPhase = cycle.phase;
+    weather = weatherStateForElapsed(0);
+    currentTerrainSlope = terrainSlopeAt(CHICKEN_X, GROUND_Y);
     currentSpeed = speedForScore(0);
-    chickenY = GROUND_Y - CHICKEN_HEIGHT;
+    cameraOffsetY = 0;
+    chickenY = terrainHeightAt(CHICKEN_X, GROUND_Y) - CHICKEN_HEIGHT;
     chickenVelocityY = 0;
     grounded = true;
     flapAvailable = true;
@@ -321,7 +344,7 @@ function mountChickenRunGame(root: HTMLElement): void {
     updateJumpButton();
     setOverlay(
       "PRESS JUMP",
-      "SPACE / UP / TAP · FLAP ONCE · FIND AN EGG BEFORE NIGHT",
+      "SPACE / UP / TAP · FLAP ONCE · HILLS, WIND, RAIN & NIGHT",
     );
     draw();
   };
@@ -386,7 +409,7 @@ function mountChickenRunGame(root: HTMLElement): void {
     if (obstacle.kind === "mud") {
       return {
         x: obstacle.x + 7,
-        y: GROUND_Y - 6,
+        y: obstacle.y + 2,
         width: obstacle.width - 14,
         height: 8,
       };
@@ -435,7 +458,8 @@ function mountChickenRunGame(root: HTMLElement): void {
     invulnerableRemaining = EGG_INVULNERABILITY_SECONDS;
     rescuePulse = 0.9;
     jumpBufferedUntil = 0;
-    chickenY = Math.min(chickenY, GROUND_Y - CHICKEN_HEIGHT - 12);
+    const rescueGround = terrainHeightAt(distance + CHICKEN_X, GROUND_Y);
+    chickenY = Math.min(chickenY, rescueGround - CHICKEN_HEIGHT - 12);
     chickenVelocityY = -420;
     grounded = false;
     flapAvailable = true;
@@ -506,28 +530,35 @@ function mountChickenRunGame(root: HTMLElement): void {
   };
 
   const updateChicken = (delta: number, now: number): void => {
-    chickenVelocityY += GRAVITY * delta;
-    chickenY += chickenVelocityY * delta;
+    const ground = terrainHeightAt(distance + CHICKEN_X, GROUND_Y);
+    const floor = ground - CHICKEN_HEIGHT;
+    currentTerrainSlope = terrainSlopeAt(distance + CHICKEN_X, GROUND_Y);
 
-    const floor = GROUND_Y - CHICKEN_HEIGHT;
-    if (chickenY >= floor) {
-      const impactVelocity = chickenVelocityY;
-      const landed = !grounded && impactVelocity > 120;
+    if (grounded) {
       chickenY = floor;
       chickenVelocityY = 0;
-      grounded = true;
-      flapAvailable = true;
       lastGroundedAt = now;
-      if (landed) {
-        landingPulse = Math.min(0.14, 0.07 + impactVelocity / 4_000);
-        emitFeathers("land", { x: CHICKEN_X + 12, y: GROUND_Y - 5 });
-      }
-      if (jumpBufferedUntil >= now) {
-        jumpBufferedUntil = 0;
-        performJump(now);
-      }
     } else {
-      grounded = false;
+      chickenVelocityY += GRAVITY * delta;
+      chickenY += chickenVelocityY * delta;
+
+      if (chickenY >= floor) {
+        const impactVelocity = chickenVelocityY;
+        const landed = impactVelocity > 120;
+        chickenY = floor;
+        chickenVelocityY = 0;
+        grounded = true;
+        flapAvailable = true;
+        lastGroundedAt = now;
+        if (landed) {
+          landingPulse = Math.min(0.14, 0.07 + impactVelocity / 4_000);
+          emitFeathers("land", { x: CHICKEN_X + 12, y: ground - 5 });
+        }
+        if (jumpBufferedUntil >= now) {
+          jumpBufferedUntil = 0;
+          performJump(now);
+        }
+      }
     }
     updateJumpButton();
   };
@@ -584,14 +615,16 @@ function mountChickenRunGame(root: HTMLElement): void {
     updateScoreboard();
   };
 
-  const updateCollectibles = (delta: number): void => {
+  const updateCollectibles = (): void => {
     const chickenCenter = {
       x: CHICKEN_X + CHICKEN_WIDTH * 0.52,
       y: chickenY + CHICKEN_HEIGHT * 0.48,
     };
 
     corn.forEach((kernel) => {
-      kernel.x -= currentSpeed * delta;
+      kernel.x = kernel.worldX - distance;
+      kernel.y =
+        terrainHeightAt(kernel.worldX, GROUND_Y) - kernel.heightAboveGround;
       if (kernel.collected) return;
       const dx = kernel.x - chickenCenter.x;
       const dy = kernel.y - chickenCenter.y;
@@ -605,7 +638,8 @@ function mountChickenRunGame(root: HTMLElement): void {
     });
 
     if (egg) {
-      egg.x -= currentSpeed * delta;
+      egg.x = egg.worldX - distance;
+      egg.y = terrainHeightAt(egg.worldX, GROUND_Y) - egg.heightAboveGround;
       const dx = egg.x - chickenCenter.x;
       const dy = egg.y - chickenCenter.y;
       if (dx * dx + dy * dy <= 20 * 20) collectEgg();
@@ -613,9 +647,13 @@ function mountChickenRunGame(root: HTMLElement): void {
     }
   };
 
-  const updateObstacles = (delta: number): void => {
+  const updateObstacles = (): void => {
     obstacles.forEach((obstacle) => {
-      obstacle.x -= currentSpeed * delta;
+      obstacle.x = obstacle.worldX - distance;
+      const obstacleCenter = obstacle.worldX + obstacle.width * 0.5;
+      obstacle.slope = terrainSlopeAt(obstacleCenter, GROUND_Y);
+      obstacle.y =
+        terrainHeightAt(obstacleCenter, GROUND_Y) - obstacle.height;
       if (!obstacle.passed && obstacle.x + obstacle.width < CHICKEN_X) {
         obstacle.passed = true;
         bonusScore += 15;
@@ -668,6 +706,38 @@ function mountChickenRunGame(root: HTMLElement): void {
     }
   };
 
+  const handleWeatherTransition = (
+    previous: RunWeatherState,
+    next: RunWeatherState,
+  ): void => {
+    if (
+      previous.phase === next.phase &&
+      previous.cycleIndex === next.cycleIndex
+    ) {
+      return;
+    }
+
+    if (next.phase === "cloudy") {
+      setNotice("WIND PICKING UP", 0.95);
+      return;
+    }
+    if (next.phase === "rain") {
+      setNotice("RAIN FRONT · MUD AHEAD", 1.15);
+      return;
+    }
+    if (next.phase === "clearing") {
+      setNotice("RAIN EASING", 0.9);
+      return;
+    }
+    setNotice("SKIES CLEAR", 0.85);
+  };
+
+  const updateWeather = (): void => {
+    const nextWeather = weatherStateForElapsed(runElapsed);
+    handleWeatherTransition(weather, nextWeather);
+    weather = nextWeather;
+  };
+
   const updateCycle = (delta: number): void => {
     const nextCycle = cycleStateForElapsed(runElapsed);
     handlePhaseTransition(cycle, nextCycle);
@@ -686,7 +756,13 @@ function mountChickenRunGame(root: HTMLElement): void {
     }
 
     if (cycle.phase === "night") {
-      foxPressure += foxApproachPerSecond(cycle.cycleIndex) * delta;
+      const uphillPressure = Math.max(0, -currentTerrainSlope) * 0.035;
+      const downhillRelief = Math.max(0, currentTerrainSlope) * 0.022;
+      foxPressure +=
+        (foxApproachPerSecond(cycle.cycleIndex) * foxWeatherMultiplier(weather) +
+          uphillPressure -
+          downhillRelief) *
+        delta;
     } else if (cycle.phase === "sunset") {
       const target = foxStartingPressure(cycle.cycleIndex) * 0.48;
       foxPressure = Math.max(foxPressure, target * cycle.phaseProgress);
@@ -710,6 +786,7 @@ function mountChickenRunGame(root: HTMLElement): void {
       delta,
       BOARD_WIDTH,
       BOARD_HEIGHT,
+      weather.wind,
     );
   };
 
@@ -759,12 +836,26 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   const update = (delta: number, now: number): void => {
     runElapsed += delta;
+    updateWeather();
     updateCycle(delta);
+    currentTerrainSlope = terrainSlopeAt(distance + CHICKEN_X, GROUND_Y);
+    const secondarySpeedMultiplier = environmentSpeedMultiplier(
+      terrainSpeedMultiplier(currentTerrainSlope),
+      weather.speedMultiplier,
+    );
     currentSpeed = Math.min(
       MAX_RUN_SPEED,
-      speedForScore(score) * cycle.speedMultiplier,
+      speedForScore(score) * cycle.speedMultiplier * secondarySpeedMultiplier,
     );
     distance += currentSpeed * delta;
+
+    const chickenGround = terrainHeightAt(distance + CHICKEN_X, GROUND_Y);
+    const cameraTarget = Math.max(
+      -12,
+      Math.min(12, (GROUND_Y - chickenGround) * 0.55),
+    );
+    const cameraEase = 1 - Math.exp(-delta * 1.65);
+    cameraOffsetY += (cameraTarget - cameraOffsetY) * cameraEase;
     sceneElapsed += delta;
     runFrame += delta * (grounded ? 11 + currentSpeed / 65 : 3.2);
     featherAccumulator += delta;
@@ -776,8 +867,8 @@ function mountChickenRunGame(root: HTMLElement): void {
 
     updateAnimationTimers(delta);
     updateChicken(delta, now);
-    updateCollectibles(delta);
-    updateObstacles(delta);
+    updateCollectibles();
+    updateObstacles();
     updateFeathers(delta);
 
     score = Math.floor(distance / 12) + bonusScore;
@@ -802,6 +893,7 @@ function mountChickenRunGame(root: HTMLElement): void {
       width: BOARD_WIDTH,
       height: BOARD_HEIGHT,
       groundY: GROUND_Y,
+      cameraOffsetY,
       distance,
       elapsed: sceneElapsed,
       obstacles,
@@ -811,6 +903,7 @@ function mountChickenRunGame(root: HTMLElement): void {
       scoreBursts,
       notice,
       cycle,
+      weather,
       fox: {
         visible: foxVisible,
         x: crash?.kind === "fox" ? 49 : foxXForPressure(foxPressure),
@@ -830,6 +923,7 @@ function mountChickenRunGame(root: HTMLElement): void {
         rescuePulse,
         invulnerable: invulnerableRemaining > 0,
         eggCarried,
+        slope: currentTerrainSlope,
         crash,
       },
     });

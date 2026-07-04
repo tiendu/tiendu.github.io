@@ -1,15 +1,14 @@
 import type { RunCycleState } from "./chicken-run-cycle";
+import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
 import type { CrashKind, ObstacleKind } from "./chicken-run-rules";
 import {
   CHICKEN_SPRITE_PALETTE,
-  cloudOpacityForCycle,
-  moonVisual,
-  paletteForCycle,
   rgbCss,
   rgbaCss,
-  sunVisual,
   type ChickenWorldPalette,
 } from "./chicken-run-sky";
+import { terrainHeightAt } from "./chicken-run-terrain";
+import type { RunWeatherState } from "./chicken-run-weather";
 
 export interface Point {
   x: number;
@@ -23,16 +22,22 @@ export interface Rect extends Point {
 
 export interface ChickenObstacle extends Rect {
   kind: ObstacleKind;
+  worldX: number;
+  slope: number;
   passed: boolean;
 }
 
 export interface CornKernel extends Point {
+  worldX: number;
+  heightAboveGround: number;
   groupId: number;
   collected: boolean;
   phase: number;
 }
 
 export interface EggPickup extends Point {
+  worldX: number;
+  heightAboveGround: number;
   phase: number;
 }
 
@@ -84,6 +89,7 @@ export interface ChickenVisual {
   rescuePulse: number;
   invulnerable: boolean;
   eggCarried: boolean;
+  slope: number;
   crash: CrashVisual | null;
 }
 
@@ -98,6 +104,7 @@ export interface ChickenRunScene {
   width: number;
   height: number;
   groundY: number;
+  cameraOffsetY: number;
   distance: number;
   elapsed: number;
   obstacles: readonly ChickenObstacle[];
@@ -107,246 +114,9 @@ export interface ChickenRunScene {
   scoreBursts: readonly ScoreBurst[];
   notice: RunNotice | null;
   cycle: RunCycleState;
+  weather: RunWeatherState;
   fox: FoxVisual;
   chicken: ChickenVisual;
-}
-
-function drawBarn(
-  context: CanvasRenderingContext2D,
-  x: number,
-  baseY: number,
-): void {
-  context.fillRect(x + 8, baseY - 35, 54, 35);
-  context.fillRect(x + 14, baseY - 43, 42, 8);
-  context.fillRect(x + 20, baseY - 49, 30, 6);
-  context.fillRect(x + 29, baseY - 22, 13, 22);
-  context.fillRect(x + 12, baseY - 26, 9, 10);
-  context.fillRect(x + 49, baseY - 26, 9, 10);
-}
-
-function drawSilo(
-  context: CanvasRenderingContext2D,
-  x: number,
-  baseY: number,
-): void {
-  context.fillRect(x + 10, baseY - 48, 26, 48);
-  context.fillRect(x + 13, baseY - 54, 20, 6);
-  context.fillRect(x + 17, baseY - 58, 12, 4);
-  context.fillRect(x + 18, baseY - 31, 9, 12);
-}
-
-function drawWindmill(
-  context: CanvasRenderingContext2D,
-  x: number,
-  baseY: number,
-): void {
-  context.fillRect(x + 23, baseY - 48, 4, 48);
-  context.fillRect(x + 16, baseY - 3, 18, 3);
-  context.fillRect(x + 11, baseY - 45, 28, 3);
-  context.fillRect(x + 23, baseY - 58, 3, 28);
-  context.fillRect(x + 14, baseY - 54, 3, 21);
-  context.fillRect(x + 33, baseY - 54, 3, 21);
-}
-
-function drawSun(
-  context: CanvasRenderingContext2D,
-  scene: ChickenRunScene,
-  palette: ChickenWorldPalette,
-): void {
-  const sun = sunVisual(scene.cycle, scene.width, scene.groundY);
-  if (sun.alpha <= 0.01) return;
-
-  const x = Math.round(sun.x);
-  const y = Math.round(sun.y);
-  context.save();
-  context.globalAlpha = sun.alpha;
-  context.fillStyle = rgbCss(palette.sun);
-  context.shadowColor = rgbaCss(palette.sun, 0.42);
-  context.shadowBlur = 10;
-  context.fillRect(x - 9, y - 9, 18, 18);
-  context.fillRect(x - 13, y - 5, 26, 10);
-  context.fillRect(x - 5, y - 13, 10, 26);
-  context.shadowBlur = 0;
-  context.fillRect(x - 2, y - 20, 4, 5);
-  context.fillRect(x - 2, y + 15, 4, 5);
-  context.fillRect(x - 20, y - 2, 5, 4);
-  context.fillRect(x + 15, y - 2, 5, 4);
-  context.restore();
-}
-
-function drawMoon(
-  context: CanvasRenderingContext2D,
-  scene: ChickenRunScene,
-  palette: ChickenWorldPalette,
-): void {
-  const moon = moonVisual(scene.cycle, scene.width, scene.groundY);
-  if (moon.alpha <= 0.01) return;
-
-  const x = Math.round(moon.x);
-  const y = Math.round(moon.y);
-  context.save();
-  context.globalAlpha = moon.alpha;
-  context.fillStyle = rgbCss(palette.moon);
-  context.shadowColor = rgbaCss(palette.moon, 0.38);
-  context.shadowBlur = 8;
-  context.fillRect(x - 10, y - 10, 20, 20);
-  context.fillRect(x - 13, y - 6, 26, 12);
-  context.shadowBlur = 0;
-  context.fillStyle = rgbCss(palette.sky);
-  context.fillRect(x - 2, y - 13, 15, 23);
-  context.fillRect(x + 4, y - 9, 11, 17);
-  context.restore();
-}
-
-function drawStars(
-  context: CanvasRenderingContext2D,
-  scene: ChickenRunScene,
-  palette: ChickenWorldPalette,
-): void {
-  if (scene.cycle.nightFactor <= 0.01) return;
-
-  const stars = [
-    [45, 34], [104, 62], [172, 28], [245, 51], [316, 24], [388, 68],
-    [462, 36], [528, 59], [598, 26], [76, 105], [208, 91], [354, 112],
-    [505, 96], [620, 122],
-  ] as const;
-
-  context.save();
-  context.globalAlpha = scene.cycle.nightFactor * 0.74;
-  context.fillStyle = rgbCss(palette.star);
-  stars.forEach(([x, y], index) => {
-    const twinkle = Math.sin(scene.elapsed * 2.1 + index * 1.7) > 0.25 ? 2 : 1;
-    context.fillRect(x, y, twinkle, twinkle);
-  });
-  context.restore();
-}
-
-function drawCloudShape(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  scale: number,
-  palette: ChickenWorldPalette,
-  alpha: number,
-): void {
-  context.save();
-  context.globalAlpha = alpha;
-  context.translate(Math.round(x), Math.round(y));
-  context.scale(scale, scale);
-  context.fillStyle = rgbCss(palette.cloudShadow);
-  context.fillRect(5, 10, 42, 9);
-  context.fillRect(13, 6, 28, 11);
-  context.fillStyle = rgbCss(palette.cloud);
-  context.fillRect(2, 7, 43, 9);
-  context.fillRect(10, 3, 28, 11);
-  context.fillRect(17, 0, 13, 10);
-  context.restore();
-}
-
-function drawClouds(
-  context: CanvasRenderingContext2D,
-  scene: ChickenRunScene,
-  palette: ChickenWorldPalette,
-): void {
-  const opacity = cloudOpacityForCycle(scene.cycle);
-  if (opacity <= 0.02) return;
-
-  const clouds = [
-    { y: 41, scale: 0.92, speed: 0.018, offset: 30, spacing: 360 },
-    { y: 78, scale: 0.72, speed: 0.028, offset: 210, spacing: 430 },
-    { y: 112, scale: 0.58, speed: 0.038, offset: 90, spacing: 510 },
-  ] as const;
-
-  clouds.forEach((cloud, layerIndex) => {
-    const drift = scene.elapsed * (3.4 + layerIndex * 0.8);
-    const base = -((scene.distance * cloud.speed + drift) % cloud.spacing);
-    for (let index = -1; index < 3; index += 1) {
-      drawCloudShape(
-        context,
-        base + cloud.offset + index * cloud.spacing,
-        cloud.y,
-        cloud.scale,
-        palette,
-        opacity * (0.74 - layerIndex * 0.12),
-      );
-    }
-  });
-}
-
-function drawBackground(
-  context: CanvasRenderingContext2D,
-  scene: ChickenRunScene,
-  palette: ChickenWorldPalette,
-): void {
-  context.fillStyle = rgbCss(palette.sky);
-  context.fillRect(0, 0, scene.width, scene.height);
-  drawStars(context, scene, palette);
-  drawMoon(context, scene, palette);
-  drawSun(context, scene, palette);
-  drawClouds(context, scene, palette);
-
-  const farBaseY = scene.groundY - 70;
-  const farOffset = -((scene.distance * 0.035) % 360);
-  const farAlpha = 0.25 - scene.cycle.nightFactor * 0.11;
-  context.fillStyle = rgbaCss(palette.distant, Math.max(0.09, farAlpha));
-  for (let index = -1; index < 4; index += 1) {
-    const x = farOffset + index * 360;
-    const variant = ((index % 3) + 3) % 3;
-    if (variant === 0) drawBarn(context, x + 24, farBaseY);
-    else if (variant === 1) drawSilo(context, x + 72, farBaseY);
-    else drawWindmill(context, x + 46, farBaseY);
-  }
-
-  const middleOffset = -((scene.distance * 0.13) % 92);
-  context.fillStyle = rgbaCss(
-    palette.middle,
-    0.29 - scene.cycle.nightFactor * 0.1,
-  );
-  for (let x = middleOffset - 20; x < scene.width + 100; x += 92) {
-    context.fillRect(x, scene.groundY - 37, 4, 37);
-    context.fillRect(x + 42, scene.groundY - 30, 4, 30);
-    context.fillRect(x, scene.groundY - 25, 46, 3);
-    context.fillRect(x, scene.groundY - 12, 46, 3);
-  }
-
-  const grassOffset = -((scene.distance * 0.24) % 57);
-  context.fillStyle = rgbaCss(
-    palette.grass,
-    0.38 - scene.cycle.nightFactor * 0.12,
-  );
-  for (let x = grassOffset - 10; x < scene.width + 60; x += 57) {
-    const wobble = Math.sin(scene.elapsed * 1.7 + x * 0.03) > 0 ? 1 : 0;
-    context.fillRect(x, scene.groundY - 5, 2, 5);
-    context.fillRect(x + 3, scene.groundY - 7 - wobble, 2, 7 + wobble);
-    context.fillRect(x + 6, scene.groundY - 4, 2, 4);
-  }
-}
-
-function drawGround(
-  context: CanvasRenderingContext2D,
-  scene: ChickenRunScene,
-  palette: ChickenWorldPalette,
-): void {
-  context.fillStyle = rgbCss(palette.ground);
-  context.fillRect(
-    0,
-    scene.groundY,
-    scene.width,
-    scene.height - scene.groundY,
-  );
-  context.strokeStyle = rgbaCss(palette.groundLine, 0.68);
-  context.lineWidth = 2;
-  context.beginPath();
-  context.moveTo(0, scene.groundY + 0.5);
-  context.lineTo(scene.width, scene.groundY + 0.5);
-  context.stroke();
-
-  const offset = -((scene.distance * 0.52) % 34);
-  context.fillStyle = rgbaCss(palette.groundMark, 0.52);
-  for (let x = offset; x < scene.width + 34; x += 34) {
-    context.fillRect(x, scene.groundY + 14, 13, 2);
-    context.fillRect(x + 18, scene.groundY + 31, 7, 2);
-  }
 }
 
 function drawObstacle(
@@ -387,6 +157,25 @@ function drawObstacle(
     context.fillRect(x + 42, y, 3, obstacle.height);
     context.fillStyle = rgbaCss(palette.obstacleHighlight, 0.35);
     context.fillRect(x + 3, y + 3, obstacle.width - 6, 2);
+    context.restore();
+    return;
+  }
+
+  if (obstacle.kind === "log") {
+    context.translate(x + obstacle.width / 2, y + obstacle.height / 2);
+    context.rotate(Math.atan(obstacle.slope));
+    context.translate(-obstacle.width / 2, -obstacle.height / 2);
+    context.fillStyle = rgbCss(palette.obstaclePrimary);
+    context.fillRect(3, 5, obstacle.width - 6, obstacle.height - 8);
+    context.fillRect(10, 1, obstacle.width - 20, obstacle.height - 2);
+    context.fillStyle = rgbCss(palette.obstacleSecondary);
+    context.fillRect(8, 7, obstacle.width - 16, 3);
+    context.fillRect(15, 15, obstacle.width - 30, 2);
+    context.fillStyle = rgbaCss(palette.obstacleHighlight, 0.45);
+    context.fillRect(11, 3, obstacle.width - 24, 2);
+    context.fillStyle = rgbCss(palette.obstacleSecondary);
+    context.fillRect(0, 8, 10, 8);
+    context.fillRect(obstacle.width - 10, 8, 10, 8);
     context.restore();
     return;
   }
@@ -453,12 +242,12 @@ function drawEgg(
 function drawFox(
   context: CanvasRenderingContext2D,
   fox: FoxVisual,
-  groundY: number,
+  scene: ChickenRunScene,
   palette: ChickenWorldPalette,
 ): void {
   if (!fox.visible) return;
   const x = Math.round(fox.x);
-  const y = groundY - 35;
+  const y = terrainHeightAt(scene.distance + fox.x + 20, scene.groundY) - 35;
   const legPhase = Math.floor(fox.runFrame) % 2;
 
   context.save();
@@ -640,6 +429,9 @@ function drawChickenBody(
   const flash = chicken.invulnerable && Math.floor(elapsed * 12) % 2 === 0;
   if (flash) context.globalAlpha = 0.5;
   context.translate(Math.round(x + 21), Math.round(y + 42));
+  if (!crash && chicken.grounded) {
+    context.rotate(Math.atan(chicken.slope) * 0.58);
+  }
   if (crash) context.rotate(crash.rotation);
   context.scale(scaleX, scaleY);
   context.translate(-21, -42 + (mudCrash ? crash.sink : 0));
@@ -759,6 +551,7 @@ function drawNotice(
 function drawCycleBadge(
   context: CanvasRenderingContext2D,
   cycle: RunCycleState,
+  weather: RunWeatherState,
   palette: ChickenWorldPalette,
 ): void {
   context.save();
@@ -767,7 +560,10 @@ function drawCycleBadge(
   context.textBaseline = "top";
   context.fillStyle = rgbCss(cycle.phase === "night" ? palette.text : palette.dim);
   context.globalAlpha = 0.8;
-  context.fillText(cycle.phase.toUpperCase(), 12, 11);
+  const weatherLabel = weather.phase === "clear"
+    ? Math.abs(weather.wind) > 0.55 ? "WIND" : "CLEAR"
+    : weather.phase.toUpperCase();
+  context.fillText(`${cycle.phase.toUpperCase()} · ${weatherLabel}`, 12, 11);
   context.restore();
 }
 
@@ -775,10 +571,11 @@ export function drawChickenRunScene(
   context: CanvasRenderingContext2D,
   scene: ChickenRunScene,
 ): void {
-  const palette = paletteForCycle(scene.cycle);
-  drawBackground(context, scene, palette);
-  drawGround(context, scene, palette);
-  drawFox(context, scene.fox, scene.groundY, palette);
+  const palette = drawChickenEnvironment(context, scene);
+
+  context.save();
+  context.translate(0, scene.cameraOffsetY);
+  drawFox(context, scene.fox, scene, palette);
   scene.corn.forEach((kernel) =>
     drawCorn(
       context,
@@ -801,6 +598,8 @@ export function drawChickenRunScene(
   );
   drawFeathers(context, scene.feathers, palette);
   drawScoreBursts(context, scene.scoreBursts, palette);
+  context.restore();
+
   drawNotice(context, scene.notice, scene.width, palette);
-  drawCycleBadge(context, scene.cycle, palette);
+  drawCycleBadge(context, scene.cycle, scene.weather, palette);
 }

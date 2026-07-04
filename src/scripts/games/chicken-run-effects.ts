@@ -207,6 +207,7 @@ export function updateFeathers(
   delta: number,
   boardWidth: number,
   boardHeight: number,
+  wind = 0,
 ): Feather[] {
   const updated = [...feathers];
   updated.forEach((feather) => {
@@ -214,6 +215,7 @@ export function updateFeathers(
     feather.x += feather.vx * delta;
     feather.y += feather.vy * delta;
     feather.vy += feather.gravity * delta;
+    feather.vx += wind * 72 * delta;
     feather.vx *= Math.pow(feather.drag, delta * 60);
     feather.rotation += feather.spin * delta;
   });

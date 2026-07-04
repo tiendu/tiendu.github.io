@@ -3,7 +3,7 @@ export const START_SPEED = 220;
 export const MAX_SPEED = 430;
 
 export type JumpAction = "jump" | "flap" | null;
-export type ObstacleKind = "fence" | "hay" | "mud";
+export type ObstacleKind = "fence" | "hay" | "mud" | "log";
 export type CrashKind = ObstacleKind | "fox";
 export type CornLayout = "per-obstacle" | "combined";
 
@@ -53,6 +53,7 @@ export const OBSTACLE_DIMENSIONS: Readonly<
   fence: { width: 34, height: 62 },
   hay: { width: 62, height: 38 },
   mud: { width: 132, height: 10 },
+  log: { width: 76, height: 24 },
 };
 
 export const RUN_PATTERNS: readonly RunPattern[] = [
@@ -70,6 +71,14 @@ export const RUN_PATTERNS: readonly RunPattern[] = [
     weight: 2.8,
     obstacles: [{ kind: "fence", offset: 0 }],
     recoveryGap: 300,
+    cornLayout: "per-obstacle",
+  },
+  {
+    id: "single-log",
+    minimumScore: 180,
+    weight: 1.45,
+    obstacles: [{ kind: "log", offset: 0 }],
+    recoveryGap: 305,
     cornLayout: "per-obstacle",
   },
   {
@@ -111,6 +120,17 @@ export const RUN_PATTERNS: readonly RunPattern[] = [
       { kind: "mud", offset: 410 },
     ],
     recoveryGap: 330,
+    cornLayout: "per-obstacle",
+  },
+  {
+    id: "log-then-mud",
+    minimumScore: 610,
+    weight: 0.95,
+    obstacles: [
+      { kind: "log", offset: 0 },
+      { kind: "mud", offset: 390 },
+    ],
+    recoveryGap: 340,
     cornLayout: "per-obstacle",
   },
   {
