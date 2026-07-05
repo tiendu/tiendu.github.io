@@ -1,0 +1,81 @@
+---
+import "../../styles/components/arcade.css";
+import "../../styles/components/crane-game.css";
+---
+
+<section
+  class="arcade-panel crane-panel"
+  data-crane-game
+  data-crane-phase="ready"
+  aria-label="Stack Trace crane tower game"
+  hidden
+>
+  <div class="arcade-scoreboard crane-scoreboard" aria-live="polite">
+    <span>HEIGHT <output data-crane-height>000</output></span>
+    <span>BEST <output data-crane-high>000</output></span>
+    <span>WIND <output data-crane-wind>CALM</output></span>
+  </div>
+
+  <div class="arcade-board-frame crane-board-frame">
+    <canvas
+      class="arcade-board crane-board"
+      data-crane-canvas
+      width="560"
+      height="720"
+      tabindex="0"
+      aria-label="Stack Trace game board. Tap, click, or press Space to drop the hanging cargo."
+    >
+      Stack Trace requires a browser with canvas support.
+    </canvas>
+
+    <div class="crane-board-controls" data-crane-controls aria-label="Stack Trace controls">
+      <button type="button" data-crane-control="pause" aria-label="Pause game" title="Pause">Ⅱ</button>
+      <button type="button" data-crane-control="restart" aria-label="Restart game" title="Restart">↻</button>
+      <button type="button" data-crane-control="exit" aria-label="Exit game" title="Exit">×</button>
+    </div>
+
+    <div class="arcade-overlay crane-overlay" data-crane-overlay>
+      <strong data-crane-state>STACK TRACE</strong>
+      <span data-crane-message>TAP TO START</span>
+      <div
+        class="arcade-resume-picker crane-resume-picker"
+        data-crane-resume-picker
+        role="group"
+        aria-label="Resume saved Stack Trace game"
+        hidden
+      >
+        <button type="button" data-crane-resume="continue">
+          CONTINUE
+          <small data-crane-resume-summary>SAVED TOWER</small>
+        </button>
+        <button type="button" data-crane-resume="new">
+          NEW RUN
+          <small>DISCARD SAVE</small>
+        </button>
+      </div>
+    </div>
+
+    <div class="crane-tool-overlay" data-crane-tool-choices hidden>
+      <strong>SELECT BONUS</strong>
+      <div class="crane-tool-choice-grid">
+        <button type="button" data-crane-tool-choice="0"></button>
+        <button type="button" data-crane-tool-choice="1"></button>
+      </div>
+      <span>APPLIES IMMEDIATELY</span>
+    </div>
+  </div>
+
+  <p class="crane-tool-hints" aria-label="Bonus effects">
+    <span><b>STABILIZE</b> calms sway</span>
+    <span><b>MAG-LOCK</b> secures the next landing</span>
+    <span><b>WIDE LOAD</b> widens the next container</span>
+    <span><b>WINDBREAK</b> cancels wind for two drops</span>
+  </p>
+
+  <p
+    class="sr-only"
+    data-crane-status
+    aria-live="polite"
+    aria-atomic="true"
+  ></p>
+</section>

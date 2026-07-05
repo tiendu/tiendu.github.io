@@ -223,6 +223,8 @@ body.terminal-home .terminal-page-content {
   color: var(--terminal-green-bright);
 }
 
+
+
 .terminal-response {
   border-left: 2px solid rgb(199 240 139 / 28%);
   color: var(--terminal-green-dim);

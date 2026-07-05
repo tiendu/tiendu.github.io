@@ -10,14 +10,64 @@ import {
   type SnakeMode,
 } from "./snake-rules";
 import { dispatchGameExit, GAME_EVENTS } from "./shared/events";
-import {
-  createSnakeRenderer,
-  type SnakeVisualEffect,
-} from "./snake-renderer";
+import { createSnakeRenderer, type SnakeVisualEffect } from "./snake-renderer";
 import { mountAllGames } from "./shared/mount";
-import { readStoredScore, writeStoredScore } from "./shared/storage";
+import {
+  readStoredScore,
+  readStoredSession,
+  removeStoredSession,
+  writeStoredScore,
+  writeStoredSession,
+} from "./shared/storage";
 
 type DirectionName = "up" | "down" | "left" | "right";
+
+interface SnakeSessionState {
+  mode: SnakeMode;
+  mazeSeed: number | null;
+  snake: Point[];
+  food: Point | null;
+  bonusFood: Point | null;
+  bonusRemainingMs: number;
+  regularFoodsEaten: number;
+  direction: Point;
+  queuedDirection: Point;
+  score: number;
+  speed: number;
+}
+
+const SNAKE_SESSION_KEY = "tiendu-snake-session";
+const SNAKE_SESSION_VERSION = 1;
+
+function isPoint(value: unknown): value is Point {
+  if (!value || typeof value !== "object") return false;
+  const point = value as Partial<Point>;
+  return Number.isInteger(point.x) && Number.isInteger(point.y);
+}
+
+function isSnakeSessionState(value: unknown): value is SnakeSessionState {
+  if (!value || typeof value !== "object") return false;
+  const state = value as Partial<SnakeSessionState>;
+  return (
+    (state.mode === "free" || state.mode === "maze") &&
+    (state.mazeSeed === null || Number.isInteger(state.mazeSeed)) &&
+    Array.isArray(state.snake) &&
+    state.snake.length >= 2 &&
+    state.snake.every(isPoint) &&
+    (state.food === null || isPoint(state.food)) &&
+    (state.bonusFood === null || isPoint(state.bonusFood)) &&
+    typeof state.bonusRemainingMs === "number" &&
+    Number.isFinite(state.bonusRemainingMs) &&
+    typeof state.regularFoodsEaten === "number" &&
+    Number.isInteger(state.regularFoodsEaten) &&
+    isPoint(state.direction) &&
+    isPoint(state.queuedDirection) &&
+    typeof state.score === "number" &&
+    Number.isFinite(state.score) &&
+    typeof state.speed === "number" &&
+    Number.isFinite(state.speed)
+  );
+}
 
 export function mountSnakeGames(): void {
   mountAllGames("[data-snake-game]", "snakeInitialized", mountSnakeGame);
@@ -43,6 +93,15 @@ function mountSnakeGame(root: HTMLElement): void {
   const statusLabel = root.querySelector<HTMLElement>("[data-snake-status]");
   const modePicker = root.querySelector<HTMLElement>(
     "[data-snake-mode-picker]",
+  );
+  const resumePicker = root.querySelector<HTMLElement>(
+    "[data-snake-resume-picker]",
+  );
+  const resumeSummary = root.querySelector<HTMLElement>(
+    "[data-snake-resume-summary]",
+  );
+  const resumeButtons = Array.from(
+    root.querySelectorAll<HTMLButtonElement>("[data-snake-resume]"),
   );
   const modeButtons = Array.from(
     root.querySelectorAll<HTMLButtonElement>("[data-snake-mode]"),
@@ -110,6 +169,37 @@ function mountSnakeGame(root: HTMLElement): void {
   let pointerId: number | null = null;
   let eatEffect: SnakeVisualEffect | null = null;
   let collisionEffect: SnakeVisualEffect | null = null;
+  let resumePrompt = false;
+
+  const clearSession = (): void => {
+    removeStoredSession(SNAKE_SESSION_KEY);
+  };
+
+  const persistSession = (): void => {
+    if (!mode || gameOver || snake.length < 2 || (!started && !paused)) return;
+    writeStoredSession<SnakeSessionState>(
+      SNAKE_SESSION_KEY,
+      SNAKE_SESSION_VERSION,
+      {
+        mode,
+        mazeSeed,
+        snake: snake.map((segment) => ({ ...segment })),
+        food: food ? { ...food } : null,
+        bonusFood: bonusFood ? { ...bonusFood } : null,
+        bonusRemainingMs,
+        regularFoodsEaten,
+        direction: { ...direction },
+        queuedDirection: { ...queuedDirection },
+        score,
+        speed,
+      },
+    );
+  };
+
+  const setResumePicker = (visible: boolean): void => {
+    resumePrompt = visible;
+    if (resumePicker) resumePicker.hidden = !visible;
+  };
 
   const formatScore = (value: number): string => String(value).padStart(4, "0");
 
@@ -282,6 +372,8 @@ function mountSnakeGame(root: HTMLElement): void {
   const finishGame = (won = false) => {
     gameOver = true;
     started = false;
+    clearSession();
+    setResumePicker(false);
     clearPointerGesture();
     clearBonusFood();
     saveHighScore();
@@ -308,6 +400,8 @@ function mountSnakeGame(root: HTMLElement): void {
   };
 
   const resetGame = () => {
+    clearSession();
+    setResumePicker(false);
     if (!mode) {
       setOverlay(
         "SELECT MODE",
@@ -374,7 +468,13 @@ function mountSnakeGame(root: HTMLElement): void {
     isOppositeDirection(direction, nextDirection);
 
   const setDirection = (nextDirection: Point): void => {
-    if (!active || !mode || gameOver || isOpposite(nextDirection)) {
+    if (
+      !active ||
+      resumePrompt ||
+      !mode ||
+      gameOver ||
+      isOpposite(nextDirection)
+    ) {
       return;
     }
 
@@ -461,6 +561,8 @@ function mountSnakeGame(root: HTMLElement): void {
       saveHighScore();
       updateScoreboard();
     }
+
+    if (!gameOver) persistSession();
   };
 
   const gameLoop = (time: number): void => {
@@ -509,6 +611,7 @@ function mountSnakeGame(root: HTMLElement): void {
     }
 
     paused = true;
+    persistSession();
     setOverlay("PAUSED", message);
     announce("Game paused.");
   };
@@ -521,6 +624,7 @@ function mountSnakeGame(root: HTMLElement): void {
     paused = !paused;
 
     if (paused) {
+      persistSession();
       setOverlay("PAUSED", "P TO RESUME");
       announce("Game paused.");
     } else {
@@ -528,6 +632,86 @@ function mountSnakeGame(root: HTMLElement): void {
       setOverlay("", "", false);
       announce("Game resumed.");
     }
+  };
+
+  const restoreSession = (state: SnakeSessionState): void => {
+    mode = state.mode;
+    mazeSeed = state.mazeSeed;
+    obstacles = new Set();
+    mazeReachableCells = [];
+    if (mode === "maze" && mazeSeed !== null) {
+      const maze = generateMaze(mazeSeed, GRID_SIZE);
+      obstacles = maze.obstacles;
+      mazeReachableCells = maze.reachableCells;
+    }
+    snake = state.snake.map((segment) => ({ ...segment }));
+    previousSnake = snake.map((segment) => ({ ...segment }));
+    food = state.food ? { ...state.food } : null;
+    bonusFood = state.bonusFood ? { ...state.bonusFood } : null;
+    bonusRemainingMs = Math.max(0, state.bonusRemainingMs);
+    regularFoodsEaten = Math.max(0, state.regularFoodsEaten);
+    direction = { ...state.direction };
+    queuedDirection = { ...state.queuedDirection };
+    score = Math.max(0, state.score);
+    speed = Math.min(START_SPEED, Math.max(MIN_SPEED, state.speed));
+    highScore = readHighScore(mode);
+    newHighScoreThisRun = false;
+    started = false;
+    paused = true;
+    gameOver = false;
+    previousTime = 0;
+    accumulator = 0;
+    eatEffect = null;
+    collisionEffect = null;
+    updateScoreboard();
+    updateBonusIndicator();
+    if (resumeSummary) {
+      resumeSummary.textContent = `${mode.toUpperCase()} · SCORE ${formatScore(score)}`;
+    }
+    if (modePicker) modePicker.hidden = true;
+    setResumePicker(true);
+    setOverlay("SAVED RUN", "CONTINUE OR START OVER", true, false);
+    announce(`Saved ${mode} run found. Score ${score}.`);
+    draw();
+  };
+
+  const continueSession = (): void => {
+    if (!active || !resumePrompt || !mode) return;
+    setResumePicker(false);
+    started = true;
+    paused = false;
+    previousTime = performance.now();
+    setOverlay("", "", false);
+    announce("Saved run resumed.");
+    persistSession();
+    canvas.focus({ preventScroll: true });
+  };
+
+  const discardSession = (): void => {
+    clearSession();
+    setResumePicker(false);
+    mode = null;
+    mazeSeed = null;
+    snake = [];
+    previousSnake = [];
+    food = null;
+    bonusFood = null;
+    bonusRemainingMs = 0;
+    score = 0;
+    highScore = 0;
+    started = false;
+    paused = false;
+    gameOver = false;
+    updateScoreboard();
+    updateBonusIndicator();
+    setOverlay(
+      "SELECT MODE",
+      "FREE WRAPS · MAZE WRAPS + OBSTACLES",
+      true,
+      true,
+    );
+    announce("Select Free mode or Maze mode.");
+    draw();
   };
 
   const startGame = () => {
@@ -556,14 +740,24 @@ function mountSnakeGame(root: HTMLElement): void {
     clearBonusFood();
     configureCanvas();
     updateScoreboard();
-    setOverlay(
-      "SELECT MODE",
-      "FREE WRAPS · MAZE WRAPS + OBSTACLES",
-      true,
-      true,
+    const saved = readStoredSession(
+      SNAKE_SESSION_KEY,
+      SNAKE_SESSION_VERSION,
+      isSnakeSessionState,
     );
-    announce("Select Free mode or Maze mode.");
-    draw();
+    if (saved) {
+      restoreSession(saved.state);
+    } else {
+      setResumePicker(false);
+      setOverlay(
+        "SELECT MODE",
+        "FREE WRAPS · MAZE WRAPS + OBSTACLES",
+        true,
+        true,
+      );
+      announce("Select Free mode or Maze mode.");
+      draw();
+    }
 
     if (animationFrame !== null) {
       window.cancelAnimationFrame(animationFrame);
@@ -578,6 +772,7 @@ function mountSnakeGame(root: HTMLElement): void {
       return;
     }
 
+    persistSession();
     active = false;
     started = false;
     paused = false;
@@ -627,7 +822,24 @@ function mountSnakeGame(root: HTMLElement): void {
 
     const normalizedKey = event.key.toLowerCase();
 
-    if ((!mode || gameOver) && (normalizedKey === "f" || normalizedKey === "m")) {
+    if (resumePrompt) {
+      if (normalizedKey === "c" || event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        continueSession();
+      } else if (normalizedKey === "n" || normalizedKey === "r") {
+        event.preventDefault();
+        discardSession();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        exitGame();
+      }
+      return;
+    }
+
+    if (
+      (!mode || gameOver) &&
+      (normalizedKey === "f" || normalizedKey === "m")
+    ) {
       event.preventDefault();
       selectMode(normalizedKey === "f" ? "free" : "maze");
       return;
@@ -703,6 +915,13 @@ function mountSnakeGame(root: HTMLElement): void {
     }
   };
 
+  resumeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.snakeResume === "continue") continueSession();
+      else discardSession();
+    });
+  });
+
   modeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       selectMode(button.dataset.snakeMode);
@@ -728,8 +947,10 @@ function mountSnakeGame(root: HTMLElement): void {
   document.addEventListener("keydown", onKeyDown);
 
   window.addEventListener("blur", () => pauseGame("P TO RESUME"));
+  window.addEventListener("pagehide", persistSession);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
+      persistSession();
       pauseGame("P TO RESUME");
     }
   });

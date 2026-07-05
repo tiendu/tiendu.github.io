@@ -1,18 +1,11 @@
 import {
   GAME_EVENTS,
-  type BreakoutExitDetail,
   type ChickenExitDetail,
-  type InvadersExitDetail,
   type ScoreExitDetail,
 } from "./shared/events";
 
-export type GameId = "snake" | "invaders" | "breakout" | "chicken";
-
-type ExitDetail =
-  | ScoreExitDetail
-  | InvadersExitDetail
-  | BreakoutExitDetail
-  | ChickenExitDetail;
+export type GameId = "snake" | "crane" | "chicken";
+type ExitDetail = ScoreExitDetail | ChickenExitDetail;
 
 interface ArcadeHost {
   wrapper: HTMLElement;
@@ -29,6 +22,7 @@ interface ArcadeHost {
 
 interface GameDefinition {
   id: GameId;
+  load: () => Promise<void>;
   aliases: readonly string[];
   startEvent: string;
   exitEvent: string;
@@ -37,7 +31,8 @@ interface GameDefinition {
   stateSelector: string;
   progressSelector: string;
   actionSelector: string;
-  pauseSelector: string;
+  pauseSelector?: string;
+  actionToKey: (action: string | undefined) => string | null;
   readyStatus: (progress: string, finePointer: boolean) => string;
   activeStatus: (progress: string, finePointer: boolean) => string;
   syncStatus: (
@@ -68,6 +63,10 @@ const format = (value: number, width: number): string =>
 const definitions: readonly GameDefinition[] = [
   {
     id: "snake",
+    load: async () => {
+      const { mountSnakeGames } = await import("./snake");
+      mountSnakeGames();
+    },
     aliases: ["snake"],
     startEvent: GAME_EVENTS.snake.start,
     exitEvent: GAME_EVENTS.snake.exit,
@@ -77,6 +76,14 @@ const definitions: readonly GameDefinition[] = [
     progressSelector: "[data-snake-mode]",
     actionSelector: "[data-snake-action]",
     pauseSelector: '[data-snake-action="pause"]',
+    actionToKey: (action) =>
+      action === "pause"
+        ? "p"
+        : action === "restart"
+          ? "r"
+          : action === "exit"
+            ? "Escape"
+            : null,
     readyStatus: (mode, fine) =>
       `${mode} · READY · ${fine ? "ARROWS/WASD" : "USE CONTROLS"}`,
     activeStatus: (mode, fine) =>
@@ -107,109 +114,69 @@ const definitions: readonly GameDefinition[] = [
       }
       return { text: `${mode} · READY` };
     },
-    exitMessage: (detail) =>
-      `SNAKE CLOSED · SCORE ${format(score(detail.score), 4)} · HIGH ${format(score(detail.highScore), 4)}`,
+    exitMessage: (detail) => {
+      const snake = detail as Partial<ScoreExitDetail>;
+      return `SNAKE CLOSED · SCORE ${format(score(snake.score), 4)} · HIGH ${format(score(snake.highScore), 4)}`;
+    },
   },
   {
-    id: "invaders",
-    aliases: ["invaders", "invader"],
-    startEvent: GAME_EVENTS.invaders.start,
-    exitEvent: GAME_EVENTS.invaders.exit,
-    rootSelector: "[data-invaders-game]",
-    overlaySelector: "[data-invaders-overlay]",
-    stateSelector: "[data-invaders-state]",
-    progressSelector: "[data-invaders-wave]",
-    actionSelector: "[data-invaders-action]",
-    pauseSelector: '[data-invaders-action="pause"]',
-    readyStatus: (wave, fine) =>
-      `WAVE ${wave} · READY · ${fine ? "A/D + SPACE" : "USE CONTROLS"}`,
-    activeStatus: (wave, fine) =>
-      `WAVE ${wave} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
-    syncStatus: (state, wave, overlayVisible, fine) => {
+    id: "crane",
+    load: async () => {
+      const { mountCraneGames } = await import("./crane");
+      mountCraneGames();
+    },
+    aliases: ["crane", "stack", "cargo", "stacktrace"],
+    startEvent: GAME_EVENTS.crane.start,
+    exitEvent: GAME_EVENTS.crane.exit,
+    rootSelector: "[data-crane-game]",
+    overlaySelector: "[data-crane-overlay]",
+    stateSelector: "[data-crane-state]",
+    progressSelector: "[data-crane-height]",
+    actionSelector: "[data-crane-action]",
+    actionToKey: (action) =>
+      action === "drop"
+        ? " "
+        : action === "pause"
+          ? "p"
+          : action === "restart"
+            ? "r"
+            : action === "exit"
+              ? "Escape"
+              : null,
+    readyStatus: () => "STACK TRACE · READY · TAP/CLICK/SPACE TO DROP",
+    activeStatus: (height) => `HEIGHT ${height} · ACTIVE · TIME THE DROP`,
+    syncStatus: (state, height, overlayVisible) => {
       if (state === "PAUSED") {
-        return { text: `WAVE ${wave} · GAME PAUSED`, pauseLabel: "RESUME" };
+        return { text: `HEIGHT ${height} · GAME PAUSED`, pauseLabel: "RESUME" };
       }
-      if (state === "GAME OVER") {
+      if (state === "STRUCTURAL FAILURE") {
         return {
-          text: `WAVE ${wave} · GAME OVER · RESTART OR EXIT`,
+          text: `HEIGHT ${height} · STRUCTURAL FAILURE · DROP AGAIN OR EXIT`,
           pauseDisabled: true,
         };
       }
-      if (state === "SHIP LOST") {
-        return { text: `WAVE ${wave} · RECOVERING`, pauseDisabled: true };
-      }
-      if (state.startsWith("WAVE ") && state.endsWith(" CLEARED")) {
-        return { text: `${state} · NEXT SIGNAL`, pauseDisabled: true };
-      }
-      if (state === "PRESS FIRE OR MOVE") {
+      if (state === "STACK TRACE") {
         return {
-          text: `WAVE ${wave} · READY · ${fine ? "A/D + SPACE" : "USE CONTROLS"}`,
+          text: "STACK TRACE · READY · TAP/CLICK/SPACE TO DROP",
           pauseDisabled: true,
         };
       }
       if (!overlayVisible || state === "RUNNING") {
-        return {
-          text: `WAVE ${wave} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
-        };
+        return { text: `HEIGHT ${height} · ACTIVE · TIME THE DROP` };
       }
-      return { text: `WAVE ${wave} · READY` };
+      return { text: `HEIGHT ${height} · READY` };
     },
     exitMessage: (detail) => {
-      const wave = positive((detail as Partial<InvadersExitDetail>).wave, 1);
-      return `INVADERS CLOSED · SCORE ${format(score(detail.score), 4)} · HIGH ${format(score(detail.highScore), 4)} · WAVE ${format(wave, 2)}`;
-    },
-  },
-  {
-    id: "breakout",
-    aliases: ["breakout", "arkanoid"],
-    startEvent: GAME_EVENTS.breakout.start,
-    exitEvent: GAME_EVENTS.breakout.exit,
-    rootSelector: "[data-breakout-game]",
-    overlaySelector: "[data-breakout-overlay]",
-    stateSelector: "[data-breakout-state]",
-    progressSelector: "[data-breakout-level]",
-    actionSelector: "[data-breakout-action]",
-    pauseSelector: '[data-breakout-action="pause"]',
-    readyStatus: (level, fine) =>
-      `LEVEL ${level} · READY · ${fine ? "A/D + SPACE" : "USE CONTROLS"}`,
-    activeStatus: (level, fine) =>
-      `LEVEL ${level} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
-    syncStatus: (state, level, overlayVisible, fine) => {
-      if (state === "PAUSED") {
-        return { text: `LEVEL ${level} · GAME PAUSED`, pauseLabel: "RESUME" };
-      }
-      if (state === "GAME OVER") {
-        return {
-          text: `LEVEL ${level} · GAME OVER · RESTART OR EXIT`,
-          pauseDisabled: true,
-        };
-      }
-      if (state === "BALL LOST") {
-        return { text: `LEVEL ${level} · RECOVERING`, pauseDisabled: true };
-      }
-      if (state.startsWith("LEVEL ") && state.endsWith(" CLEARED")) {
-        return { text: `${state} · NEXT BOARD`, pauseDisabled: true };
-      }
-      if (state === "PRESS FIRE OR MOVE") {
-        return {
-          text: `LEVEL ${level} · READY · ${fine ? "A/D + SPACE" : "USE CONTROLS"}`,
-          pauseDisabled: true,
-        };
-      }
-      if (!overlayVisible || state === "RUNNING") {
-        return {
-          text: `LEVEL ${level} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
-        };
-      }
-      return { text: `LEVEL ${level} · READY` };
-    },
-    exitMessage: (detail) => {
-      const level = positive((detail as Partial<BreakoutExitDetail>).level, 1);
-      return `BREAKOUT CLOSED · SCORE ${format(score(detail.score), 4)} · HIGH ${format(score(detail.highScore), 4)} · LEVEL ${format(level, 2)}`;
+      const crane = detail as Partial<ScoreExitDetail>;
+      return `STACK TRACE CLOSED · HEIGHT ${format(score(crane.score), 3)} · HIGH ${format(score(crane.highScore), 3)}`;
     },
   },
   {
     id: "chicken",
+    load: async () => {
+      const { mountChickenRunGames } = await import("./chicken-run");
+      mountChickenRunGames();
+    },
     aliases: ["chicken", "freerange", "free-range"],
     startEvent: GAME_EVENTS.chicken.start,
     exitEvent: GAME_EVENTS.chicken.exit,
@@ -219,6 +186,14 @@ const definitions: readonly GameDefinition[] = [
     progressSelector: "[data-chicken-speed]",
     actionSelector: "[data-chicken-action]",
     pauseSelector: '[data-chicken-action="pause"]',
+    actionToKey: (action) =>
+      action === "pause"
+        ? "p"
+        : action === "restart"
+          ? "r"
+          : action === "exit"
+            ? "Escape"
+            : null,
     readyStatus: (speed, fine) =>
       `SPEED ${speed} · READY · ${fine ? "SPACE/UP" : "TAP TO JUMP"}`,
     activeStatus: (speed, fine) =>
@@ -234,10 +209,7 @@ const definitions: readonly GameDefinition[] = [
         };
       }
       if (state === "CRASHED") {
-        return {
-          text: `SPEED ${speed} · COLLISION`,
-          pauseDisabled: true,
-        };
+        return { text: `SPEED ${speed} · COLLISION`, pauseDisabled: true };
       }
       if (state === "PRESS JUMP") {
         return {
@@ -253,11 +225,9 @@ const definitions: readonly GameDefinition[] = [
       return { text: `SPEED ${speed} · READY` };
     },
     exitMessage: (detail) => {
-      const speedLevel = positive(
-        (detail as Partial<ChickenExitDetail>).speed,
-        1,
-      );
-      return `FREE RANGE CLOSED · SCORE ${format(score(detail.score), 4)} · HIGH ${format(score(detail.highScore), 4)} · SPEED ${format(speedLevel, 2)}`;
+      const chicken = detail as Partial<ChickenExitDetail>;
+      const speedLevel = positive(chicken.speed, 1);
+      return `FREE RANGE CLOSED · SCORE ${format(score(chicken.score), 4)} · HIGH ${format(score(chicken.highScore), 4)} · SPEED ${format(speedLevel, 2)}`;
     },
   },
 ];
@@ -268,26 +238,34 @@ function setPauseButton(
   disabled = false,
 ): void {
   if (!button) return;
-  button.textContent = label;
-  button.disabled = disabled;
-  button.setAttribute("aria-pressed", label === "RESUME" ? "true" : "false");
+
+  // Keep this setter idempotent. The arcade controller observes game status
+  // elements; rewriting the pause button on every observer callback can create
+  // a MutationObserver feedback loop and lock the browser tab.
+  if (button.textContent !== label) button.textContent = label;
+  if (button.disabled !== disabled) button.disabled = disabled;
+
+  const pressed = label === "RESUME" ? "true" : "false";
+  if (button.getAttribute("aria-pressed") !== pressed) {
+    button.setAttribute("aria-pressed", pressed);
+  }
 }
 
 function normalizeProgress(value: string, id: GameId): string {
-  const fallback = id === "snake" ? "--" : "01";
   const cleaned = value.trim().toUpperCase();
-  if (!cleaned) return fallback;
-  return id === "snake" ? cleaned : cleaned.padStart(2, "0");
+  if (id === "snake") return cleaned || "--";
+  if (id === "crane") return cleaned ? cleaned.padStart(3, "0") : "000";
+  return cleaned ? cleaned.padStart(2, "0") : "01";
 }
 
 export function createArcadeController(host: ArcadeHost): ArcadeController {
   let activeGame: GameId | null = null;
   const byAlias = new Map<string, GameDefinition>();
-
+  const loadedGames = new Set<GameId>();
+  const loadingGames = new Map<GameId, Promise<void>>();
   const runtime = new Map<
     GameId,
     {
-      definition: GameDefinition;
       root: HTMLElement | null;
       overlay: HTMLElement | null;
       state: Element | null;
@@ -350,6 +328,40 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
     );
   };
 
+  const loadGame = (definition: GameDefinition): Promise<void> => {
+    if (loadedGames.has(definition.id)) return Promise.resolve();
+
+    const existing = loadingGames.get(definition.id);
+    if (existing) return existing;
+
+    const loading = definition
+      .load()
+      .then(() => {
+        loadedGames.add(definition.id);
+      })
+      .finally(() => {
+        loadingGames.delete(definition.id);
+      });
+
+    loadingGames.set(definition.id, loading);
+    return loading;
+  };
+
+  const restoreAfterLoadFailure = (definition: GameDefinition): void => {
+    if (activeGame !== definition.id) return;
+    activeGame = null;
+    host.wrapper.classList.remove(`${definition.id}-mode`);
+    if (host.profileView) host.profileView.hidden = false;
+    if (host.profileCopy) host.profileCopy.hidden = false;
+    if (host.shell) host.shell.hidden = false;
+    host.resizeTerminalInput();
+    setFooter("READY · TYPE HELP");
+    host.showResponse(`${definition.id.toUpperCase()} COULD NOT LOAD · TRY AGAIN`);
+    if (host.finePointer.matches && host.terminalInput) {
+      window.setTimeout(() => host.terminalInput?.focus(), 0);
+    }
+  };
+
   const open = (definition: GameDefinition): void => {
     activeGame = definition.id;
     host.wrapper.classList.add(`${definition.id}-mode`);
@@ -358,33 +370,37 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
     host.clearResponse();
 
     const game = runtime.get(definition.id);
-    const progress = normalizeProgress(
-      game?.progress?.textContent ?? "",
-      definition.id,
-    );
-    setFooter(definition.readyStatus(progress, host.finePointer.matches));
     setPauseButton(game?.pauseButton ?? null, "PAUSE", true);
-    window.dispatchEvent(new CustomEvent(definition.startEvent));
-    window.setTimeout(() => sync(definition), 0);
+    setFooter(`${definition.id.toUpperCase()} · LOADING`);
+
+    void loadGame(definition)
+      .then(() => {
+        if (activeGame !== definition.id) return;
+        const progress = normalizeProgress(
+          game?.progress?.textContent ?? "",
+          definition.id,
+        );
+        setFooter(definition.readyStatus(progress, host.finePointer.matches));
+        window.dispatchEvent(new CustomEvent(definition.startEvent));
+        window.setTimeout(() => sync(definition), 0);
+      })
+      .catch(() => restoreAfterLoadFailure(definition));
   };
 
   definitions.forEach((definition) => {
     definition.aliases.forEach((alias) => byAlias.set(alias, definition));
 
-    const root = host.wrapper.querySelector<HTMLElement>(
-      definition.rootSelector,
-    );
+    const root = host.wrapper.querySelector<HTMLElement>(definition.rootSelector);
     const overlay = host.wrapper.querySelector<HTMLElement>(
       definition.overlaySelector,
     );
     const state = host.wrapper.querySelector(definition.stateSelector);
     const progress = host.wrapper.querySelector(definition.progressSelector);
-    const pauseButton = host.wrapper.querySelector<HTMLButtonElement>(
-      definition.pauseSelector,
-    );
+    const pauseButton = definition.pauseSelector
+      ? host.wrapper.querySelector<HTMLButtonElement>(definition.pauseSelector)
+      : null;
 
     runtime.set(definition.id, {
-      definition,
       root,
       overlay,
       state,
@@ -398,14 +414,7 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
         button.addEventListener("click", () => {
           if (activeGame !== definition.id) return;
           const action = button.dataset[`${definition.id}Action`];
-          const key =
-            action === "pause"
-              ? "p"
-              : action === "restart"
-                ? "r"
-                : action === "exit"
-                  ? "Escape"
-                  : null;
+          const key = definition.actionToKey(action);
           if (!key) return;
           document.dispatchEvent(
             new KeyboardEvent("keydown", {
@@ -417,10 +426,19 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
         });
       });
 
-    if (root) {
-      new MutationObserver(() => sync(definition)).observe(root, {
+    // Observe only the pieces that actually drive footer status. Observing the
+    // entire game subtree also observes the pause button that sync() updates,
+    // which can feed mutations back into sync indefinitely.
+    if (overlay) {
+      new MutationObserver(() => sync(definition)).observe(overlay, {
         attributes: true,
         attributeFilter: ["hidden"],
+      });
+    }
+
+    for (const statusNode of [state, progress]) {
+      if (!statusNode) continue;
+      new MutationObserver(() => sync(definition)).observe(statusNode, {
         characterData: true,
         childList: true,
         subtree: true,

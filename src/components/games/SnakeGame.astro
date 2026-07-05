@@ -40,6 +40,23 @@ import "../../styles/components/snake-game.css";
       <span data-snake-message>FREE WRAPS · MAZE WRAPS + OBSTACLES</span>
 
       <div
+        class="arcade-resume-picker"
+        data-snake-resume-picker
+        role="group"
+        aria-label="Resume saved Snake game"
+        hidden
+      >
+        <button type="button" data-snake-resume="continue">
+          CONTINUE
+          <small data-snake-resume-summary>SAVED RUN</small>
+        </button>
+        <button type="button" data-snake-resume="new">
+          NEW RUN
+          <small>DISCARD SAVE</small>
+        </button>
+      </div>
+
+      <div
         class="snake-mode-picker"
         data-snake-mode-picker
         role="group"
@@ -75,9 +92,3 @@ import "../../styles/components/snake-game.css";
     aria-atomic="true"
   ></p>
 </section>
-
-<script>
-  import { mountSnakeGames } from "../../scripts/games/snake";
-
-  mountSnakeGames();
-</script>

@@ -29,6 +29,22 @@ import "../../styles/components/chicken-run-game.css";
     <div class="arcade-overlay chicken-overlay" data-chicken-overlay>
       <strong data-chicken-state>SPACE / TAP TO JUMP</strong>
       <span data-chicken-message>PRESS AGAIN IN AIR TO FLAP</span>
+      <div
+        class="arcade-resume-picker chicken-resume-picker"
+        data-chicken-resume-picker
+        role="group"
+        aria-label="Resume saved Free Range game"
+        hidden
+      >
+        <button type="button" data-chicken-resume="continue">
+          CONTINUE
+          <small data-chicken-resume-summary>SAVED RUN</small>
+        </button>
+        <button type="button" data-chicken-resume="new">
+          NEW RUN
+          <small>DISCARD SAVE</small>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -41,9 +57,3 @@ import "../../styles/components/chicken-run-game.css";
     <span class="chicken-help-secondary">P PAUSE · R RESTART · ESC EXIT</span>
   </p>
 </section>
-
-<script>
-  import { mountChickenRunGames } from "../../scripts/games/chicken-run";
-
-  mountChickenRunGames();
-</script>

@@ -52,7 +52,13 @@ import {
 import { configureFixedCanvas } from "./shared/canvas";
 import { dispatchGameExit, GAME_EVENTS } from "./shared/events";
 import { mountAllGames } from "./shared/mount";
-import { readStoredScore, writeStoredScore } from "./shared/storage";
+import {
+  readStoredScore,
+  readStoredSession,
+  removeStoredSession,
+  writeStoredScore,
+  writeStoredSession,
+} from "./shared/storage";
 
 interface CrashState extends CrashVisual {
   freezeRemaining: number;
@@ -60,6 +66,30 @@ interface CrashState extends CrashVisual {
   vx: number;
   vy: number;
   spin: number;
+}
+
+interface ChickenSessionState {
+  score: number;
+  runHighScore: number;
+  distance: number;
+  bonusScore: number;
+  sceneElapsed: number;
+  runElapsed: number;
+  cameraOffsetY: number;
+  nextPatternDistance: number;
+  obstacles: ChickenObstacle[];
+  corn: CornKernel[];
+  cornGroups: Array<[number, CornGroup]>;
+  nextCornGroupId: number;
+  egg: EggPickup | null;
+  eggCarried: boolean;
+  eggOfferPending: boolean;
+  offeredEggCycle: number;
+  foxPressure: number;
+  invulnerableRemaining: number;
+  runFrame: number;
+  foxRunFrame: number;
+  lastSpeedLevel: number;
 }
 
 const BOARD_WIDTH = 640;
@@ -75,6 +105,41 @@ const JUMP_BUFFER_MS = 110;
 const EGG_INVULNERABILITY_SECONDS = 1.15;
 const MAX_RUN_SPEED = 565;
 const HIGH_SCORE_KEY = "tiendu-chicken-high-score";
+const SESSION_KEY = "tiendu-chicken-session";
+const SESSION_VERSION = 1;
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isChickenSessionState(value: unknown): value is ChickenSessionState {
+  if (!value || typeof value !== "object") return false;
+  const state = value as Partial<ChickenSessionState>;
+  return (
+    Number.isInteger(state.score) &&
+    Number.isInteger(state.runHighScore) &&
+    isFiniteNumber(state.distance) &&
+    (state.distance ?? 0) > 0 &&
+    isFiniteNumber(state.bonusScore) &&
+    isFiniteNumber(state.sceneElapsed) &&
+    isFiniteNumber(state.runElapsed) &&
+    isFiniteNumber(state.cameraOffsetY) &&
+    isFiniteNumber(state.nextPatternDistance) &&
+    Array.isArray(state.obstacles) &&
+    Array.isArray(state.corn) &&
+    Array.isArray(state.cornGroups) &&
+    Number.isInteger(state.nextCornGroupId) &&
+    (state.egg === null || (typeof state.egg === "object" && state.egg !== null)) &&
+    typeof state.eggCarried === "boolean" &&
+    typeof state.eggOfferPending === "boolean" &&
+    Number.isInteger(state.offeredEggCycle) &&
+    isFiniteNumber(state.foxPressure) &&
+    isFiniteNumber(state.invulnerableRemaining) &&
+    isFiniteNumber(state.runFrame) &&
+    isFiniteNumber(state.foxRunFrame) &&
+    Number.isInteger(state.lastSpeedLevel)
+  );
+}
 
 export function mountChickenRunGames(): void {
   mountAllGames(
@@ -115,6 +180,15 @@ function mountChickenRunGame(root: HTMLElement): void {
   const stateLabel = root.querySelector<HTMLElement>("[data-chicken-state]");
   const messageLabel = root.querySelector<HTMLElement>(
     "[data-chicken-message]",
+  );
+  const resumePicker = root.querySelector<HTMLElement>(
+    "[data-chicken-resume-picker]",
+  );
+  const resumeSummary = root.querySelector<HTMLElement>(
+    "[data-chicken-resume-summary]",
+  );
+  const resumeButtons = Array.from(
+    root.querySelectorAll<HTMLButtonElement>("[data-chicken-resume]"),
   );
   const jumpButton = root.querySelector<HTMLButtonElement>(
     '[data-chicken-control="jump"]',
@@ -175,7 +249,63 @@ function mountChickenRunGame(root: HTMLElement): void {
   let flapPulse = 0;
   let landingPulse = 0;
   let lastSpeedLevel = 1;
+  let resumePrompt = false;
+  let lastStableSession: ChickenSessionState | null = null;
+  let checkpointElapsed = 0;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  const clearSession = (): void => {
+    lastStableSession = null;
+    removeStoredSession(SESSION_KEY);
+  };
+
+  const captureStableSession = (): ChickenSessionState | null => {
+    if (!started || gameOver || crash || !grounded || distance <= 0) return null;
+    return {
+      score,
+      runHighScore,
+      distance,
+      bonusScore,
+      sceneElapsed,
+      runElapsed,
+      cameraOffsetY,
+      nextPatternDistance,
+      obstacles: obstacles.map((obstacle) => ({ ...obstacle })),
+      corn: corn.map((kernel) => ({ ...kernel })),
+      cornGroups: Array.from(cornGroups.entries(), ([id, group]) => [id, { ...group }]),
+      nextCornGroupId,
+      egg: egg ? { ...egg } : null,
+      eggCarried,
+      eggOfferPending,
+      offeredEggCycle,
+      foxPressure,
+      invulnerableRemaining,
+      runFrame,
+      foxRunFrame,
+      lastSpeedLevel,
+    };
+  };
+
+  const refreshSessionCheckpoint = (): void => {
+    const checkpoint = captureStableSession();
+    if (!checkpoint) return;
+    lastStableSession = checkpoint;
+    checkpointElapsed = 0;
+    writeStoredSession(SESSION_KEY, SESSION_VERSION, checkpoint);
+  };
+
+  const persistSession = (): void => {
+    if (lastStableSession) {
+      writeStoredSession(SESSION_KEY, SESSION_VERSION, lastStableSession);
+      return;
+    }
+    refreshSessionCheckpoint();
+  };
+
+  const setResumePicker = (visible: boolean): void => {
+    resumePrompt = visible;
+    if (resumePicker) resumePicker.hidden = !visible;
+  };
 
   const formatScore = (value: number): string =>
     String(Math.max(0, Math.floor(value))).padStart(4, "0");
@@ -223,6 +353,10 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   const updateJumpButton = (): void => {
     if (!active) return;
+    if (resumePrompt) {
+      setJumpButton("CONTINUE", false, "Continue saved Free Range run");
+      return;
+    }
     const control = jumpControlForState({
       gameOver,
       crashing: crash !== null,
@@ -292,6 +426,9 @@ function mountChickenRunGame(root: HTMLElement): void {
   };
 
   const resetGame = (): void => {
+    clearSession();
+    setResumePicker(false);
+    checkpointElapsed = 0;
     started = false;
     paused = false;
     gameOver = false;
@@ -392,7 +529,7 @@ function mountChickenRunGame(root: HTMLElement): void {
   };
 
   const requestJump = (): void => {
-    if (!active || paused || gameOver || crash) return;
+    if (!active || resumePrompt || paused || gameOver || crash) return;
     startPlaying();
     const now = performance.now();
     if (!performJump(now)) jumpBufferedUntil = now + JUMP_BUFFER_MS;
@@ -424,6 +561,8 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   const beginCrash = (kind: CrashKind): void => {
     if (crash || gameOver) return;
+    clearSession();
+    setResumePicker(false);
     started = false;
     paused = false;
     jumpBufferedUntil = 0;
@@ -495,6 +634,8 @@ function mountChickenRunGame(root: HTMLElement): void {
   const finishGame = (): void => {
     if (gameOver) return;
     gameOver = true;
+    clearSession();
+    setResumePicker(false);
     paused = false;
     isNewHighScore = score > runHighScore;
     persistHighScore();
@@ -880,6 +1021,10 @@ function mountChickenRunGame(root: HTMLElement): void {
 
     updateHighScore();
     updateScoreboard();
+    checkpointElapsed += delta;
+    if (grounded && !crash && checkpointElapsed >= 0.7) {
+      refreshSessionCheckpoint();
+    }
   };
 
   const draw = (): void => {
@@ -952,6 +1097,7 @@ function mountChickenRunGame(root: HTMLElement): void {
   const togglePause = (): void => {
     if (!active || !started || gameOver || crash) return;
     paused = !paused;
+    if (paused) persistSession();
     if (paused) setOverlay("PAUSED", "P / TAP TO RESUME · R RESTART · ESC EXIT");
     else {
       previousTime = performance.now();
@@ -963,8 +1109,102 @@ function mountChickenRunGame(root: HTMLElement): void {
   const pauseGame = (): void => {
     if (!active || !started || paused || gameOver || crash) return;
     paused = true;
+    persistSession();
     setOverlay("PAUSED", "P / TAP TO RESUME · R RESTART · ESC EXIT");
     updateJumpButton();
+  };
+
+  const restoreSession = (state: ChickenSessionState): void => {
+    score = state.score;
+    runHighScore = state.runHighScore;
+    isNewHighScore = false;
+    distance = state.distance;
+    bonusScore = state.bonusScore;
+    sceneElapsed = state.sceneElapsed;
+    runElapsed = state.runElapsed;
+    cycle = cycleStateForElapsed(runElapsed);
+    previousPhase = cycle.phase;
+    weather = weatherStateForElapsed(runElapsed);
+    currentTerrainSlope = terrainSlopeAt(distance + CHICKEN_X, GROUND_Y);
+    currentSpeed = Math.min(
+      MAX_RUN_SPEED,
+      speedForScore(score) *
+        cycle.speedMultiplier *
+        environmentSpeedMultiplier(
+          terrainSpeedMultiplier(currentTerrainSlope),
+          weather.speedMultiplier,
+        ),
+    );
+    cameraOffsetY = state.cameraOffsetY;
+    chickenY = terrainHeightAt(distance + CHICKEN_X, GROUND_Y) - CHICKEN_HEIGHT;
+    chickenVelocityY = 0;
+    grounded = true;
+    flapAvailable = true;
+    lastGroundedAt = performance.now();
+    jumpBufferedUntil = 0;
+    nextPatternDistance = state.nextPatternDistance;
+    obstacles = state.obstacles.map((obstacle) => ({ ...obstacle }));
+    corn = state.corn.map((kernel) => ({ ...kernel }));
+    cornGroups = new Map(
+      state.cornGroups.map(([id, group]) => [id, { ...group }]),
+    );
+    nextCornGroupId = state.nextCornGroupId;
+    egg = state.egg ? { ...state.egg } : null;
+    eggCarried = state.eggCarried;
+    eggOfferPending = state.eggOfferPending;
+    offeredEggCycle = state.offeredEggCycle;
+    foxPressure = state.foxPressure;
+    foxRunFrame = state.foxRunFrame;
+    invulnerableRemaining = state.invulnerableRemaining;
+    rescuePulse = 0;
+    feathers = [];
+    scoreBursts = [];
+    notice = null;
+    crash = null;
+    previousTime = 0;
+    runFrame = state.runFrame;
+    featherAccumulator = 0;
+    crashFeatherAccumulator = 0;
+    celebrationAccumulator = 0;
+    takeoffPulse = 0;
+    flapPulse = 0;
+    landingPulse = 0;
+    lastSpeedLevel = state.lastSpeedLevel;
+    gameOver = false;
+    started = false;
+    paused = true;
+    checkpointElapsed = 0;
+    lastStableSession = {
+      ...state,
+      obstacles: state.obstacles.map((obstacle) => ({ ...obstacle })),
+      corn: state.corn.map((kernel) => ({ ...kernel })),
+      cornGroups: state.cornGroups.map(([id, group]) => [id, { ...group }]),
+      egg: state.egg ? { ...state.egg } : null,
+    };
+    if (resumeSummary) resumeSummary.textContent = `SCORE ${formatScore(score)}`;
+    setResumePicker(true);
+    setOverlay("SAVED RUN", "CONTINUE OR START OVER");
+    updateScoreboard();
+    updateJumpButton();
+    draw();
+  };
+
+  const continueSession = (): void => {
+    if (!active || !resumePrompt) return;
+    setResumePicker(false);
+    started = true;
+    paused = false;
+    previousTime = performance.now();
+    setOverlay("RUNNING", "", false);
+    updateJumpButton();
+    draw();
+    canvas.focus({ preventScroll: true });
+  };
+
+  const discardSession = (): void => {
+    clearSession();
+    setResumePicker(false);
+    resetGame();
   };
 
   const startGame = (): void => {
@@ -972,7 +1212,9 @@ function mountChickenRunGame(root: HTMLElement): void {
     root.hidden = false;
     highScore = readStoredScore(HIGH_SCORE_KEY);
     configureCanvas();
-    resetGame();
+    const saved = readStoredSession(SESSION_KEY, SESSION_VERSION, isChickenSessionState);
+    if (saved) restoreSession(saved.state);
+    else resetGame();
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     animationFrame = window.requestAnimationFrame(gameLoop);
     window.setTimeout(() => canvas.focus({ preventScroll: true }), 0);
@@ -980,6 +1222,7 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   const exitGame = (): void => {
     if (!active) return;
+    persistSession();
     active = false;
     started = false;
     paused = false;
@@ -1005,6 +1248,20 @@ function mountChickenRunGame(root: HTMLElement): void {
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!active) return;
     const key = event.key.toLowerCase();
+
+    if (resumePrompt) {
+      if (key === "c" || event.key === " " || event.key === "Enter") {
+        event.preventDefault();
+        continueSession();
+      } else if (key === "n" || key === "r") {
+        event.preventDefault();
+        discardSession();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        exitGame();
+      }
+      return;
+    }
 
     if (event.key === "Escape") {
       event.preventDefault();
@@ -1034,14 +1291,24 @@ function mountChickenRunGame(root: HTMLElement): void {
   const activateFromPointer = (event: PointerEvent): void => {
     if (!active) return;
     event.preventDefault();
+    if (resumePrompt) return;
     if (paused) return;
     if (gameOver) retryAndJump();
     else if (!crash) requestJump();
     canvas.focus({ preventScroll: true });
   };
 
+  resumeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.chickenResume === "continue") continueSession();
+      else discardSession();
+    });
+  });
+
   jumpButton?.addEventListener("click", () => {
-    if (paused) {
+    if (resumePrompt) {
+      continueSession();
+    } else if (paused) {
       togglePause();
     } else if (gameOver) {
       retryAndJump();
@@ -1053,8 +1320,12 @@ function mountChickenRunGame(root: HTMLElement): void {
   canvas.addEventListener("pointerdown", activateFromPointer);
   document.addEventListener("keydown", onKeyDown);
   window.addEventListener("blur", pauseGame);
+  window.addEventListener("pagehide", persistSession);
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) pauseGame();
+    if (document.hidden) {
+      persistSession();
+      pauseGame();
+    }
   });
   window.addEventListener("resize", () => {
     if (active) {

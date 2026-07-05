@@ -28,6 +28,9 @@ async function importTypeScript(relativePath) {
 const snakeRules = await importTypeScript(
   "../src/scripts/games/snake-rules.ts",
 );
+const crane = await importTypeScript(
+  "../src/scripts/games/crane-rules.ts",
+);
 const rules = await importTypeScript(
   "../src/scripts/games/chicken-run-rules.ts",
 );
@@ -46,6 +49,97 @@ const weather = await importTypeScript(
 const background = await importTypeScript(
   "../src/scripts/games/chicken-run-background.ts",
 );
+
+assert.equal(crane.overlapAmount(0, 100, 30, 100), 70);
+assert.equal(crane.overlapAmount(0, 40, 100, 40), 0);
+
+const centeredLanding = crane.resolveLanding({
+  crateCenterX: 2,
+  crateWidth: 120,
+  crateMass: 1,
+  lowerCenterX: 0,
+  lowerWidth: 140,
+  lateralVelocity: 20,
+  towerHeight: 100,
+});
+assert.equal(centeredLanding.kind, "landed");
+assert.equal(centeredLanding.perfect, true);
+assert.ok(Math.abs(centeredLanding.impactImpulse) < 0.1);
+
+const recoverableOverhang = crane.resolveLanding({
+  crateCenterX: 54,
+  crateWidth: 120,
+  crateMass: 1.1,
+  lowerCenterX: 0,
+  lowerWidth: 120,
+  lateralVelocity: 35,
+  towerHeight: 240,
+});
+assert.equal(recoverableOverhang.kind, "landed");
+assert.equal(recoverableOverhang.perfect, false);
+assert.ok(recoverableOverhang.impactImpulse > 0);
+
+const missedLanding = crane.resolveLanding({
+  crateCenterX: 112,
+  crateWidth: 110,
+  crateMass: 1,
+  lowerCenterX: 0,
+  lowerWidth: 120,
+  lateralVelocity: 0,
+  towerHeight: 300,
+});
+assert.equal(missedLanding.kind, "miss");
+
+assert.deepEqual(
+  crane.nextCrateSpec(12345, 8),
+  crane.nextCrateSpec(12345, 8),
+);
+assert.notDeepEqual(
+  crane.nextCrateSpec(12345, 8),
+  crane.nextCrateSpec(12345, 9),
+);
+assert.equal(crane.windForHeight(1, 0).label, "CALM");
+assert.deepEqual(crane.windForHeight(999, 19), crane.windForHeight(999, 19));
+assert.ok(Math.abs(crane.windForHeight(999, 19).force) > 0);
+
+const rightHeavyLean = crane.calculateRestLean([
+  { id: 1, centerX: 18, bottom: 0, width: 120, height: 36, mass: 1 },
+  { id: 2, centerX: 34, bottom: 36, width: 112, height: 36, mass: 1.1 },
+]);
+const counterbalancedLean = crane.calculateRestLean([
+  { id: 1, centerX: 18, bottom: 0, width: 120, height: 36, mass: 1 },
+  { id: 2, centerX: -26, bottom: 36, width: 112, height: 36, mass: 1.1 },
+]);
+assert.ok(rightHeavyLean > 0);
+assert.ok(Math.abs(counterbalancedLean) < Math.abs(rightHeavyLean));
+assert.ok(crane.collapseAngleForHeight(700) < crane.collapseAngleForHeight(0));
+assert.equal(crane.toolForAward(0), "stabilizer");
+assert.equal(crane.toolForAward(1), "mag-lock");
+assert.equal(crane.toolForAward(2), "wide-load");
+assert.equal(crane.toolForAward(3), "windbreak");
+assert.equal(crane.toolForAward(4), "stabilizer");
+assert.deepEqual(crane.toolChoicesForAward(0), ["stabilizer", "mag-lock"]);
+assert.deepEqual(crane.toolChoicesForAward(1), ["wide-load", "windbreak"]);
+assert.equal(crane.shouldAwardTool(3, 4, false), true);
+assert.equal(crane.shouldAwardTool(1, 10, false), true);
+assert.equal(crane.shouldAwardTool(3, 10, true), false);
+const wideLoad = crane.wideLoadSpec({ width: 170, height: 54, mass: 1.1 });
+assert.ok(wideLoad.width >= 232);
+assert.ok(wideLoad.height <= 52);
+const magLockedLanding = crane.resolveLanding({
+  crateCenterX: 151,
+  crateWidth: 160,
+  crateMass: 1,
+  lowerCenterX: 0,
+  lowerWidth: 160,
+  lateralVelocity: 20,
+  towerHeight: 260,
+  magLocked: true,
+});
+assert.equal(magLockedLanding.kind, "landed");
+assert.equal(crane.trolleySpeedForHeight(0), 80);
+assert.ok(crane.trolleySpeedForHeight(30) > crane.trolleySpeedForHeight(0));
+assert.ok(crane.cableSwingForHeight(30) > crane.cableSwingForHeight(0));
 
 const wrappedRight = snakeRules.advanceSnake({
   snake: [
@@ -564,5 +658,5 @@ assert.ok(
 );
 
 console.log(
-  "Game rules OK: Snake wrapping, obstacle collisions, scoring, deterministic mazes, and Chicken Run movement, weather, terrain, background scenes, pacing, and sprite contrast.",
+  "Game rules OK: Snake wrapping, obstacle collisions, scoring, deterministic mazes; Stack Trace landings, wind, balance, tools, and difficulty; and Chicken Run movement, weather, terrain, background scenes, pacing, and sprite contrast.",
 );
