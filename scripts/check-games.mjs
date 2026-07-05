@@ -73,6 +73,8 @@ for (const retired of [
 const homePage = await readFile(new URL("../src/pages/index.astro", import.meta.url), "utf8");
 const controller = await readFile(new URL("../src/scripts/games/arcade-controller.ts", import.meta.url), "utf8");
 const craneRenderer = await readFile(new URL("../src/scripts/games/crane-renderer.ts", import.meta.url), "utf8");
+const craneComponent = await readFile(new URL("../src/components/games/CraneGame.astro", import.meta.url), "utf8");
+const craneScript = await readFile(new URL("../src/scripts/games/crane.ts", import.meta.url), "utf8");
 for (const name of ["SnakeGame", "CraneGame", "ChickenRunGame"]) {
   if (!homePage.includes(name)) failures.push(`homepage does not render ${name}`);
 }
@@ -82,6 +84,12 @@ for (const id of ["snake", "crane", "chicken"]) {
 }
 if (!controller.includes('aliases: ["crane"')) failures.push("arcade controller does not expose the crane command");
 if (craneRenderer.includes("drawDropGuide") || craneRenderer.includes("setLineDash")) failures.push("crane renderer still exposes a landing guide");
+if (!craneComponent.includes("data-crane-confirm")) failures.push("crane does not expose an in-game destructive-action confirmation");
+for (const label of ["PAUSE", "RESTART", "EXIT"]) {
+  if (!craneComponent.includes(`>${label}</button>`)) failures.push(`crane toolbar does not expose the ${label} label`);
+}
+if (!craneScript.includes("requestRestart")) failures.push("crane restart bypasses confirmation handling");
+if (!craneScript.includes("requestNewRun")) failures.push("crane new-run action bypasses saved-run confirmation handling");
 if (controller.includes(".observe(root, {")) failures.push("arcade controller broadly observes a whole game subtree and can create mutation feedback loops");
 if (!controller.includes("button.textContent !== label")) failures.push("pause-button synchronization is not idempotent");
 for (const [moduleName, mountName] of [

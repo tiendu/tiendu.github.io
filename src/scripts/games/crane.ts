@@ -45,6 +45,8 @@ interface CollapseState {
   direction: -1 | 1;
 }
 
+type ConfirmationAction = "restart" | "discard-save";
+
 interface CraneSessionState {
   score: number;
   highScoreAtRunStart: number;
@@ -159,8 +161,17 @@ function mountCraneGame(root: HTMLElement): void {
     root.querySelectorAll<HTMLButtonElement>("[data-crane-tool-choice]"),
   );
   const pauseButton = root.querySelector<HTMLButtonElement>('[data-crane-control="pause"]');
+  const restartButton = root.querySelector<HTMLButtonElement>('[data-crane-control="restart"]');
+  const exitButton = root.querySelector<HTMLButtonElement>('[data-crane-control="exit"]');
   const controlButtons = Array.from(
     root.querySelectorAll<HTMLButtonElement>("[data-crane-control]"),
+  );
+  const confirmPanel = root.querySelector<HTMLElement>("[data-crane-confirm]");
+  const confirmTitle = root.querySelector<HTMLElement>("[data-crane-confirm-title]");
+  const confirmMessage = root.querySelector<HTMLElement>("[data-crane-confirm-message]");
+  const confirmButton = root.querySelector<HTMLButtonElement>('[data-crane-confirm-action="confirm"]');
+  const confirmActionButtons = Array.from(
+    root.querySelectorAll<HTMLButtonElement>("[data-crane-confirm-action]"),
   );
 
   if (!canvas) return;
@@ -206,6 +217,8 @@ function mountCraneGame(root: HTMLElement): void {
   let lastNotice = "";
   let resumePrompt = false;
   let lastStableSession: CraneSessionState | null = null;
+  let pendingConfirmation: ConfirmationAction | null = null;
+  let resumeAfterConfirmation = false;
 
   const clearSession = (): void => {
     lastStableSession = null;
@@ -296,34 +309,29 @@ function mountCraneGame(root: HTMLElement): void {
   };
 
   const setPhase = (): void => {
-    root.dataset.cranePhase = resumePrompt
-      ? "ready"
-      : gameOver
-        ? "gameover"
-      : pendingToolChoices
-        ? "choosing"
-        : paused
-          ? "paused"
-          : collapse
-            ? "collapse"
-            : started
-              ? "running"
-              : "ready";
+    root.dataset.cranePhase = pendingConfirmation
+      ? "confirming"
+      : resumePrompt
+        ? "ready"
+        : gameOver
+          ? "gameover"
+          : pendingToolChoices
+            ? "choosing"
+            : paused
+              ? "paused"
+              : collapse
+                ? "collapse"
+                : started
+                  ? "running"
+                  : "ready";
   };
 
   const updateToolChoiceOverlay = (): void => {
     if (!choicePanel) return;
 
-    if (pendingToolChoices && !gameOver && !resumePrompt) {
+    if (pendingToolChoices && !gameOver && !resumePrompt && !pendingConfirmation) {
       choicePanel.hidden = false;
-      resumeButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      if (button.dataset.craneResume === "continue") continueSession();
-      else discardSession();
-    });
-  });
-
-  choiceButtons.forEach((button, index) => {
+      choiceButtons.forEach((button, index) => {
         const candidate = pendingToolChoices?.[index];
         button.hidden = !candidate;
         button.disabled = !candidate;
@@ -337,14 +345,22 @@ function mountCraneGame(root: HTMLElement): void {
 
   const updateControls = (): void => {
     setPhase();
+
     if (pauseButton) {
+      const text = paused ? "RESUME" : "PAUSE";
       const label = paused ? "Resume game" : "Pause game";
-      const glyph = paused ? "▶" : "Ⅱ";
-      if (pauseButton.textContent !== glyph) pauseButton.textContent = glyph;
+      if (pauseButton.textContent !== text) pauseButton.textContent = text;
       if (pauseButton.getAttribute("aria-label") !== label) pauseButton.setAttribute("aria-label", label);
-      if (pauseButton.title !== label) pauseButton.title = label;
-      pauseButton.disabled = !active || resumePrompt || !started || gameOver || Boolean(collapse) || Boolean(pendingToolChoices);
+      pauseButton.hidden = !active || resumePrompt || !started || gameOver || Boolean(collapse) || Boolean(pendingToolChoices);
+      pauseButton.disabled = Boolean(pendingConfirmation);
     }
+
+    if (restartButton) {
+      restartButton.hidden = !active || resumePrompt || (!started && !gameOver);
+      restartButton.disabled = Boolean(pendingConfirmation);
+    }
+
+    if (exitButton) exitButton.disabled = Boolean(pendingConfirmation);
     updateToolChoiceOverlay();
   };
 
@@ -540,7 +556,7 @@ function mountCraneGame(root: HTMLElement): void {
   };
 
   const dropCrate = (): void => {
-    if (!active || resumePrompt || pendingToolChoices) return;
+    if (!active || resumePrompt || pendingToolChoices || pendingConfirmation) return;
     if (!started || gameOver) {
       startRun();
       return;
@@ -568,7 +584,7 @@ function mountCraneGame(root: HTMLElement): void {
   };
 
   const togglePause = (): void => {
-    if (!active || !started || gameOver || collapse || pendingToolChoices) return;
+    if (!active || !started || gameOver || collapse || pendingToolChoices || pendingConfirmation) return;
     paused = !paused;
     if (paused) persistSession();
     setOverlay(
@@ -588,6 +604,9 @@ function mountCraneGame(root: HTMLElement): void {
 
   const resetRun = (startImmediately = true): void => {
     stopAnimation();
+    pendingConfirmation = null;
+    resumeAfterConfirmation = false;
+    if (confirmPanel) confirmPanel.hidden = true;
     clearSession();
     setResumePicker(false);
     score = 0;
@@ -640,6 +659,8 @@ function mountCraneGame(root: HTMLElement): void {
 
   const exitGame = (): void => {
     if (!active) return;
+    pendingConfirmation = null;
+    if (confirmPanel) confirmPanel.hidden = true;
     persistHighScore();
     persistSession();
     active = false;
@@ -740,7 +761,7 @@ function mountCraneGame(root: HTMLElement): void {
   };
 
   const shouldAnimate = (): boolean =>
-    active && started && !paused && !gameOver && !pendingToolChoices;
+    active && started && !paused && !gameOver && !pendingToolChoices && !pendingConfirmation;
 
   const stopAnimation = (): void => {
     if (animationFrame === null) return;
@@ -832,6 +853,78 @@ function mountCraneGame(root: HTMLElement): void {
     resetRun(true);
   };
 
+  const hideConfirmation = (): void => {
+    pendingConfirmation = null;
+    if (confirmPanel) confirmPanel.hidden = true;
+    updateScoreboard();
+  };
+
+  const showConfirmation = (
+    action: ConfirmationAction,
+    title: string,
+    message: string,
+    confirmText: string,
+  ): void => {
+    if (pendingConfirmation) return;
+    resumeAfterConfirmation = shouldAnimate();
+    pendingConfirmation = action;
+    if (confirmTitle) confirmTitle.textContent = title;
+    if (confirmMessage) confirmMessage.textContent = message;
+    if (confirmButton) confirmButton.textContent = confirmText;
+    if (confirmPanel) confirmPanel.hidden = false;
+    persistSession();
+    stopAnimation();
+    updateScoreboard();
+    confirmActionButtons[0]?.focus({ preventScroll: true });
+  };
+
+  const cancelConfirmation = (): void => {
+    if (!pendingConfirmation) return;
+    const shouldResume = resumeAfterConfirmation;
+    resumeAfterConfirmation = false;
+    hideConfirmation();
+    if (shouldResume) ensureAnimation();
+    canvas.focus({ preventScroll: true });
+  };
+
+  const confirmDestructiveAction = (): void => {
+    const action = pendingConfirmation;
+    if (!action) return;
+    resumeAfterConfirmation = false;
+    hideConfirmation();
+    if (action === "discard-save") setResumePicker(false);
+    resetRun(true);
+  };
+
+  const requestRestart = (): void => {
+    if (!active || pendingConfirmation) return;
+    const hasRecoverableProgress = !gameOver && !collapse && score > 0;
+    if (!hasRecoverableProgress) {
+      resetRun(true);
+      return;
+    }
+    showConfirmation(
+      "restart",
+      "RESTART RUN?",
+      `YOUR CURRENT TOWER AT HEIGHT ${format(score, 3)} WILL BE DISCARDED.`,
+      "RESTART",
+    );
+  };
+
+  const requestNewRun = (): void => {
+    if (!active || pendingConfirmation) return;
+    if (!resumePrompt || score <= 0) {
+      discardSession();
+      return;
+    }
+    showConfirmation(
+      "discard-save",
+      "START NEW RUN?",
+      `YOUR SAVED TOWER AT HEIGHT ${format(score, 3)} WILL BE DISCARDED.`,
+      "NEW RUN",
+    );
+  };
+
   const startGame = (): void => {
     if (active) return;
     active = true;
@@ -851,13 +944,23 @@ function mountCraneGame(root: HTMLElement): void {
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!active) return;
     const key = event.key.toLowerCase();
+    if (pendingConfirmation) {
+      if (key === "escape") {
+        event.preventDefault();
+        cancelConfirmation();
+      } else if (key === "enter") {
+        event.preventDefault();
+        confirmDestructiveAction();
+      }
+      return;
+    }
     if (resumePrompt) {
       if (key === "c" || key === " " || key === "enter") {
         event.preventDefault();
         continueSession();
       } else if (key === "n" || key === "r") {
         event.preventDefault();
-        discardSession();
+        requestNewRun();
       } else if (key === "escape") {
         event.preventDefault();
         exitGame();
@@ -872,7 +975,7 @@ function mountCraneGame(root: HTMLElement): void {
       togglePause();
     } else if (key === "r") {
       event.preventDefault();
-      resetRun(true);
+      requestRestart();
     } else if (key === "escape") {
       event.preventDefault();
       exitGame();
@@ -884,7 +987,7 @@ function mountCraneGame(root: HTMLElement): void {
   resumeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       if (button.dataset.craneResume === "continue") continueSession();
-      else discardSession();
+      else requestNewRun();
     });
   });
 
@@ -896,14 +999,21 @@ function mountCraneGame(root: HTMLElement): void {
     button.addEventListener("click", () => {
       const action = button.dataset.craneControl;
       if (action === "pause") togglePause();
-      else if (action === "restart") resetRun(true);
+      else if (action === "restart") requestRestart();
       else if (action === "exit") exitGame();
+    });
+  });
+
+  confirmActionButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.craneConfirmAction === "confirm") confirmDestructiveAction();
+      else cancelConfirmation();
     });
   });
 
   window.addEventListener("pagehide", persistSession);
   window.addEventListener("blur", () => {
-    if (!active || !started || paused || gameOver || collapse || pendingToolChoices) return;
+    if (!active || !started || paused || gameOver || collapse || pendingToolChoices || pendingConfirmation) return;
     paused = true;
     persistSession();
     setOverlay("PAUSED", "TAP PAUSE OR PRESS P TO RESUME", true);
