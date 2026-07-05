@@ -60,18 +60,6 @@
     top: 1rem;
   }
 
-  .terminal-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-    margin-top: 0.9rem;
-  }
-
-  .terminal-actions a,
-  .terminal-actions a:visited {
-    font-size: 1rem;
-    min-height: 44px;
-  }
-
   .terminal-footer {
     align-items: flex-start;
     flex-wrap: wrap;

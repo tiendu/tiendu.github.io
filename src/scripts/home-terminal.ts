@@ -93,9 +93,6 @@ function mountTerminal(wrapper: HTMLElement): void {
   const response = wrapper.querySelector<HTMLElement>(
     "[data-terminal-response]",
   );
-  const terminalActions = wrapper.querySelector<HTMLElement>(
-    "[data-terminal-actions]",
-  );
   const skipButton = wrapper.querySelector<HTMLButtonElement>(
     "[data-terminal-skip]",
   );
@@ -187,7 +184,6 @@ function mountTerminal(wrapper: HTMLElement): void {
 
     introFinished = true;
     commandCursor?.classList.add("cursor-hidden");
-    terminalActions?.classList.add("is-visible");
     skipButton?.setAttribute("hidden", "");
 
     try {

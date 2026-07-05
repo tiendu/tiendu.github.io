@@ -223,43 +223,6 @@ body.terminal-home .terminal-page-content {
   color: var(--terminal-green-bright);
 }
 
-.terminal-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-top: 1.2rem;
-  opacity: 1;
-  transform: translateY(0);
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
-}
-
-.landing-wrapper.terminal-typing-enabled .terminal-actions {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(0.3rem);
-  visibility: hidden;
-}
-
-.terminal-actions a,
-.terminal-actions a:visited {
-  border: 1px solid rgb(199 240 139 / 26%);
-  color: var(--terminal-green);
-  font-size: clamp(0.96rem, 1.5vw, 1.08rem);
-  letter-spacing: 0.055em;
-  min-height: 42px;
-  padding: 0.55rem 0.75rem;
-  text-decoration: none;
-}
-
-.terminal-actions a:hover,
-.terminal-actions a:focus-visible {
-  background: rgb(199 240 139 / 9%);
-  border-color: var(--terminal-green);
-  color: var(--terminal-green-bright);
-}
-
 .terminal-response {
   border-left: 2px solid rgb(199 240 139 / 28%);
   color: var(--terminal-green-dim);

@@ -358,34 +358,105 @@ export function createSnakeRenderer(
     context.restore();
   };
 
-  const drawSnakeSegment = (
-    point: FloatPoint,
-    isHead: boolean,
-    direction: Point,
+  const strokeSnakeLink = (
+    from: FloatPoint,
+    to: FloatPoint,
+    offsetX: number,
+    offsetY: number,
   ): void => {
-    const elevation = isHead ? 5 : 4;
-    const inset = isHead ? 2 : 3;
-    const palette: PrismPalette = isHead
-      ? {
-          top: "#e7ffb0",
-          right: "#769e54",
-          bottom: "#8dbd64",
-          outline: "rgba(255, 255, 226, 0.68)",
-          glow: "rgba(231, 255, 176, 0.5)",
-        }
-      : {
-          top: "#9fcf71",
-          right: "#496c37",
-          bottom: "#638d49",
-          outline: "rgba(231, 255, 176, 0.25)",
-          glow: "rgba(199, 240, 139, 0.16)",
-        };
+    const deltaX = wrappedDelta(from.x, to.x, gridSize);
+    const deltaY = wrappedDelta(from.y, to.y, gridSize);
 
-    drawPrism(point, inset, elevation, palette, 3);
+    for (const copy of wrappedCopies(from, gridSize)) {
+      const startX = BOARD_X + copy.x * CELL_SIZE + CELL_SIZE / 2 + offsetX;
+      const startY = BOARD_Y + copy.y * CELL_SIZE + CELL_SIZE / 2 + offsetY;
+      const endX =
+        BOARD_X + (copy.x + deltaX) * CELL_SIZE + CELL_SIZE / 2 + offsetX;
+      const endY =
+        BOARD_Y + (copy.y + deltaY) * CELL_SIZE + CELL_SIZE / 2 + offsetY;
 
-    if (!isHead) {
+      context.beginPath();
+      context.moveTo(startX, startY);
+      context.lineTo(endX, endY);
+      context.stroke();
+    }
+  };
+
+  const strokeSnakeBody = (
+    points: readonly FloatPoint[],
+    offsetX: number,
+    offsetY: number,
+  ): void => {
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const from = points[index];
+      const to = points[index + 1];
+
+      if (from && to) {
+        strokeSnakeLink(from, to, offsetX, offsetY);
+      }
+    }
+  };
+
+  const drawSnakeBodyShadow = (points: readonly FloatPoint[]): void => {
+    if (points.length < 2) {
       return;
     }
+
+    context.save();
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.lineWidth = 16;
+    context.strokeStyle = "rgba(0, 0, 0, 0.42)";
+    context.shadowColor = "rgba(0, 0, 0, 0.62)";
+    context.shadowBlur = 5;
+    strokeSnakeBody(points, 3, 3);
+    context.restore();
+  };
+
+  const drawSnakeBody = (points: readonly FloatPoint[]): void => {
+    if (points.length < 2) {
+      return;
+    }
+
+    context.save();
+    context.lineCap = "round";
+    context.lineJoin = "round";
+
+    // Draw each visual layer across the whole body before moving to the next.
+    // This keeps internal joints covered instead of outlining every grid cell.
+    context.lineWidth = 15;
+    context.strokeStyle = "#496c37";
+    strokeSnakeBody(points, 3, -1);
+
+    context.lineWidth = 15.5;
+    context.strokeStyle = "rgba(231, 255, 176, 0.25)";
+    strokeSnakeBody(points, 0, -4);
+
+    context.lineWidth = 14;
+    context.strokeStyle = "#9fcf71";
+    context.shadowColor = "rgba(199, 240, 139, 0.16)";
+    context.shadowBlur = 8;
+    strokeSnakeBody(points, 0, -4);
+    context.restore();
+  };
+
+  const drawSnakeHead = (point: FloatPoint, direction: Point): void => {
+    const elevation = 5;
+    const inset = 2;
+
+    drawPrism(
+      point,
+      inset,
+      elevation,
+      {
+        top: "#e7ffb0",
+        right: "#769e54",
+        bottom: "#8dbd64",
+        outline: "rgba(255, 255, 226, 0.68)",
+        glow: "rgba(231, 255, 176, 0.5)",
+      },
+      3,
+    );
 
     const rect = cellRect(point, inset);
     const topY = rect.y - elevation;
@@ -562,19 +633,19 @@ export function createSnakeRenderer(
       });
     }
 
-    state.snake.forEach((segment, index) => {
+    const interpolatedSnake = state.snake.map((segment, index) => {
       const previous =
         state.previousSnake[index] ??
         state.previousSnake[state.previousSnake.length - 1] ??
         segment;
-      const interpolated = interpolatePoint(
-        previous,
-        segment,
-        progress,
-        gridSize,
-      );
 
-      for (const copy of wrappedCopies(interpolated, gridSize)) {
+      return interpolatePoint(previous, segment, progress, gridSize);
+    });
+
+    const head = interpolatedSnake[0];
+
+    if (head) {
+      for (const copy of wrappedCopies(head, gridSize)) {
         if (
           copy.x < -1 ||
           copy.x > gridSize ||
@@ -585,15 +656,16 @@ export function createSnakeRenderer(
         }
 
         renderables.push({
-          depth: copy.y + 0.6 + index * 0.0001,
-          drawShadow: () => drawShadow(copy, index === 0 ? 2 : 3, 0.36, 5),
-          drawObject: () =>
-            drawSnakeSegment(copy, index === 0, state.direction),
+          depth: copy.y + 0.6,
+          drawShadow: () => drawShadow(copy, 2, 0.36, 5),
+          drawObject: () => drawSnakeHead(copy, state.direction),
         });
       }
-    });
+    }
 
+    drawSnakeBodyShadow(interpolatedSnake);
     renderables.forEach((renderable) => renderable.drawShadow());
+    drawSnakeBody(interpolatedSnake);
     renderables
       .sort((left, right) => left.depth - right.depth)
       .forEach((renderable) => renderable.drawObject());
