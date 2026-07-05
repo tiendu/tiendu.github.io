@@ -17,10 +17,18 @@ profile after a game exits.
 
 | Command    | Component              | Logic            | Styles                 |
 | ---------- | ---------------------- | ---------------- | ---------------------- |
-| `snake`    | `SnakeGame.astro`      | `snake.ts`       | `snake-game.css`       |
+| `snake`    | `SnakeGame.astro`      | `snake.ts` + `snake-rules.ts` | `snake-game.css`       |
 | `invaders` | `InvadersGame.astro`   | `invaders.ts`    | `invaders-game.css`    |
 | `breakout` | `BreakoutGame.astro`   | `breakout.ts`    | `breakout-game.css`    |
 | `chicken`  | `ChickenRunGame.astro` | `chicken-run.ts` | `chicken-run-game.css` |
+
+## Snake modules
+
+Snake keeps browser lifecycle and rendering in `snake.ts`, while
+`snake-rules.ts` contains deterministic movement, wrapping, collision, spawn,
+bonus-score, and seeded obstacle-layout rules. Both Free and Maze wrap at the
+board edges; Maze is Free mode with solid obstacles. Restarting retries the same
+seeded layout, while selecting Maze again creates a new one.
 
 ## Free Range modules
 
@@ -81,7 +89,9 @@ an inheritance hierarchy.
 ## Tests and guardrails
 
 `make games` checks the component/module boundary and runs deterministic tests
-for the chicken runner's speed curve, obstacle spacing, coyote time, jump and
+for Snake wrapping, obstacle and self collisions, growth, bonus scoring, spawn
+safety, and seeded maze generation, plus the chicken runner's speed curve,
+obstacle spacing, coyote time, jump and
 flap decisions, day/night boundaries, weather, long terrain, terrain-aware
 background chunks, landmark placement, egg offering, fox pressure, world-palette
 contrast, fixed chicken-sprite contrast, and celestial visibility. `make verify`

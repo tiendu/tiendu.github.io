@@ -9,7 +9,7 @@ import "../../styles/components/snake-game.css";
   aria-label="Snake game"
   hidden
 >
-  <div class="arcade-scoreboard snake-scoreboard" aria-live="polite">
+  <div class="arcade-scoreboard snake-scoreboard">
     <span>MODE <output data-snake-mode>--</output></span>
     <span>SCORE <output data-snake-score>0000</output></span>
     <span
@@ -27,19 +27,22 @@ import "../../styles/components/snake-game.css";
     <canvas
       class="arcade-board snake-board"
       data-snake-canvas
-      width="400"
-      height="400"
+      width="440"
+      height="444"
       tabindex="0"
       aria-label="Snake game board. Use arrow keys or W A S D to move."
-    ></canvas>
+    >
+      Snake requires a browser with canvas support.
+    </canvas>
 
     <div class="arcade-overlay snake-overlay" data-snake-overlay>
       <strong data-snake-state>SELECT MODE</strong>
-      <span data-snake-message>FREE WRAPS · MAZE HAS WALLS</span>
+      <span data-snake-message>FREE WRAPS · MAZE WRAPS + OBSTACLES</span>
 
       <div
         class="snake-mode-picker"
         data-snake-mode-picker
+        role="group"
         aria-label="Select Snake game mode"
       >
         <button type="button" data-snake-mode="free">
@@ -48,7 +51,7 @@ import "../../styles/components/snake-game.css";
         </button>
         <button type="button" data-snake-mode="maze">
           MAZE
-          <small>WALLS + OBSTACLES</small>
+          <small>WRAP + OBSTACLES</small>
         </button>
       </div>
     </div>
@@ -62,8 +65,15 @@ import "../../styles/components/snake-game.css";
   </div>
 
   <p class="arcade-help snake-help">
-    ARROWS/WASD MOVE · P PAUSE · R RESTART · ESC EXIT
+    ARROWS/WASD MOVE · P PAUSE · R RETRY · ESC EXIT
   </p>
+
+  <p
+    class="sr-only"
+    data-snake-status
+    aria-live="polite"
+    aria-atomic="true"
+  ></p>
 </section>
 
 <script>

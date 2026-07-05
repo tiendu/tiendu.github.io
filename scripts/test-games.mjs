@@ -25,6 +25,9 @@ async function importTypeScript(relativePath) {
   return import(`data:text/javascript;base64,${encoded}`);
 }
 
+const snakeRules = await importTypeScript(
+  "../src/scripts/games/snake-rules.ts",
+);
 const rules = await importTypeScript(
   "../src/scripts/games/chicken-run-rules.ts",
 );
@@ -43,6 +46,150 @@ const weather = await importTypeScript(
 const background = await importTypeScript(
   "../src/scripts/games/chicken-run-background.ts",
 );
+
+const wrappedRight = snakeRules.advanceSnake({
+  snake: [
+    { x: 19, y: 10 },
+    { x: 18, y: 10 },
+    { x: 17, y: 10 },
+  ],
+  direction: { x: 1, y: 0 },
+  food: null,
+  bonusFood: null,
+  obstacles: new Set(),
+  gridSize: 20,
+});
+assert.equal(wrappedRight.kind, "move");
+assert.deepEqual(wrappedRight.head, { x: 0, y: 10 });
+assert.equal(wrappedRight.snake.length, 3);
+
+const wrappedObstacle = snakeRules.advanceSnake({
+  snake: [
+    { x: 19, y: 10 },
+    { x: 18, y: 10 },
+  ],
+  direction: { x: 1, y: 0 },
+  food: null,
+  bonusFood: null,
+  obstacles: new Set(["0,10"]),
+  gridSize: 20,
+});
+assert.equal(wrappedObstacle.kind, "collision");
+assert.equal(wrappedObstacle.collision, "obstacle");
+assert.deepEqual(wrappedObstacle.head, { x: 0, y: 10 });
+
+const departingTail = snakeRules.advanceSnake({
+  snake: [
+    { x: 1, y: 1 },
+    { x: 1, y: 2 },
+    { x: 0, y: 2 },
+    { x: 0, y: 1 },
+  ],
+  direction: { x: -1, y: 0 },
+  food: null,
+  bonusFood: null,
+  obstacles: new Set(),
+  gridSize: 20,
+});
+assert.equal(departingTail.kind, "move");
+assert.deepEqual(departingTail.head, { x: 0, y: 1 });
+
+const growingIntoTail = snakeRules.advanceSnake({
+  snake: [
+    { x: 1, y: 1 },
+    { x: 1, y: 2 },
+    { x: 0, y: 2 },
+    { x: 0, y: 1 },
+  ],
+  direction: { x: -1, y: 0 },
+  food: { x: 0, y: 1 },
+  bonusFood: null,
+  obstacles: new Set(),
+  gridSize: 20,
+});
+assert.equal(growingIntoTail.kind, "collision");
+assert.equal(growingIntoTail.collision, "self");
+
+const regularFoodStep = snakeRules.advanceSnake({
+  snake: [
+    { x: 5, y: 5 },
+    { x: 4, y: 5 },
+  ],
+  direction: { x: 1, y: 0 },
+  food: { x: 6, y: 5 },
+  bonusFood: null,
+  obstacles: new Set(),
+  gridSize: 20,
+});
+assert.equal(regularFoodStep.kind, "regular-food");
+assert.equal(regularFoodStep.snake.length, 3);
+
+const bonusFoodStep = snakeRules.advanceSnake({
+  snake: [
+    { x: 5, y: 5 },
+    { x: 4, y: 5 },
+  ],
+  direction: { x: 1, y: 0 },
+  food: null,
+  bonusFood: { x: 6, y: 5 },
+  obstacles: new Set(),
+  gridSize: 20,
+});
+assert.equal(bonusFoodStep.kind, "bonus-food");
+assert.equal(bonusFoodStep.snake.length, 2);
+
+assert.equal(
+  snakeRules.isOppositeDirection({ x: 1, y: 0 }, { x: -1, y: 0 }),
+  true,
+);
+assert.equal(
+  snakeRules.isOppositeDirection({ x: 1, y: 0 }, { x: 0, y: -1 }),
+  false,
+);
+
+assert.equal(snakeRules.calculateBonusPoints(5_000, 5_000, 40, 120), 120);
+assert.equal(snakeRules.calculateBonusPoints(1, 5_000, 40, 120), 40);
+assert.equal(snakeRules.calculateBonusPoints(625, 5_000, 40, 120), 50);
+
+const deterministicMazeA = snakeRules.generateMaze(123_456, 20);
+const deterministicMazeB = snakeRules.generateMaze(123_456, 20);
+assert.deepEqual(
+  [...deterministicMazeA.obstacles].sort(),
+  [...deterministicMazeB.obstacles].sort(),
+);
+assert.ok(deterministicMazeA.obstacles.size >= 14);
+assert.equal(deterministicMazeA.obstacles.has("9,10"), false);
+assert.ok(deterministicMazeA.reachableCells.length >= 250);
+
+const wrappingOnlyOpenCells = new Set();
+for (let y = 0; y < 5; y += 1) {
+  for (let x = 0; x < 5; x += 1) {
+    if (!((x === 0 || x === 4) && y === 0)) {
+      wrappingOnlyOpenCells.add(`${x},${y}`);
+    }
+  }
+}
+const wrappingReachable = snakeRules.reachableCells(
+  wrappingOnlyOpenCells,
+  5,
+  { x: 0, y: 0 },
+);
+assert.deepEqual([...wrappingReachable].sort(), ["0,0", "4,0"]);
+
+const spawnCells = snakeRules.availableSpawnCells({
+  candidates: [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: 2, y: 0 },
+    { x: 3, y: 0 },
+    { x: 4, y: 0 },
+  ],
+  snake: [{ x: 0, y: 0 }],
+  obstacles: new Set(["1,0"]),
+  food: { x: 2, y: 0 },
+  bonusFood: { x: 3, y: 0 },
+});
+assert.deepEqual(spawnCells, [{ x: 4, y: 0 }]);
 
 assert.equal(rules.speedForScore(0), 220);
 assert.equal(rules.speedForScore(179), 220);
@@ -417,5 +564,5 @@ assert.ok(
 );
 
 console.log(
-  "Game rules OK: movement, weather, long terrain, terrain-aware background scenes, course patterns, egg reserve, day/night pacing, fox pressure, and fixed sprite contrast.",
+  "Game rules OK: Snake wrapping, obstacle collisions, scoring, deterministic mazes, and Chicken Run movement, weather, terrain, background scenes, pacing, and sprite contrast.",
 );

@@ -1,7 +1,7 @@
 /* Snake-specific board, mode picker, and direction controls. */
 
 .snake-panel {
-  max-width: 430px;
+  max-width: 470px;
 }
 
 .snake-scoreboard {
@@ -27,13 +27,15 @@
 }
 
 .snake-board-frame {
+  background: #010302;
   box-shadow:
     inset 0 0 24px rgb(0 0 0 / 58%),
-    0 0 16px rgb(199 240 139 / 7%);
+    0 10px 28px rgb(0 0 0 / 34%),
+    0 0 18px rgb(199 240 139 / 9%);
 }
 
 .snake-board {
-  aspect-ratio: 1;
+  aspect-ratio: 440 / 444;
 }
 
 .snake-overlay {
@@ -99,16 +101,16 @@
   grid-template-areas:
     ". up ."
     "left down right";
-  grid-template-columns: repeat(3, 44px);
+  grid-template-columns: repeat(3, 48px);
   max-width: none;
 }
 
 .snake-pad button {
   font-family: var(--font-mono);
   font-size: 0.9rem;
-  height: 38px;
+  height: 48px;
   padding: 0;
-  width: 44px;
+  width: 48px;
 }
 
 .snake-pad button[data-snake-direction="up"] {

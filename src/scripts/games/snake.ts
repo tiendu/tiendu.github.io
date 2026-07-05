@@ -1,14 +1,22 @@
-import { configureFixedCanvas } from "./shared/canvas";
+import {
+  advanceSnake,
+  allBoardCells,
+  availableSpawnCells,
+  calculateBonusPoints,
+  generateMaze,
+  isOppositeDirection,
+  startingSnake,
+  type Point,
+  type SnakeMode,
+} from "./snake-rules";
 import { dispatchGameExit, GAME_EVENTS } from "./shared/events";
+import {
+  createSnakeRenderer,
+  type SnakeVisualEffect,
+} from "./snake-renderer";
 import { mountAllGames } from "./shared/mount";
 import { readStoredScore, writeStoredScore } from "./shared/storage";
 
-interface Point {
-  x: number;
-  y: number;
-}
-
-type SnakeMode = "free" | "maze";
 type DirectionName = "up" | "down" | "left" | "right";
 
 export function mountSnakeGames(): void {
@@ -32,6 +40,7 @@ function mountSnakeGame(root: HTMLElement): void {
   const overlay = root.querySelector<HTMLElement>("[data-snake-overlay]");
   const stateLabel = root.querySelector<HTMLElement>("[data-snake-state]");
   const messageLabel = root.querySelector<HTMLElement>("[data-snake-message]");
+  const statusLabel = root.querySelector<HTMLElement>("[data-snake-status]");
   const modePicker = root.querySelector<HTMLElement>(
     "[data-snake-mode-picker]",
   );
@@ -53,17 +62,19 @@ function mountSnakeGame(root: HTMLElement): void {
   }
 
   const GRID_SIZE = 20;
-  const BOARD_SIZE = 400;
-  const CELL_SIZE = BOARD_SIZE / GRID_SIZE;
   const START_SPEED = 132;
   const MIN_SPEED = 72;
   const BONUS_TRIGGER_FOODS = 5;
   const BONUS_DURATION_MS = 5000;
   const BONUS_MIN_SCORE = 40;
   const BONUS_MAX_SCORE = 120;
-  const MAZE_SEGMENTS = 7;
-  const MAZE_MIN_REACHABLE_RATIO = 0.72;
-  const HIGH_SCORE_KEY = "tiendu-snake-high-score";
+  const HIGH_SCORE_KEYS: Record<SnakeMode, string> = {
+    free: "tiendu-snake-high-score-free",
+    maze: "tiendu-snake-high-score-maze",
+  };
+  const LEGACY_HIGH_SCORE_KEY = "tiendu-snake-high-score";
+  const boardCells = allBoardCells(GRID_SIZE);
+  const renderer = createSnakeRenderer(canvas, context, GRID_SIZE);
 
   const directions: Record<DirectionName, Point> = {
     up: { x: 0, y: -1 },
@@ -77,7 +88,9 @@ function mountSnakeGame(root: HTMLElement): void {
   let paused = false;
   let gameOver = false;
   let mode: SnakeMode | null = null;
+  let mazeSeed: number | null = null;
   let snake: Point[] = [];
+  let previousSnake: Point[] = [];
   let food: Point | null = null;
   let obstacles = new Set<string>();
   let mazeReachableCells: Point[] = [];
@@ -88,24 +101,49 @@ function mountSnakeGame(root: HTMLElement): void {
   let queuedDirection = directions.right;
   let score = 0;
   let highScore = 0;
+  let newHighScoreThisRun = false;
   let speed = START_SPEED;
   let animationFrame: number | null = null;
   let previousTime = 0;
   let accumulator = 0;
   let pointerStart: Point | null = null;
+  let pointerId: number | null = null;
+  let eatEffect: SnakeVisualEffect | null = null;
+  let collisionEffect: SnakeVisualEffect | null = null;
 
   const formatScore = (value: number): string => String(value).padStart(4, "0");
 
-  const readHighScore = (): number => readStoredScore(HIGH_SCORE_KEY);
+  const readHighScore = (selectedMode: SnakeMode): number => {
+    const storedScore = readStoredScore(HIGH_SCORE_KEYS[selectedMode]);
 
-  const saveHighScore = () => {
-    if (score <= highScore) {
-      return;
+    if (storedScore > 0 || selectedMode === "maze") {
+      return storedScore;
+    }
+
+    const legacyScore = readStoredScore(LEGACY_HIGH_SCORE_KEY);
+
+    if (legacyScore > 0) {
+      writeStoredScore(HIGH_SCORE_KEYS.free, legacyScore);
+    }
+
+    return legacyScore;
+  };
+
+  const saveHighScore = (): boolean => {
+    if (!mode || score <= highScore) {
+      return false;
     }
 
     highScore = score;
+    newHighScoreThisRun = true;
+    writeStoredScore(HIGH_SCORE_KEYS[mode], highScore);
+    return true;
+  };
 
-    writeStoredScore(HIGH_SCORE_KEY, highScore);
+  const announce = (message: string): void => {
+    if (statusLabel) {
+      statusLabel.textContent = message;
+    }
   };
 
   const updateScoreboard = () => {
@@ -165,347 +203,56 @@ function mountSnakeGame(root: HTMLElement): void {
     }
   };
 
-  const cellKey = (x: number, y: number): string => `${x},${y}`;
+  const getSpawnCells = (): Point[] =>
+    availableSpawnCells({
+      candidates: mode === "maze" ? mazeReachableCells : boardCells,
+      snake,
+      obstacles,
+      food,
+      bonusFood,
+    });
 
-  const isInsideBoard = (x: number, y: number): boolean =>
-    x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
-
-  const isObstacle = (x: number, y: number): boolean =>
-    obstacles.has(cellKey(x, y));
-
-  const isSnakeCell = (x: number, y: number): boolean =>
-    snake.some((segment) => segment.x === x && segment.y === y);
-
-  const startingSnake = (): Point[] => [
-    { x: 9, y: 10 },
-    { x: 8, y: 10 },
-    { x: 7, y: 10 },
-    { x: 6, y: 10 },
-  ];
-
-  const isReservedStartCell = (x: number, y: number): boolean =>
-    x >= 4 && x <= 13 && y >= 8 && y <= 12;
-
-  const floodFill = (blockedCells: Set<string>): Set<string> => {
-    const start = { x: 9, y: 10 };
-    const visited = new Set([cellKey(start.x, start.y)]);
-    const queue = [start];
-
-    while (queue.length > 0) {
-      const current = queue.shift();
-
-      if (!current) {
-        break;
-      }
-
-      const neighbors = [
-        { x: current.x + 1, y: current.y },
-        { x: current.x - 1, y: current.y },
-        { x: current.x, y: current.y + 1 },
-        { x: current.x, y: current.y - 1 },
-      ];
-
-      for (const neighbor of neighbors) {
-        const key = cellKey(neighbor.x, neighbor.y);
-
-        if (
-          !isInsideBoard(neighbor.x, neighbor.y) ||
-          blockedCells.has(key) ||
-          visited.has(key)
-        ) {
-          continue;
-        }
-
-        visited.add(key);
-        queue.push(neighbor);
-      }
+  const createMazeSeed = (): number => {
+    if (globalThis.crypto) {
+      const seed = new Uint32Array(1);
+      globalThis.crypto.getRandomValues(seed);
+      return seed[0] ?? 0;
     }
 
-    return visited;
+    return Date.now() ^ Math.floor(performance.now());
   };
 
-  const generateMaze = () => {
-    for (let attempt = 0; attempt < 80; attempt += 1) {
-      const candidate = new Set<string>();
-
-      for (
-        let segmentIndex = 0;
-        segmentIndex < MAZE_SEGMENTS;
-        segmentIndex += 1
-      ) {
-        const horizontal = Math.random() < 0.5;
-        const length = 3 + Math.floor(Math.random() * 4);
-        const maxX = horizontal ? GRID_SIZE - length - 1 : GRID_SIZE - 2;
-        const maxY = horizontal ? GRID_SIZE - 2 : GRID_SIZE - length - 1;
-        const startX = 1 + Math.floor(Math.random() * Math.max(1, maxX));
-        const startY = 1 + Math.floor(Math.random() * Math.max(1, maxY));
-        const cells = [];
-
-        for (let offset = 0; offset < length; offset += 1) {
-          const x = horizontal ? startX + offset : startX;
-          const y = horizontal ? startY : startY + offset;
-          cells.push({ x, y });
-        }
-
-        if (cells.some(({ x, y }) => isReservedStartCell(x, y))) {
-          continue;
-        }
-
-        cells.forEach(({ x, y }) => candidate.add(cellKey(x, y)));
-      }
-
-      const reachable = floodFill(candidate);
-      const freeCellCount = GRID_SIZE * GRID_SIZE - candidate.size;
-
-      if (
-        candidate.size >= 14 &&
-        reachable.size >= freeCellCount * MAZE_MIN_REACHABLE_RATIO
-      ) {
-        obstacles = candidate;
-        mazeReachableCells = Array.from(reachable, (key) => {
-          const [x = 0, y = 0] = key.split(",").map(Number);
-          return { x, y };
-        });
-        return;
-      }
+  const clearPointerGesture = (): void => {
+    if (pointerId !== null && canvas.hasPointerCapture(pointerId)) {
+      canvas.releasePointerCapture(pointerId);
     }
 
-    /*
-     * Deterministic fallback. It keeps the starting corridor open and
-     * cannot divide the board into isolated food regions.
-     */
-    const fallbackSegments = [
-      [
-        { x: 2, y: 4 },
-        { x: 3, y: 4 },
-        { x: 4, y: 4 },
-        { x: 5, y: 4 },
-      ],
-      [
-        { x: 14, y: 3 },
-        { x: 14, y: 4 },
-        { x: 14, y: 5 },
-        { x: 14, y: 6 },
-      ],
-      [
-        { x: 3, y: 15 },
-        { x: 4, y: 15 },
-        { x: 5, y: 15 },
-        { x: 6, y: 15 },
-      ],
-      [
-        { x: 15, y: 14 },
-        { x: 16, y: 14 },
-        { x: 17, y: 14 },
-      ],
-      [
-        { x: 11, y: 17 },
-        { x: 11, y: 18 },
-      ],
-    ];
-
-    obstacles = new Set(
-      fallbackSegments.flat().map(({ x, y }) => cellKey(x, y)),
-    );
-
-    mazeReachableCells = Array.from(floodFill(obstacles), (key) => {
-      const [x = 0, y = 0] = key.split(",").map(Number);
-      return { x, y };
-    });
-  };
-
-  const getSpawnCells = () => {
-    const candidates =
-      mode === "maze"
-        ? mazeReachableCells
-        : Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, index) => ({
-            x: index % GRID_SIZE,
-            y: Math.floor(index / GRID_SIZE),
-          }));
-
-    return candidates.filter(({ x, y }) => {
-      const occupiedByFood = food && food.x === x && food.y === y;
-      const occupiedByBonus =
-        bonusFood && bonusFood.x === x && bonusFood.y === y;
-
-      return (
-        !isObstacle(x, y) &&
-        !isSnakeCell(x, y) &&
-        !occupiedByFood &&
-        !occupiedByBonus
-      );
-    });
+    pointerStart = null;
+    pointerId = null;
   };
 
   const configureCanvas = (): void => {
-    configureFixedCanvas(canvas, context, BOARD_SIZE, BOARD_SIZE);
+    renderer.configure();
   };
 
-  const drawGrid = () => {
-    context.strokeStyle = "rgba(199, 240, 139, 0.055)";
-    context.lineWidth = 1;
+  const draw = (time = performance.now()): void => {
+    const movementProgress =
+      started || paused ? Math.min(1, accumulator / speed) : 1;
 
-    for (let index = 1; index < GRID_SIZE; index += 1) {
-      const position = index * CELL_SIZE + 0.5;
-
-      context.beginPath();
-      context.moveTo(position, 0);
-      context.lineTo(position, BOARD_SIZE);
-      context.stroke();
-
-      context.beginPath();
-      context.moveTo(0, position);
-      context.lineTo(BOARD_SIZE, position);
-      context.stroke();
-    }
-  };
-
-  const drawFood = () => {
-    if (!food) {
-      return;
-    }
-
-    const centerX = food.x * CELL_SIZE + CELL_SIZE / 2;
-    const centerY = food.y * CELL_SIZE + CELL_SIZE / 2;
-    const radius = CELL_SIZE * 0.32;
-
-    context.save();
-    context.translate(centerX, centerY);
-    context.rotate(Math.PI / 4);
-    context.fillStyle = "#d9805d";
-    context.shadowColor = "rgba(217, 128, 93, 0.75)";
-    context.shadowBlur = 10;
-    context.fillRect(-radius, -radius, radius * 2, radius * 2);
-    context.restore();
-  };
-
-  const drawBonusFood = () => {
-    if (!bonusFood) {
-      return;
-    }
-
-    const originX = bonusFood.x * CELL_SIZE;
-    const originY = bonusFood.y * CELL_SIZE;
-    const flashing =
-      bonusRemainingMs <= 2000 && Math.floor(bonusRemainingMs / 160) % 2 === 0;
-
-    context.save();
-    context.globalAlpha = flashing ? 0.34 : 1;
-    context.fillStyle = "#f0c36f";
-    context.shadowColor = "rgba(240, 195, 111, 0.9)";
-    context.shadowBlur = 15;
-
-    /*
-     * A large pixel-style meal: visibly different from the normal diamond,
-     * while still occupying one logical grid cell.
-     */
-    context.fillRect(originX + 6, originY + 1, 8, 18);
-    context.fillRect(originX + 1, originY + 6, 18, 8);
-
-    context.shadowBlur = 0;
-    context.fillStyle = "#07120b";
-    context.fillRect(originX + 8, originY + 8, 4, 4);
-    context.restore();
-  };
-
-  const drawObstacles = () => {
-    if (mode !== "maze") {
-      return;
-    }
-
-    context.save();
-
-    obstacles.forEach((key) => {
-      const [x = 0, y = 0] = key.split(",").map(Number);
-      const originX = x * CELL_SIZE;
-      const originY = y * CELL_SIZE;
-
-      context.fillStyle = "#536b3d";
-      context.shadowColor = "rgba(127, 164, 92, 0.28)";
-      context.shadowBlur = 5;
-      context.fillRect(originX + 2, originY + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-
-      context.shadowBlur = 0;
-      context.strokeStyle = "rgba(231, 255, 176, 0.18)";
-      context.lineWidth = 1;
-      context.strokeRect(
-        originX + 4.5,
-        originY + 4.5,
-        CELL_SIZE - 9,
-        CELL_SIZE - 9,
-      );
+    renderer.draw({
+      snake,
+      previousSnake,
+      food,
+      bonusFood,
+      obstacles,
+      direction,
+      mode,
+      bonusRemainingMs,
+      movementProgress,
+      time,
+      eatEffect,
+      collisionEffect,
     });
-
-    context.restore();
-  };
-
-  const drawSnake = () => {
-    snake.forEach((segment, index) => {
-      const inset = index === 0 ? 2 : 3;
-      const size = CELL_SIZE - inset * 2;
-
-      context.fillStyle = index === 0 ? "#e7ffb0" : "#9fcf71";
-      context.shadowColor =
-        index === 0 ? "rgba(231, 255, 176, 0.55)" : "rgba(199, 240, 139, 0.22)";
-      context.shadowBlur = index === 0 ? 8 : 4;
-      context.fillRect(
-        segment.x * CELL_SIZE + inset,
-        segment.y * CELL_SIZE + inset,
-        size,
-        size,
-      );
-    });
-
-    const head = snake[0];
-
-    if (!head) {
-      return;
-    }
-
-    const eyeSize = 2.5;
-    const baseX = head.x * CELL_SIZE;
-    const baseY = head.y * CELL_SIZE;
-    let eyes;
-
-    if (direction.x > 0) {
-      eyes = [
-        [baseX + 14, baseY + 5],
-        [baseX + 14, baseY + 12],
-      ];
-    } else if (direction.x < 0) {
-      eyes = [
-        [baseX + 4, baseY + 5],
-        [baseX + 4, baseY + 12],
-      ];
-    } else if (direction.y < 0) {
-      eyes = [
-        [baseX + 5, baseY + 4],
-        [baseX + 12, baseY + 4],
-      ];
-    } else {
-      eyes = [
-        [baseX + 5, baseY + 14],
-        [baseX + 12, baseY + 14],
-      ];
-    }
-
-    context.shadowBlur = 0;
-    context.fillStyle = "#07120b";
-
-    eyes.forEach(([x, y]) => {
-      context.fillRect(x, y, eyeSize, eyeSize);
-    });
-  };
-
-  const draw = () => {
-    context.clearRect(0, 0, BOARD_SIZE, BOARD_SIZE);
-    context.fillStyle = "#020704";
-    context.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
-    drawGrid();
-    drawObstacles();
-    drawFood();
-    drawBonusFood();
-    drawSnake();
   };
 
   const placeFood = () => {
@@ -529,40 +276,66 @@ function mountSnakeGame(root: HTMLElement): void {
     bonusFood = freeCells[Math.floor(Math.random() * freeCells.length)];
     bonusRemainingMs = BONUS_DURATION_MS;
     updateBonusIndicator();
+    announce("Bonus food appeared. Five seconds remaining.");
   };
 
   const finishGame = (won = false) => {
     gameOver = true;
     started = false;
+    clearPointerGesture();
     clearBonusFood();
     saveHighScore();
     updateScoreboard();
+
+    const result = won ? "SYSTEM CLEARED" : "GAME OVER";
+    const highScoreMessage = newHighScoreThisRun ? " · NEW HIGH SCORE" : "";
+    const retryMessage =
+      mode === "maze"
+        ? "R RETRY SAME MAP · SELECT MAZE FOR NEW MAP"
+        : "R RESTART · SELECT MODE";
+
     setOverlay(
-      won ? "SYSTEM CLEARED" : "GAME OVER",
-      `${formatScore(score)} · R RESTART · SELECT MODE · ESC EXIT`,
+      result,
+      `${formatScore(score)}${highScoreMessage} · ${retryMessage} · ESC EXIT`,
       true,
       true,
+    );
+    announce(
+      `${won ? "Board cleared" : "Game over"}. Score ${score}.${
+        newHighScoreThisRun ? " New high score." : ""
+      }`,
     );
   };
 
   const resetGame = () => {
     if (!mode) {
-      setOverlay("SELECT MODE", "FREE WRAPS · MAZE HAS WALLS", true, true);
+      setOverlay(
+        "SELECT MODE",
+        "FREE WRAPS · MAZE WRAPS + OBSTACLES",
+        true,
+        true,
+      );
       draw();
       return;
     }
 
+    clearPointerGesture();
     snake = startingSnake();
+    previousSnake = snake.map((segment) => ({ ...segment }));
     obstacles = new Set();
     mazeReachableCells = [];
 
     if (mode === "maze") {
-      generateMaze();
+      mazeSeed ??= createMazeSeed();
+      const maze = generateMaze(mazeSeed, GRID_SIZE);
+      obstacles = maze.obstacles;
+      mazeReachableCells = maze.reachableCells;
     }
 
     direction = directions.right;
     queuedDirection = directions.right;
     score = 0;
+    newHighScoreThisRun = false;
     regularFoodsEaten = 0;
     speed = START_SPEED;
     clearBonusFood();
@@ -571,11 +344,16 @@ function mountSnakeGame(root: HTMLElement): void {
     gameOver = false;
     previousTime = 0;
     accumulator = 0;
+    eatEffect = null;
+    collisionEffect = null;
     placeFood();
     updateScoreboard();
     setOverlay(
       "PRESS A DIRECTION",
       `${mode.toUpperCase()} MODE · ARROWS / WASD / SWIPE`,
+    );
+    announce(
+      `${mode === "maze" ? "Maze" : "Free"} mode ready. Press a direction to start.`,
     );
     draw();
   };
@@ -586,12 +364,14 @@ function mountSnakeGame(root: HTMLElement): void {
     }
 
     mode = nextMode;
+    mazeSeed = mode === "maze" ? createMazeSeed() : null;
+    highScore = readHighScore(mode);
     resetGame();
     window.setTimeout(() => canvas.focus({ preventScroll: true }), 0);
   };
 
   const isOpposite = (nextDirection: Point): boolean =>
-    nextDirection.x + direction.x === 0 && nextDirection.y + direction.y === 0;
+    isOppositeDirection(direction, nextDirection);
 
   const setDirection = (nextDirection: Point): void => {
     if (!active || !mode || gameOver || isOpposite(nextDirection)) {
@@ -605,89 +385,82 @@ function mountSnakeGame(root: HTMLElement): void {
       paused = false;
       setOverlay("", "", false);
       previousTime = performance.now();
+      announce("Game started.");
     }
   };
 
   const tick = () => {
     direction = queuedDirection;
+    const snakeBeforeStep = snake.map((segment) => ({ ...segment }));
+    const regularFoodBeforeStep = food ? { ...food } : null;
+    const bonusFoodBeforeStep = bonusFood ? { ...bonusFood } : null;
 
-    const currentHead = snake[0];
+    const result = advanceSnake({
+      snake,
+      direction,
+      food,
+      bonusFood,
+      obstacles,
+      gridSize: GRID_SIZE,
+    });
 
-    if (!currentHead) {
-      finishGame();
-      return;
-    }
-
-    let nextHead: Point = {
-      x: currentHead.x + direction.x,
-      y: currentHead.y + direction.y,
-    };
-
-    const outsideBoard = !isInsideBoard(nextHead.x, nextHead.y);
-
-    if (mode === "free") {
-      nextHead = {
-        x: (nextHead.x + GRID_SIZE) % GRID_SIZE,
-        y: (nextHead.y + GRID_SIZE) % GRID_SIZE,
+    if (result.kind === "collision") {
+      collisionEffect = {
+        kind: "collision",
+        point: result.head,
+        startedAt: performance.now(),
       };
-    }
-
-    const hitWall = mode === "maze" && outsideBoard;
-    const hitObstacle =
-      mode === "maze" &&
-      isInsideBoard(nextHead.x, nextHead.y) &&
-      isObstacle(nextHead.x, nextHead.y);
-
-    const eatingRegularFood =
-      food && nextHead.x === food.x && nextHead.y === food.y;
-    const eatingBonusFood =
-      bonusFood && nextHead.x === bonusFood.x && nextHead.y === bonusFood.y;
-    const collisionBody = eatingRegularFood ? snake : snake.slice(0, -1);
-    const hitSelf = collisionBody.some(
-      (segment) => segment.x === nextHead.x && segment.y === nextHead.y,
-    );
-
-    if (hitWall || hitObstacle || hitSelf) {
+      previousSnake = snake.map((segment) => ({ ...segment }));
       finishGame();
       return;
     }
 
-    snake.unshift(nextHead);
+    previousSnake = snakeBeforeStep;
+    snake = result.snake;
 
-    if (eatingRegularFood) {
+    if (result.kind === "regular-food") {
+      if (regularFoodBeforeStep) {
+        eatEffect = {
+          kind: "regular-food",
+          point: regularFoodBeforeStep,
+          startedAt: performance.now(),
+        };
+      }
+
       score += 10;
       regularFoodsEaten += 1;
       saveHighScore();
       speed = Math.max(MIN_SPEED, START_SPEED - regularFoodsEaten * 4.5);
       placeFood();
 
+      if (gameOver) {
+        return;
+      }
+
       if (regularFoodsEaten % BONUS_TRIGGER_FOODS === 0 && !bonusFood) {
         placeBonusFood();
       }
 
       updateScoreboard();
-    } else if (eatingBonusFood) {
-      const remainingRatio = Math.max(
-        0,
-        Math.min(1, bonusRemainingMs / BONUS_DURATION_MS),
-      );
-      const rawBonus =
-        BONUS_MIN_SCORE + (BONUS_MAX_SCORE - BONUS_MIN_SCORE) * remainingRatio;
-      const bonusPoints = Math.max(
-        BONUS_MIN_SCORE,
-        Math.ceil(rawBonus / 10) * 10,
-      );
+    } else if (result.kind === "bonus-food") {
+      if (bonusFoodBeforeStep) {
+        eatEffect = {
+          kind: "bonus-food",
+          point: bonusFoodBeforeStep,
+          startedAt: performance.now(),
+        };
+      }
 
-      score += bonusPoints;
-      snake.pop(); // Nokia-style bonus: points only, no extra length.
+      score += calculateBonusPoints(
+        bonusRemainingMs,
+        BONUS_DURATION_MS,
+        BONUS_MIN_SCORE,
+        BONUS_MAX_SCORE,
+      );
       clearBonusFood();
       saveHighScore();
       updateScoreboard();
-    } else {
-      snake.pop();
     }
-
-    draw();
   };
 
   const gameLoop = (time: number): void => {
@@ -708,7 +481,6 @@ function mountSnakeGame(root: HTMLElement): void {
 
         if (bonusRemainingMs === 0) {
           clearBonusFood();
-          draw();
         } else {
           updateBonusIndicator();
         }
@@ -717,23 +489,17 @@ function mountSnakeGame(root: HTMLElement): void {
       accumulator += elapsed;
 
       while (accumulator >= speed) {
+        const stepDuration = speed;
         tick();
-        accumulator -= speed;
+        accumulator -= stepDuration;
 
         if (gameOver) {
           break;
         }
       }
-
-      /*
-       * Redraw while the bonus exists so its final two-second warning
-       * can flash even between snake movement ticks.
-       */
-      if (bonusFood) {
-        draw();
-      }
     }
 
+    draw(time);
     animationFrame = window.requestAnimationFrame(gameLoop);
   };
 
@@ -744,6 +510,7 @@ function mountSnakeGame(root: HTMLElement): void {
 
     paused = true;
     setOverlay("PAUSED", message);
+    announce("Game paused.");
   };
 
   const togglePause = () => {
@@ -755,26 +522,47 @@ function mountSnakeGame(root: HTMLElement): void {
 
     if (paused) {
       setOverlay("PAUSED", "P TO RESUME");
+      announce("Game paused.");
     } else {
       previousTime = performance.now();
-      accumulator = 0;
       setOverlay("", "", false);
+      announce("Game resumed.");
     }
   };
 
   const startGame = () => {
     active = true;
     root.hidden = false;
-    highScore = readHighScore();
     mode = null;
+    mazeSeed = null;
     snake = [];
+    previousSnake = [];
     food = null;
     obstacles = new Set();
     mazeReachableCells = [];
+    score = 0;
+    highScore = 0;
+    newHighScoreThisRun = false;
+    speed = START_SPEED;
+    regularFoodsEaten = 0;
+    started = false;
+    paused = false;
+    gameOver = false;
+    previousTime = 0;
+    accumulator = 0;
+    eatEffect = null;
+    collisionEffect = null;
+    clearPointerGesture();
     clearBonusFood();
     configureCanvas();
     updateScoreboard();
-    setOverlay("SELECT MODE", "FREE WRAPS · MAZE HAS WALLS", true, true);
+    setOverlay(
+      "SELECT MODE",
+      "FREE WRAPS · MAZE WRAPS + OBSTACLES",
+      true,
+      true,
+    );
+    announce("Select Free mode or Maze mode.");
     draw();
 
     if (animationFrame !== null) {
@@ -793,8 +581,12 @@ function mountSnakeGame(root: HTMLElement): void {
     active = false;
     started = false;
     paused = false;
-    mode = null;
+    clearPointerGesture();
     saveHighScore();
+    mode = null;
+    mazeSeed = null;
+    eatEffect = null;
+    collisionEffect = null;
     updateScoreboard();
     root.hidden = true;
 
@@ -835,7 +627,7 @@ function mountSnakeGame(root: HTMLElement): void {
 
     const normalizedKey = event.key.toLowerCase();
 
-    if (!mode && (normalizedKey === "f" || normalizedKey === "m")) {
+    if ((!mode || gameOver) && (normalizedKey === "f" || normalizedKey === "m")) {
       event.preventDefault();
       selectMode(normalizedKey === "f" ? "free" : "maze");
       return;
@@ -868,21 +660,24 @@ function mountSnakeGame(root: HTMLElement): void {
   };
 
   const onPointerDown = (event: PointerEvent): void => {
-    if (!active) {
+    if (!active || (event.pointerType === "mouse" && event.button !== 0)) {
       return;
     }
 
+    clearPointerGesture();
     pointerStart = { x: event.clientX, y: event.clientY };
+    pointerId = event.pointerId;
+    canvas.setPointerCapture(event.pointerId);
   };
 
   const onPointerUp = (event: PointerEvent): void => {
-    if (!active || !pointerStart) {
+    if (!active || !pointerStart || pointerId !== event.pointerId) {
       return;
     }
 
     const deltaX = event.clientX - pointerStart.x;
     const deltaY = event.clientY - pointerStart.y;
-    pointerStart = null;
+    clearPointerGesture();
 
     if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 20) {
       return;
@@ -892,6 +687,19 @@ function mountSnakeGame(root: HTMLElement): void {
       setDirection(deltaX > 0 ? directions.right : directions.left);
     } else {
       setDirection(deltaY > 0 ? directions.down : directions.up);
+    }
+  };
+
+  const onPointerCancel = (event: PointerEvent): void => {
+    if (pointerId === event.pointerId) {
+      clearPointerGesture();
+    }
+  };
+
+  const onLostPointerCapture = (event: PointerEvent): void => {
+    if (pointerId === event.pointerId) {
+      pointerStart = null;
+      pointerId = null;
     }
   };
 
@@ -915,6 +723,8 @@ function mountSnakeGame(root: HTMLElement): void {
 
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointerup", onPointerUp);
+  canvas.addEventListener("pointercancel", onPointerCancel);
+  canvas.addEventListener("lostpointercapture", onLostPointerCapture);
   document.addEventListener("keydown", onKeyDown);
 
   window.addEventListener("blur", () => pauseGame("P TO RESUME"));

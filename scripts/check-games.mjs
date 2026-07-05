@@ -9,6 +9,8 @@ const expectedGames = [
   ["ChickenRunGame.astro", "chicken-run.ts"],
 ];
 
+const snakeModules = ["snake-rules.ts", "snake-renderer.ts"];
+
 const chickenModules = [
   "chicken-run-rules.ts",
   "chicken-run-course.ts",
@@ -27,6 +29,12 @@ const chickenModules = [
 const failures = [];
 const componentNames = await readdir(componentDirectory);
 const scriptNames = await readdir(scriptDirectory);
+
+for (const moduleName of snakeModules) {
+  if (!scriptNames.includes(moduleName)) {
+    failures.push(`missing snake game module: ${moduleName}`);
+  }
+}
 
 for (const moduleName of chickenModules) {
   if (!scriptNames.includes(moduleName)) {
