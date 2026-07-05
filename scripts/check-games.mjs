@@ -103,6 +103,14 @@ const snakeRenderer = await readFile(
   new URL("../src/scripts/games/snake-renderer.ts", import.meta.url),
   "utf8",
 );
+const snakeComponent = await readFile(
+  new URL("../src/components/games/SnakeGame.astro", import.meta.url),
+  "utf8",
+);
+const snakeScript = await readFile(
+  new URL("../src/scripts/games/snake.ts", import.meta.url),
+  "utf8",
+);
 const craneComponent = await readFile(
   new URL("../src/components/games/CraneGame.astro", import.meta.url),
   "utf8",
@@ -151,6 +159,19 @@ if (!snakeRenderer.includes("MAX_PIXEL_RATIO = 1.5"))
   failures.push("snake renderer does not cap high-DPI rendering for performance");
 if (!snakeRenderer.includes("staticLayer") || !snakeRenderer.includes("obstacleLayer"))
   failures.push("snake renderer does not cache static arena layers");
+if (!snakeRenderer.includes("drawArenaWalls") || !snakeRenderer.includes("drawSectorGate"))
+  failures.push("snake renderer does not expose solid walls and the wall exit");
+if (!snakeRenderer.includes("drawCollisionWarning"))
+  failures.push("snake renderer does not show the exact imminent collision");
+if (!snakeScript.includes("chooseSectorGate") || !snakeScript.includes("openSectorGate"))
+  failures.push("snake sectors still advance without reaching a wall exit");
+if (
+  snakeComponent.includes("DRIVE") ||
+  snakeComponent.includes("data-snake-overdrive") ||
+  snakeScript.includes("startOverdrive") ||
+  snakeScript.includes("overdriveActive")
+)
+  failures.push("snake still exposes the removed overdrive mechanic");
 if (!craneComponent.includes("data-crane-confirm"))
   failures.push(
     "crane does not expose an in-game destructive-action confirmation",

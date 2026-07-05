@@ -5,15 +5,18 @@ import {
   availableSpawnCells,
   calculateBonusPoints,
   calculateFlowScore,
+  chooseSectorGate,
   generateSectorLayout,
   isOppositeDirection,
   protocolChoices,
   reachableCells,
   seededRandom,
+  isInsideBoard,
   shrinkSnake,
   speedForSector,
   startingSnake,
   type Point,
+  type SectorGate,
   type SnakeProtocol,
 } from "./snake-rules";
 import { dispatchGameExit, GAME_EVENTS } from "./shared/events";
@@ -44,6 +47,7 @@ interface SnakeSessionState {
   food: Point | null;
   bonusFood: Point | null;
   bonusRemainingMs: number;
+  sectorGate: SectorGate | null;
   obstacles: string[];
   sector: number;
   foodsInSector: number;
@@ -56,11 +60,14 @@ interface SnakeSessionState {
   flowRemainingMs: number;
   activeProtocol: SnakeProtocol | null;
   choosingProtocol: boolean;
+  exitingSector: boolean;
+  enteringSector: boolean;
+  transitionGate: SectorGate | null;
   protocolChoices: [SnakeProtocol, SnakeProtocol];
 }
 
 const SNAKE_SESSION_KEY = "tiendu-snake-session";
-const SNAKE_SESSION_VERSION = 3;
+const SNAKE_SESSION_VERSION = 6;
 const HIGH_SCORE_KEY = "tiendu-snake-high-score-neon";
 const LEGACY_HIGH_SCORE_KEYS = [
   "tiendu-snake-high-score-free",
@@ -80,6 +87,19 @@ const isProtocol = (value: unknown): value is SnakeProtocol =>
   value === "dense-grid" ||
   value === "tail-pressure";
 
+const isSectorGate = (value: unknown): value is SectorGate => {
+  if (!value || typeof value !== "object") return false;
+  const gate = value as Partial<SectorGate>;
+  return (
+    (gate.side === "top" ||
+      gate.side === "right" ||
+      gate.side === "bottom" ||
+      gate.side === "left") &&
+    Number.isInteger(gate.index) &&
+    isPoint(gate.entry)
+  );
+};
+
 function isSnakeSessionState(value: unknown): value is SnakeSessionState {
   if (!value || typeof value !== "object") return false;
   const state = value as Partial<SnakeSessionState>;
@@ -94,6 +114,7 @@ function isSnakeSessionState(value: unknown): value is SnakeSessionState {
     (state.bonusFood === null || isPoint(state.bonusFood)) &&
     typeof state.bonusRemainingMs === "number" &&
     Number.isFinite(state.bonusRemainingMs) &&
+    (state.sectorGate === null || isSectorGate(state.sectorGate)) &&
     Array.isArray(state.obstacles) &&
     state.obstacles.every((item) => typeof item === "string") &&
     Number.isInteger(state.sector) &&
@@ -111,6 +132,9 @@ function isSnakeSessionState(value: unknown): value is SnakeSessionState {
     Number.isFinite(state.flowRemainingMs) &&
     (state.activeProtocol === null || isProtocol(state.activeProtocol)) &&
     typeof state.choosingProtocol === "boolean" &&
+    typeof state.exitingSector === "boolean" &&
+    typeof state.enteringSector === "boolean" &&
+    (state.transitionGate === null || isSectorGate(state.transitionGate)) &&
     Array.isArray(state.protocolChoices) &&
     state.protocolChoices.length === 2 &&
     state.protocolChoices.every(isProtocol)
@@ -131,8 +155,11 @@ function mountSnakeGame(root: HTMLElement): void {
   const highScoreOutput = root.querySelector<HTMLOutputElement>(
     "[data-snake-high-score]",
   );
-  const overdriveOutput = root.querySelector<HTMLOutputElement>(
-    "[data-snake-overdrive]",
+  const gateIndicator = root.querySelector<HTMLElement>(
+    "[data-snake-gate-indicator]",
+  );
+  const gateSideOutput = root.querySelector<HTMLOutputElement>(
+    "[data-snake-gate-side]",
   );
   const bonusIndicator = root.querySelector<HTMLElement>(
     "[data-snake-bonus-indicator]",
@@ -167,9 +194,6 @@ function mountSnakeGame(root: HTMLElement): void {
   const directionButtons = Array.from(
     root.querySelectorAll<HTMLButtonElement>("[data-snake-direction]"),
   );
-  const overdriveButton = root.querySelector<HTMLButtonElement>(
-    "[data-snake-overdrive-button]",
-  );
 
   if (!canvas) return;
   const context = canvas.getContext("2d");
@@ -184,7 +208,6 @@ function mountSnakeGame(root: HTMLElement): void {
   const BONUS_MIN_SCORE = 30;
   const BONUS_MAX_SCORE = 90;
   const MINIMUM_SNAKE_LENGTH = 5;
-  const OVERDRIVE_BURN_INTERVAL_MS = 1200;
   const boardCells = allBoardCells(GRID_SIZE);
   const renderer = createSnakeRenderer(canvas, context, GRID_SIZE);
 
@@ -194,6 +217,9 @@ function mountSnakeGame(root: HTMLElement): void {
   let paused = false;
   let gameOver = false;
   let choosingProtocol = false;
+  let exitingSector = false;
+  let enteringSector = false;
+  let transitionGate: SectorGate | null = null;
   let resumePrompt = false;
   let runSeed = 0;
   let spawnCounter = 0;
@@ -202,6 +228,7 @@ function mountSnakeGame(root: HTMLElement): void {
   let food: Point | null = null;
   let bonusFood: Point | null = null;
   let bonusRemainingMs = 0;
+  let sectorGate: SectorGate | null = null;
   let obstacles = new Set<string>();
   let reachableBoardCells: Point[] = boardCells;
   let sector = 1;
@@ -220,8 +247,6 @@ function mountSnakeGame(root: HTMLElement): void {
     "stabilize",
     "overclock",
   ];
-  let overdriveActive = false;
-  let overdriveBurnElapsed = 0;
   let animationFrame: number | null = null;
   let previousTime = 0;
   let accumulator = 0;
@@ -230,6 +255,7 @@ function mountSnakeGame(root: HTMLElement): void {
   let pointerId: number | null = null;
   let eatEffect: SnakeVisualEffect | null = null;
   let collisionEffect: SnakeVisualEffect | null = null;
+  let dying = false;
 
   const createRunSeed = (): number => {
     if (globalThis.crypto) {
@@ -281,6 +307,7 @@ function mountSnakeGame(root: HTMLElement): void {
         food: food ? { ...food } : null,
         bonusFood: bonusFood ? { ...bonusFood } : null,
         bonusRemainingMs,
+        sectorGate: sectorGate ? { ...sectorGate, entry: { ...sectorGate.entry } } : null,
         obstacles: [...obstacles],
         sector,
         foodsInSector,
@@ -293,6 +320,9 @@ function mountSnakeGame(root: HTMLElement): void {
         flowRemainingMs,
         activeProtocol,
         choosingProtocol,
+        exitingSector,
+        enteringSector,
+        transitionGate: transitionGate ? { ...transitionGate, entry: { ...transitionGate.entry } } : null,
         protocolChoices: [...currentProtocolChoices],
       },
     );
@@ -336,15 +366,11 @@ function mountSnakeGame(root: HTMLElement): void {
     }
   };
 
-  const updateOverdriveIndicator = (): void => {
-    const capacity = Math.max(0, snake.length - MINIMUM_SNAKE_LENGTH);
-    const lit = Math.min(6, Math.ceil(capacity / 2));
-    if (overdriveOutput) {
-      overdriveOutput.textContent = `${"■".repeat(lit)}${"·".repeat(6 - lit)}`;
-    }
-    if (overdriveButton) {
-      overdriveButton.classList.toggle("is-active", overdriveActive);
-      overdriveButton.disabled = capacity <= 0;
+  const updateGateIndicator = (): void => {
+    const visible = sectorGate !== null;
+    if (gateIndicator) gateIndicator.hidden = !visible;
+    if (visible && gateSideOutput && sectorGate) {
+      gateSideOutput.textContent = sectorGate.side.toUpperCase();
     }
   };
 
@@ -354,7 +380,7 @@ function mountSnakeGame(root: HTMLElement): void {
     if (scoreOutput) scoreOutput.textContent = formatScore(score);
     if (flowOutput) flowOutput.textContent = `x${flow}`;
     if (highScoreOutput) highScoreOutput.textContent = formatScore(highScore);
-    updateOverdriveIndicator();
+    updateGateIndicator();
   };
 
   const clearBonusFood = (): void => {
@@ -375,8 +401,7 @@ function mountSnakeGame(root: HTMLElement): void {
     const protocolSpeed = activeProtocol
       ? PROTOCOLS[activeProtocol].speedMultiplier
       : 1;
-    const overdriveSpeed = overdriveActive ? 0.82 : 1;
-    return speedForSector(sector) * protocolSpeed * overdriveSpeed;
+    return speedForSector(sector) * protocolSpeed;
   };
 
   const draw = (time = performance.now()): void => {
@@ -397,7 +422,8 @@ function mountSnakeGame(root: HTMLElement): void {
       flow,
       activeProtocol,
       bonusRemainingMs,
-      overdriveActive,
+      sectorGate,
+      collisionWarning: getCollisionWarning(),
       movementProgress,
       time,
       eatEffect,
@@ -471,13 +497,13 @@ function mountSnakeGame(root: HTMLElement): void {
     announce("Surge core detected. Five seconds remaining.");
   };
 
-  const configureSector = (): void => {
+  const configureSector = (layoutSnake: readonly Point[] = snake): void => {
     const protocol = activeProtocol ? PROTOCOLS[activeProtocol] : null;
     const layout = generateSectorLayout({
       seed: runSeed,
       gridSize: GRID_SIZE,
       sector,
-      snake,
+      snake: layoutSnake,
       extraObstacleCells: protocol?.extraObstacleCells ?? 0,
     });
 
@@ -485,18 +511,149 @@ function mountSnakeGame(root: HTMLElement): void {
     reachableBoardCells = layout.reachableCells;
   };
 
-  const stopOverdrive = (): void => {
-    overdriveActive = false;
-    overdriveBurnElapsed = 0;
-    updateOverdriveIndicator();
+  const clearEntranceCorridor = (gate: SectorGate): void => {
+    const inward = inwardDirection(gate.side);
+    const perpendicular = { x: -inward.y, y: inward.x };
+    const cleared = new Set(obstacles);
+
+    // Keep the portal mouth and a short three-cell-wide approach lane clear.
+    // This makes obstacle safety explicit rather than relying only on the
+    // temporary entering-snake reservation used by the layout generator.
+    for (let depth = 0; depth <= 4; depth += 1) {
+      for (let lateral = -1; lateral <= 1; lateral += 1) {
+        const point = {
+          x: gate.entry.x + inward.x * depth + perpendicular.x * lateral,
+          y: gate.entry.y + inward.y * depth + perpendicular.y * lateral,
+        };
+        if (isInsideBoard(point, GRID_SIZE)) {
+          cleared.delete(`${point.x},${point.y}`);
+        }
+      }
+    }
+
+    obstacles = cleared;
+    reachableBoardCells = Array.from(
+      reachableCells(obstacles, GRID_SIZE, gate.entry),
+      (key) => {
+        const [x = 0, y = 0] = key.split(",").map(Number);
+        return { x, y };
+      },
+    );
   };
 
-  const startOverdrive = (): void => {
-    if (!active || !started || paused || choosingProtocol || gameOver) return;
-    if (snake.length <= MINIMUM_SNAKE_LENGTH) return;
-    overdriveActive = true;
-    updateOverdriveIndicator();
+  const chooseSafeDirection = (preferred: Point): Point => {
+    const candidates = [preferred, ...Object.values(DIRECTIONS)];
+    const seen = new Set<string>();
+
+    for (const candidate of candidates) {
+      const key = `${candidate.x},${candidate.y}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const result = advanceSnake({
+        snake,
+        direction: candidate,
+        food: null,
+        bonusFood: null,
+        gate: null,
+        obstacles,
+        gridSize: GRID_SIZE,
+      });
+      if (result.kind !== "collision") return { ...candidate };
+    }
+
+    return { x: 0, y: -1 };
   };
+
+  const oppositeSide = (side: SectorGate["side"]): SectorGate["side"] =>
+    side === "top"
+      ? "bottom"
+      : side === "right"
+        ? "left"
+        : side === "bottom"
+          ? "top"
+          : "right";
+
+  const inwardDirection = (side: SectorGate["side"]): Point =>
+    side === "top"
+      ? { x: 0, y: 1 }
+      : side === "right"
+        ? { x: -1, y: 0 }
+        : side === "bottom"
+          ? { x: 0, y: -1 }
+          : { x: 1, y: 0 };
+
+  const gateEntryAt = (side: SectorGate["side"], index: number): Point =>
+    side === "top"
+      ? { x: index, y: 0 }
+      : side === "right"
+        ? { x: GRID_SIZE - 1, y: index }
+        : side === "bottom"
+          ? { x: index, y: GRID_SIZE - 1 }
+          : { x: 0, y: index };
+
+  const chooseEntranceGate = (fromGate: SectorGate | null): SectorGate => {
+    const preferredSide = fromGate ? oppositeSide(fromGate.side) : "top";
+    const preferredIndex = Math.max(
+      2,
+      Math.min(GRID_SIZE - 3, fromGate?.index ?? Math.floor(GRID_SIZE / 2)),
+    );
+    return {
+      side: preferredSide,
+      index: preferredIndex,
+      entry: gateEntryAt(preferredSide, preferredIndex),
+    };
+  };
+
+  const buildEnteringSnake = (gate: SectorGate, length: number): Point[] => {
+    const travel = inwardDirection(gate.side);
+    return Array.from({ length: Math.max(MINIMUM_SNAKE_LENGTH, length) }, (_, index) => ({
+      x: gate.entry.x - travel.x * index,
+      y: gate.entry.y - travel.y * index,
+    }));
+  };
+
+
+  const openSectorGate = (): void => {
+    food = null;
+    clearBonusFood();
+    sectorGate = chooseSectorGate({
+      seed: runSeed,
+      sector,
+      gridSize: GRID_SIZE,
+      snake,
+      obstacles,
+      reachableCells: reachableBoardCells,
+    });
+
+    if (!sectorGate) {
+      beginProtocolChoice();
+      return;
+    }
+
+    updateScoreboard();
+    announce(
+      `Sector gate online on the ${sectorGate.side} wall. Reach the exit and clear the whole snake through it.`,
+    );
+    persistSession();
+  };
+
+  const getCollisionWarning = () => {
+    if (!started || paused || gameOver || choosingProtocol || exitingSector || dying) return null;
+    const nextDirection = directionQueue[0] ?? direction;
+    const prediction = advanceSnake({
+      snake,
+      direction: nextDirection,
+      food,
+      bonusFood,
+      gate: sectorGate,
+      obstacles,
+      gridSize: GRID_SIZE,
+    });
+    if (prediction.kind !== "collision" || !prediction.collision) return null;
+    return { point: prediction.head, collision: prediction.collision };
+  };
+
+
 
   const prepareNewRun = (): void => {
     clearSession();
@@ -508,6 +665,7 @@ function mountSnakeGame(root: HTMLElement): void {
     food = null;
     bonusFood = null;
     bonusRemainingMs = 0;
+    sectorGate = null;
     obstacles = new Set();
     reachableBoardCells = boardCells;
     sector = 1;
@@ -527,27 +685,30 @@ function mountSnakeGame(root: HTMLElement): void {
     paused = false;
     gameOver = false;
     choosingProtocol = false;
+    exitingSector = false;
+    enteringSector = false;
+    transitionGate = null;
     previousTime = 0;
     accumulator = 0;
     lastPersistAt = 0;
     eatEffect = null;
     collisionEffect = null;
-    stopOverdrive();
+    dying = false;
     configureSector();
     placeFood();
     updateScoreboard();
     updateBonusIndicator();
-    setOverlay("NEON RUN", "STEER · BUILD FLOW · BURN THE TAIL", true, {
+    setOverlay("NEON RUN", "STEER · BUILD FLOW · REACH THE EXIT", true, {
       start: true,
     });
     announce(
-      "Neon Run ready. Start the run, then steer with the arrow keys or W A S D.",
+      "Neon Run ready. Collect six cores, then reach the wall exit.",
     );
     draw();
   };
 
   const beginRun = (): void => {
-    if (!active || !prepared || gameOver || resumePrompt) return;
+    if (!active || !prepared || gameOver || resumePrompt || dying) return;
     started = true;
     paused = false;
     choosingProtocol = false;
@@ -564,7 +725,11 @@ function mountSnakeGame(root: HTMLElement): void {
     started = false;
     paused = false;
     choosingProtocol = false;
-    stopOverdrive();
+    exitingSector = false;
+    enteringSector = false;
+    transitionGate = null;
+    dying = false;
+    sectorGate = null;
     clearSession();
     clearPointerGesture();
     clearBonusFood();
@@ -604,8 +769,10 @@ function mountSnakeGame(root: HTMLElement): void {
   const beginProtocolChoice = (): void => {
     started = false;
     choosingProtocol = true;
+    exitingSector = false;
+    enteringSector = false;
     paused = false;
-    stopOverdrive();
+    sectorGate = null;
     clearBonusFood();
     currentProtocolChoices = protocolChoices(runSeed, sector);
     updateProtocolPicker();
@@ -625,6 +792,9 @@ function mountSnakeGame(root: HTMLElement): void {
     activeProtocol = protocol;
     sector += 1;
     foodsInSector = 0;
+    exitingSector = false;
+    enteringSector = false;
+    sectorGate = null;
     flowRemainingMs = Math.max(flowRemainingMs, 1400);
     const definition = PROTOCOLS[protocol];
     if (definition.tailReduction > 0) {
@@ -635,12 +805,23 @@ function mountSnakeGame(root: HTMLElement): void {
       );
       previousSnake = previousSnake.slice(0, snake.length);
     }
-    configureSector();
+
     clearBonusFood();
     food = null;
-    placeFood();
-    if (gameOver) return;
+    bonusFood = null;
 
+    const entranceGate = chooseEntranceGate(transitionGate);
+    const enteringSnake = buildEnteringSnake(entranceGate, snake.length);
+    configureSector(enteringSnake);
+    clearEntranceCorridor(entranceGate);
+
+    sectorGate = entranceGate;
+    direction = inwardDirection(entranceGate.side);
+    directionQueue = [];
+    snake = enteringSnake;
+    previousSnake = snake.map((segment) => ({ ...segment }));
+    enteringSector = true;
+    transitionGate = null;
     choosingProtocol = false;
     started = true;
     paused = false;
@@ -648,7 +829,7 @@ function mountSnakeGame(root: HTMLElement): void {
     accumulator = 0;
     setOverlay("RUNNING", "", false);
     updateScoreboard();
-    announce(`${PROTOCOLS[protocol].name} active for sector ${sector}.`);
+    announce(`Entering sector ${sector}. Guide the head inside and clear the tail through the gate.`);
     persistSession();
     canvas.focus({ preventScroll: true });
   };
@@ -661,7 +842,7 @@ function mountSnakeGame(root: HTMLElement): void {
       return;
     }
 
-    if (!started || paused || gameOver || resumePrompt) return;
+    if (!started || paused || gameOver || resumePrompt || exitingSector || dying) return;
     const next = DIRECTIONS[name];
     const lastQueued = directionQueue[directionQueue.length - 1] ?? direction;
     if (
@@ -674,6 +855,19 @@ function mountSnakeGame(root: HTMLElement): void {
     directionQueue.push({ ...next });
   };
 
+  const advanceSectorExit = (): boolean => {
+    const head = snake[0];
+    if (!head) return true;
+
+    const nextHead = {
+      x: head.x + direction.x,
+      y: head.y + direction.y,
+    };
+
+    snake = [nextHead, ...snake.slice(0, -1)];
+    return snake.every((segment) => !isInsideBoard(segment, GRID_SIZE));
+  };
+
   const tick = (): void => {
     const queued = directionQueue.shift();
     if (queued) direction = queued;
@@ -681,28 +875,120 @@ function mountSnakeGame(root: HTMLElement): void {
     const foodBeforeStep = food ? { ...food } : null;
     const bonusBeforeStep = bonusFood ? { ...bonusFood } : null;
 
+    if (exitingSector) {
+      previousSnake = snakeBeforeStep;
+      const fullyExited = advanceSectorExit();
+      if (fullyExited) {
+        transitionGate = sectorGate
+          ? { ...sectorGate, entry: { ...sectorGate.entry } }
+          : transitionGate;
+        sectorGate = null;
+        exitingSector = false;
+        updateScoreboard();
+        beginProtocolChoice();
+      }
+      return;
+    }
+
+    if (enteringSector) {
+      const result = advanceSnake({
+        snake,
+        direction,
+        food: null,
+        bonusFood: null,
+        gate: null,
+        obstacles,
+        gridSize: GRID_SIZE,
+      });
+
+      if (result.kind === "collision") {
+        const contactPoint = {
+          x: Math.min(GRID_SIZE - 1, Math.max(0, result.head.x)),
+          y: Math.min(GRID_SIZE - 1, Math.max(0, result.head.y)),
+        };
+        collisionEffect = {
+          kind: "collision",
+          point: contactPoint,
+          startedAt: performance.now(),
+          collision: result.collision,
+        };
+        previousSnake = snake.map((segment) => ({ ...segment }));
+        dying = true;
+        started = false;
+        directionQueue = [];
+        announce(`Collision with ${result.collision ?? "hazard"}.`);
+        window.setTimeout(() => {
+          if (active && dying && !gameOver) finishGame();
+        }, 180);
+        return;
+      }
+
+      previousSnake = snakeBeforeStep;
+      snake = result.snake;
+      if (snake.every((segment) => isInsideBoard(segment, GRID_SIZE))) {
+        enteringSector = false;
+        sectorGate = null;
+        transitionGate = null;
+        placeFood();
+        if (gameOver) return;
+        updateScoreboard();
+        announce(`Sector ${sector} online. Collect six cores, then reach the exit.`);
+        persistSession();
+      }
+      return;
+    }
+
     const result = advanceSnake({
       snake,
       direction,
       food,
       bonusFood,
+      gate: sectorGate,
       obstacles,
       gridSize: GRID_SIZE,
     });
 
     if (result.kind === "collision") {
+      const contactPoint = {
+        x: Math.min(GRID_SIZE - 1, Math.max(0, result.head.x)),
+        y: Math.min(GRID_SIZE - 1, Math.max(0, result.head.y)),
+      };
       collisionEffect = {
         kind: "collision",
-        point: result.head,
+        point: contactPoint,
         startedAt: performance.now(),
+        collision: result.collision,
       };
       previousSnake = snake.map((segment) => ({ ...segment }));
-      finishGame();
+      dying = true;
+      started = false;
+      directionQueue = [];
+      announce(`Collision with ${result.collision ?? "hazard"}.`);
+      window.setTimeout(() => {
+        if (active && dying && !gameOver) finishGame();
+      }, 180);
       return;
     }
 
     previousSnake = snakeBeforeStep;
     snake = result.snake;
+
+    if (result.kind === "sector-gate") {
+      eatEffect = {
+        kind: "sector-gate",
+        point: result.head,
+        startedAt: performance.now(),
+      };
+      exitingSector = true;
+      transitionGate = sectorGate
+        ? { ...sectorGate, entry: { ...sectorGate.entry } }
+        : transitionGate;
+      directionQueue = [];
+      updateScoreboard();
+      announce("Exit engaged. Clear the whole snake through the gate.");
+      persistSession();
+      return;
+    }
 
     if (result.kind === "regular-food") {
       if (foodBeforeStep) {
@@ -737,7 +1023,7 @@ function mountSnakeGame(root: HTMLElement): void {
       updateScoreboard();
 
       if (foodsInSector >= FOODS_PER_SECTOR) {
-        beginProtocolChoice();
+        openSectorGate();
         return;
       }
 
@@ -783,7 +1069,7 @@ function mountSnakeGame(root: HTMLElement): void {
       else updateBonusIndicator();
     }
 
-    if (flowRemainingMs > 0) {
+    if (!sectorGate && flowRemainingMs > 0) {
       flowRemainingMs = Math.max(0, flowRemainingMs - elapsed);
       if (flowRemainingMs === 0 && flow > 1) {
         flow -= 1;
@@ -792,23 +1078,6 @@ function mountSnakeGame(root: HTMLElement): void {
       }
     }
 
-    if (overdriveActive) {
-      if (snake.length <= MINIMUM_SNAKE_LENGTH) {
-        stopOverdrive();
-      } else {
-        overdriveBurnElapsed += elapsed;
-        while (overdriveBurnElapsed >= OVERDRIVE_BURN_INTERVAL_MS) {
-          overdriveBurnElapsed -= OVERDRIVE_BURN_INTERVAL_MS;
-          snake = shrinkSnake(snake, 1, MINIMUM_SNAKE_LENGTH);
-          previousSnake = previousSnake.slice(0, snake.length);
-          updateOverdriveIndicator();
-          if (snake.length <= MINIMUM_SNAKE_LENGTH) {
-            stopOverdrive();
-            break;
-          }
-        }
-      }
-    }
   };
 
   const gameLoop = (time: number): void => {
@@ -818,7 +1087,7 @@ function mountSnakeGame(root: HTMLElement): void {
     const elapsed = Math.min(time - previousTime, 250);
     previousTime = time;
 
-    if (started && !paused && !gameOver && !choosingProtocol) {
+    if (started && !paused && !gameOver && !choosingProtocol && !dying) {
       updateTimers(elapsed);
       accumulator += elapsed;
 
@@ -841,20 +1110,28 @@ function mountSnakeGame(root: HTMLElement): void {
   };
 
   const pauseGame = (message = "P TO RESUME"): void => {
-    if (!active || !started || gameOver || paused || choosingProtocol) return;
+    if (
+      !active ||
+      !started ||
+      gameOver ||
+      paused ||
+      choosingProtocol ||
+      exitingSector ||
+      enteringSector ||
+      dying
+    )
+      return;
     paused = true;
-    stopOverdrive();
     persistSession();
     setOverlay("PAUSED", message, true);
     announce("Game paused.");
   };
 
   const togglePause = (): void => {
-    if (!active || !started || gameOver || choosingProtocol) return;
+    if (!active || !started || gameOver || choosingProtocol || exitingSector || enteringSector || dying) return;
     paused = !paused;
 
     if (paused) {
-      stopOverdrive();
       persistSession();
       setOverlay("PAUSED", "P TO RESUME", true);
       announce("Game paused.");
@@ -873,6 +1150,9 @@ function mountSnakeGame(root: HTMLElement): void {
     food = state.food ? { ...state.food } : null;
     bonusFood = state.bonusFood ? { ...state.bonusFood } : null;
     bonusRemainingMs = Math.max(0, state.bonusRemainingMs);
+    sectorGate = state.sectorGate
+      ? { ...state.sectorGate, entry: { ...state.sectorGate.entry } }
+      : null;
     obstacles = new Set(state.obstacles);
     reachableBoardCells = Array.from(
       reachableCells(obstacles, GRID_SIZE, snake[0] ?? { x: 10, y: 10 }),
@@ -891,6 +1171,11 @@ function mountSnakeGame(root: HTMLElement): void {
     maxFlow = Math.min(5, Math.max(flow, state.maxFlow));
     flowRemainingMs = Math.max(0, state.flowRemainingMs);
     activeProtocol = state.activeProtocol;
+    exitingSector = state.exitingSector;
+    enteringSector = state.enteringSector;
+    transitionGate = state.transitionGate
+      ? { ...state.transitionGate, entry: { ...state.transitionGate.entry } }
+      : null;
     currentProtocolChoices = [...state.protocolChoices];
     prepared = true;
     started = false;
@@ -901,7 +1186,7 @@ function mountSnakeGame(root: HTMLElement): void {
     accumulator = 0;
     eatEffect = null;
     collisionEffect = null;
-    stopOverdrive();
+    dying = false;
     updateScoreboard();
     updateBonusIndicator();
     if (resumeSummary) {
@@ -931,7 +1216,7 @@ function mountSnakeGame(root: HTMLElement): void {
     } else {
       started = true;
       setOverlay("RUNNING", "", false);
-      announce("Saved run resumed.");
+      announce(enteringSector ? `Entering sector ${sector}.` : "Saved run resumed.");
     }
 
     persistSession();
@@ -976,7 +1261,8 @@ function mountSnakeGame(root: HTMLElement): void {
     started = false;
     paused = false;
     choosingProtocol = false;
-    stopOverdrive();
+    exitingSector = false;
+    dying = false;
     clearPointerGesture();
     saveHighScore();
     updateScoreboard();
@@ -1047,11 +1333,6 @@ function mountSnakeGame(root: HTMLElement): void {
       return;
     }
 
-    if (event.code === "Space") {
-      event.preventDefault();
-      startOverdrive();
-      return;
-    }
 
     if (event.key === "Escape") {
       event.preventDefault();
@@ -1071,9 +1352,6 @@ function mountSnakeGame(root: HTMLElement): void {
     }
   };
 
-  const onKeyUp = (event: KeyboardEvent): void => {
-    if (event.code === "Space") stopOverdrive();
-  };
 
   const onPointerDown = (event: PointerEvent): void => {
     if (!active || (event.pointerType === "mouse" && event.button !== 0))
@@ -1091,7 +1369,7 @@ function mountSnakeGame(root: HTMLElement): void {
     clearPointerGesture();
 
     if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 18) {
-      if (!started && prepared && !gameOver) beginRun();
+      if (!started && prepared && !gameOver && !dying) beginRun();
       return;
     }
 
@@ -1147,24 +1425,12 @@ function mountSnakeGame(root: HTMLElement): void {
     });
   });
 
-  const startDriveFromPointer = (event: PointerEvent): void => {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    event.preventDefault();
-    overdriveButton?.setPointerCapture(event.pointerId);
-    startOverdrive();
-  };
-  const stopDriveFromPointer = (): void => stopOverdrive();
-  overdriveButton?.addEventListener("pointerdown", startDriveFromPointer);
-  overdriveButton?.addEventListener("pointerup", stopDriveFromPointer);
-  overdriveButton?.addEventListener("pointercancel", stopDriveFromPointer);
-  overdriveButton?.addEventListener("lostpointercapture", stopDriveFromPointer);
 
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("pointercancel", onPointerCancel);
   canvas.addEventListener("lostpointercapture", onLostPointerCapture);
   document.addEventListener("keydown", onKeyDown);
-  document.addEventListener("keyup", onKeyUp);
 
   window.addEventListener("blur", () => pauseGame("P TO RESUME"));
   window.addEventListener("pagehide", persistSession);

@@ -22,8 +22,13 @@ import "../../styles/components/snake-game.css";
     >
       SURGE <output data-snake-bonus-time>5</output>
     </span>
-    <span class="snake-overdrive-indicator">
-      DRIVE <output data-snake-overdrive>······</output>
+    <span
+      class="snake-gate-indicator"
+      data-snake-gate-indicator
+      aria-label="Open sector exit"
+      hidden
+    >
+      EXIT <output data-snake-gate-side>TOP</output>
     </span>
   </div>
 
@@ -34,14 +39,14 @@ import "../../styles/components/snake-game.css";
       width="440"
       height="480"
       tabindex="0"
-      aria-label="Neon Snake top-down arena. Guide the transparent block snake with the arrow keys or W A S D, and hold Space for overdrive."
+      aria-label="Neon Snake top-down arena. Guide the transparent block snake with the arrow keys or W A S D. Collect six cores, then reach the open wall gate."
     >
       Snake requires a browser with canvas support.
     </canvas>
 
     <div class="arcade-overlay snake-overlay" data-snake-overlay>
       <strong data-snake-state>NEON RUN</strong>
-      <span data-snake-message>STEER · BUILD FLOW · BURN THE TAIL</span>
+      <span data-snake-message>STEER · BUILD FLOW · REACH THE EXIT</span>
 
       <div
         class="arcade-resume-picker"
@@ -63,7 +68,7 @@ import "../../styles/components/snake-game.css";
       <div class="snake-start-picker" data-snake-start-picker>
         <button type="button" data-snake-start>
           START RUN
-          <small>ARROWS / WASD · SPACE DRIVE</small>
+          <small>ARROWS / WASD</small>
         </button>
       </div>
 
@@ -75,12 +80,12 @@ import "../../styles/components/snake-game.css";
         hidden
       >
         <button type="button" data-snake-protocol="left">
-          <strong data-snake-protocol-name="left">OVERCLOCK</strong>
+          <strong data-snake-protocol-name="left">STABILIZE</strong>
           <small data-snake-protocol-summary="left">REMOVE 2 TAIL · SPEED -5%</small>
         </button>
         <button type="button" data-snake-protocol="right">
           <strong data-snake-protocol-name="right">DENSE GRID</strong>
-          <small data-snake-protocol-summary="right">SCORE +35% · SPEED +6%</small>
+          <small data-snake-protocol-summary="right">SCORE +45% · HAZARDS +4</small>
         </button>
       </div>
     </div>
@@ -105,14 +110,6 @@ import "../../styles/components/snake-game.css";
     </button>
     <button
       type="button"
-      class="snake-overdrive-button"
-      data-snake-overdrive-button
-      aria-label="Hold for overdrive"
-    >
-      DRIVE
-    </button>
-    <button
-      type="button"
       class="snake-direction-right"
       data-snake-direction="right"
       aria-label="Move right"
@@ -130,7 +127,7 @@ import "../../styles/components/snake-game.css";
   </div>
 
   <p class="arcade-help snake-help">
-    ARROWS / WASD STEER · HOLD SPACE OVERDRIVE · P PAUSE · R RETRY · ESC EXIT
+    ARROWS / WASD STEER · COLLECT 6 CORES · REACH EXIT · P PAUSE · R RETRY · ESC EXIT
   </p>
 
   <p

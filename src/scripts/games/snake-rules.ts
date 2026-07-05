@@ -3,6 +3,14 @@ export interface Point {
   y: number;
 }
 
+export type SectorGateSide = "top" | "right" | "bottom" | "left";
+
+export interface SectorGate {
+  side: SectorGateSide;
+  index: number;
+  entry: Point;
+}
+
 export type TurnDirection = "left" | "right";
 export type SnakeProtocol =
   "stabilize" | "overclock" | "dense-grid" | "tail-pressure";
@@ -24,7 +32,11 @@ export interface ProtocolDefinition {
 }
 
 export type SnakeStepKind =
-  "move" | "regular-food" | "bonus-food" | "collision";
+  | "move"
+  | "regular-food"
+  | "bonus-food"
+  | "sector-gate"
+  | "collision";
 
 export type SnakeCollisionKind = "wall" | "obstacle" | "self";
 
@@ -40,6 +52,7 @@ interface SnakeStepOptions {
   direction: Point;
   food: Point | null;
   bonusFood: Point | null;
+  gate?: SectorGate | null;
   obstacles: ReadonlySet<string>;
   gridSize: number;
 }
@@ -58,6 +71,15 @@ interface SectorLayoutOptions {
   sector: number;
   snake: readonly Point[];
   extraObstacleCells?: number;
+}
+
+interface SectorGateOptions {
+  seed: number;
+  sector: number;
+  gridSize: number;
+  snake: readonly Point[];
+  obstacles: ReadonlySet<string>;
+  reachableCells?: readonly Point[];
 }
 
 const MINIMUM_REACHABLE_RATIO = 0.7;
@@ -324,6 +346,67 @@ export function protocolChoices(
   return random() < 0.5 ? ["stabilize", risky] : [risky, "stabilize"];
 }
 
+export function chooseSectorGate({
+  seed,
+  sector,
+  gridSize,
+  snake,
+  obstacles,
+  reachableCells: reachableCandidates,
+}: SectorGateOptions): SectorGate | null {
+  const head = snake[0];
+  if (!head || gridSize < 6) return null;
+
+  const occupied = new Set(snake.map(({ x, y }) => cellKey(x, y)));
+  const reachable = new Set(
+    (reachableCandidates ?? allBoardCells(gridSize)).map(({ x, y }) =>
+      cellKey(x, y),
+    ),
+  );
+  const candidates: SectorGate[] = [];
+
+  const addCandidate = (side: SectorGateSide, index: number): void => {
+    const entry =
+      side === "top"
+        ? { x: index, y: 0 }
+        : side === "right"
+          ? { x: gridSize - 1, y: index }
+          : side === "bottom"
+            ? { x: index, y: gridSize - 1 }
+            : { x: 0, y: index };
+    const approach =
+      side === "top"
+        ? { x: index, y: 1 }
+        : side === "right"
+          ? { x: gridSize - 2, y: index }
+          : side === "bottom"
+            ? { x: index, y: gridSize - 2 }
+            : { x: 1, y: index };
+    const entryKey = cellKey(entry.x, entry.y);
+    const approachKey = cellKey(approach.x, approach.y);
+    const distance = Math.abs(entry.x - head.x) + Math.abs(entry.y - head.y);
+
+    if (distance < 6) return;
+    if (occupied.has(entryKey) || occupied.has(approachKey)) return;
+    if (obstacles.has(entryKey) || obstacles.has(approachKey)) return;
+    if (!reachable.has(entryKey) || !reachable.has(approachKey)) return;
+    candidates.push({ side, index, entry });
+  };
+
+  for (let index = 2; index <= gridSize - 3; index += 1) {
+    addCandidate("top", index);
+    addCandidate("right", index);
+    addCandidate("bottom", index);
+    addCandidate("left", index);
+  }
+
+  if (candidates.length === 0) return null;
+  const random = seededRandom(
+    seed ^ Math.imul(sector + 17, 0x27d4eb2d) ^ candidates.length,
+  );
+  return candidates[Math.floor(random() * candidates.length)] ?? null;
+}
+
 export function availableSpawnCells({
   candidates,
   snake,
@@ -350,6 +433,7 @@ export function advanceSnake({
   direction,
   food,
   bonusFood,
+  gate = null,
   obstacles,
   gridSize,
 }: SnakeStepOptions): SnakeStepResult {
@@ -387,6 +471,7 @@ export function advanceSnake({
     };
   }
 
+  const reachingSectorGate = samePoint(gate?.entry ?? null, nextHead);
   const eatingRegularFood = samePoint(food, nextHead);
   const eatingBonusFood = samePoint(bonusFood, nextHead);
   const collisionBody = eatingRegularFood ? snake : snake.slice(0, -1);
@@ -406,11 +491,13 @@ export function advanceSnake({
   if (!eatingRegularFood) nextSnake.pop();
 
   return {
-    kind: eatingRegularFood
-      ? "regular-food"
-      : eatingBonusFood
-        ? "bonus-food"
-        : "move",
+    kind: reachingSectorGate
+      ? "sector-gate"
+      : eatingRegularFood
+        ? "regular-food"
+        : eatingBonusFood
+          ? "bonus-food"
+          : "move",
     snake: nextSnake,
     head: nextHead,
   };

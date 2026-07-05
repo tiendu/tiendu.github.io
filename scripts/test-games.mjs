@@ -264,6 +264,22 @@ const bonusFoodStep = snakeRules.advanceSnake({
 assert.equal(bonusFoodStep.kind, "bonus-food");
 assert.equal(bonusFoodStep.snake.length, 2);
 
+const gateStep = snakeRules.advanceSnake({
+  snake: [
+    { x: 5, y: 1 },
+    { x: 5, y: 2 },
+  ],
+  direction: { x: 0, y: -1 },
+  food: null,
+  bonusFood: null,
+  gate: { side: "top", index: 5, entry: { x: 5, y: 0 } },
+  obstacles: new Set(),
+  gridSize: 20,
+});
+assert.equal(gateStep.kind, "sector-gate");
+assert.deepEqual(gateStep.head, { x: 5, y: 0 });
+assert.equal(gateStep.snake.length, 2);
+
 assert.deepEqual(snakeRules.turnDirection({ x: 0, y: -1 }, "left"), {
   x: -1,
   y: 0,
@@ -322,6 +338,44 @@ const emptyFirstSector = snakeRules.generateSectorLayout({
 });
 assert.equal(emptyFirstSector.obstacles.size, 0);
 assert.equal(emptyFirstSector.reachableCells.length, 400);
+
+const sectorGateA = snakeRules.chooseSectorGate({
+  seed: 45_678,
+  sector: 3,
+  gridSize: 20,
+  snake: startSnake,
+  obstacles: deterministicSectorA.obstacles,
+  reachableCells: deterministicSectorA.reachableCells,
+});
+const sectorGateB = snakeRules.chooseSectorGate({
+  seed: 45_678,
+  sector: 3,
+  gridSize: 20,
+  snake: startSnake,
+  obstacles: deterministicSectorA.obstacles,
+  reachableCells: deterministicSectorA.reachableCells,
+});
+assert.deepEqual(sectorGateA, sectorGateB);
+assert.ok(sectorGateA);
+assert.ok(
+  sectorGateA.entry.x === 0 ||
+    sectorGateA.entry.x === 19 ||
+    sectorGateA.entry.y === 0 ||
+    sectorGateA.entry.y === 19,
+);
+assert.equal(
+  deterministicSectorA.obstacles.has(
+    `${sectorGateA.entry.x},${sectorGateA.entry.y}`,
+  ),
+  false,
+);
+assert.equal(
+  startSnake.some(
+    (segment) =>
+      segment.x === sectorGateA.entry.x && segment.y === sectorGateA.entry.y,
+  ),
+  false,
+);
 
 const choicesA = snakeRules.protocolChoices(91, 3);
 const choicesB = snakeRules.protocolChoices(91, 3);
@@ -755,5 +809,5 @@ assert.ok(
 );
 
 console.log(
-  "Game rules OK: Neon Snake walls, absolute steering, flow scoring, deterministic sectors; Stack Trace landings, wind, balance, tools, and difficulty; and Chicken Run movement, weather, terrain, background scenes, pacing, and sprite contrast.",
+  "Game rules OK: Neon Snake solid walls, wall exits, absolute steering, flow scoring, deterministic sectors; Stack Trace landings, wind, balance, tools, and difficulty; and Chicken Run movement, weather, terrain, background scenes, pacing, and sprite contrast.",
 );

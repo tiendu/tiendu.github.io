@@ -33,10 +33,17 @@
   color: #f0c36f;
 }
 
-.snake-overdrive-indicator output {
+.snake-gate-indicator[hidden] {
+  display: none;
+}
+
+.snake-gate-indicator {
   color: #58e2cf;
-  letter-spacing: 0.04em;
-  text-shadow: 0 0 7px rgb(88 226 207 / 35%);
+  text-shadow: 0 0 8px rgb(88 226 207 / 44%);
+}
+
+.snake-gate-indicator output {
+  color: #9cf3df;
 }
 
 .snake-board-frame {
@@ -139,7 +146,7 @@
   gap: 0.38rem;
   grid-template-areas:
     ". up ."
-    "left drive right"
+    "left . right"
     ". down .";
   grid-template-columns: repeat(3, minmax(64px, 92px));
   max-width: 300px;
@@ -170,19 +177,7 @@
   grid-area: right;
 }
 
-.snake-pad .snake-overdrive-button {
-  border-color: rgb(88 226 207 / 34%);
-  color: #58e2cf;
-  font-size: 0.72rem;
-  grid-area: drive;
-  letter-spacing: 0.07em;
-}
 
-.snake-pad .snake-overdrive-button.is-active {
-  background: rgb(88 226 207 / 18%);
-  border-color: #58e2cf;
-  box-shadow: 0 0 10px rgb(88 226 207 / 24%);
-}
 
 .snake-help {
   font-size: 0.7rem;

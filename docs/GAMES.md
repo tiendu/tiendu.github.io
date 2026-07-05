@@ -28,9 +28,11 @@ high scores.
 
 Snake is one evolving Neon Run with a fixed top-down 2.5D arena, absolute
 four-direction steering, a transparent block-built snake, Flow scoring,
-tail-powered Overdrive, deterministic sectors, and recovery-or-risk protocol
-choices. The arena and obstacles are cached, while the high-DPI render scale is
-capped to keep the game responsive on ordinary laptops and phones.
+deterministic sectors, solid arena walls, and recovery-or-risk protocol choices.
+After six cores, a physical wall gate opens; the next sector begins only after
+the snake reaches it. The arena and obstacles are cached, while the high-DPI
+render scale is capped to keep the game responsive on ordinary laptops and
+phones.
 
 ## Free Range
 

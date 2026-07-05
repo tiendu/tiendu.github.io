@@ -1,16 +1,30 @@
-import type { Point, SnakeProtocol } from "./snake-rules";
-import { cellKey } from "./snake-rules";
+import type {
+  Point,
+  SectorGate,
+  SnakeCollisionKind,
+  SnakeProtocol,
+} from "./snake-rules";
 import { configureFixedCanvas } from "./shared/canvas";
 
 export const SNAKE_CANVAS_WIDTH = 440;
 export const SNAKE_CANVAS_HEIGHT = 480;
 
-export type SnakeEffectKind = "regular-food" | "bonus-food" | "collision";
+export type SnakeEffectKind =
+  | "regular-food"
+  | "bonus-food"
+  | "sector-gate"
+  | "collision";
 
 export interface SnakeVisualEffect {
   kind: SnakeEffectKind;
   point: Point;
   startedAt: number;
+  collision?: SnakeCollisionKind;
+}
+
+export interface SnakeCollisionWarning {
+  point: Point;
+  collision: SnakeCollisionKind;
 }
 
 export interface SnakeRenderState {
@@ -24,7 +38,8 @@ export interface SnakeRenderState {
   flow: number;
   activeProtocol: SnakeProtocol | null;
   bonusRemainingMs: number;
-  overdriveActive: boolean;
+  sectorGate: SectorGate | null;
+  collisionWarning: SnakeCollisionWarning | null;
   movementProgress: number;
   time: number;
   eatEffect: SnakeVisualEffect | null;
@@ -52,7 +67,7 @@ const TAU = Math.PI * 2;
 const BOARD_X = 30;
 const BOARD_Y = 42;
 const BOARD_SIZE = 380;
-const BOARD_DEPTH = 8;
+const WALL_THICKNESS = 9;
 const MAX_PIXEL_RATIO = 1.5;
 const BONUS_DURATION_MS = 5500;
 
@@ -225,49 +240,6 @@ export function createSnakeRenderer(
       target.lineTo(BOARD_X + BOARD_SIZE, BOARD_Y + offset);
       target.stroke();
     }
-
-    target.fillStyle = "#020906";
-    target.beginPath();
-    target.moveTo(BOARD_X, BOARD_Y + BOARD_SIZE);
-    target.lineTo(BOARD_X + BOARD_SIZE, BOARD_Y + BOARD_SIZE);
-    target.lineTo(
-      BOARD_X + BOARD_SIZE - BOARD_DEPTH,
-      BOARD_Y + BOARD_SIZE + BOARD_DEPTH,
-    );
-    target.lineTo(BOARD_X + BOARD_DEPTH, BOARD_Y + BOARD_SIZE + BOARD_DEPTH);
-    target.closePath();
-    target.fill();
-
-    target.fillStyle = "#04100b";
-    target.beginPath();
-    target.moveTo(BOARD_X + BOARD_SIZE, BOARD_Y);
-    target.lineTo(BOARD_X + BOARD_SIZE + BOARD_DEPTH, BOARD_Y + BOARD_DEPTH);
-    target.lineTo(
-      BOARD_X + BOARD_SIZE + BOARD_DEPTH,
-      BOARD_Y + BOARD_SIZE,
-    );
-    target.lineTo(BOARD_X + BOARD_SIZE, BOARD_Y + BOARD_SIZE);
-    target.closePath();
-    target.fill();
-
-    target.strokeStyle = "rgba(199, 240, 139, 0.42)";
-    target.lineWidth = 1.5;
-    traceRoundedRect(
-      target,
-      BOARD_X - 1,
-      BOARD_Y - 1,
-      BOARD_SIZE + 2,
-      BOARD_SIZE + 2,
-      2,
-    );
-    target.stroke();
-
-    target.strokeStyle = "rgba(88, 226, 207, 0.17)";
-    target.lineWidth = 3;
-    target.beginPath();
-    target.moveTo(BOARD_X + 18, BOARD_Y - 5);
-    target.lineTo(BOARD_X + BOARD_SIZE - 18, BOARD_Y - 5);
-    target.stroke();
 
     const vignette = target.createRadialGradient(
       SNAKE_CANVAS_WIDTH / 2,
@@ -454,7 +426,6 @@ export function createSnakeRenderer(
     index: number,
     length: number,
     flow: number,
-    overdrive: boolean,
     danger: boolean,
     time: number,
   ): void => {
@@ -463,14 +434,9 @@ export function createSnakeRenderer(
     const size = center.cellWidth * lerp(0.69, 0.57, tailProgress);
     const pulseIndex = reducedMotionQuery.matches
       ? -1
-      : Math.floor((time / (overdrive ? 65 : 105)) % Math.max(1, length));
+      : Math.floor((time / 115) % Math.max(1, length));
     const pulsing = index === pulseIndex;
-    const color =
-      danger && index < 3
-        ? "#f0c36f"
-        : overdrive
-          ? "#58e2cf"
-          : "#72e7d1";
+    const color = danger && index < 3 ? "#f0c36f" : "#72e7d1";
     const alpha = clamp(0.2 - tailProgress * 0.08 + flow * 0.008, 0.13, 0.3);
     drawGlassBlock(
       center,
@@ -478,7 +444,7 @@ export function createSnakeRenderer(
       color,
       pulsing ? alpha + 0.12 : alpha,
       3,
-      pulsing || overdrive ? 9 : 3,
+      pulsing ? 9 : 3,
     );
 
     context.save();
@@ -494,19 +460,18 @@ export function createSnakeRenderer(
     head: FloatPoint,
     direction: Point,
     flow: number,
-    overdrive: boolean,
     danger: boolean,
   ): void => {
     const center = projectBoardPoint({ x: head.x + 0.5, y: head.y + 0.5 });
     const size = center.cellWidth * 0.91;
-    const color = danger ? "#f0c36f" : overdrive ? "#58e2cf" : "#9cf3df";
+    const color = danger ? "#f0c36f" : "#9cf3df";
     drawGlassBlock(
       center,
       size,
       color,
-      overdrive ? 0.37 : 0.29 + flow * 0.01,
+      0.29 + flow * 0.01,
       4,
-      danger || overdrive || flow >= 4 ? 11 : 6,
+      danger || flow >= 4 ? 11 : 6,
     );
 
     const perpendicular = { x: -direction.y, y: direction.x };
@@ -639,60 +604,275 @@ export function createSnakeRenderer(
     context.restore();
   };
 
-  const nextCellIsDangerous = (state: SnakeRenderState): boolean => {
-    const head = state.snake[0];
-    if (!head) return false;
-    const next = {
-      x: head.x + state.direction.x,
-      y: head.y + state.direction.y,
-    };
-    if (next.x < 0 || next.x >= gridSize || next.y < 0 || next.y >= gridSize) {
-      return true;
-    }
-    if (state.obstacles.has(cellKey(next.x, next.y))) return true;
-    return state.snake
-      .slice(0, -1)
-      .some((point) => point.x === next.x && point.y === next.y);
-  };
+  const drawCollisionWarning = (state: SnakeRenderState): void => {
+    const warning = state.collisionWarning;
+    if (!warning) return;
 
-  const drawDangerCell = (state: SnakeRenderState): void => {
-    if (!nextCellIsDangerous(state)) return;
-    const head = state.snake[0];
-    if (!head) return;
-    const next = {
-      x: head.x + state.direction.x,
-      y: head.y + state.direction.y,
+    const point = {
+      x: clamp(warning.point.x, 0, gridSize - 1),
+      y: clamp(warning.point.y, 0, gridSize - 1),
     };
-    if (next.x < 0 || next.x >= gridSize || next.y < 0 || next.y >= gridSize) {
-      return;
-    }
-
     const cellSize = BOARD_SIZE / gridSize;
+    const pulse = reducedMotionQuery.matches
+      ? 0.72
+      : 0.58 + Math.sin(state.time / 70) * 0.2;
+
     context.save();
-    context.fillStyle = "rgba(240, 195, 111, 0.09)";
-    context.strokeStyle = "rgba(240, 195, 111, 0.7)";
-    context.lineWidth = 1.4;
-    context.shadowColor = "rgba(240, 195, 111, 0.45)";
-    context.shadowBlur = 7;
+    context.fillStyle = `rgba(240, 195, 111, ${0.08 + pulse * 0.08})`;
+    context.strokeStyle = `rgba(240, 195, 111, ${pulse})`;
+    context.lineWidth = 1.7;
+    context.shadowColor = "rgba(240, 195, 111, 0.65)";
+    context.shadowBlur = 9;
     context.fillRect(
-      BOARD_X + next.x * cellSize + 2,
-      BOARD_Y + next.y * cellSize + 2,
-      cellSize - 4,
-      cellSize - 4,
+      BOARD_X + point.x * cellSize + 1.5,
+      BOARD_Y + point.y * cellSize + 1.5,
+      cellSize - 3,
+      cellSize - 3,
     );
     context.strokeRect(
-      BOARD_X + next.x * cellSize + 2,
-      BOARD_Y + next.y * cellSize + 2,
+      BOARD_X + point.x * cellSize + 1.5,
+      BOARD_Y + point.y * cellSize + 1.5,
+      cellSize - 3,
+      cellSize - 3,
+    );
+
+    const center = projectCellCenter(point);
+    context.fillStyle = "#f6d697";
+    context.globalAlpha = pulse;
+    context.beginPath();
+    context.arc(center.x, center.y, 1.8, 0, TAU);
+    context.fill();
+    context.restore();
+  };
+
+  const wallWarningSide = (
+    warning: SnakeCollisionWarning | null,
+  ): SectorGate["side"] | null => {
+    if (!warning || warning.collision !== "wall") return null;
+    if (warning.point.x < 0) return "left";
+    if (warning.point.x >= gridSize) return "right";
+    if (warning.point.y < 0) return "top";
+    return "bottom";
+  };
+
+  const gateOpeningRect = (gate: SectorGate): { x: number; y: number; width: number; height: number } => {
+    const cellSize = BOARD_SIZE / gridSize;
+    if (gate.side === "top") {
+      return {
+        x: BOARD_X + gate.index * cellSize - 2,
+        y: BOARD_Y - WALL_THICKNESS - 6,
+        width: cellSize + 4,
+        height: WALL_THICKNESS + 12,
+      };
+    }
+    if (gate.side === "right") {
+      return {
+        x: BOARD_X + BOARD_SIZE - 6,
+        y: BOARD_Y + gate.index * cellSize - 7,
+        width: WALL_THICKNESS + 12,
+        height: cellSize + 8,
+      };
+    }
+    if (gate.side === "bottom") {
+      return {
+        x: BOARD_X + gate.index * cellSize - 2,
+        y: BOARD_Y + BOARD_SIZE - 6,
+        width: cellSize + 4,
+        height: WALL_THICKNESS + 12,
+      };
+    }
+    return {
+      x: BOARD_X - WALL_THICKNESS - 6,
+      y: BOARD_Y + gate.index * cellSize - 7,
+      width: WALL_THICKNESS + 12,
+      height: cellSize + 8,
+    };
+  };
+
+  const drawWallTerminal = (x: number, y: number, width: number, height: number, time: number): void => {
+    const pulse = reducedMotionQuery.matches ? 0.7 : 0.55 + Math.sin(time / 120 + x * 0.03 + y * 0.02) * 0.2;
+    context.save();
+    context.fillStyle = `rgba(88, 226, 207, ${0.22 + pulse * 0.18})`;
+    context.fillRect(x, y, width, height);
+    context.strokeStyle = `rgba(197, 255, 238, ${0.42 + pulse * 0.24})`;
+    context.lineWidth = 1.2;
+    context.strokeRect(x + 0.6, y + 0.6, width - 1.2, height - 1.2);
+    context.restore();
+  };
+
+  const drawContinuousWall = (gate: SectorGate | null, time: number): void => {
+    const wallX = BOARD_X - WALL_THICKNESS / 2;
+    const wallY = BOARD_Y - WALL_THICKNESS / 2;
+    const wallSize = BOARD_SIZE + WALL_THICKNESS;
+    const radius = 8;
+    const pulse = reducedMotionQuery.matches ? 0.8 : 0.68 + Math.sin(time / 180) * 0.12;
+
+    context.save();
+    context.shadowColor = "rgba(0, 0, 0, 0.82)";
+    context.shadowBlur = 10;
+    context.strokeStyle = "#040b08";
+    context.lineWidth = WALL_THICKNESS + 4;
+    traceRoundedRect(context, wallX, wallY, wallSize, wallSize, radius);
+    context.stroke();
+
+    context.shadowBlur = 0;
+    context.strokeStyle = "rgba(9, 22, 18, 0.96)";
+    context.lineWidth = WALL_THICKNESS + 1;
+    traceRoundedRect(context, wallX, wallY, wallSize, wallSize, radius);
+    context.stroke();
+
+    context.strokeStyle = `rgba(88, 226, 207, ${0.14 + pulse * 0.1})`;
+    context.lineWidth = Math.max(3, WALL_THICKNESS - 4);
+    traceRoundedRect(context, wallX, wallY, wallSize, wallSize, radius);
+    context.stroke();
+
+    context.strokeStyle = `rgba(234, 255, 223, ${0.18 + pulse * 0.12})`;
+    context.lineWidth = 1;
+    traceRoundedRect(context, wallX, wallY, wallSize, wallSize, radius);
+    context.stroke();
+
+    const perimeter = wallSize * 4;
+    context.save();
+    context.strokeStyle = `rgba(134, 255, 238, ${0.32 + pulse * 0.24})`;
+    context.lineWidth = Math.max(2, WALL_THICKNESS - 6);
+    context.lineCap = "round";
+    context.setLineDash([30, Math.max(140, perimeter - 30)]);
+    context.lineDashOffset = reducedMotionQuery.matches ? 0 : -((time * 0.08) % perimeter);
+    traceRoundedRect(context, wallX, wallY, wallSize, wallSize, radius);
+    context.stroke();
+    context.restore();
+
+    const corners = [
+      { x: BOARD_X, y: BOARD_Y },
+      { x: BOARD_X + BOARD_SIZE, y: BOARD_Y },
+      { x: BOARD_X + BOARD_SIZE, y: BOARD_Y + BOARD_SIZE },
+      { x: BOARD_X, y: BOARD_Y + BOARD_SIZE },
+    ];
+    context.fillStyle = `rgba(185, 229, 142, ${0.2 + pulse * 0.14})`;
+    corners.forEach((corner) => {
+      context.beginPath();
+      context.arc(corner.x, corner.y, 2.3, 0, TAU);
+      context.fill();
+    });
+
+    if (gate) {
+      const opening = gateOpeningRect(gate);
+      context.fillStyle = "rgba(1, 6, 4, 0.98)";
+      context.fillRect(opening.x, opening.y, opening.width, opening.height);
+
+      if (gate.side === "left" || gate.side === "right") {
+        drawWallTerminal(opening.x + 1, opening.y - 4, opening.width - 2, 4, time);
+        drawWallTerminal(opening.x + 1, opening.y + opening.height, opening.width - 2, 4, time);
+      } else {
+        drawWallTerminal(opening.x - 2, opening.y + 1, 4, opening.height - 2, time);
+        drawWallTerminal(opening.x + opening.width - 2, opening.y + 1, 4, opening.height - 2, time);
+      }
+    }
+
+    context.restore();
+  };
+
+  const drawSectorGate = (gate: SectorGate, time: number): void => {
+    const cellSize = BOARD_SIZE / gridSize;
+    const pulse = reducedMotionQuery.matches
+      ? 0.75
+      : 0.62 + Math.sin(time / 125) * 0.18;
+    const center =
+      gate.side === "left" || gate.side === "right"
+        ? projectCellCenter(gate.entry, 4)
+        : projectCellCenter(gate.entry);
+    const color = "#58e2cf";
+
+    context.save();
+    context.fillStyle = `rgba(88, 226, 207, ${0.08 + pulse * 0.08})`;
+    context.fillRect(
+      center.x - cellSize / 2 + 1,
+      center.y - cellSize / 2 + 1,
+      cellSize - 2,
+      cellSize - 2,
+    );
+    context.strokeStyle = color;
+    context.lineWidth = 1.5;
+    context.globalAlpha = pulse;
+    context.shadowColor = color;
+    context.shadowBlur = 10;
+    context.strokeRect(
+      center.x - cellSize / 2 + 2,
+      center.y - cellSize / 2 + 2,
       cellSize - 4,
       cellSize - 4,
     );
+
+    const outward =
+      gate.side === "top"
+        ? { x: 0, y: -1 }
+        : gate.side === "right"
+          ? { x: 1, y: 0 }
+          : gate.side === "bottom"
+            ? { x: 0, y: 1 }
+            : { x: -1, y: 0 };
+    for (let index = 0; index < 3; index += 1) {
+      const distance = 3 + index * 4;
+      const x = center.x + outward.x * distance;
+      const y = center.y + outward.y * distance;
+      const perpendicular = { x: -outward.y, y: outward.x };
+      context.beginPath();
+      context.moveTo(
+        x - outward.x * 2 + perpendicular.x * 2,
+        y - outward.y * 2 + perpendicular.y * 2,
+      );
+      context.lineTo(x + outward.x * 2, y + outward.y * 2);
+      context.lineTo(
+        x - outward.x * 2 - perpendicular.x * 2,
+        y - outward.y * 2 - perpendicular.y * 2,
+      );
+      context.stroke();
+    }
     context.restore();
+  };
+
+  const drawWallWarningMarker = (
+    warning: SnakeCollisionWarning | null,
+    time: number,
+  ): void => {
+    const side = wallWarningSide(warning);
+    if (!side || !warning) return;
+    const cellSize = BOARD_SIZE / gridSize;
+    const index =
+      side === "left" || side === "right"
+        ? clamp(warning.point.y, 0, gridSize - 1)
+        : clamp(warning.point.x, 0, gridSize - 1);
+
+    const rect =
+      side === "top"
+        ? { x: BOARD_X + index * cellSize - 1, y: BOARD_Y - WALL_THICKNESS - 4, width: cellSize + 2, height: WALL_THICKNESS + 8 }
+        : side === "bottom"
+          ? { x: BOARD_X + index * cellSize - 1, y: BOARD_Y + BOARD_SIZE - 4, width: cellSize + 2, height: WALL_THICKNESS + 8 }
+          : side === "left"
+            ? { x: BOARD_X - WALL_THICKNESS - 4, y: BOARD_Y + index * cellSize - 1, width: WALL_THICKNESS + 8, height: cellSize + 2 }
+            : { x: BOARD_X + BOARD_SIZE - 4, y: BOARD_Y + index * cellSize - 1, width: WALL_THICKNESS + 8, height: cellSize + 2 };
+
+    const pulse = reducedMotionQuery.matches ? 0.8 : 0.6 + Math.sin(time / 110) * 0.22;
+    context.save();
+    context.fillStyle = `rgba(240, 195, 111, ${0.16 + pulse * 0.14})`;
+    context.fillRect(rect.x, rect.y, rect.width, rect.height);
+    context.strokeStyle = `rgba(255, 226, 154, ${0.42 + pulse * 0.3})`;
+    context.lineWidth = 1.2;
+    context.strokeRect(rect.x + 0.6, rect.y + 0.6, rect.width - 1.2, rect.height - 1.2);
+    context.restore();
+  };
+
+  const drawArenaWalls = (state: SnakeRenderState): void => {
+    drawContinuousWall(state.sectorGate, state.time);
+    if (state.sectorGate) drawSectorGate(state.sectorGate, state.time);
+    drawWallWarningMarker(state.collisionWarning, state.time);
   };
 
   const drawEffect = (effect: SnakeVisualEffect | null, time: number): void => {
     if (!effect) return;
     const age = time - effect.startedAt;
-    const duration = effect.kind === "collision" ? 650 : 380;
+    const duration =
+      effect.kind === "collision" ? 650 : effect.kind === "sector-gate" ? 520 : 380;
     if (age < 0 || age > duration) return;
 
     const progress = age / duration;
@@ -702,7 +882,9 @@ export function createSnakeRenderer(
         ? "#b5f58f"
         : effect.kind === "bonus-food"
           ? "#f0c36f"
-          : "#ef7d68";
+          : effect.kind === "sector-gate"
+            ? "#58e2cf"
+            : "#ef7d68";
     const count = effect.kind === "collision" ? 12 : 7;
 
     context.save();
@@ -745,13 +927,6 @@ export function createSnakeRenderer(
 
   const drawArenaStatus = (state: SnakeRenderState): void => {
     context.save();
-    const pulse = reducedMotionQuery.matches
-      ? 0.42
-      : 0.4 + Math.sin(state.time / 780) * 0.06;
-    context.strokeStyle = `rgba(199, 240, 139, ${pulse})`;
-    context.lineWidth = 1.3;
-    context.strokeRect(BOARD_X, BOARD_Y, BOARD_SIZE, BOARD_SIZE);
-
     context.font = "10px monospace";
     context.textAlign = "center";
     context.fillStyle = "rgba(197, 239, 151, 0.44)";
@@ -768,6 +943,20 @@ export function createSnakeRenderer(
     refreshObstacleLayer(state.obstacles);
 
     context.clearRect(0, 0, SNAKE_CANVAS_WIDTH, SNAKE_CANVAS_HEIGHT);
+    const collisionAge = state.collisionEffect
+      ? state.time - state.collisionEffect.startedAt
+      : Number.POSITIVE_INFINITY;
+    const shake =
+      state.collisionEffect?.kind === "collision" && collisionAge < 180
+        ? (1 - collisionAge / 180) * 2.2
+        : 0;
+    context.save();
+    if (shake > 0 && !reducedMotionQuery.matches) {
+      context.translate(
+        Math.sin(state.time * 0.29) * shake,
+        Math.cos(state.time * 0.37) * shake,
+      );
+    }
     context.drawImage(
       staticLayer.canvas,
       0,
@@ -792,7 +981,8 @@ export function createSnakeRenderer(
     );
 
     drawArenaStatus(state);
-    drawDangerCell(state);
+    drawArenaWalls(state);
+    drawCollisionWarning(state);
     if (state.food) drawPickupFrame(state.food, state.time, false, 0);
     if (state.bonusFood) {
       drawPickupFrame(
@@ -804,7 +994,7 @@ export function createSnakeRenderer(
     }
 
     const snakePoints = interpolatedSnake(state);
-    const danger = nextCellIsDangerous(state);
+    const danger = state.collisionWarning !== null;
     for (let index = snakePoints.length - 1; index >= 1; index -= 1) {
       const point = snakePoints[index];
       if (!point) continue;
@@ -813,7 +1003,6 @@ export function createSnakeRenderer(
         index,
         snakePoints.length,
         state.flow,
-        state.overdriveActive,
         danger,
         state.time,
       );
@@ -825,7 +1014,6 @@ export function createSnakeRenderer(
         head,
         state.direction,
         state.flow,
-        state.overdriveActive,
         danger,
       );
     }
@@ -833,6 +1021,7 @@ export function createSnakeRenderer(
     drawEffect(state.eatEffect, state.time);
     drawEffect(state.collisionEffect, state.time);
     drawProtocolMarker(state.activeProtocol);
+    context.restore();
   };
 
   return { configure, draw };
