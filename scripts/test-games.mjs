@@ -16,7 +16,9 @@ async function importTypeScript(relativePath) {
 
   if (diagnostics?.length) {
     diagnostics.forEach((diagnostic) => {
-      console.error(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+      console.error(
+        ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+      );
     });
     process.exit(1);
   }
@@ -28,18 +30,14 @@ async function importTypeScript(relativePath) {
 const snakeRules = await importTypeScript(
   "../src/scripts/games/snake-rules.ts",
 );
-const crane = await importTypeScript(
-  "../src/scripts/games/crane-rules.ts",
-);
+const crane = await importTypeScript("../src/scripts/games/crane-rules.ts");
 const rules = await importTypeScript(
   "../src/scripts/games/chicken-run-rules.ts",
 );
 const cycle = await importTypeScript(
   "../src/scripts/games/chicken-run-cycle.ts",
 );
-const sky = await importTypeScript(
-  "../src/scripts/games/chicken-run-sky.ts",
-);
+const sky = await importTypeScript("../src/scripts/games/chicken-run-sky.ts");
 const terrain = await importTypeScript(
   "../src/scripts/games/chicken-run-terrain.ts",
 );
@@ -90,10 +88,7 @@ const missedLanding = crane.resolveLanding({
 });
 assert.equal(missedLanding.kind, "miss");
 
-assert.deepEqual(
-  crane.nextCrateSpec(12345, 8),
-  crane.nextCrateSpec(12345, 8),
-);
+assert.deepEqual(crane.nextCrateSpec(12345, 8), crane.nextCrateSpec(12345, 8));
 assert.notDeepEqual(
   crane.nextCrateSpec(12345, 8),
   crane.nextCrateSpec(12345, 9),
@@ -179,7 +174,7 @@ assert.equal(crane.trolleySpeedForHeight(0), 80);
 assert.ok(crane.trolleySpeedForHeight(30) > crane.trolleySpeedForHeight(0));
 assert.ok(crane.cableSwingForHeight(30) > crane.cableSwingForHeight(0));
 
-const wrappedRight = snakeRules.advanceSnake({
+const wallCollision = snakeRules.advanceSnake({
   snake: [
     { x: 19, y: 10 },
     { x: 18, y: 10 },
@@ -191,24 +186,23 @@ const wrappedRight = snakeRules.advanceSnake({
   obstacles: new Set(),
   gridSize: 20,
 });
-assert.equal(wrappedRight.kind, "move");
-assert.deepEqual(wrappedRight.head, { x: 0, y: 10 });
-assert.equal(wrappedRight.snake.length, 3);
+assert.equal(wallCollision.kind, "collision");
+assert.equal(wallCollision.collision, "wall");
+assert.deepEqual(wallCollision.head, { x: 20, y: 10 });
 
-const wrappedObstacle = snakeRules.advanceSnake({
+const obstacleCollision = snakeRules.advanceSnake({
   snake: [
-    { x: 19, y: 10 },
-    { x: 18, y: 10 },
+    { x: 5, y: 5 },
+    { x: 4, y: 5 },
   ],
   direction: { x: 1, y: 0 },
   food: null,
   bonusFood: null,
-  obstacles: new Set(["0,10"]),
+  obstacles: new Set(["6,5"]),
   gridSize: 20,
 });
-assert.equal(wrappedObstacle.kind, "collision");
-assert.equal(wrappedObstacle.collision, "obstacle");
-assert.deepEqual(wrappedObstacle.head, { x: 0, y: 10 });
+assert.equal(obstacleCollision.kind, "collision");
+assert.equal(obstacleCollision.collision, "obstacle");
 
 const departingTail = snakeRules.advanceSnake({
   snake: [
@@ -270,43 +264,87 @@ const bonusFoodStep = snakeRules.advanceSnake({
 assert.equal(bonusFoodStep.kind, "bonus-food");
 assert.equal(bonusFoodStep.snake.length, 2);
 
+assert.deepEqual(snakeRules.turnDirection({ x: 0, y: -1 }, "left"), {
+  x: -1,
+  y: 0,
+});
+assert.deepEqual(snakeRules.turnDirection({ x: 0, y: -1 }, "right"), {
+  x: 1,
+  y: 0,
+});
 assert.equal(
   snakeRules.isOppositeDirection({ x: 1, y: 0 }, { x: -1, y: 0 }),
   true,
 );
-assert.equal(
-  snakeRules.isOppositeDirection({ x: 1, y: 0 }, { x: 0, y: -1 }),
-  false,
-);
 
 assert.equal(snakeRules.calculateBonusPoints(5_000, 5_000, 40, 120), 120);
 assert.equal(snakeRules.calculateBonusPoints(1, 5_000, 40, 120), 40);
-assert.equal(snakeRules.calculateBonusPoints(625, 5_000, 40, 120), 50);
+assert.equal(snakeRules.calculateFlowScore(10, 4, 1.5), 60);
+assert.equal(snakeRules.sectorForFoods(0, 6), 1);
+assert.equal(snakeRules.sectorForFoods(6, 6), 2);
+assert.equal(snakeRules.speedForSector(1), 170);
+assert.ok(snakeRules.speedForSector(8) < snakeRules.speedForSector(1));
 
-const deterministicMazeA = snakeRules.generateMaze(123_456, 20);
-const deterministicMazeB = snakeRules.generateMaze(123_456, 20);
+const startSnake = snakeRules.startingSnake(20);
+assert.equal(startSnake.length, 5);
+assert.deepEqual(startSnake[0], { x: 10, y: 12 });
+
+const deterministicSectorA = snakeRules.generateSectorLayout({
+  seed: 123_456,
+  gridSize: 20,
+  sector: 4,
+  snake: startSnake,
+});
+const deterministicSectorB = snakeRules.generateSectorLayout({
+  seed: 123_456,
+  gridSize: 20,
+  sector: 4,
+  snake: startSnake,
+});
 assert.deepEqual(
-  [...deterministicMazeA.obstacles].sort(),
-  [...deterministicMazeB.obstacles].sort(),
+  [...deterministicSectorA.obstacles].sort(),
+  [...deterministicSectorB.obstacles].sort(),
 );
-assert.ok(deterministicMazeA.obstacles.size >= 14);
-assert.equal(deterministicMazeA.obstacles.has("9,10"), false);
-assert.ok(deterministicMazeA.reachableCells.length >= 250);
-
-const wrappingOnlyOpenCells = new Set();
-for (let y = 0; y < 5; y += 1) {
-  for (let x = 0; x < 5; x += 1) {
-    if (!((x === 0 || x === 4) && y === 0)) {
-      wrappingOnlyOpenCells.add(`${x},${y}`);
-    }
-  }
+assert.ok(deterministicSectorA.obstacles.size >= 5);
+for (const segment of startSnake) {
+  assert.equal(
+    deterministicSectorA.obstacles.has(`${segment.x},${segment.y}`),
+    false,
+  );
 }
-const wrappingReachable = snakeRules.reachableCells(
-  wrappingOnlyOpenCells,
+assert.ok(deterministicSectorA.reachableCells.length >= 250);
+
+const emptyFirstSector = snakeRules.generateSectorLayout({
+  seed: 1,
+  gridSize: 20,
+  sector: 1,
+  snake: startSnake,
+});
+assert.equal(emptyFirstSector.obstacles.size, 0);
+assert.equal(emptyFirstSector.reachableCells.length, 400);
+
+const choicesA = snakeRules.protocolChoices(91, 3);
+const choicesB = snakeRules.protocolChoices(91, 3);
+assert.deepEqual(choicesA, choicesB);
+assert.notEqual(choicesA[0], choicesA[1]);
+assert.ok(choicesA.includes("stabilize"));
+assert.ok(
+  choicesA.some((choice) => snakeRules.PROTOCOLS[choice].scoreMultiplier > 1),
+);
+
+const shrunk = snakeRules.shrinkSnake(
+  startSnake.concat([{ x: 10, y: 17 }]),
+  3,
+  5,
+);
+assert.equal(shrunk.length, 5);
+
+const reachableWithoutWrapping = snakeRules.reachableCells(
+  new Set(["1,0", "0,1"]),
   5,
   { x: 0, y: 0 },
 );
-assert.deepEqual([...wrappingReachable].sort(), ["0,0", "4,0"]);
+assert.deepEqual([...reachableWithoutWrapping], ["0,0"]);
 
 const spawnCells = snakeRules.availableSpawnCells({
   candidates: [
@@ -347,19 +385,27 @@ assert.deepEqual(
   ["single-hay", "single-fence"],
 );
 assert.equal(
-  rules.availablePatternsForScore(120).some((pattern) => pattern.id === "single-mud"),
+  rules
+    .availablePatternsForScore(120)
+    .some((pattern) => pattern.id === "single-mud"),
   true,
 );
 assert.equal(
-  rules.availablePatternsForScore(180).some((pattern) => pattern.id === "single-log"),
+  rules
+    .availablePatternsForScore(180)
+    .some((pattern) => pattern.id === "single-log"),
   true,
 );
 assert.equal(
-  rules.availablePatternsForScore(859).some((pattern) => pattern.id === "hay-trio"),
+  rules
+    .availablePatternsForScore(859)
+    .some((pattern) => pattern.id === "hay-trio"),
   false,
 );
 assert.equal(
-  rules.availablePatternsForScore(860).some((pattern) => pattern.id === "hay-trio"),
+  rules
+    .availablePatternsForScore(860)
+    .some((pattern) => pattern.id === "hay-trio"),
   true,
 );
 assert.equal(rules.selectPatternForScore(0, 0).id, "single-hay");
@@ -530,8 +576,6 @@ assert.equal(
   false,
 );
 
-
-
 const terrainBaseline = 264;
 assert.equal(terrain.terrainHeightAt(0, terrainBaseline), terrainBaseline);
 assert.equal(terrain.terrainSegmentAt(450).kind, "flat");
@@ -560,7 +604,9 @@ assert.ok(sampledSegments.some((segment) => segment.kind === "uphill"));
 assert.ok(sampledSegments.some((segment) => segment.kind === "downhill"));
 assert.ok(
   sampledSegments
-    .filter((segment) => segment.kind === "uphill" || segment.kind === "downhill")
+    .filter(
+      (segment) => segment.kind === "uphill" || segment.kind === "downhill",
+    )
     .every((segment) => segment.endX - segment.startX >= 800),
 );
 assert.ok(
@@ -573,7 +619,11 @@ let terrainDirectionChanges = 0;
 let previousDirection = 0;
 for (const slope of terrainSlopes) {
   const direction = slope > 0.002 ? 1 : slope < -0.002 ? -1 : 0;
-  if (direction !== 0 && previousDirection !== 0 && direction !== previousDirection) {
+  if (
+    direction !== 0 &&
+    previousDirection !== 0 &&
+    direction !== previousDirection
+  ) {
     terrainDirectionChanges += 1;
   }
   if (direction !== 0) previousDirection = direction;
@@ -597,7 +647,6 @@ assert.ok(
   Math.abs(terrain.terrainSlopeAt(safeTerrainStart, terrainBaseline)) <= 0.081,
 );
 
-
 const backgroundTerrainAt = (worldX) => {
   const zone = Math.floor(worldX / 5_000) % 5;
   if (zone === 0) return { kind: "flat", offset: 0, slope: 0 };
@@ -611,7 +660,8 @@ const backgroundChunks = backgroundWorld.chunksInRange(0, 60_000);
 assert.ok(backgroundChunks.length >= 20);
 assert.ok(
   backgroundChunks.every(
-    (chunk) => chunk.endX - chunk.startX >= 1_800 && chunk.endX - chunk.startX <= 3_300,
+    (chunk) =>
+      chunk.endX - chunk.startX >= 1_800 && chunk.endX - chunk.startX <= 3_300,
   ),
 );
 assert.ok(
@@ -620,7 +670,10 @@ assert.ok(
   ),
 );
 for (let index = 1; index < backgroundChunks.length; index += 1) {
-  assert.notEqual(backgroundChunks[index].kind, backgroundChunks[index - 1].kind);
+  assert.notEqual(
+    backgroundChunks[index].kind,
+    backgroundChunks[index - 1].kind,
+  );
 }
 const backgroundKinds = new Set(backgroundChunks.map((chunk) => chunk.kind));
 assert.ok(backgroundKinds.has("open-field"));
@@ -652,13 +705,19 @@ const middleProfileSamples = Array.from({ length: 80 }, (_, index) =>
   backgroundWorld.middleProfileAt(index * 350),
 );
 assert.ok(Math.max(...farProfileSamples) - Math.min(...farProfileSamples) > 20);
-assert.ok(Math.max(...middleProfileSamples) - Math.min(...middleProfileSamples) > 12);
+assert.ok(
+  Math.max(...middleProfileSamples) - Math.min(...middleProfileSamples) > 12,
+);
 
 const weatherDurations = weather.weatherDurationsForCycle(0);
 const clearWeather = weather.weatherStateForElapsed(0);
-const cloudyWeather = weather.weatherStateForElapsed(weatherDurations.clear + 0.5);
+const cloudyWeather = weather.weatherStateForElapsed(
+  weatherDurations.clear + 0.5,
+);
 const rainWeather = weather.weatherStateForElapsed(
-  weatherDurations.clear + weatherDurations.cloudy + weatherDurations.rain * 0.5,
+  weatherDurations.clear +
+    weatherDurations.cloudy +
+    weatherDurations.rain * 0.5,
 );
 const clearingWeather = weather.weatherStateForElapsed(
   weatherDurations.clear +
@@ -696,5 +755,5 @@ assert.ok(
 );
 
 console.log(
-  "Game rules OK: Snake wrapping, obstacle collisions, scoring, deterministic mazes; Stack Trace landings, wind, balance, tools, and difficulty; and Chicken Run movement, weather, terrain, background scenes, pacing, and sprite contrast.",
+  "Game rules OK: Neon Snake walls, absolute steering, flow scoring, deterministic sectors; Stack Trace landings, wind, balance, tools, and difficulty; and Chicken Run movement, weather, terrain, background scenes, pacing, and sprite contrast.",
 );

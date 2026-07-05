@@ -1,16 +1,23 @@
-/* Snake-specific board, mode picker, and direction controls. */
+/* Snake-specific top-down 2.5D arena, run HUD, and absolute steering controls. */
 
 .snake-panel {
-  max-width: 470px;
+  max-width: 520px;
 }
 
 .snake-scoreboard {
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 0.98rem;
-  gap: 0.35rem 1rem;
-  justify-content: space-between;
-  letter-spacing: 0.11em;
+  display: grid;
+  font-size: 0.86rem;
+  gap: 0.3rem 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  letter-spacing: 0.085em;
+}
+
+.snake-scoreboard span:nth-child(3n + 2) {
+  text-align: center;
+}
+
+.snake-scoreboard span:nth-child(3n) {
+  text-align: right;
 }
 
 .snake-bonus-indicator[hidden] {
@@ -26,20 +33,31 @@
   color: #f0c36f;
 }
 
+.snake-overdrive-indicator output {
+  color: #58e2cf;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 7px rgb(88 226 207 / 35%);
+}
+
 .snake-board-frame {
   background: #010302;
   box-shadow:
-    inset 0 0 24px rgb(0 0 0 / 58%),
-    0 10px 28px rgb(0 0 0 / 34%),
-    0 0 18px rgb(199 240 139 / 9%);
+    inset 0 0 30px rgb(0 0 0 / 64%),
+    0 12px 32px rgb(0 0 0 / 42%),
+    0 0 20px rgb(88 226 207 / 7%);
 }
 
 .snake-board {
-  aspect-ratio: 440 / 444;
+  aspect-ratio: 440 / 480;
 }
 
 .snake-overlay {
-  background: rgb(2 7 4 / 66%);
+  background: linear-gradient(
+    180deg,
+    rgb(2 7 4 / 52%),
+    rgb(2 7 4 / 76%) 55%,
+    rgb(2 7 4 / 86%)
+  );
 }
 
 .snake-overlay strong {
@@ -48,107 +66,155 @@
 }
 
 .snake-overlay > span {
-  font-size: 0.86rem;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  letter-spacing: 0.075em;
 }
 
-.snake-mode-picker {
-  display: grid;
-  gap: 0.55rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.snake-start-picker,
+.snake-protocol-picker {
   margin-top: 1rem;
-  max-width: 300px;
+  max-width: 330px;
   pointer-events: auto;
   width: 100%;
 }
 
-.snake-mode-picker[hidden] {
+.snake-start-picker[hidden],
+.snake-protocol-picker[hidden] {
   display: none;
 }
 
-.snake-mode-picker button {
+.snake-start-picker button,
+.snake-protocol-picker button {
   background: rgb(199 240 139 / 7%);
-  border: 1px solid rgb(199 240 139 / 32%);
+  border: 1px solid rgb(199 240 139 / 34%);
   border-radius: 2px;
   color: var(--terminal-green-bright);
   cursor: pointer;
   font-family: var(--font-terminal);
   font-size: 1rem;
-  letter-spacing: 0.1em;
-  min-height: 52px;
-  padding: 0.55rem 0.4rem;
+  letter-spacing: 0.09em;
+  min-height: 54px;
+  padding: 0.58rem 0.5rem;
   text-transform: uppercase;
   touch-action: manipulation;
+  width: 100%;
 }
 
-.snake-mode-picker button:hover,
-.snake-mode-picker button:focus-visible {
-  background: rgb(199 240 139 / 15%);
-  border-color: var(--terminal-green);
+.snake-start-picker button:hover,
+.snake-start-picker button:focus-visible,
+.snake-protocol-picker button:hover,
+.snake-protocol-picker button:focus-visible {
+  background: rgb(88 226 207 / 12%);
+  border-color: #58e2cf;
 }
 
-.snake-mode-picker small {
+.snake-start-picker small,
+.snake-protocol-picker small {
   color: var(--terminal-green-dim);
   display: block;
   font-family: inherit;
-  font-size: 0.64rem;
-  letter-spacing: 0.05em;
+  font-size: 0.63rem;
+  letter-spacing: 0.045em;
   margin-top: 0.2rem;
 }
 
+.snake-protocol-picker {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.snake-protocol-picker button {
+  min-height: 78px;
+}
+
+.snake-protocol-picker button > strong {
+  display: block;
+  font-size: 0.98rem;
+  letter-spacing: 0.08em;
+}
+
 .snake-pad {
-  gap: 0.45rem;
+  display: grid;
+  gap: 0.38rem;
   grid-template-areas:
     ". up ."
-    "left down right";
-  grid-template-columns: repeat(3, 48px);
-  max-width: none;
+    "left drive right"
+    ". down .";
+  grid-template-columns: repeat(3, minmax(64px, 92px));
+  max-width: 300px;
 }
 
 .snake-pad button {
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  height: 48px;
+  font-family: var(--font-terminal);
+  font-size: 1rem;
+  height: 42px;
+  letter-spacing: 0.04em;
   padding: 0;
-  width: 48px;
+  width: 100%;
 }
 
-.snake-pad button[data-snake-direction="up"] {
+.snake-direction-up {
   grid-area: up;
 }
 
-.snake-pad button[data-snake-direction="left"] {
-  grid-area: left;
-}
-
-.snake-pad button[data-snake-direction="down"] {
+.snake-direction-down {
   grid-area: down;
 }
 
-.snake-pad button[data-snake-direction="right"] {
+.snake-direction-left {
+  grid-area: left;
+}
+
+.snake-direction-right {
   grid-area: right;
 }
 
+.snake-pad .snake-overdrive-button {
+  border-color: rgb(88 226 207 / 34%);
+  color: #58e2cf;
+  font-size: 0.72rem;
+  grid-area: drive;
+  letter-spacing: 0.07em;
+}
+
+.snake-pad .snake-overdrive-button.is-active {
+  background: rgb(88 226 207 / 18%);
+  border-color: #58e2cf;
+  box-shadow: 0 0 10px rgb(88 226 207 / 24%);
+}
+
 .snake-help {
-  font-size: 0.78rem;
-  letter-spacing: 0.075em;
+  font-size: 0.7rem;
+  letter-spacing: 0.055em;
+  line-height: 1.45;
 }
 
 @media (max-width: 620px), (pointer: coarse) {
-  .snake-mode-picker {
-    max-width: 260px;
+  .snake-scoreboard {
+    font-size: 0.78rem;
+    gap: 0.25rem 0.45rem;
   }
 
-  .snake-mode-picker button {
-    min-height: 48px;
+  .snake-start-picker,
+  .snake-protocol-picker {
+    max-width: 290px;
+  }
+
+  .snake-protocol-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .snake-protocol-picker button {
+    min-height: 62px;
   }
 
   .snake-pad {
-    display: grid;
+    grid-template-columns: repeat(3, minmax(58px, 82px));
+    max-width: 270px;
   }
 
   .snake-help {
-    font-size: 0.7rem;
-    line-height: 1.45;
+    font-size: 0.66rem;
   }
 }

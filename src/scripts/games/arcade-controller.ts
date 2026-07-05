@@ -84,35 +84,38 @@ const definitions: readonly GameDefinition[] = [
           : action === "exit"
             ? "Escape"
             : null,
-    readyStatus: (mode, fine) =>
-      `${mode} · READY · ${fine ? "ARROWS/WASD" : "USE CONTROLS"}`,
-    activeStatus: (mode, fine) =>
-      `${mode} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
-    syncStatus: (state, mode, overlayVisible, fine) => {
+    readyStatus: (sector, fine) =>
+      `SECTOR ${sector} · READY · ${fine ? "ARROWS / WASD · SPACE DRIVE" : "USE CONTROLS"}`,
+    activeStatus: (sector, fine) =>
+      `SECTOR ${sector} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
+    syncStatus: (state, sector, overlayVisible, fine) => {
       if (state === "PAUSED") {
-        return { text: `${mode} · GAME PAUSED`, pauseLabel: "RESUME" };
+        return { text: `SECTOR ${sector} · GAME PAUSED`, pauseLabel: "RESUME" };
       }
-      if (state === "GAME OVER" || state === "SYSTEM CLEARED") {
+      if (state === "RUN TERMINATED" || state === "GRID CLEARED") {
         return {
-          text: `${mode} · ${state} · SELECT MODE OR EXIT`,
+          text: `SECTOR ${sector} · ${state} · START AGAIN OR EXIT`,
           pauseDisabled: true,
         };
       }
-      if (state === "SELECT MODE") {
-        return { text: "SELECT MODE · FREE OR MAZE", pauseDisabled: true };
-      }
-      if (state === "PRESS A DIRECTION") {
+      if (state.includes("CLEARED")) {
         return {
-          text: `${mode} · READY · ${fine ? "ARROWS/WASD" : "USE CONTROLS"}`,
+          text: `SECTOR ${sector} · CHOOSE LEFT OR RIGHT ROUTE`,
+          pauseDisabled: true,
+        };
+      }
+      if (state === "NEON RUN" || state === "SAVED RUN") {
+        return {
+          text: `SECTOR ${sector} · READY · ${fine ? "ARROWS / WASD · SPACE DRIVE" : "USE CONTROLS"}`,
           pauseDisabled: true,
         };
       }
       if (!overlayVisible || state === "RUNNING") {
         return {
-          text: `${mode} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
+          text: `SECTOR ${sector} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
         };
       }
-      return { text: `${mode} · READY` };
+      return { text: `SECTOR ${sector} · READY` };
     },
     exitMessage: (detail) => {
       const snake = detail as Partial<ScoreExitDetail>;

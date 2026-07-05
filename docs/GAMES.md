@@ -4,10 +4,10 @@ The homepage arcade keeps game markup, typed game logic, rendering, and shared
 browser utilities separate. Each game mounts itself from a small Astro component,
 while `arcade-controller.ts` handles terminal commands and restoring the profile.
 
-| Command | Component | Runtime | Styles |
-|---|---|---|---|
-| `snake` | `SnakeGame.astro` | `snake.ts` + rules + renderer | `snake-game.css` |
-| `crane` | `CraneGame.astro` | `crane.ts` + rules + renderer | `crane-game.css` |
+| Command   | Component              | Runtime                                     | Styles                 |
+| --------- | ---------------------- | ------------------------------------------- | ---------------------- |
+| `snake`   | `SnakeGame.astro`      | `snake.ts` + rules + renderer               | `snake-game.css`       |
+| `crane`   | `CraneGame.astro`      | `crane.ts` + rules + renderer               | `crane-game.css`       |
 | `chicken` | `ChickenRunGame.astro` | `chicken-run.ts` and focused helper modules | `chicken-run-game.css` |
 
 ## Stack Trace
@@ -26,8 +26,11 @@ high scores.
 
 ## Snake
 
-Snake supports free and maze modes, edge wrapping, a continuous rendered body,
-bonus food, and deterministic maze generation.
+Snake is one evolving Neon Run with a fixed top-down 2.5D arena, absolute
+four-direction steering, a transparent block-built snake, Flow scoring,
+tail-powered Overdrive, deterministic sectors, and recovery-or-risk protocol
+choices. The arena and obstacles are cached, while the high-DPI render scale is
+capped to keep the game responsive on ordinary laptops and phones.
 
 ## Free Range
 
