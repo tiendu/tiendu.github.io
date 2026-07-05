@@ -2,6 +2,7 @@ import {
   calculateRestLean,
   cableSwingForHeight,
   collapseAngleForHeight,
+  crateMotionProfile,
   nextCrateSpec,
   resolveLanding,
   shouldAwardTool,
@@ -10,6 +11,7 @@ import {
   wideLoadSpec,
   windForHeight,
   type CraneTool,
+  type CrateKind,
   type CrateSpec,
   type PlacedCrate,
   type WindState,
@@ -45,6 +47,16 @@ interface CollapseState {
   direction: -1 | 1;
 }
 
+type LandingFeedbackKind = "perfect" | "stable" | "risky" | "mag-lock";
+
+interface LandingFeedback {
+  kind: LandingFeedbackKind;
+  label: string;
+  centerX: number;
+  height: number;
+  elapsed: number;
+}
+
 type ConfirmationAction = "restart" | "discard-save";
 
 interface CraneSessionState {
@@ -69,7 +81,7 @@ interface CraneSessionState {
 
 const HIGH_SCORE_KEY = "tiendu-crane-high-score";
 const SESSION_KEY = "tiendu-crane-session";
-const SESSION_VERSION = 1;
+const SESSION_VERSION = 2;
 const BASE_WIDTH = 230;
 const GRAVITY = 760;
 const MAX_FRAME_STEP = 1 / 30;
@@ -96,6 +108,10 @@ function isCraneTool(value: unknown): value is CraneTool {
   return value === "stabilizer" || value === "mag-lock" || value === "wide-load" || value === "windbreak";
 }
 
+function isCrateKind(value: unknown): value is CrateKind {
+  return value === "standard" || value === "long" || value === "heavy";
+}
+
 function isPlacedCrate(value: unknown): value is PlacedCrate {
   if (!value || typeof value !== "object") return false;
   const crate = value as Partial<PlacedCrate>;
@@ -103,9 +119,11 @@ function isPlacedCrate(value: unknown): value is PlacedCrate {
     Number.isInteger(crate.id) &&
     isFiniteNumber(crate.centerX) &&
     isFiniteNumber(crate.bottom) &&
+    isCrateKind(crate.kind) &&
     isFiniteNumber(crate.width) &&
     isFiniteNumber(crate.height) &&
-    isFiniteNumber(crate.mass)
+    isFiniteNumber(crate.mass) &&
+    isFiniteNumber(crate.tonnage)
   );
 }
 
@@ -196,11 +214,13 @@ function mountCraneGame(root: HTMLElement): void {
   let windbreakDrops = 0;
   let windSuppressedForDrop = false;
   let stabilizerPulse = 0;
+  let landingFeedback: LandingFeedback | null = null;
   let runSeed = randomSeed();
   let wind: WindState = windForHeight(runSeed, 0);
   let crates: PlacedCrate[] = [];
   let hanging: AirborneCrate | null = null;
   let falling: AirborneCrate | null = null;
+  let loadAge = 0;
   let respawnDelay = 0;
   let trolleyX = 148;
   let trolleyDirection: -1 | 1 = 1;
@@ -389,6 +409,7 @@ function mountCraneGame(root: HTMLElement): void {
       vy: 0,
     };
     falling = null;
+    loadAge = 0;
     updateScoreboard();
   };
 
@@ -418,12 +439,13 @@ function mountCraneGame(root: HTMLElement): void {
       announce("STABILIZE APPLIED");
     } else if (selected === "mag-lock") {
       magLockArmed = true;
-      announce("MAG-LOCK ACTIVE FOR NEXT LANDING");
+      announce("MAG-LOCK ARMED · NEXT LOAD WILL ALIGN PERFECTLY");
     } else if (selected === "wide-load") {
       wideLoadArmed = true;
       if (hanging) {
         const widened = wideLoadSpec(hanging);
         hanging = { ...hanging, ...widened };
+        loadAge = 0;
       }
       announce("WIDE LOAD APPLIED TO NEXT CONTAINER");
     } else if (selected === "windbreak") {
@@ -508,34 +530,63 @@ function mountCraneGame(root: HTMLElement): void {
     }
 
     const centerY = currentTop + falling.height / 2;
-    const localCenterX = (falling.x - centerY * sine) / Math.max(0.75, cosine);
-    crates.push({
+    const localCenterX =
+      (landing.resolvedCenterX - centerY * sine) / Math.max(0.75, cosine);
+    const placedCrate: PlacedCrate = {
       id: score + 1,
+      kind: falling.kind,
       centerX: localCenterX,
       bottom: currentTop,
       width: falling.width,
       height: falling.height,
       mass: falling.mass,
-    });
+      tonnage: falling.tonnage,
+    };
+    crates.push(placedCrate);
     score += 1;
     persistHighScore();
 
     angularVelocity += landing.impactImpulse * 0.42;
-    if (landing.perfect) {
+    if (usedMagLock) {
+      perfectStreak += 1;
+      angularVelocity *= 0.18;
+      towerAngle = restLean + (towerAngle - restLean) * 0.28;
+      landingFeedback = {
+        kind: "mag-lock",
+        label: "PERFECT LOCK",
+        centerX: localCenterX,
+        height: currentTop + falling.height,
+        elapsed: 0,
+      };
+      announce("MAG-LOCKED · PERFECT ALIGNMENT");
+    } else if (landing.perfect) {
       perfectStreak += 1;
       angularVelocity *= 0.34;
       towerAngle = restLean + (towerAngle - restLean) * 0.55;
+      landingFeedback = {
+        kind: "perfect",
+        label: "PERFECT",
+        centerX: localCenterX,
+        height: currentTop + falling.height,
+        elapsed: 0,
+      };
       announce("PERFECT DROP · SWAY REDUCED");
     } else {
       perfectStreak = 0;
+      const risky = Math.abs(landing.normalizedOffset) > 0.32;
+      landingFeedback = {
+        kind: risky ? "risky" : "stable",
+        label: risky ? "RISKY" : usedWideLoad ? "WIDE LOAD" : "STABLE",
+        centerX: localCenterX,
+        height: currentTop + falling.height,
+        elapsed: 0,
+      };
       announce(
-        usedMagLock
-          ? "MAG-LOCK SECURED LOAD"
-          : usedWideLoad
-            ? "WIDE LOAD SECURED"
-            : Math.abs(landing.normalizedOffset) > 0.32
-              ? "DANGEROUS OVERHANG"
-              : "LOAD SECURED",
+        usedWideLoad
+          ? "WIDE LOAD SECURED"
+          : risky
+            ? "DANGEROUS OVERHANG"
+            : "LOAD SECURED",
       );
     }
 
@@ -564,12 +615,15 @@ function mountCraneGame(root: HTMLElement): void {
     if (paused || collapse || !hanging) return;
 
     const currentWind = effectiveWind();
-    const speed = trolleySpeedForHeight(score);
-    const amplitude = cableSwingForHeight(score);
+    const motion = crateMotionProfile(hanging.kind);
+    const speed = trolleySpeedForHeight(score) * motion.trolleyFactor;
+    const amplitude = cableSwingForHeight(score) * motion.swingFactor;
     const swingRate = 1.35 + currentWind.strength * 0.08;
     const swingVelocity = Math.cos(swingPhase) * amplitude * swingRate;
     const horizontalVelocity =
-      trolleyDirection * speed * 0.095 + swingVelocity + currentWind.force * 0.2;
+      trolleyDirection * speed * 0.095 +
+      swingVelocity +
+      currentWind.force * 0.2 * motion.windFactor;
 
     windSuppressedForDrop = windbreakDrops > 0;
     if (windSuppressedForDrop) windbreakDrops -= 1;
@@ -580,6 +634,7 @@ function mountCraneGame(root: HTMLElement): void {
       vy: -20,
     };
     hanging = null;
+    loadAge = 0;
     updateScoreboard();
   };
 
@@ -618,12 +673,14 @@ function mountCraneGame(root: HTMLElement): void {
     windbreakDrops = 0;
     windSuppressedForDrop = false;
     stabilizerPulse = 0;
+    landingFeedback = null;
     runSeed = randomSeed();
     highScoreAtRunStart = highScore;
     wind = windForHeight(runSeed, 0);
     crates = [];
     hanging = null;
     falling = null;
+    loadAge = 0;
     respawnDelay = 0;
     trolleyX = 148;
     trolleyDirection = 1;
@@ -679,7 +736,9 @@ function mountCraneGame(root: HTMLElement): void {
     restLean,
     cameraOffset,
     trolleyX,
+    trolleyDirection,
     cableAnchorX,
+    loadAge,
     wind: effectiveWind(),
     score,
     perfectStreak,
@@ -687,6 +746,7 @@ function mountCraneGame(root: HTMLElement): void {
     wideLoadArmed,
     windbreakDrops,
     stabilizerPulse,
+    landingFeedback,
     collapse,
     time,
     reducedMotion: reducedMotion.matches,
@@ -696,6 +756,10 @@ function mountCraneGame(root: HTMLElement): void {
     if (!started || paused || gameOver || pendingToolChoices) return;
 
     stabilizerPulse = Math.max(0, stabilizerPulse - delta * 1.8);
+    if (landingFeedback) {
+      landingFeedback.elapsed += delta;
+      if (landingFeedback.elapsed >= 1.25) landingFeedback = null;
+    }
     const targetCameraOffset = Math.max(0, towerHeight() - CRANE_CAMERA_THRESHOLD);
     const cameraBlend = reducedMotion.matches ? 1 : Math.min(1, delta * 4.2);
     cameraOffset += (targetCameraOffset - cameraOffset) * cameraBlend;
@@ -722,7 +786,9 @@ function mountCraneGame(root: HTMLElement): void {
     }
 
     if (hanging) {
-      const speed = trolleySpeedForHeight(score);
+      loadAge += delta;
+      const motion = crateMotionProfile(hanging.kind);
+      const speed = trolleySpeedForHeight(score) * motion.trolleyFactor;
       trolleyX += trolleyDirection * speed * delta;
       const halfWidth = hanging.width / 2;
       const minimumX = 58 + halfWidth;
@@ -736,20 +802,32 @@ function mountCraneGame(root: HTMLElement): void {
       }
 
       swingPhase += delta * (1.35 + currentWind.strength * 0.08);
-      const amplitude = cableSwingForHeight(score);
+      const amplitude = cableSwingForHeight(score) * motion.swingFactor;
       const pendulum = Math.sin(swingPhase) * amplitude;
-      const windDrift = currentWind.force * 0.19;
+      const windDrift = currentWind.force * 0.19 * motion.windFactor;
       cableAnchorX = trolleyX;
       hanging.x = trolleyX + pendulum + windDrift - CRANE_TOWER_X;
       hanging.y = CRANE_BASE_Y + cameraOffset - CRANE_HANGING_Y;
     }
 
     if (falling) {
-      falling.vx += currentWind.force * 0.16 * delta;
+      const landingY = currentHeight + falling.height / 2;
+      if (magLockArmed) {
+        const support = topSupport();
+        const cosine = Math.cos(towerAngle);
+        const sine = Math.sin(towerAngle);
+        const supportVisualX = support.centerX * cosine + support.centerY * sine;
+        const distanceToLanding = Math.max(0, falling.y - landingY);
+        const magneticPull = distanceToLanding < 150 ? 24 : 11;
+        falling.vx += (supportVisualX - falling.x) * magneticPull * delta;
+        falling.vx *= Math.max(0, 1 - delta * 7.5);
+      } else {
+        const motion = crateMotionProfile(falling.kind);
+        falling.vx += currentWind.force * 0.16 * motion.windFactor * delta;
+      }
       falling.x += falling.vx * delta;
       falling.vy -= GRAVITY * delta;
       falling.y += falling.vy * delta;
-      const landingY = currentHeight + falling.height / 2;
       if (falling.y <= landingY) {
         falling.y = landingY;
         placeFallingCrate();
@@ -804,11 +882,13 @@ function mountCraneGame(root: HTMLElement): void {
     windbreakDrops = state.windbreakDrops;
     windSuppressedForDrop = false;
     stabilizerPulse = 0;
+    landingFeedback = null;
     runSeed = state.runSeed;
     wind = windForHeight(runSeed, score);
     crates = state.crates.map((crate) => ({ ...crate }));
     hanging = null;
     falling = null;
+    loadAge = 0;
     respawnDelay = 0;
     trolleyX = state.trolleyX;
     trolleyDirection = state.trolleyDirection;

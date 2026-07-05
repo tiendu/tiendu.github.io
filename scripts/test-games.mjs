@@ -98,6 +98,32 @@ assert.notDeepEqual(
   crane.nextCrateSpec(12345, 8),
   crane.nextCrateSpec(12345, 9),
 );
+const generatedCrates = Array.from({ length: 48 }, (_, index) =>
+  crane.nextCrateSpec(12345, index),
+);
+assert.deepEqual(
+  [...new Set(generatedCrates.map((crate) => crate.kind))].sort(),
+  ["heavy", "long", "standard"],
+);
+assert.equal(generatedCrates[0].kind, "standard");
+assert.equal(generatedCrates[1].kind, "standard");
+assert.ok(generatedCrates.every((crate) => crate.tonnage > 0));
+assert.ok(
+  crane.crateMotionProfile("heavy").swingFactor <
+    crane.crateMotionProfile("standard").swingFactor,
+);
+assert.ok(
+  crane.crateMotionProfile("long").windFactor >
+    crane.crateMotionProfile("standard").windFactor,
+);
+const standardRig = crane.craneRigProfile("standard");
+const longRig = crane.craneRigProfile("long");
+const heavyRig = crane.craneRigProfile("heavy");
+assert.equal(longRig.telescopingSpreader, true);
+assert.equal(heavyRig.warningBeacon, true);
+assert.ok(longRig.rockAmplitude > standardRig.rockAmplitude);
+assert.ok(heavyRig.beamStrain > longRig.beamStrain);
+assert.ok(heavyRig.cableTension > standardRig.cableTension);
 assert.equal(crane.windForHeight(1, 0).label, "CALM");
 assert.deepEqual(crane.windForHeight(999, 19), crane.windForHeight(999, 19));
 assert.ok(Math.abs(crane.windForHeight(999, 19).force) > 0);
@@ -123,9 +149,17 @@ assert.deepEqual(crane.toolChoicesForAward(1), ["wide-load", "windbreak"]);
 assert.equal(crane.shouldAwardTool(3, 4, false), true);
 assert.equal(crane.shouldAwardTool(1, 10, false), true);
 assert.equal(crane.shouldAwardTool(3, 10, true), false);
-const wideLoad = crane.wideLoadSpec({ width: 170, height: 54, mass: 1.1 });
+const wideLoad = crane.wideLoadSpec({
+  kind: "standard",
+  width: 170,
+  height: 54,
+  mass: 1.1,
+  tonnage: 16,
+});
+assert.equal(wideLoad.kind, "long");
 assert.ok(wideLoad.width >= 232);
 assert.ok(wideLoad.height <= 52);
+assert.ok(wideLoad.tonnage > 0);
 const magLockedLanding = crane.resolveLanding({
   crateCenterX: 151,
   crateWidth: 160,
@@ -137,6 +171,10 @@ const magLockedLanding = crane.resolveLanding({
   magLocked: true,
 });
 assert.equal(magLockedLanding.kind, "landed");
+assert.equal(magLockedLanding.perfect, true);
+assert.equal(magLockedLanding.resolvedCenterX, 0);
+assert.equal(magLockedLanding.resolvedLateralVelocity, 0);
+assert.equal(magLockedLanding.impactImpulse, 0);
 assert.equal(crane.trolleySpeedForHeight(0), 80);
 assert.ok(crane.trolleySpeedForHeight(30) > crane.trolleySpeedForHeight(0));
 assert.ok(crane.cableSwingForHeight(30) > crane.cableSwingForHeight(0));
