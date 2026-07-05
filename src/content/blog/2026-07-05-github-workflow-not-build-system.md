@@ -63,27 +63,27 @@ The workflow slowly becomes:
 
 ```text
 install dependencies
-|
-v
-configure tools
-|
-v
-run linting
-|
-v
-run tests
-|
-v
-calculate version
-|
-v
-build image
-|
-v
-publish artifact
-|
-v
-deploy
+         |
+         v
+  configure tools
+         |
+         v
+    run linting
+         |
+         v
+     run tests
+         |
+         v
+ calculate version
+         |
+         v
+    build image
+         |
+         v
+  publish artifact
+         |
+         v
+       deploy
 ```
 
 Eventually, the workflow becomes the only place that knows how to build the project.
@@ -180,18 +180,18 @@ GitHub Actions is good at orchestration.
 It should decide:
 
 ```text
-when to run
-|
-v
-which runner to use
-|
-v
-which permissions are needed
-|
-v
-which jobs depend on each other
-|
-v
+            when to run
+                 |
+                 v
+        which runner to use
+                 |
+                 v
+   which permissions are needed
+                 |
+                 v
+  which jobs depend on each other
+                 |
+                 v
 which artifacts should be published
 ```
 
@@ -199,20 +199,20 @@ The repository should decide:
 
 ```text
 how to install
-|
-v
-how to lint
-|
-v
-how to test
-|
-v
-how to build
-|
-v
+      |
+      v
+ how to lint
+      |
+      v
+ how to test
+      |
+      v
+ how to build
+      |
+      v
 how to package
-|
-v
+      |
+      v
 how to deploy
 ```
 
@@ -252,21 +252,21 @@ The repository implements.
 When the build only exists inside GitHub Actions, every failure becomes a remote experiment:
 
 ```text
-edit
-|
-v
-commit
-|
-v
-push
-|
-v
-wait
-|
-v
+   edit
+    |
+    v
+  commit
+    |
+    v
+   push
+    |
+    v
+   wait
+    |
+    v
 read logs
-|
-v
+    |
+    v
 edit again
 ```
 
@@ -457,22 +457,22 @@ The architectural problem appears when the workflow also contains the build logi
 The development loop becomes:
 
 ```text
-change code
-|
-v
-commit
-|
-v
-push
-|
-v
-wait for CI
-|
-v
+    change code
+         |
+         v
+      commit
+         |
+         v
+       push
+         |
+         v
+    wait for CI
+         |
+         v
 inspect remote logs
-|
-v
-try again
+         |
+         v
+     try again
 ```
 
 The private image is only one example.
@@ -671,15 +671,15 @@ There is no need to reproduce the entire GitHub Actions platform on a developer 
 The practical local workflow is:
 
 ```text
-make ci
-|
-v
-actionlint
-|
-v
-git push
-|
-v
+      make ci
+         |
+         v
+    actionlint
+         |
+         v
+     git push
+         |
+         v
 real GitHub Actions
 ```
 
@@ -1020,31 +1020,31 @@ If the answer is no, the build is probably too tightly coupled to the current CI
 A maintainable design should look like this:
 
 ```text
-developer
-|
-v
-make ci
-|
-v
+      developer
+          |
+          v
+       make ci
+          |
+          v
 normal project scripts
-|
-v
-fast local feedback
+          |
+          v
+ fast local feedback
 ```
 
 And in CI:
 
 ```text
-GitHub Actions
-|
-v
-obtain trusted identity
-|
-v
+        GitHub Actions
+              |
+              v
+   obtain trusted identity
+              |
+              v
 call the same project commands
-|
-v
-perform final verification
+              |
+              v
+  perform final verification
 ```
 
 The paths are not identical.
