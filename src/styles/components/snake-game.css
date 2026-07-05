@@ -146,8 +146,7 @@
   gap: 0.38rem;
   grid-template-areas:
     ". up ."
-    "left . right"
-    ". down .";
+    "left down right";
   grid-template-columns: repeat(3, minmax(64px, 92px));
   max-width: 300px;
 }
