@@ -19,7 +19,12 @@ import {
   type SectorGate,
   type SnakeProtocol,
 } from "./snake-rules";
-import { dispatchGameExit, GAME_EVENTS } from "./shared/events";
+import {
+  dispatchGameExit,
+  dispatchGameStatus,
+  GAME_EVENTS,
+  readGameCommand,
+} from "./shared/events";
 import { createSnakeRenderer, type SnakeVisualEffect } from "./snake-renderer";
 import { mountAllGames } from "./shared/mount";
 import {
@@ -68,6 +73,8 @@ interface SnakeSessionState {
 
 const SNAKE_SESSION_KEY = "tiendu-snake-session";
 const SNAKE_SESSION_VERSION = 6;
+const SNAKE_GRID_SIZE = 20;
+const MAX_SAVED_SNAKE_LENGTH = 512;
 const HIGH_SCORE_KEY = "tiendu-snake-high-score-neon";
 const LEGACY_HIGH_SCORE_KEYS = [
   "tiendu-snake-high-score-free",
@@ -79,6 +86,36 @@ const isPoint = (value: unknown): value is Point => {
   if (!value || typeof value !== "object") return false;
   const point = value as Partial<Point>;
   return Number.isInteger(point.x) && Number.isInteger(point.y);
+};
+
+const isSavedSnakePoint = (value: unknown): value is Point => {
+  if (!isPoint(value)) return false;
+  const margin = MAX_SAVED_SNAKE_LENGTH;
+  return (
+    value.x >= -margin &&
+    value.x < SNAKE_GRID_SIZE + margin &&
+    value.y >= -margin &&
+    value.y < SNAKE_GRID_SIZE + margin
+  );
+};
+
+const isBoardPoint = (value: unknown): value is Point =>
+  isPoint(value) &&
+  value.x >= 0 &&
+  value.x < SNAKE_GRID_SIZE &&
+  value.y >= 0 &&
+  value.y < SNAKE_GRID_SIZE;
+
+const isDirection = (value: unknown): value is Point =>
+  isPoint(value) && Math.abs(value.x) + Math.abs(value.y) === 1;
+
+const isObstacleCell = (value: unknown): value is string => {
+  if (typeof value !== "string") return false;
+  const match = /^(\d+),(\d+)$/.exec(value);
+  if (!match) return false;
+  const x = Number(match[1]);
+  const y = Number(match[2]);
+  return x >= 0 && x < SNAKE_GRID_SIZE && y >= 0 && y < SNAKE_GRID_SIZE;
 };
 
 const isProtocol = (value: unknown): value is SnakeProtocol =>
@@ -96,7 +133,9 @@ const isSectorGate = (value: unknown): value is SectorGate => {
       gate.side === "bottom" ||
       gate.side === "left") &&
     Number.isInteger(gate.index) &&
-    isPoint(gate.entry)
+    (gate.index ?? -1) >= 0 &&
+    (gate.index ?? SNAKE_GRID_SIZE) < SNAKE_GRID_SIZE &&
+    isBoardPoint(gate.entry)
   );
 };
 
@@ -109,25 +148,35 @@ function isSnakeSessionState(value: unknown): value is SnakeSessionState {
     Number.isInteger(state.spawnCounter) &&
     Array.isArray(state.snake) &&
     state.snake.length >= 5 &&
-    state.snake.every(isPoint) &&
-    (state.food === null || isPoint(state.food)) &&
-    (state.bonusFood === null || isPoint(state.bonusFood)) &&
+    state.snake.length <= MAX_SAVED_SNAKE_LENGTH &&
+    state.snake.every(isSavedSnakePoint) &&
+    (state.food === null || isBoardPoint(state.food)) &&
+    (state.bonusFood === null || isBoardPoint(state.bonusFood)) &&
     typeof state.bonusRemainingMs === "number" &&
     Number.isFinite(state.bonusRemainingMs) &&
     (state.sectorGate === null || isSectorGate(state.sectorGate)) &&
     Array.isArray(state.obstacles) &&
-    state.obstacles.every((item) => typeof item === "string") &&
+    state.obstacles.length <= SNAKE_GRID_SIZE * SNAKE_GRID_SIZE &&
+    state.obstacles.every(isObstacleCell) &&
     Number.isInteger(state.sector) &&
+    (state.sector ?? 0) >= 1 &&
     Number.isInteger(state.foodsInSector) &&
+    (state.foodsInSector ?? -1) >= 0 &&
     Number.isInteger(state.totalFoods) &&
-    isPoint(state.direction) &&
+    (state.totalFoods ?? -1) >= 0 &&
+    isDirection(state.direction) &&
     Array.isArray(state.queuedDirections) &&
     state.queuedDirections.length <= 2 &&
-    state.queuedDirections.every(isPoint) &&
+    state.queuedDirections.every(isDirection) &&
     typeof state.score === "number" &&
     Number.isFinite(state.score) &&
+    (state.score ?? -1) >= 0 &&
     Number.isInteger(state.flow) &&
+    (state.flow ?? 0) >= 1 &&
+    (state.flow ?? 6) <= 5 &&
     Number.isInteger(state.maxFlow) &&
+    (state.maxFlow ?? 0) >= 1 &&
+    (state.maxFlow ?? 6) <= 5 &&
     typeof state.flowRemainingMs === "number" &&
     Number.isFinite(state.flowRemainingMs) &&
     (state.activeProtocol === null || isProtocol(state.activeProtocol)) &&
@@ -329,6 +378,92 @@ function mountSnakeGame(root: HTMLElement): void {
   };
 
   const formatScore = (value: number): string => String(value).padStart(5, "0");
+
+  const publishStatus = (): void => {
+    if (!active) return;
+    const progress = String(sector).padStart(2, "0");
+
+    if (resumePrompt) {
+      dispatchGameStatus(GAME_EVENTS.snake.status, {
+        game: "snake",
+        phase: "saved",
+        progress,
+        text: `SECTOR ${progress} · SAVED RUN · CONTINUE OR START OVER`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (gameOver) {
+      dispatchGameStatus(GAME_EVENTS.snake.status, {
+        game: "snake",
+        phase: "gameover",
+        progress,
+        text: `SECTOR ${progress} · RUN TERMINATED · START AGAIN OR EXIT`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (choosingProtocol) {
+      dispatchGameStatus(GAME_EVENTS.snake.status, {
+        game: "snake",
+        phase: "choosing",
+        progress,
+        text: `SECTOR ${progress} · CHOOSE LEFT OR RIGHT ROUTE`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (paused) {
+      dispatchGameStatus(GAME_EVENTS.snake.status, {
+        game: "snake",
+        phase: "paused",
+        progress,
+        text: `SECTOR ${progress} · GAME PAUSED`,
+        pauseLabel: "RESUME",
+      });
+      return;
+    }
+    if (exitingSector) {
+      dispatchGameStatus(GAME_EVENTS.snake.status, {
+        game: "snake",
+        phase: "transitioning",
+        progress,
+        text: `SECTOR ${progress} · EXITING · CLEAR THE TAIL THROUGH THE GATE`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (enteringSector) {
+      dispatchGameStatus(GAME_EVENTS.snake.status, {
+        game: "snake",
+        phase: "transitioning",
+        progress,
+        text: `SECTOR ${progress} · ENTERING · GUIDE THE SNAKE INSIDE`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (started) {
+      dispatchGameStatus(GAME_EVENTS.snake.status, {
+        game: "snake",
+        phase: "playing",
+        progress,
+        text: sectorGate
+          ? `SECTOR ${progress} · EXIT ONLINE · REACH THE ${sectorGate.side.toUpperCase()} GATE`
+          : `SECTOR ${progress} · ACTIVE · COLLECT ${Math.max(0, FOODS_PER_SECTOR - foodsInSector)} CORES`,
+      });
+      return;
+    }
+
+    dispatchGameStatus(GAME_EVENTS.snake.status, {
+      game: "snake",
+      phase: "ready",
+      progress,
+      text: `SECTOR ${progress} · READY · ARROWS / WASD`,
+      pauseDisabled: true,
+    });
+  };
+
   const announce = (message: string): void => {
     if (statusLabel) statusLabel.textContent = message;
   };
@@ -354,6 +489,7 @@ function mountSnakeGame(root: HTMLElement): void {
     if (messageLabel) messageLabel.textContent = message;
     setPickerVisibility(pickers);
     if (overlay) overlay.hidden = !visible;
+    publishStatus();
   };
 
   const updateBonusIndicator = (): void => {
@@ -381,6 +517,7 @@ function mountSnakeGame(root: HTMLElement): void {
     if (flowOutput) flowOutput.textContent = `x${flow}`;
     if (highScoreOutput) highScoreOutput.textContent = formatScore(highScore);
     updateGateIndicator();
+    publishStatus();
   };
 
   const clearBonusFood = (): void => {
@@ -539,29 +676,6 @@ function mountSnakeGame(root: HTMLElement): void {
         return { x, y };
       },
     );
-  };
-
-  const chooseSafeDirection = (preferred: Point): Point => {
-    const candidates = [preferred, ...Object.values(DIRECTIONS)];
-    const seen = new Set<string>();
-
-    for (const candidate of candidates) {
-      const key = `${candidate.x},${candidate.y}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const result = advanceSnake({
-        snake,
-        direction: candidate,
-        food: null,
-        bonusFood: null,
-        gate: null,
-        obstacles,
-        gridSize: GRID_SIZE,
-      });
-      if (result.kind !== "collision") return { ...candidate };
-    }
-
-    return { x: 0, y: -1 };
   };
 
   const oppositeSide = (side: SectorGate["side"]): SectorGate["side"] =>
@@ -1276,6 +1390,15 @@ function mountSnakeGame(root: HTMLElement): void {
     dispatchGameExit(GAME_EVENTS.snake.exit, { score, highScore });
   };
 
+  const onCommand = (event: Event): void => {
+    const action = readGameCommand(event);
+    if (!active || !action) return;
+    if (action === "pause") togglePause();
+    else if (action === "restart") restartRun();
+    else if (action === "exit") exitGame();
+    else if (action === "start") beginRun();
+  };
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!active) return;
     const key = event.key.toLowerCase();
@@ -1449,4 +1572,5 @@ function mountSnakeGame(root: HTMLElement): void {
   });
 
   window.addEventListener(GAME_EVENTS.snake.start, startGame);
+  window.addEventListener(GAME_EVENTS.snake.command, onCommand);
 }

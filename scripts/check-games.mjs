@@ -192,6 +192,29 @@ if (controller.includes(".observe(root, {"))
   );
 if (!controller.includes("button.textContent !== label"))
   failures.push("pause-button synchronization is not idempotent");
+
+if (!controller.includes("dispatchGameCommand"))
+  failures.push("arcade controller does not use typed game commands");
+if (!controller.includes("statusEvent"))
+  failures.push("arcade controller does not consume explicit game status events");
+if (controller.includes("new KeyboardEvent"))
+  failures.push("arcade controller still controls games through synthetic keyboard events");
+if (homePage.includes("HOLD DRIVE") || controller.includes("SPACE DRIVE"))
+  failures.push("retired Snake Drive instructions are still visible");
+for (const [scriptName, eventName] of [
+  ["snake.ts", "GAME_EVENTS.snake.status"],
+  ["crane.ts", "GAME_EVENTS.crane.status"],
+  ["chicken-run.ts", "GAME_EVENTS.chicken.status"],
+]) {
+  const script = await readFile(
+    new URL(`../src/scripts/games/${scriptName}`, import.meta.url),
+    "utf8",
+  );
+  if (!script.includes(eventName))
+    failures.push(`${scriptName} does not publish explicit game status`);
+  if (!script.includes("readGameCommand"))
+    failures.push(`${scriptName} does not consume typed game commands`);
+}
 for (const [moduleName, mountName] of [
   ["./snake", "mountSnakeGames"],
   ["./crane", "mountCraneGames"],

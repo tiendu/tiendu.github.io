@@ -25,7 +25,12 @@ import {
   createCraneRenderer,
   type CraneRenderState,
 } from "./crane-renderer";
-import { dispatchGameExit, GAME_EVENTS } from "./shared/events";
+import {
+  dispatchGameExit,
+  dispatchGameStatus,
+  GAME_EVENTS,
+  readGameCommand,
+} from "./shared/events";
 import { mountAllGames } from "./shared/mount";
 import {
   readStoredScore,
@@ -121,9 +126,17 @@ function isPlacedCrate(value: unknown): value is PlacedCrate {
     isFiniteNumber(crate.bottom) &&
     isCrateKind(crate.kind) &&
     isFiniteNumber(crate.width) &&
+    (crate.width ?? 0) > 0 &&
+    (crate.width ?? 10_000) < 1_000 &&
     isFiniteNumber(crate.height) &&
+    (crate.height ?? 0) > 0 &&
+    (crate.height ?? 10_000) < 1_000 &&
     isFiniteNumber(crate.mass) &&
-    isFiniteNumber(crate.tonnage)
+    (crate.mass ?? 0) > 0 &&
+    (crate.mass ?? 10_000) < 10_000 &&
+    isFiniteNumber(crate.tonnage) &&
+    (crate.tonnage ?? 0) > 0 &&
+    (crate.tonnage ?? 10_000) < 10_000
   );
 }
 
@@ -134,8 +147,11 @@ function isCraneSessionState(value: unknown): value is CraneSessionState {
   return (
     Number.isInteger(state.score) &&
     (state.score ?? 0) > 0 &&
+    (state.score ?? 100_001) <= 100_000 &&
     Number.isInteger(state.highScoreAtRunStart) &&
+    (state.highScoreAtRunStart ?? -1) >= 0 &&
     Number.isInteger(state.perfectStreak) &&
+    (state.perfectStreak ?? -1) >= 0 &&
     (choices === null ||
       (Array.isArray(choices) && choices.length === 2 && choices.every(isCraneTool))) &&
     Number.isInteger(state.toolAwardIndex) &&
@@ -145,6 +161,7 @@ function isCraneSessionState(value: unknown): value is CraneSessionState {
     Number.isInteger(state.runSeed) &&
     Array.isArray(state.crates) &&
     state.crates.length === state.score &&
+    state.crates.length <= 100_000 &&
     state.crates.every(isPlacedCrate) &&
     isFiniteNumber(state.trolleyX) &&
     (state.trolleyDirection === -1 || state.trolleyDirection === 1) &&
@@ -178,12 +195,9 @@ function mountCraneGame(root: HTMLElement): void {
   const choiceButtons = Array.from(
     root.querySelectorAll<HTMLButtonElement>("[data-crane-tool-choice]"),
   );
-  const pauseButton = root.querySelector<HTMLButtonElement>('[data-crane-control="pause"]');
-  const restartButton = root.querySelector<HTMLButtonElement>('[data-crane-control="restart"]');
-  const exitButton = root.querySelector<HTMLButtonElement>('[data-crane-control="exit"]');
-  const controlButtons = Array.from(
-    root.querySelectorAll<HTMLButtonElement>("[data-crane-control]"),
-  );
+  const pauseButton = root.querySelector<HTMLButtonElement>('[data-crane-action="pause"]');
+  const restartButton = root.querySelector<HTMLButtonElement>('[data-crane-action="restart"]');
+  const exitButton = root.querySelector<HTMLButtonElement>('[data-crane-action="exit"]');
   const confirmPanel = root.querySelector<HTMLElement>("[data-crane-confirm]");
   const confirmTitle = root.querySelector<HTMLElement>("[data-crane-confirm-title]");
   const confirmMessage = root.querySelector<HTMLElement>("[data-crane-confirm-message]");
@@ -346,6 +360,107 @@ function mountCraneGame(root: HTMLElement): void {
                   : "ready";
   };
 
+  const publishStatus = (): void => {
+    if (!active) return;
+    const progress = format(score, 3);
+
+    if (pendingConfirmation) {
+      dispatchGameStatus(GAME_EVENTS.crane.status, {
+        game: "crane",
+        phase: "confirming",
+        progress,
+        text: `HEIGHT ${progress} · CONFIRM ACTION`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (resumePrompt) {
+      dispatchGameStatus(GAME_EVENTS.crane.status, {
+        game: "crane",
+        phase: "saved",
+        progress,
+        text: `SAVED TOWER · HEIGHT ${progress} · CONTINUE OR NEW RUN`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (gameOver) {
+      dispatchGameStatus(GAME_EVENTS.crane.status, {
+        game: "crane",
+        phase: "gameover",
+        progress,
+        text: `HEIGHT ${progress} · STRUCTURAL FAILURE · RETRY OR EXIT`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (collapse) {
+      dispatchGameStatus(GAME_EVENTS.crane.status, {
+        game: "crane",
+        phase: "crashed",
+        progress,
+        text: `HEIGHT ${progress} · STRUCTURAL FAILURE`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (pendingToolChoices) {
+      dispatchGameStatus(GAME_EVENTS.crane.status, {
+        game: "crane",
+        phase: "choosing",
+        progress,
+        text: `HEIGHT ${progress} · BONUS READY · CHOOSE TOOL`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (paused) {
+      dispatchGameStatus(GAME_EVENTS.crane.status, {
+        game: "crane",
+        phase: "paused",
+        progress,
+        text: `HEIGHT ${progress} · GAME PAUSED`,
+        pauseLabel: "RESUME",
+      });
+      return;
+    }
+    if (falling) {
+      dispatchGameStatus(GAME_EVENTS.crane.status, {
+        game: "crane",
+        phase: "playing",
+        progress,
+        text: `HEIGHT ${progress} · CARGO FALLING`,
+      });
+      return;
+    }
+    if (hanging && started) {
+      dispatchGameStatus(GAME_EVENTS.crane.status, {
+        game: "crane",
+        phase: "playing",
+        progress,
+        text: `HEIGHT ${progress} · LOAD READY · TIME THE DROP`,
+      });
+      return;
+    }
+    if (started) {
+      dispatchGameStatus(GAME_EVENTS.crane.status, {
+        game: "crane",
+        phase: "transitioning",
+        progress,
+        text: `HEIGHT ${progress} · PREPARING NEXT LOAD`,
+      });
+      return;
+    }
+
+    dispatchGameStatus(GAME_EVENTS.crane.status, {
+      game: "crane",
+      phase: "ready",
+      progress,
+      text: "STACK TRACE · READY · TAP/CLICK/SPACE TO DROP",
+      pauseDisabled: true,
+    });
+  };
+
   const updateToolChoiceOverlay = (): void => {
     if (!choicePanel) return;
 
@@ -382,6 +497,7 @@ function mountCraneGame(root: HTMLElement): void {
 
     if (exitButton) exitButton.disabled = Boolean(pendingConfirmation);
     updateToolChoiceOverlay();
+    publishStatus();
   };
 
   const updateScoreboard = (): void => {
@@ -1021,6 +1137,15 @@ function mountCraneGame(root: HTMLElement): void {
     dropCrate();
   };
 
+  const onCommand = (event: Event): void => {
+    const action = readGameCommand(event);
+    if (!active || !action) return;
+    if (action === "pause") togglePause();
+    else if (action === "restart") requestRestart();
+    else if (action === "exit") exitGame();
+    else if (action === "drop" || action === "start") dropCrate();
+  };
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!active) return;
     const key = event.key.toLowerCase();
@@ -1075,14 +1200,6 @@ function mountCraneGame(root: HTMLElement): void {
     button.addEventListener("click", () => chooseTool(index));
   });
 
-  controlButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const action = button.dataset.craneControl;
-      if (action === "pause") togglePause();
-      else if (action === "restart") requestRestart();
-      else if (action === "exit") exitGame();
-    });
-  });
 
   confirmActionButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -1105,5 +1222,6 @@ function mountCraneGame(root: HTMLElement): void {
     if (document.hidden) persistSession();
   });
   window.addEventListener(GAME_EVENTS.crane.start, startGame);
+  window.addEventListener(GAME_EVENTS.crane.command, onCommand);
   updateScoreboard();
 }

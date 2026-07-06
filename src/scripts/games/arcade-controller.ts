@@ -1,6 +1,9 @@
 import {
   GAME_EVENTS,
+  dispatchGameCommand,
   type ChickenExitDetail,
+  type GameCommandAction,
+  type GameStatusDetail,
   type ScoreExitDetail,
 } from "./shared/events";
 
@@ -25,22 +28,14 @@ interface GameDefinition {
   load: () => Promise<void>;
   aliases: readonly string[];
   startEvent: string;
+  commandEvent: string;
+  statusEvent: string;
   exitEvent: string;
   rootSelector: string;
-  overlaySelector: string;
-  stateSelector: string;
   progressSelector: string;
   actionSelector: string;
-  pauseSelector?: string;
-  actionToKey: (action: string | undefined) => string | null;
+  pauseSelector: string;
   readyStatus: (progress: string, finePointer: boolean) => string;
-  activeStatus: (progress: string, finePointer: boolean) => string;
-  syncStatus: (
-    state: string,
-    progress: string,
-    overlayVisible: boolean,
-    finePointer: boolean,
-  ) => { text: string; pauseLabel?: string; pauseDisabled?: boolean };
   exitMessage: (detail: ExitDetail) => string;
 }
 
@@ -69,54 +64,15 @@ const definitions: readonly GameDefinition[] = [
     },
     aliases: ["snake"],
     startEvent: GAME_EVENTS.snake.start,
+    commandEvent: GAME_EVENTS.snake.command,
+    statusEvent: GAME_EVENTS.snake.status,
     exitEvent: GAME_EVENTS.snake.exit,
     rootSelector: "[data-snake-game]",
-    overlaySelector: "[data-snake-overlay]",
-    stateSelector: "[data-snake-state]",
     progressSelector: "[data-snake-mode]",
     actionSelector: "[data-snake-action]",
     pauseSelector: '[data-snake-action="pause"]',
-    actionToKey: (action) =>
-      action === "pause"
-        ? "p"
-        : action === "restart"
-          ? "r"
-          : action === "exit"
-            ? "Escape"
-            : null,
     readyStatus: (sector, fine) =>
-      `SECTOR ${sector} · READY · ${fine ? "ARROWS / WASD · SPACE DRIVE" : "USE CONTROLS"}`,
-    activeStatus: (sector, fine) =>
-      `SECTOR ${sector} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
-    syncStatus: (state, sector, overlayVisible, fine) => {
-      if (state === "PAUSED") {
-        return { text: `SECTOR ${sector} · GAME PAUSED`, pauseLabel: "RESUME" };
-      }
-      if (state === "RUN TERMINATED" || state === "GRID CLEARED") {
-        return {
-          text: `SECTOR ${sector} · ${state} · START AGAIN OR EXIT`,
-          pauseDisabled: true,
-        };
-      }
-      if (state.includes("CLEARED")) {
-        return {
-          text: `SECTOR ${sector} · CHOOSE LEFT OR RIGHT ROUTE`,
-          pauseDisabled: true,
-        };
-      }
-      if (state === "NEON RUN" || state === "SAVED RUN") {
-        return {
-          text: `SECTOR ${sector} · READY · ${fine ? "ARROWS / WASD · SPACE DRIVE" : "USE CONTROLS"}`,
-          pauseDisabled: true,
-        };
-      }
-      if (!overlayVisible || state === "RUNNING") {
-        return {
-          text: `SECTOR ${sector} · ACTIVE · ${fine ? "ESC EXIT" : "USE CONTROLS"}`,
-        };
-      }
-      return { text: `SECTOR ${sector} · READY` };
-    },
+      `SECTOR ${sector} · READY · ${fine ? "ARROWS / WASD" : "USE CONTROLS"}`,
     exitMessage: (detail) => {
       const snake = detail as Partial<ScoreExitDetail>;
       return `SNAKE CLOSED · SCORE ${format(score(snake.score), 4)} · HIGH ${format(score(snake.highScore), 4)}`;
@@ -130,45 +86,14 @@ const definitions: readonly GameDefinition[] = [
     },
     aliases: ["crane", "stack", "cargo", "stacktrace"],
     startEvent: GAME_EVENTS.crane.start,
+    commandEvent: GAME_EVENTS.crane.command,
+    statusEvent: GAME_EVENTS.crane.status,
     exitEvent: GAME_EVENTS.crane.exit,
     rootSelector: "[data-crane-game]",
-    overlaySelector: "[data-crane-overlay]",
-    stateSelector: "[data-crane-state]",
     progressSelector: "[data-crane-height]",
     actionSelector: "[data-crane-action]",
-    actionToKey: (action) =>
-      action === "drop"
-        ? " "
-        : action === "pause"
-          ? "p"
-          : action === "restart"
-            ? "r"
-            : action === "exit"
-              ? "Escape"
-              : null,
+    pauseSelector: '[data-crane-action="pause"]',
     readyStatus: () => "STACK TRACE · READY · TAP/CLICK/SPACE TO DROP",
-    activeStatus: (height) => `HEIGHT ${height} · ACTIVE · TIME THE DROP`,
-    syncStatus: (state, height, overlayVisible) => {
-      if (state === "PAUSED") {
-        return { text: `HEIGHT ${height} · GAME PAUSED`, pauseLabel: "RESUME" };
-      }
-      if (state === "STRUCTURAL FAILURE") {
-        return {
-          text: `HEIGHT ${height} · STRUCTURAL FAILURE · DROP AGAIN OR EXIT`,
-          pauseDisabled: true,
-        };
-      }
-      if (state === "STACK TRACE") {
-        return {
-          text: "STACK TRACE · READY · TAP/CLICK/SPACE TO DROP",
-          pauseDisabled: true,
-        };
-      }
-      if (!overlayVisible || state === "RUNNING") {
-        return { text: `HEIGHT ${height} · ACTIVE · TIME THE DROP` };
-      }
-      return { text: `HEIGHT ${height} · READY` };
-    },
     exitMessage: (detail) => {
       const crane = detail as Partial<ScoreExitDetail>;
       return `STACK TRACE CLOSED · HEIGHT ${format(score(crane.score), 3)} · HIGH ${format(score(crane.highScore), 3)}`;
@@ -182,51 +107,15 @@ const definitions: readonly GameDefinition[] = [
     },
     aliases: ["chicken", "freerange", "free-range"],
     startEvent: GAME_EVENTS.chicken.start,
+    commandEvent: GAME_EVENTS.chicken.command,
+    statusEvent: GAME_EVENTS.chicken.status,
     exitEvent: GAME_EVENTS.chicken.exit,
     rootSelector: "[data-chicken-game]",
-    overlaySelector: "[data-chicken-overlay]",
-    stateSelector: "[data-chicken-state]",
     progressSelector: "[data-chicken-speed]",
     actionSelector: "[data-chicken-action]",
     pauseSelector: '[data-chicken-action="pause"]',
-    actionToKey: (action) =>
-      action === "pause"
-        ? "p"
-        : action === "restart"
-          ? "r"
-          : action === "exit"
-            ? "Escape"
-            : null,
     readyStatus: (speed, fine) =>
       `SPEED ${speed} · READY · ${fine ? "SPACE/UP" : "TAP TO JUMP"}`,
-    activeStatus: (speed, fine) =>
-      `SPEED ${speed} · ACTIVE · ${fine ? "ESC EXIT" : "TAP TO FLAP"}`,
-    syncStatus: (state, speed, overlayVisible, fine) => {
-      if (state === "PAUSED") {
-        return { text: `SPEED ${speed} · GAME PAUSED`, pauseLabel: "RESUME" };
-      }
-      if (state === "GAME OVER") {
-        return {
-          text: `SPEED ${speed} · GAME OVER · RESTART OR EXIT`,
-          pauseDisabled: true,
-        };
-      }
-      if (state === "CRASHED") {
-        return { text: `SPEED ${speed} · COLLISION`, pauseDisabled: true };
-      }
-      if (state === "PRESS JUMP") {
-        return {
-          text: `SPEED ${speed} · READY · ${fine ? "SPACE/UP" : "TAP TO JUMP"}`,
-          pauseDisabled: true,
-        };
-      }
-      if (!overlayVisible || state === "RUNNING") {
-        return {
-          text: `SPEED ${speed} · ACTIVE · ${fine ? "ESC EXIT" : "TAP TO FLAP"}`,
-        };
-      }
-      return { text: `SPEED ${speed} · READY` };
-    },
     exitMessage: (detail) => {
       const chicken = detail as Partial<ChickenExitDetail>;
       const speedLevel = positive(chicken.speed, 1);
@@ -241,10 +130,6 @@ function setPauseButton(
   disabled = false,
 ): void {
   if (!button) return;
-
-  // Keep this setter idempotent. The arcade controller observes game status
-  // elements; rewriting the pause button on every observer callback can create
-  // a MutationObserver feedback loop and lock the browser tab.
   if (button.textContent !== label) button.textContent = label;
   if (button.disabled !== disabled) button.disabled = disabled;
 
@@ -261,6 +146,21 @@ function normalizeProgress(value: string, id: GameId): string {
   return cleaned ? cleaned.padStart(2, "0") : "01";
 }
 
+function actionFromButton(
+  definition: GameDefinition,
+  button: HTMLButtonElement,
+): GameCommandAction | null {
+  const value = button.dataset[`${definition.id}Action`];
+  return value === "pause" ||
+    value === "restart" ||
+    value === "exit" ||
+    value === "drop" ||
+    value === "jump" ||
+    value === "start"
+    ? value
+    : null;
+}
+
 export function createArcadeController(host: ArcadeHost): ArcadeController {
   let activeGame: GameId | null = null;
   const byAlias = new Map<string, GameDefinition>();
@@ -269,9 +169,6 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
   const runtime = new Map<
     GameId,
     {
-      root: HTMLElement | null;
-      overlay: HTMLElement | null;
-      state: Element | null;
       progress: Element | null;
       pauseButton: HTMLButtonElement | null;
     }
@@ -302,35 +199,6 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
     }
   };
 
-  const sync = (definition: GameDefinition): void => {
-    if (activeGame !== definition.id) return;
-    const game = runtime.get(definition.id);
-    if (!game) return;
-
-    const state = game.state?.textContent?.trim().toUpperCase() ?? "";
-    const progress = normalizeProgress(
-      game.progress?.textContent ?? "",
-      definition.id,
-    );
-    const overlayVisible = game.overlay ? !game.overlay.hidden : false;
-    const status = definition.syncStatus(
-      state,
-      progress,
-      overlayVisible,
-      host.finePointer.matches,
-    );
-
-    setFooter(
-      status.text ||
-        definition.activeStatus(progress, host.finePointer.matches),
-    );
-    setPauseButton(
-      game.pauseButton,
-      status.pauseLabel ?? "PAUSE",
-      status.pauseDisabled ?? false,
-    );
-  };
-
   const loadGame = (definition: GameDefinition): Promise<void> => {
     if (loadedGames.has(definition.id)) return Promise.resolve();
 
@@ -342,9 +210,7 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
       .then(() => {
         loadedGames.add(definition.id);
       })
-      .finally(() => {
-        loadingGames.delete(definition.id);
-      });
+      .finally(() => loadingGames.delete(definition.id));
 
     loadingGames.set(definition.id, loading);
     return loading;
@@ -385,7 +251,6 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
         );
         setFooter(definition.readyStatus(progress, host.finePointer.matches));
         window.dispatchEvent(new CustomEvent(definition.startEvent));
-        window.setTimeout(() => sync(definition), 0);
       })
       .catch(() => restoreAfterLoadFailure(definition));
   };
@@ -393,60 +258,38 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
   definitions.forEach((definition) => {
     definition.aliases.forEach((alias) => byAlias.set(alias, definition));
 
-    const root = host.wrapper.querySelector<HTMLElement>(definition.rootSelector);
-    const overlay = host.wrapper.querySelector<HTMLElement>(
-      definition.overlaySelector,
-    );
-    const state = host.wrapper.querySelector(definition.stateSelector);
     const progress = host.wrapper.querySelector(definition.progressSelector);
-    const pauseButton = definition.pauseSelector
-      ? host.wrapper.querySelector<HTMLButtonElement>(definition.pauseSelector)
-      : null;
+    const pauseButton = host.wrapper.querySelector<HTMLButtonElement>(
+      definition.pauseSelector,
+    );
 
-    runtime.set(definition.id, {
-      root,
-      overlay,
-      state,
-      progress,
-      pauseButton,
-    });
+    runtime.set(definition.id, { progress, pauseButton });
 
     host.wrapper
       .querySelectorAll<HTMLButtonElement>(definition.actionSelector)
       .forEach((button) => {
         button.addEventListener("click", () => {
           if (activeGame !== definition.id) return;
-          const action = button.dataset[`${definition.id}Action`];
-          const key = definition.actionToKey(action);
-          if (!key) return;
-          document.dispatchEvent(
-            new KeyboardEvent("keydown", {
-              key,
-              bubbles: true,
-              cancelable: true,
-            }),
-          );
+          const action = actionFromButton(definition, button);
+          if (action) dispatchGameCommand(definition.commandEvent, action);
         });
       });
 
-    // Observe only the pieces that actually drive footer status. Observing the
-    // entire game subtree also observes the pause button that sync() updates,
-    // which can feed mutations back into sync indefinitely.
-    if (overlay) {
-      new MutationObserver(() => sync(definition)).observe(overlay, {
-        attributes: true,
-        attributeFilter: ["hidden"],
-      });
-    }
-
-    for (const statusNode of [state, progress]) {
-      if (!statusNode) continue;
-      new MutationObserver(() => sync(definition)).observe(statusNode, {
-        characterData: true,
-        childList: true,
-        subtree: true,
-      });
-    }
+    window.addEventListener(definition.statusEvent, (event) => {
+      if (activeGame !== definition.id || !(event instanceof CustomEvent)) {
+        return;
+      }
+      const detail = event.detail as Partial<GameStatusDetail>;
+      if (detail.game !== definition.id || typeof detail.text !== "string") {
+        return;
+      }
+      setFooter(detail.text);
+      setPauseButton(
+        pauseButton,
+        detail.pauseLabel ?? "PAUSE",
+        detail.pauseDisabled ?? false,
+      );
+    });
 
     window.addEventListener(definition.exitEvent, (event) => {
       if (activeGame !== definition.id) return;

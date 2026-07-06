@@ -4,6 +4,9 @@ export interface StoredSession<T> {
   state: T;
 }
 
+const DEFAULT_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
+
 export function readStoredScore(key: string): number {
   try {
     const value = Number(window.localStorage.getItem(key));
@@ -25,7 +28,17 @@ export function readStoredSession<T>(
   key: string,
   version: number,
   isValid: (state: unknown) => state is T,
+  maxAgeMs = DEFAULT_SESSION_MAX_AGE_MS,
 ): StoredSession<T> | null {
+  const discard = (): null => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // Ignore storage failures while rejecting a bad session.
+    }
+    return null;
+  };
+
   try {
     const raw = window.localStorage.getItem(key);
     if (!raw) return null;
@@ -38,29 +51,29 @@ export function readStoredSession<T>(
       !("savedAt" in parsed) ||
       !("state" in parsed)
     ) {
-      window.localStorage.removeItem(key);
-      return null;
+      return discard();
     }
 
     const candidate = parsed as Partial<StoredSession<unknown>>;
+    const now = Date.now();
+    const validTimestamp =
+      typeof candidate.savedAt === "number" &&
+      Number.isFinite(candidate.savedAt) &&
+      candidate.savedAt > 0 &&
+      candidate.savedAt <= now + MAX_FUTURE_CLOCK_SKEW_MS &&
+      now - candidate.savedAt <= Math.max(0, maxAgeMs);
+
     if (
       candidate.version !== version ||
-      typeof candidate.savedAt !== "number" ||
-      !Number.isFinite(candidate.savedAt) ||
+      !validTimestamp ||
       !isValid(candidate.state)
     ) {
-      window.localStorage.removeItem(key);
-      return null;
+      return discard();
     }
 
     return candidate as StoredSession<T>;
   } catch {
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // Ignore storage failures.
-    }
-    return null;
+    return discard();
   }
 }
 

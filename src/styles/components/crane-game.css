@@ -10,9 +10,6 @@
   padding-block: 0.48rem;
 }
 
-.landing-wrapper.crane-mode .terminal-footer {
-  display: none;
-}
 
 .crane-panel {
   gap: 0.36rem;

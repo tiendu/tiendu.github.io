@@ -54,3 +54,47 @@ remain separate from active-run saves.
 A completed, collapsed, or explicitly restarted run clears its resume checkpoint.
 Save formats carry a schema version; invalid or incompatible data is discarded
 instead of being guessed at.
+
+## Runtime integration contract
+
+The terminal shell does not inspect overlay text or synthesize keyboard events.
+Each game publishes a typed status event and consumes typed command events from
+`shared/events.ts`.
+
+```text
+terminal button / command
+        |
+        v
+typed game command event
+        |
+        v
+game runtime
+        |
+        v
+typed status event
+        |
+        +--> footer status
+        +--> pause/resume label
+```
+
+This keeps keyboard bindings, touch controls, the terminal footer, and game
+internals independent. Visual copy can change without silently changing state
+recognition in the shared controller.
+
+## Session safety
+
+Saved sessions expire after 30 days. Validators check nested obstacle, pickup,
+crate, gate, direction, and coordinate data before restoring. Invalid, expired,
+future-dated, or incompatible sessions are removed instead of partially loaded.
+
+## Release archives
+
+Run:
+
+```sh
+make package
+```
+
+Set a custom output path with `ARCHIVE=/path/to/file.tar.gz`. The packaging
+script verifies the project first and excludes `.git`, `node_modules`, build
+output, Astro caches, and macOS metadata files.

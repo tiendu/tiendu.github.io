@@ -50,7 +50,12 @@ import {
   type RunWeatherState,
 } from "./chicken-run-weather";
 import { configureFixedCanvas } from "./shared/canvas";
-import { dispatchGameExit, GAME_EVENTS } from "./shared/events";
+import {
+  dispatchGameExit,
+  dispatchGameStatus,
+  GAME_EVENTS,
+  readGameCommand,
+} from "./shared/events";
 import { mountAllGames } from "./shared/mount";
 import {
   readStoredScore,
@@ -112,12 +117,91 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function isReasonableNumber(value: unknown, limit = 10_000_000): value is number {
+  return isFiniteNumber(value) && Math.abs(value) <= limit;
+}
+
+function isObstacleKind(value: unknown): value is ChickenObstacle["kind"] {
+  return value === "fence" || value === "hay" || value === "mud" || value === "log";
+}
+
+function isChickenObstacle(value: unknown): value is ChickenObstacle {
+  if (!value || typeof value !== "object") return false;
+  const obstacle = value as Partial<ChickenObstacle>;
+  return (
+    isObstacleKind(obstacle.kind) &&
+    isReasonableNumber(obstacle.x) &&
+    isReasonableNumber(obstacle.y) &&
+    isReasonableNumber(obstacle.worldX) &&
+    isReasonableNumber(obstacle.slope, 10) &&
+    isFiniteNumber(obstacle.width) &&
+    (obstacle.width ?? 0) > 0 &&
+    (obstacle.width ?? 0) <= 1_000 &&
+    isFiniteNumber(obstacle.height) &&
+    (obstacle.height ?? 0) > 0 &&
+    (obstacle.height ?? 0) <= 1_000 &&
+    typeof obstacle.passed === "boolean"
+  );
+}
+
+function isCornKernel(value: unknown): value is CornKernel {
+  if (!value || typeof value !== "object") return false;
+  const kernel = value as Partial<CornKernel>;
+  return (
+    isReasonableNumber(kernel.x) &&
+    isReasonableNumber(kernel.y) &&
+    isReasonableNumber(kernel.worldX) &&
+    isReasonableNumber(kernel.heightAboveGround, 10_000) &&
+    Number.isInteger(kernel.groupId) &&
+    (kernel.groupId ?? 0) > 0 &&
+    typeof kernel.collected === "boolean" &&
+    isReasonableNumber(kernel.phase, 100)
+  );
+}
+
+function isCornGroup(value: unknown): value is CornGroup {
+  if (!value || typeof value !== "object") return false;
+  const group = value as Partial<CornGroup>;
+  return (
+    Number.isInteger(group.total) &&
+    (group.total ?? -1) >= 0 &&
+    Number.isInteger(group.collected) &&
+    (group.collected ?? -1) >= 0 &&
+    (group.collected ?? 1) <= (group.total ?? 0) &&
+    typeof group.bonusAwarded === "boolean"
+  );
+}
+
+function isCornGroupEntry(value: unknown): value is [number, CornGroup] {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    Number.isInteger(value[0]) &&
+    value[0] > 0 &&
+    isCornGroup(value[1])
+  );
+}
+
+function isEggPickup(value: unknown): value is EggPickup {
+  if (!value || typeof value !== "object") return false;
+  const egg = value as Partial<EggPickup>;
+  return (
+    isReasonableNumber(egg.x) &&
+    isReasonableNumber(egg.y) &&
+    isReasonableNumber(egg.worldX) &&
+    isReasonableNumber(egg.heightAboveGround, 10_000) &&
+    isReasonableNumber(egg.phase, 100)
+  );
+}
+
 function isChickenSessionState(value: unknown): value is ChickenSessionState {
   if (!value || typeof value !== "object") return false;
   const state = value as Partial<ChickenSessionState>;
   return (
     Number.isInteger(state.score) &&
+    (state.score ?? -1) >= 0 &&
     Number.isInteger(state.runHighScore) &&
+    (state.runHighScore ?? -1) >= 0 &&
     isFiniteNumber(state.distance) &&
     (state.distance ?? 0) > 0 &&
     isFiniteNumber(state.bonusScore) &&
@@ -126,15 +210,24 @@ function isChickenSessionState(value: unknown): value is ChickenSessionState {
     isFiniteNumber(state.cameraOffsetY) &&
     isFiniteNumber(state.nextPatternDistance) &&
     Array.isArray(state.obstacles) &&
+    state.obstacles.length <= 2_000 &&
+    state.obstacles.every(isChickenObstacle) &&
     Array.isArray(state.corn) &&
+    state.corn.length <= 5_000 &&
+    state.corn.every(isCornKernel) &&
     Array.isArray(state.cornGroups) &&
+    state.cornGroups.length <= 2_000 &&
+    state.cornGroups.every(isCornGroupEntry) &&
     Number.isInteger(state.nextCornGroupId) &&
-    (state.egg === null || (typeof state.egg === "object" && state.egg !== null)) &&
+    (state.egg === null || isEggPickup(state.egg)) &&
     typeof state.eggCarried === "boolean" &&
     typeof state.eggOfferPending === "boolean" &&
     Number.isInteger(state.offeredEggCycle) &&
     isFiniteNumber(state.foxPressure) &&
+    (state.foxPressure ?? -1) >= 0 &&
+    (state.foxPressure ?? 2) <= 1.5 &&
     isFiniteNumber(state.invulnerableRemaining) &&
+    (state.invulnerableRemaining ?? -1) >= 0 &&
     isFiniteNumber(state.runFrame) &&
     isFiniteNumber(state.foxRunFrame) &&
     Number.isInteger(state.lastSpeedLevel)
@@ -310,10 +403,74 @@ function mountChickenRunGame(root: HTMLElement): void {
   const formatScore = (value: number): string =>
     String(Math.max(0, Math.floor(value))).padStart(4, "0");
 
+  const publishStatus = (): void => {
+    if (!active) return;
+    const progress = String(speedLevelForVelocity(currentSpeed)).padStart(2, "0");
+
+    if (resumePrompt) {
+      dispatchGameStatus(GAME_EVENTS.chicken.status, {
+        game: "chicken",
+        phase: "saved",
+        progress,
+        text: `SPEED ${progress} · SAVED RUN · CONTINUE OR START OVER`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (gameOver) {
+      dispatchGameStatus(GAME_EVENTS.chicken.status, {
+        game: "chicken",
+        phase: "gameover",
+        progress,
+        text: `SPEED ${progress} · GAME OVER · RESTART OR EXIT`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (crash) {
+      dispatchGameStatus(GAME_EVENTS.chicken.status, {
+        game: "chicken",
+        phase: "crashed",
+        progress,
+        text: `SPEED ${progress} · COLLISION`,
+        pauseDisabled: true,
+      });
+      return;
+    }
+    if (paused) {
+      dispatchGameStatus(GAME_EVENTS.chicken.status, {
+        game: "chicken",
+        phase: "paused",
+        progress,
+        text: `SPEED ${progress} · GAME PAUSED`,
+        pauseLabel: "RESUME",
+      });
+      return;
+    }
+    if (started) {
+      dispatchGameStatus(GAME_EVENTS.chicken.status, {
+        game: "chicken",
+        phase: "playing",
+        progress,
+        text: `SPEED ${progress} · ACTIVE · SPACE/UP TO JUMP`,
+      });
+      return;
+    }
+
+    dispatchGameStatus(GAME_EVENTS.chicken.status, {
+      game: "chicken",
+      phase: "ready",
+      progress,
+      text: `SPEED ${progress} · READY · SPACE/UP TO JUMP`,
+      pauseDisabled: true,
+    });
+  };
+
   const setOverlay = (title: string, message: string, visible = true): void => {
     if (stateLabel) stateLabel.textContent = title;
     if (messageLabel) messageLabel.textContent = message;
     if (overlay) overlay.hidden = !visible;
+    publishStatus();
   };
 
   const setNotice = (text: string, lifetime = 0.9): void => {
@@ -338,6 +495,7 @@ function mountChickenRunGame(root: HTMLElement): void {
         speedLevelForVelocity(currentSpeed),
       ).padStart(2, "0");
     }
+    publishStatus();
   };
 
   const setJumpButton = (
@@ -1245,6 +1403,18 @@ function mountChickenRunGame(root: HTMLElement): void {
     requestJump();
   };
 
+  const onCommand = (event: Event): void => {
+    const action = readGameCommand(event);
+    if (!active || !action) return;
+    if (action === "pause") togglePause();
+    else if (action === "restart") resetGame();
+    else if (action === "exit") exitGame();
+    else if (action === "jump" || action === "start") {
+      if (gameOver) retryAndJump();
+      else if (!crash) requestJump();
+    }
+  };
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!active) return;
     const key = event.key.toLowerCase();
@@ -1334,4 +1504,5 @@ function mountChickenRunGame(root: HTMLElement): void {
     }
   });
   window.addEventListener(GAME_EVENTS.chicken.start, startGame);
+  window.addEventListener(GAME_EVENTS.chicken.command, onCommand);
 }
