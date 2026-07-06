@@ -724,7 +724,6 @@ function drawTower(
 }
 
 const GANTRY_LEFT_X = 20;
-const GANTRY_RIGHT_X = CRANE_WIDTH - 20;
 const GANTRY_RAIL_Y = 58;
 const GANTRY_LEG_WIDTH = 22;
 
@@ -1017,7 +1016,6 @@ function drawMastAndRail(
   rig: RigAnimation,
 ): void {
   drawGantryLeg(context, GANTRY_LEFT_X, GANTRY_RAIL_Y, false);
-  drawGantryLeg(context, GANTRY_RIGHT_X, GANTRY_RAIL_Y, true);
   drawBridgeTruss(context, state, rig);
   drawTrolley(context, state, rig);
 
@@ -1025,7 +1023,6 @@ function drawMastAndRail(
   for (let y = 126 + tickOffset; y < CRANE_HEIGHT - 28; y += 96) {
     context.fillStyle = "rgba(199, 240, 139, 0.44)";
     context.fillRect(GANTRY_LEFT_X + GANTRY_LEG_WIDTH + 4, Math.round(y), 12, 2);
-    context.fillRect(GANTRY_RIGHT_X - GANTRY_LEG_WIDTH - 16, Math.round(y), 12, 2);
   }
 }
 
