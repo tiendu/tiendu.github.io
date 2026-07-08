@@ -1,5 +1,5 @@
 ---
-title: "Notes on Common Bioinformatics Datasets and File Formats"
+title: "Notes on Public Bioinformatics Datasets and Repositories"
 date: 2022-12-26
 description: "Practical notes on finding, evaluating, downloading, and documenting public bioinformatics datasets across NCBI, ENA, UniProt, GEO, and related repositories."
 topic: "Bioinformatics Engineering"
