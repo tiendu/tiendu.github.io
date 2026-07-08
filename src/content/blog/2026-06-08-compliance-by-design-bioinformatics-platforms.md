@@ -1,5 +1,5 @@
 ---
-title: "Compliance by Design in Bioinformatics Platforms: An Implementation Manual"
+title: "Compliance Controls I Would Build Into a Bioinformatics Platform"
 date: 2026-06-08
 description: "Concrete patterns for compliant bioinformatics platforms: data classification, pseudonymous IDs, least privilege, audit logs, retention, and provenance."
 topic: "Reliability & Operations"

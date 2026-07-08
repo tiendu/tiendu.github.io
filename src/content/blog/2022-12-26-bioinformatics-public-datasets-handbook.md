@@ -1,5 +1,5 @@
 ---
-title: "The Bioinformatics Dataset Handbook: A Complete Reference Manual"
+title: "Notes on Common Bioinformatics Datasets and File Formats"
 date: 2022-12-26
 description: "A practical guide to finding, evaluating, downloading, and documenting public bioinformatics datasets across NCBI, ENA, UniProt, GEO, and related repositories."
 topic: "Bioinformatics Engineering"
