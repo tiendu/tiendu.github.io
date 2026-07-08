@@ -1,29 +1,27 @@
 ---
 title: "Compliance Controls I Would Build Into a Bioinformatics Platform"
 date: 2026-06-08
-description: "Concrete patterns for compliant bioinformatics platforms: data classification, pseudonymous IDs, least privilege, audit logs, retention, and provenance."
+description: "Engineering notes on safer identifiers, scoped access, audit events, provenance, exports, retention, and support access in bioinformatics platforms."
 topic: "Reliability & Operations"
 keywords:
-  - "compliance"
-  - "bioinformatics platforms"
-  - "audit logging"
-  - "data governance"
-  - "platform engineering"
-urlSlug: "compliance-by-design-examples"
-pinned: true
+  - bioinformatics platforms
+  - compliance engineering
+  - access control
+  - audit logging
+  - data governance
+  - workflow provenance
+  - platform security
+urlSlug: compliance-by-design-examples
+pinned: false
 ---
 
 Compliance frameworks tell you what matters.
 
 They do not always tell you how to build the system.
 
-Assume you already understand the basic ideas: least privilege, auditability, data minimization, retention, provenance, controlled access, and clinical change control.
+I am approaching this from the engineering side rather than the legal or policy side. The question I care about is what least privilege, auditability, data minimization, retention, and provenance should look like in the platform itself.
 
-Now the question is simpler:
-
-```text
-Okay, but how do I implement this in a bioinformatics platform?
-```
+The practical question is what these principles change in storage layouts, identifiers, permissions, logs, workflow execution, support access, and data exports.
 
 The answer is not one magical product or one compliance checkbox.
 

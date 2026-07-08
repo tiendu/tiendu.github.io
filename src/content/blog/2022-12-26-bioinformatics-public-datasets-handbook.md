@@ -1,15 +1,17 @@
 ---
 title: "Notes on Common Bioinformatics Datasets and File Formats"
 date: 2022-12-26
-description: "A practical guide to finding, evaluating, downloading, and documenting public bioinformatics datasets across NCBI, ENA, UniProt, GEO, and related repositories."
+description: "Practical notes on finding, evaluating, downloading, and documenting public bioinformatics datasets across NCBI, ENA, UniProt, GEO, and related repositories."
 topic: "Bioinformatics Engineering"
 keywords:
   - "bioinformatics"
   - "public datasets"
+  - "biological databases"
   - "NCBI"
-  - "sequence data"
+  - "ENA"
+  - "dataset metadata"
   - "reproducibility"
-urlSlug: "entrez-direct-guide"
+urlSlug: "public-bioinformatics-datasets"
 ---
 
 Bioinformatics is often taught as a collection of tools.
@@ -20,7 +22,7 @@ Yet one of the most important practical skills receives surprisingly little atte
 
 > Finding the right dataset.
 
-This handbook focuses on where biological data comes from, how major repositories relate to each other, how to evaluate datasets before downloading them, and how to build reproducible workflows around public data.
+These notes cover where biological data comes from, how major repositories relate to each other, how to evaluate datasets before downloading them, and how to build reproducible workflows around public data.
 
 ---
 
