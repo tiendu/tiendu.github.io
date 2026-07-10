@@ -12,7 +12,7 @@ keywords:
   - "k-mers"
   - "FM-index"
 urlSlug: "genome-search"
-pinned: true
+pinned: false
 ---
 
 Genome search sounds like a specialized biological problem.

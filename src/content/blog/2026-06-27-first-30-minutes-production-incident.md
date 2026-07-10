@@ -10,6 +10,7 @@ keywords:
   - "forensics"
   - "reliability engineering"
 urlSlug: "first-30-mins-production-incident"
+pinned: true
 ---
 
 Production systems fail.

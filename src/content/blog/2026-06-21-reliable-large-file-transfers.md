@@ -1,7 +1,7 @@
 ---
 title: "Reliable Large File Transfers: Integrity, Retries, Resumability, and Recovery"
 date: 2026-06-21
-description: "A practical guide to reliable large-file transfers with rsync, checksums, temporary files, retries, resumability, object storage, verification, and failure recovery."
+description: "A practical guide to reliable large-file transfers with rsync, checksums, temporary files, retries, resumability, object storage, safe streaming, verification, and failure recovery."
 topic: "Reliability & Operations"
 keywords:
   - "file transfer"
@@ -9,6 +9,8 @@ keywords:
   - "checksums"
   - "reliability engineering"
   - "object storage"
+  - "data integrity"
+  - "streaming"
 urlSlug: "hidden-complexity-file-transfer"
 ---
 
@@ -147,6 +149,194 @@ MD5 is still useful for accidental corruption checks, but not for security-sensi
 
 ---
 
+## Do Not Use `stdin` and `stdout` as the Only File Boundary
+
+Unix pipes are useful:
+
+```bash
+producer | consumer
+```
+
+They avoid temporary files and let the consumer start before the producer has finished.
+
+That does not make a pipe equivalent to a file.
+
+A stream normally carries bytes and an eventual end-of-file signal.
+
+It does not automatically carry:
+
+```text
+expected file size
+source object version
+source checksum
+destination checksum
+resume position
+whether EOF was expected
+```
+
+This matters when copying durable data between storage systems.
+
+A tempting pattern looks like this:
+
+```bash
+set -o pipefail
+
+aws s3 cp "s3://bucket/large-file.bam" - |
+  upload-tool --stdin --destination "/project/large-file.bam"
+```
+
+The exact uploader does not matter.
+
+The architecture is:
+
+```text
+object storage
+    -> anonymous byte stream
+    -> another storage system
+```
+
+It saves temporary disk space.
+
+It also removes the stable checkpoint between download and upload.
+
+Suppose the source object is 500 GB, but the producer stops after sending 417 GB.
+
+The receiving uploader may still:
+
+```text
+receive 417 GB
+validate every chunk it received
+receive successful HTTP responses
+close a valid 417 GB destination object
+```
+
+Every received byte may be intact.
+
+The destination is still incomplete relative to the source.
+
+This is an important distinction:
+
+> A successful upload proves that the destination accepted the bytes it received. It does not prove that every source byte was received.
+
+The consumer only sees bytes followed by EOF.
+
+It cannot tell whether EOF means:
+
+```text
+the complete source was transferred
+```
+
+or:
+
+```text
+the producer failed early
+the source connection was interrupted
+only part of the object was emitted
+```
+
+### `pipefail` is necessary, but not sufficient
+
+Use `set -o pipefail` whenever a shell pipeline must fail if any component fails:
+
+```bash
+set -o pipefail
+producer | consumer
+```
+
+Without it, the shell may report the exit status of only the last command.
+
+However, `pipefail` does not provide end-to-end integrity.
+
+By the time the shell reports that the producer failed, the consumer may already have accepted EOF, closed the destination, and returned an object identifier.
+
+The pipeline can fail while leaving behind an apparently valid but incomplete destination object.
+
+The surrounding application must therefore:
+
+```text
+check the complete pipeline exit status
+avoid publishing the destination before validation
+delete or quarantine failed outputs
+compare source and destination metadata
+```
+
+### Prefer a durable checkpoint for important transfers
+
+The safest pattern is still:
+
+```text
+download to a temporary file
+    -> verify the downloaded file
+    -> upload the verified file
+    -> verify the destination
+    -> publish the result
+```
+
+The temporary file provides:
+
+```text
+a known size
+a stable checksum target
+a retry boundary
+an inspectable artifact
+a source for repeating the upload
+```
+
+Temporary storage is not always wasted capacity.
+
+Sometimes it is the reliability boundary.
+
+### When streaming is unavoidable
+
+Streaming may be reasonable when local staging is prohibitively expensive or when data is being generated rather than copied from an existing object.
+
+In that case, create an external integrity contract before the stream begins.
+
+Record at least:
+
+```text
+immutable source identifier or version
+expected content length
+full-object checksum, when available
+```
+
+After upload:
+
+```text
+wait for the destination to close
+compare destination size with expected size
+compare compatible full-object checksums
+quarantine or delete the destination if validation fails
+publish only after validation succeeds
+record the source identity with the destination
+```
+
+At minimum:
+
+```text
+source size == destination size
+```
+
+That catches truncation, but not same-length corruption.
+
+For stronger validation:
+
+```text
+source full-object checksum == destination full-object checksum
+```
+
+Do not assume an object-storage ETag is always the MD5 of the complete object. Multipart uploads can make that assumption wrong.
+
+Use stdin and stdout freely for transient processing.
+
+Do not use them as the only integrity boundary for an important file transfer unless the surrounding system independently verifies the source identity, expected length, complete content, and destination state.
+
+A pipe is a transport mechanism.
+
+It is not proof that the destination is the same file as the source.
+
+---
+
 ## Use Temporary Filenames for Incomplete Files
 
 Never let downstream tools see half-written files.
@@ -159,17 +349,17 @@ cp source.bam /data/final/sample.bam
 
 If the copy fails halfway, `/data/final/sample.bam` may still exist.
 
-Better pattern:
+Better pattern for a local copy where both files remain available:
 
 ```bash
 cp source.bam /data/final/sample.bam.tmp
-sha256sum /data/final/sample.bam.tmp
+cmp -s source.bam /data/final/sample.bam.tmp
 mv /data/final/sample.bam.tmp /data/final/sample.bam
 ```
 
-The final name only appears after the copy succeeds.
+`cmp` returns nonzero if the files differ.
 
-This is a small habit that prevents many ugly bugs.
+The final name appears only after the copy and verification succeed.
 
 For scripts:
 
@@ -180,9 +370,13 @@ src="source.bam"
 dst="/data/final/sample.bam"
 tmp="${dst}.tmp"
 
+trap 'rm -f "$tmp"' EXIT
+
 cp "$src" "$tmp"
-sha256sum "$tmp"
+cmp -s "$src" "$tmp"
 mv "$tmp" "$dst"
+
+trap - EXIT
 ```
 
 `mv` on the same filesystem is usually atomic.
@@ -477,6 +671,12 @@ aws s3 sync ./results s3://my-bucket/project/results --delete
 ```
 
 Again, be careful with delete.
+
+`aws s3 sync` is useful for synchronization.
+
+It is not, by itself, an end-to-end integrity check for critical files.
+
+Verify important objects separately with expected sizes and checksums.
 
 ---
 
@@ -797,25 +997,30 @@ if [[ ! -f "$src" ]]; then
   exit 1
 fi
 
-echo "Creating checksum..."
-sha256sum "$src" > "${src}.sha256"
+trap 'rm -f "$tmp"' EXIT
+
+echo "Calculating source checksum..."
+expected_hash=$(sha256sum "$src" | awk '{print $1}')
 
 echo "Copying to temporary destination..."
 cp "$src" "$tmp"
 
 echo "Verifying copied file..."
-expected_hash=$(cut -d ' ' -f1 "${src}.sha256")
-actual_hash=$(sha256sum "$tmp" | cut -d ' ' -f1)
+actual_hash=$(sha256sum "$tmp" | awk '{print $1}')
 
 if [[ "$expected_hash" != "$actual_hash" ]]; then
   echo "Checksum mismatch" >&2
-  rm -f "$tmp"
   exit 1
 fi
 
 echo "Publishing final file..."
 mv "$tmp" "$dst"
-cp "${src}.sha256" "$checksum"
+trap - EXIT
+
+printf '%s  %s\n' \
+  "$expected_hash" \
+  "$(basename "$dst")" \
+  > "$checksum"
 
 echo "Done: $dst"
 ```
@@ -863,7 +1068,7 @@ rsync -avh --delete ./results/ user@server:/data/results/
 
 ---
 
-## Safe Object Storage Pattern
+## Object Storage Pattern with Explicit Verification
 
 For important outputs:
 
@@ -904,8 +1109,11 @@ Useful fields:
 
 ```text
 source
+source version or immutable identifier
 destination
-file size
+destination object identifier
+expected file size
+actual file size
 start time
 end time
 duration
@@ -1009,6 +1217,8 @@ Is this a file, directory, symlink, or object prefix?
 Do I need timestamps or permissions preserved?
 Do I need compression?
 Do I need encryption?
+Am I crossing storage systems through stdin or stdout?
+If so, what proves the stream is complete?
 ```
 
 During transfer:
@@ -1019,13 +1229,15 @@ Can it resume?
 Is there a timeout?
 Are retries configured?
 Are partial files isolated?
+Does the receiver know the expected length?
+Will a failed stream leave a published destination object?
 ```
 
 After transfer:
 
 ```text
-Does the file size match?
-Does the checksum match?
+Does the source size match the destination size?
+Does the full-object checksum match, when available?
 Are permissions correct?
 Are timestamps correct?
 Can the downstream tool read it?
@@ -1054,6 +1266,8 @@ Use this as a rough guide.
 | Many tiny files | `tar` first, if appropriate |
 | Critical file | checksum before and after |
 | Repeated workflow | script it and log it |
+| Durable store-to-store copy | stage and verify, or use a native transfer service |
+| Streamed store-to-store copy | require independent size and checksum validation |
 
 ---
 
@@ -1070,6 +1284,10 @@ Dry-run before destructive syncs.
 Do not assume object storage behaves like a filesystem.
 
 Do not trust file existence alone.
+
+Do not treat EOF as proof that a streamed file is complete.
+
+Do not publish a streamed destination before validating it against the source.
 
 Do not copy millions of tiny files one by one if an archive would do.
 
