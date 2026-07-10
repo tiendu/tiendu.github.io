@@ -12,6 +12,7 @@ keywords:
   - "data integrity"
   - "streaming"
 urlSlug: "hidden-complexity-file-transfer"
+pinned: true
 ---
 
 File transfer sounds boring.

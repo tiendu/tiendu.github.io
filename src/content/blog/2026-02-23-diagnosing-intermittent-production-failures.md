@@ -1,573 +1,675 @@
 ---
-title: "Diagnosing Intermittent Production Failures: An SRE Playbook"
+title: "Diagnosing Intermittent Production Failures"
 date: 2026-02-23
-description: "A systematic SRE playbook for diagnosing intermittent failures with timelines, logs, metrics, traces, controlled experiments, and evidence-driven hypotheses."
+description: "A field reference for turning apparently random production failures into measurable conditions using timelines, comparisons, system evidence, and controlled reproduction."
 topic: "Reliability & Operations"
 keywords:
-  - "SRE"
   - "production debugging"
+  - "incident investigation"
+  - "Linux"
   - "observability"
-  - "incident response"
   - "reliability engineering"
+  - "root cause analysis"
 urlSlug: "sre-playbook"
-pinned: true
+pinned: false
 ---
 
-Most production issues described as "flaky" are not truly random.
+Most production failures described as "flaky" are not truly random.
 
-They are usually systems crossing a boundary that has not been measured yet.
+They are usually deterministic under a condition we have not isolated yet:
 
-Before investigating, ask a better question:
+```text
+higher load
+lower memory
+slower disk
+different node
+different dependency path
+different timing
+different version
+different limit
+```
 
-> Is this truly intermittent, or deterministic under conditions we have not identified yet?
+I keep these notes as a field reference for that kind of incident.
 
-When something fails "sometimes", there is usually a condition behind it:
+The goal is not to run every command on the page. The goal is to turn:
 
-- Higher load
-- Lower memory
-- Slower disk
-- DNS delay
-- Network jitter
-- Different node
-- Different container limit
-- Different dependency path
-- Different execution order
-- Different timing window
+```text
+It fails sometimes.
+```
 
-The task of an SRE is not only to restart the service.
+into:
 
-The task is to find the condition that makes the failure happen.
+```text
+It fails when <condition> causes <resource, dependency, or limit>
+to cross <boundary>.
+```
 
-This playbook is written as a practical reference manual. It is not a list of random commands. It is a way to think.
+A restart may restore service. A retry may make the symptom disappear. Neither one explains the failure.
+
+The investigation is complete only when the timing, blast radius, and recovery behavior all make sense together.
 
 ---
 
 ## Table of Contents
 
-1. [Core Operating Model](#1-core-operating-model)
-2. [Terminology: Deterministic, Intermittent, and Reproducible](#2-terminology-deterministic-intermittent-and-reproducible)
-3. [First Response Checklist](#3-first-response-checklist)
-4. [Classify the Failure](#4-classify-the-failure)
-   - [Hard deterministic failure](#41-hard-deterministic-failure)
-   - [Timing-sensitive failure](#42-timing-sensitive-failure)
-   - [Resource-pressure failure](#43-resource-pressure-failure)
-   - [Dependency instability](#44-dependency-instability)
-5. [Fast Triage Commands](#5-fast-triage-commands)
-6. [Linux Survival Commands for Incidents](#6-linux-survival-commands-for-incidents)
-7. [CPU Investigation](#7-cpu-investigation)
-8. [Memory Investigation](#8-memory-investigation)
-9. [Disk and I/O Investigation](#9-disk-and-io-investigation)
-10. [File Descriptor and Socket Exhaustion](#10-file-descriptor-and-socket-exhaustion)
-11. [Network, DNS, HTTP and TLS Debugging](#11-network-dns-http-and-tls-debugging)
-12. [Systemd and Service Debugging](#12-systemd-and-service-debugging)
-13. [Containers and Docker Debugging](#13-containers-and-docker-debugging)
-14. [Cloud Platform Constraints](#14-cloud-platform-constraints)
-15. [Node Comparison Method](#15-node-comparison-method)
-16. [Reproducibility Engineering](#16-reproducibility-engineering)
-17. [Observability: What to Measure](#17-observability-what-to-measure)
-18. [Alerts and Runbooks](#18-alerts-and-runbooks)
-19. [CI/CD and Deployment-Related Intermittency](#19-cicd-and-deployment-related-intermittency)
-20. [Common Intermittent Failure Patterns](#20-common-intermittent-failure-patterns)
-21. [Practical Investigation Flow](#21-practical-investigation-flow)
-22. [Root Cause Analysis Template](#22-root-cause-analysis-template)
-23. [Prevention Patterns](#23-prevention-patterns)
-24. [Quick Reference Cheatsheet](#24-quick-reference-cheatsheet)
-25. [Final Principles](#25-final-principles)
+1. [The operating model](#1-the-operating-model)
+2. [Start with the incident, not the command line](#2-start-with-the-incident-not-the-command-line)
+3. [Classify the failure](#3-classify-the-failure)
+4. [Five-minute triage](#4-five-minute-triage)
+5. [Compare healthy and unhealthy cases](#5-compare-healthy-and-unhealthy-cases)
+6. [CPU and scheduling](#6-cpu-and-scheduling)
+7. [Memory and process limits](#7-memory-and-process-limits)
+8. [Disk, filesystems, and I/O](#8-disk-filesystems-and-io)
+9. [File descriptors, sockets, and threads](#9-file-descriptors-sockets-and-threads)
+10. [DNS, TCP, TLS, HTTP, and dependencies](#10-dns-tcp-tls-http-and-dependencies)
+11. [Services, containers, orchestrators, and cloud limits](#11-services-containers-orchestrators-and-cloud-limits)
+12. [Make the failure reproducible](#12-make-the-failure-reproducible)
+13. [Observability and alerts](#13-observability-and-alerts)
+14. [Closing the incident](#14-closing-the-incident)
+15. [Appendix A: quick command reference](#appendix-a-quick-command-reference)
+16. [Appendix B: symptom-to-boundary map](#appendix-b-symptom-to-boundary-map)
+17. [Appendix C: runbook and RCA templates](#appendix-c-runbook-and-rca-templates)
 
 ---
 
-## 1. Core Operating Model
+## 1. The operating model
 
-Treat every intermittent failure as a threshold event until proven otherwise.
+Treat an intermittent failure as a threshold or path-dependent event until evidence shows otherwise.
 
-A threshold event means the system behaves normally until it crosses some limit.
+A threshold event behaves normally until some boundary is crossed:
 
-Common limits:
+```text
+memory limit
+file descriptor limit
+queue depth
+disk throughput
+connection-pool capacity
+dependency timeout
+CPU quota
+rate limit
+temporary-storage capacity
+```
 
-- CPU saturation
-- CPU steal time
-- CPU throttling
-- Memory limit
-- Swap pressure
-- OOM killer
-- Disk full
-- Disk I/O saturation
-- Cloud disk throughput cap
-- File descriptor limit
-- Process limit
-- Thread limit
-- Socket exhaustion
-- Ephemeral port exhaustion
-- DNS timeout
-- TLS handshake timeout
-- Upstream timeout
-- Rate limit
-- Queue depth
-- Retry storm
-- Lock contention
-- Race condition
-- Cold cache
-- Bad node
-- Bad deployment version
-- Hidden cgroup limit
+A path-dependent event behaves differently depending on where or how the work runs:
 
-The failure may look random because the boundary is hidden.
+```text
+one node
+one availability zone
+one DNS resolver
+one proxy
+one deployment version
+one object-storage prefix
+one instance type
+one user or payload class
+```
 
-The job is to make the boundary visible.
+A timing-sensitive event depends on ordering:
 
-Simple investigation loop:
+```text
+startup race
+parallel build
+lock contention
+cache state
+token expiry
+rolling deployment
+dependency readiness
+```
+
+The failure looks random because the changing condition is hidden.
+
+A practical investigation loop is:
 
 1. Define the symptom.
 2. Define the blast radius.
-3. Find what changed.
-4. Compare good and bad cases.
-5. Measure the likely boundary.
-6. Reproduce under controlled conditions.
-7. Fix or reduce the risk.
-8. Add monitoring so the same failure is easier to detect next time.
+3. Build a timeline.
+4. Preserve evidence.
+5. Classify the failure.
+6. Compare healthy and unhealthy cases.
+7. Measure the likely boundary.
+8. Reproduce the condition safely.
+9. Mitigate the impact.
+10. Verify the explanation.
+11. Add a guardrail, metric, alert, or test.
 
-Keep this rule in mind:
+Keep one distinction clear:
 
-> Logs tell you what happened. Metrics tell you when the system crossed a limit.
+> Logs describe events. Metrics describe system state. Traces describe a request path.
 
-Use both.
-
----
-
-## 2. Terminology: Deterministic, Intermittent, and Reproducible
-
-These terms are related, but not the same.
-
-### Deterministic
-
-A deterministic failure gives the same result under the same conditions.
-
-Examples:
-
-- A service always fails to start because a config file is missing.
-- A binary always crashes with the same invalid input.
-- A schema migration always fails on the same version mismatch.
-
-Simple idea:
-
-> Same conditions, same outcome.
-
-### Intermittent
-
-An intermittent failure appears to happen only sometimes.
-
-Examples:
-
-- A job fails only under high concurrency.
-- A request times out only on one node.
-- TLS fails only from one proxy path.
-- A service crashes after running for several hours.
-
-Simple idea:
-
-> The outcome changes because some condition is changing, but the condition is not yet isolated.
-
-### Reproducible
-
-A failure is reproducible when you can make it happen again on demand, or at least raise the failure rate enough to study it.
-
-Examples:
-
-- Running a test 100 times reproduces the failure 8 times.
-- Lowering memory to 1 GiB makes the crash happen consistently.
-- Using `-j16` in a parallel build triggers the issue, while `-j1` does not.
-
-Simple idea:
-
-> You know how to bring the failure back.
-
-### Why this matters
-
-Many failures that look intermittent are deterministic under a hidden condition.
-
-That is why reproducibility matters so much in incident work:
-
-- It helps validate the root cause.
-- It helps test the fix.
-- It helps distinguish coincidence from mechanism.
-
-A good investigation usually moves like this:
-
-1. Start with an intermittent symptom.
-2. Identify the changing condition.
-3. Make the issue reproducible.
-4. Show that the behavior is deterministic under that condition.
+Most difficult incidents need more than one of them.
 
 ---
 
-## 3. First Response Checklist
+## 2. Start with the incident, not the command line
 
-When an intermittent issue is reported, do not jump straight into random logs.
+Before opening several terminals, write down what is actually failing.
 
-First collect the minimum facts.
-
-Ask:
-
-- What exactly failed?
-- What was the expected behavior?
-- What was the observed behavior?
-- When did it start?
-- How often does it happen?
-- Does it affect all users or only some users?
-- Does it affect all nodes or only some nodes?
-- Does it affect all requests or only specific routes?
-- Does it affect all jobs or only specific workloads?
-- Does it happen at a specific time of day?
-- Does it happen after long runtime?
-- Does it happen only under concurrency?
-- Does it happen only on one instance type?
-- Does it happen only in one region or availability zone?
-- Does retry fix it?
-- Does restart fix it?
-- Does moving to another node fix it?
-
-Do not treat "retry fixed it" as root cause.
-
-A retry can hide:
-
-- A transient network failure
-- A race condition
-- A cold cache
-- A throttled dependency
-- A slow DNS response
-- A bad node
-- A dependency timeout
-- A resource leak that resets after process restart
-
-A restart is useful for recovery, but it is not an explanation.
-
-Write the first incident note in one sentence:
+A useful first sentence is:
 
 ```text
-<service/job> fails with <error> when <condition>, affecting <scope> since <time>.
+<service or job> fails with <symptom> under <known condition>,
+affecting <scope> since <time>.
 ```
 
 Example:
 
 ```text
-The API returns intermittent 504 errors during peak traffic, affecting about 10% of requests since 09:30 UTC.
+The API returns 504 responses during peak traffic, affecting about
+10% of requests from two worker nodes since 09:30 UTC.
 ```
 
-That one sentence forces the problem to become concrete.
+This is much more useful than:
+
+```text
+The API is flaky.
+```
+
+### Define the expected and observed behavior
+
+Record:
+
+- What should have happened?
+- What happened instead?
+- Is the failure visible to users, operators, or only monitoring?
+- Does the request fail, time out, return partial data, or complete slowly?
+- Is the result wrong, or merely delayed?
+- Does retry change the result?
+- Does restart change the result?
+
+Do not combine different symptoms into one incident too early.
+
+A timeout, a crash, and an incorrect result may share a cause, but they may also be separate failures.
+
+### Define the blast radius
+
+Ask:
+
+```text
+one user or many?
+one route or all routes?
+one job type or all jobs?
+one node or all nodes?
+one region or all regions?
+one version or all versions?
+one data size or all data sizes?
+one dependency path or every path?
+```
+
+Scope is often the first useful clue.
+
+If only one node fails, compare nodes.
+
+If only large requests fail, measure per-request resource usage.
+
+If only one region fails, inspect regional dependencies and infrastructure.
+
+If only new instances fail, compare images, startup scripts, and configuration.
+
+### Build a timeline
+
+Record concrete timestamps for:
+
+```text
+first known failure
+first alert
+recent deployment
+configuration change
+scaling event
+node replacement
+certificate or DNS change
+dependency degradation
+mitigation
+recovery
+```
+
+Use UTC when several systems or teams are involved.
+
+A timeline lets you align:
+
+- application logs
+- system logs
+- metrics
+- cloud events
+- deployment history
+- dependency request IDs
+
+Without timestamps, useful evidence remains disconnected.
+
+### Preserve evidence before mitigation
+
+A restart may restore service while destroying the only evidence that explains the failure.
+
+Where urgency allows, preserve:
+
+```text
+application logs
+previous container logs
+process state
+resource limits
+termination reasons
+node placement
+orchestrator events
+configuration and version
+dependency request IDs
+recent metrics
+```
+
+Examples for a Linux service:
+
+```bash
+export SERVICE=example.service
+export PID=<process-id>
+
+date -Is > incident-time.txt
+systemctl status "$SERVICE" > service-status.txt 2>&1 || true
+journalctl -u "$SERVICE" --since "1 hour ago" \
+  > service-journal.txt 2>&1 || true
+cat "/proc/$PID/status" > process-status.txt 2>&1 || true
+cat "/proc/$PID/limits" > process-limits.txt 2>&1 || true
+```
+
+Examples for Kubernetes:
+
+```bash
+export NS=example
+export POD=<pod-name>
+
+kubectl get pod -n "$NS" "$POD" -o yaml > pod.yaml
+kubectl describe pod -n "$NS" "$POD" > pod-describe.txt
+kubectl logs -n "$NS" "$POD" --timestamps > pod.log 2>&1 || true
+kubectl logs -n "$NS" "$POD" --previous --timestamps \
+  > pod-previous.log 2>&1 || true
+kubectl get events -n "$NS" --sort-by=.lastTimestamp \
+  > namespace-events.txt
+```
+
+Treat incident bundles as sensitive. Logs and object definitions may contain internal names, customer identifiers, paths, tokens passed incorrectly through environment variables, or other protected data.
+
+### Separate mitigation from root cause
+
+A mitigation reduces impact:
+
+```text
+restart process
+remove bad node
+roll back deployment
+increase capacity
+reduce concurrency
+fail over dependency
+disable feature
+```
+
+A root cause explains the mechanism.
+
+For example:
+
+```text
+Mitigation:
+Restart the worker.
+
+Root cause:
+The worker leaked file descriptors until it reached LimitNOFILE.
+The restart reset the descriptor table.
+```
+
+"Restart fixed it" is not a root-cause statement.
 
 ---
 
-## 4. Classify the Failure
+## 3. Classify the failure
 
-Classify the failure before going deep.
+Classification prevents an investigation from becoming a random command hunt.
 
-This avoids wasting time.
+### Configuration or deterministic startup failure
 
-### 4.1 Hard deterministic failure
+Typical signs:
 
-Fails every time.
+- fails every time
+- fails immediately
+- one version or image always fails
+- error is stable across retries
+- service behaves differently under systemd than in a shell
 
 Common causes:
 
-- Bad config
-- Missing file
-- Missing shared library
-- Invalid permission
-- Wrong version
-- Schema mismatch
-- Bad environment variable
-- Broken deployment
+```text
+missing file
+bad permission
+wrong environment variable
+missing library
+schema mismatch
+invalid command
+wrong working directory
+bad image
+unsupported runtime version
+```
 
 Useful checks:
 
 ```bash
-systemctl status service-name
-journalctl -u service-name -n 200 --no-pager
-journalctl -xe --no-pager
-ldd /path/to/binary
+export SERVICE=example.service
+
+systemctl status "$SERVICE"
+systemctl cat "$SERVICE"
+systemctl show "$SERVICE"
+journalctl -u "$SERVICE" -n 200 --no-pager
 env | sort
 ```
 
-Compare environments:
+If a binary is involved:
 
 ```bash
-env | sort > current.env
-# On a known-good node:
-env | sort > reference.env
-
-diff -u reference.env current.env
+ldd /path/to/binary
+file /path/to/binary
 ```
 
-If the failure always happens, focus on configuration, version, permissions, and dependencies.
+Focus on configuration, runtime, identity, permissions, and version.
 
-### 4.2 Timing-sensitive failure
+### Timing-sensitive failure
 
-Fails only sometimes, often depending on execution order.
+Typical signs:
+
+- failure rate changes with concurrency
+- serial execution succeeds
+- startup order matters
+- retry immediately succeeds
+- cold and warm behavior differ
 
 Common causes:
 
-- Race condition
-- Parallel build issue
-- Lock contention
-- Thread scheduling
-- Startup ordering
-- Cold cache vs warm cache
-- Slow dependency during initialization
+```text
+race condition
+lock contention
+parallel build issue
+dependency not ready
+cache initialization
+thread scheduling
+shared temporary file
+non-atomic update
+```
 
-Useful tests:
+Useful tests in a safe environment:
 
 ```bash
-# Remove parallelism
+# Remove parallelism.
 MAKEFLAGS="-j1" make
 
-# Run repeatedly
-for i in {1..100}; do
-  echo "run $i"
+# Repeat the operation.
+for i in $(seq 1 100); do
+  printf 'run=%s time=%s\n' "$i" "$(date -Is)"
   ./run_command || break
 done
 ```
 
-If reducing concurrency changes the failure rate, timing matters.
+A changing failure rate is useful evidence even when the problem is not yet fully reproducible.
 
-### 4.3 Resource-pressure failure
+### Resource-pressure failure
 
-Fails under load, after long runtime, or on smaller nodes.
+Typical signs:
 
-Common causes:
+- fails under load
+- fails after long runtime
+- fails on smaller nodes
+- restart temporarily helps
+- large requests fail more often
+- one container restarts while the host looks healthy
 
-- Memory leak
-- OOM kill
-- Swap pressure
-- File descriptor leak
-- Thread leak
-- Disk full
-- Disk I/O saturation
-- CPU throttling
-- Queue buildup
+Common boundaries:
 
-Useful checks:
+```text
+memory
+CPU quota
+disk capacity
+disk latency
+file descriptors
+threads
+sockets
+connection pools
+ephemeral ports
+queue depth
+temporary storage
+```
+
+Useful first checks:
 
 ```bash
 free -m
-vmstat 1
-iostat -x 1
-mpstat 1
-ulimit -a
-ulimit -n
-lsof -p <PID> | wc -l
-ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head
-```
-
-Check kernel logs:
-
-```bash
-dmesg -T | grep -Ei 'oom|killed process|out of memory'
-journalctl -k --no-pager | grep -Ei 'oom|killed process|out of memory'
-```
-
-If the issue appears after long runtime, suspect resource leak first.
-
-### 4.4 Dependency instability
-
-Fails because something outside the process is slow, unavailable, or inconsistent.
-
-Common dependencies:
-
-- DNS
-- Database
-- Object storage
-- Metadata service
-- Package registry
-- License server
-- Message queue
-- Authentication service
-- Secrets service
-- External API
-
-Common symptoms:
-
-- 502
-- 503
-- 504
-- Connection reset
-- Connection refused
-- TLS handshake timeout
-- DNS timeout
-- Slow response
-- Retry storm
-- Partial success
-
-Useful checks:
-
-```bash
-dig dependency.example
-curl -v https://dependency.example
-ss -tan
-```
-
-Use curl timing to split the request into stages:
-
-```bash
-cat > curl-format.txt <<'EOF_CURL'
-time_namelookup:  %{time_namelookup}\n
-time_connect:     %{time_connect}\n
-time_appconnect:  %{time_appconnect}\n
-time_starttransfer:%{time_starttransfer}\n
-time_total:       %{time_total}\n
-http_code:        %{http_code}\n
-EOF_CURL
-
-curl -w '@curl-format.txt' -o /dev/null -s https://dependency.example
-```
-
-Interpretation:
-
-- High `time_namelookup`: DNS problem
-- High `time_connect`: TCP/network problem
-- High `time_appconnect`: TLS problem
-- High `time_starttransfer`: upstream server slow
-- High `time_total`: full request path slow
-
----
-
-## 5. Fast Triage Commands
-
-When you need a quick first pass, use a short set of commands before going subsystem by subsystem.
-
-```bash
-hostname
-date
-uptime
-free -m
-df -h
-df -i
 vmstat 1 5
 iostat -x 1 5
 mpstat 1 5
 ss -s
-systemctl status service-name
-journalctl -u service-name -n 100 --no-pager
+df -h
+df -i
 ```
 
-This set answers:
+Then inspect the process or container limits. Host capacity alone may be irrelevant when the process is constrained by systemd, a container, or an orchestrator.
 
-- Which node am I on?
-- Has the system been up long enough for leak patterns?
-- Is memory tight?
-- Is disk full?
-- Is I/O slow?
-- Is CPU saturated or throttled?
-- Are sockets piling up?
-- Is the service unhealthy right now?
+### Dependency or request-path failure
 
-For many incidents, this is enough to decide where to look next.
+Typical signs:
+
+- one external call is slow
+- failures cluster by region or node
+- 502, 503, or 504 responses appear
+- DNS lookup or TLS handshake time grows
+- retry succeeds through a different backend
+- only one object store, database, or API path fails
+
+Possible boundaries:
+
+```text
+DNS
+TCP connection
+TLS handshake
+proxy
+load balancer
+database pool
+object storage
+authentication service
+queue
+rate limit
+remote timeout
+```
+
+Separate the path into stages instead of calling everything a network problem.
+
+### Rollout, node, or environment inconsistency
+
+Typical signs:
+
+- only some nodes fail
+- issue begins during deployment
+- rollback helps
+- new and old versions run together
+- one availability zone or instance type behaves differently
+
+Common causes:
+
+```text
+mixed application versions
+partial migration
+config drift
+different resolver
+different proxy
+different kernel
+different image
+different service account
+different instance limit
+bad node
+```
+
+The correct tool here is often comparison, not deeper inspection of one failing process.
 
 ---
 
-## 6. Linux Survival Commands for Incidents
+## 4. Five-minute triage
 
-These commands are the foundation of Linux incident response.
+Use a short first pass to decide where to look next.
 
-### 6.1 Where am I and what system is this?
+Set reusable names first:
+
+```bash
+export SERVICE=example.service
+export PID=<process-id>
+export HOST=dependency.example
+export URL=https://dependency.example/health
+```
+
+Then collect a basic snapshot:
 
 ```bash
 hostname
-whoami
-id
-pwd
-date
+date -Is
 uptime
-uname -a
-cat /etc/os-release
-```
 
-Use these before copying commands from one node to another.
-
-Different nodes often explain intermittent failures.
-
-### 6.2 Disk usage
-
-```bash
+free -m
 df -h
-du -h --max-depth=1 / 2>/dev/null | sort -h
-du -h --max-depth=1 . | sort -h
-find / -xdev -type f -size +1G 2>/dev/null
-```
+df -i
 
-Find deleted files still held open:
-
-```bash
-lsof +L1
-```
-
-This matters when `df -h` shows disk full but `du` does not explain it.
-
-A process may still hold a deleted log file open.
-
-### 6.3 Processes
-
-```bash
-ps aux --sort=-%cpu | head
-ps aux --sort=-%mem | head
-pstree -ap
-pgrep -af service-name
-```
-
-Inspect one process:
-
-```bash
-ps -p <PID> -o pid,ppid,cmd,%cpu,%mem,etime,nlwp
-cat /proc/<PID>/status
-cat /proc/<PID>/limits
-```
-
-Useful fields:
-
-- `VmRSS`: resident memory
-- `Threads`: number of threads
-- `FDSize`: file descriptor table size
-- `voluntary_ctxt_switches`: voluntary context switches
-- `nonvoluntary_ctxt_switches`: forced context switches
-
-### 6.4 Open files and sockets
-
-```bash
-lsof -p <PID> | head
-lsof -p <PID> | wc -l
-ls /proc/<PID>/fd | wc -l
-ss -tanp
+vmstat 1 5
+iostat -x 1 5
+mpstat 1 5
 ss -s
+
+systemctl status "$SERVICE"
+journalctl -u "$SERVICE" -n 100 --no-pager
 ```
 
-Check for many connections in one state:
+This should answer:
 
-```bash
-ss -tan | awk '{print $1}' | sort | uniq -c | sort -nr
+- Which node am I on?
+- Is the system under CPU, memory, or I/O pressure?
+- Is a filesystem full?
+- Are socket counts unusual?
+- Is the service restarting?
+- Is the current failure local to this node?
+- Did the kernel report OOM, disk, or network errors?
+
+Do not run commands merely because they appear in a checklist.
+
+Use the first pass to choose a direction:
+
+```text
+high iowait and blocked tasks -> disk or storage
+growing RSS and OOM events -> memory
+many CLOSE-WAIT sockets -> application connection handling
+one unhealthy node -> compare nodes
+slow DNS lookup -> resolver path
+container restarts -> container limits and termination reason
 ```
-
-Many `TIME-WAIT` sockets can suggest connection churn.
-
-Many `CLOSE-WAIT` sockets can suggest the application is not closing sockets properly.
-
-Many `SYN-SENT` sockets can suggest network or upstream connectivity issues.
 
 ---
 
-## 7. CPU Investigation
+## 5. Compare healthy and unhealthy cases
 
-CPU problems are not always simple "high CPU".
+Comparison is one of the fastest ways to turn an intermittent failure into a concrete difference.
 
-You need to distinguish:
+Compare the same operation across:
 
-- User CPU
-- System CPU
-- I/O wait
-- Steal time
-- CPU throttling
-- Load caused by runnable tasks
-- Load caused by blocked tasks
+```text
+healthy node vs failing node
+small request vs large request
+low concurrency vs high concurrency
+old version vs new version
+one region vs another region
+direct path vs proxy path
+IPv4 vs IPv6
+cold start vs warm start
+```
 
-### 7.1 Basic CPU view
+### Collect a node fingerprint
+
+On each node:
+
+```bash
+hostname
+date -Is
+uptime
+uname -a
+cat /etc/os-release
+lscpu
+free -m
+lsblk
+df -h
+df -i
+ip addr
+ip route
+ulimit -a
+cat /proc/self/limits
+```
+
+Capture the resolver and proxy environment:
+
+```bash
+resolvectl status 2>/dev/null || cat /etc/resolv.conf
+env | grep -iE '^(http|https|no)_proxy=' || true
+```
+
+Capture service state:
+
+```bash
+systemctl status "$SERVICE"
+systemctl cat "$SERVICE"
+systemctl show "$SERVICE"
+```
+
+Capture packages when package drift is plausible:
+
+```bash
+# Debian or Ubuntu
+dpkg-query -W -f='${Package}\t${Version}\n' | sort > packages.txt
+
+# RPM-based systems
+rpm -qa --qf '%{NAME}\t%{VERSION}-%{RELEASE}\n' | sort > packages.txt
+```
+
+Then compare:
+
+```bash
+diff -u healthy/env.txt failing/env.txt
+diff -u healthy/packages.txt failing/packages.txt
+diff -u healthy/service-unit.txt failing/service-unit.txt
+```
+
+Important differences include:
+
+```text
+kernel
+instance type
+CPU architecture
+memory size
+disk type
+mount options
+container runtime
+DNS resolver
+proxy settings
+service version
+configuration
+environment variables
+resource limits
+clock
+```
+
+A node comparison is boring. It is also one of the most reliable ways to solve incidents that affect only part of a fleet.
+
+---
+
+## 6. CPU and scheduling
+
+"High CPU" is not a diagnosis.
+
+Distinguish:
+
+```text
+user CPU
+system CPU
+I/O wait
+steal time
+runnable queue
+blocked tasks
+container throttling
+```
+
+### Basic CPU view
 
 ```bash
 uptime
@@ -578,58 +680,46 @@ vmstat 1
 
 Useful `vmstat` fields:
 
-- `r`: runnable processes
-- `b`: blocked processes
+- `r`: runnable tasks
+- `b`: tasks blocked in uninterruptible sleep
 - `us`: user CPU
 - `sy`: system CPU
 - `id`: idle CPU
 - `wa`: I/O wait
 - `st`: steal time
 
-Example:
+High `r` with low idle time can indicate CPU contention.
 
-```text
-r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
-8  0      0  50000 100000 900000    0    0     1     2 1000 3000 90  5  5  0  0
-```
+High `b` and `wa` often point to storage or another blocking I/O path rather than a CPU shortage.
 
-This suggests CPU is busy with user-space work.
-
-Example:
-
-```text
-r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
-1 12      0  50000 100000 900000    0    0 50000 80000 1000 3000 10  5 20 65  0
-```
-
-This suggests many tasks are blocked on I/O.
-
-### 7.2 Load average
-
-Load average is not CPU usage.
-
-Load average counts tasks that are:
-
-- Running on CPU
-- Waiting to run on CPU
-- Waiting in uninterruptible sleep, often I/O
-
-High load with low CPU often means blocked I/O.
-
-Check:
+Check for tasks in uninterruptible sleep:
 
 ```bash
-uptime
-vmstat 1
-iostat -x 1
-ps -eo state,pid,cmd | awk '$1 ~ /D/ {print}'
+ps -eo state,pid,ppid,comm,wchan:32 \
+  | awk '$1 ~ /^D/ {print}'
 ```
 
-Processes in `D` state are usually stuck waiting on I/O.
+### Load average is not CPU usage
 
-### 7.3 CPU steal time
+Load average includes tasks that are:
 
-In virtual machines, steal time means the VM wanted CPU but the hypervisor did not give it CPU immediately.
+- running
+- waiting for CPU
+- waiting in uninterruptible sleep
+
+A high load average with idle CPU can still be an I/O problem.
+
+Read load average together with:
+
+```bash
+vmstat 1
+iostat -x 1
+ps -eo state,pid,comm,wchan:32
+```
+
+### CPU steal time
+
+On virtual machines, steal time means the guest wanted CPU but the hypervisor did not schedule it.
 
 Check:
 
@@ -637,17 +727,21 @@ Check:
 mpstat 1
 ```
 
-Look at `%steal`.
+If `%steal` rises during degradation, compare:
 
-If steal time rises during degradation, the problem may be noisy-neighbor contention or cloud host pressure.
+```text
+instance type
+availability zone
+host lifecycle
+burstable CPU credits
+provider metrics
+```
 
-This can explain why the same workload behaves differently on different nodes.
+One noisy or degraded host can make identical software behave differently.
 
-### 7.4 CPU throttling in containers
+### Container CPU throttling
 
-A container can be CPU-throttled even when the host has idle CPU.
-
-Check cgroup CPU stats.
+A container can be throttled even while the host has idle CPU.
 
 For cgroup v2:
 
@@ -656,36 +750,29 @@ cat /sys/fs/cgroup/cpu.max
 cat /sys/fs/cgroup/cpu.stat
 ```
 
-Useful fields in `cpu.stat`:
+Useful counters include:
 
-- `nr_periods`
-- `nr_throttled`
-- `throttled_usec`
+```text
+nr_periods
+nr_throttled
+throttled_usec
+```
 
-If `nr_throttled` and `throttled_usec` keep increasing during slow periods, the container is CPU-throttled.
+Watch the counters over time. A non-zero value alone is not enough; the rate of increase during slow periods is more useful.
 
-### 7.5 Mini example: CPU problem that looked random
+Also compare application concurrency with available CPU.
 
-A worker pool slows down only during business hours. Overall CPU is not pinned at 100%, so the issue looks unclear.
-
-Investigation shows:
-
-- high load average
-- high `wa`
-- many tasks in `D` state
-- elevated disk `await`
-
-This is not a CPU shortage. It is an I/O problem that shows up through CPU scheduling symptoms.
-
-That is why high load is a clue, not a conclusion.
+Eight worker threads inside a container limited to two CPUs can create latency through oversubscription without ever consuming eight CPUs.
 
 ---
 
-## 8. Memory Investigation
+## 7. Memory and process limits
 
-Memory failures are often intermittent because memory usage grows over time or spikes during specific requests.
+Memory failures often appear intermittent because usage grows with time or spikes for particular work.
 
-### 8.1 Basic memory checks
+### Host memory
+
+Start with:
 
 ```bash
 free -m
@@ -693,42 +780,40 @@ vmstat 1
 ps aux --sort=-%mem | head
 ```
 
-Do not panic only because Linux uses memory for cache.
-
-Linux uses free memory for filesystem cache. That is normal.
+Do not treat low `free` memory alone as a problem. Linux uses available RAM for cache.
 
 Focus on:
 
-- Available memory
-- Swap activity
-- OOM events
-- Process RSS growth
-- cgroup memory limits
+```text
+MemAvailable
+swap activity
+process RSS
+OOM events
+reclaim pressure
+container limit
+```
 
-### 8.2 OOM killer
+### Host OOM
 
 Check kernel logs:
 
 ```bash
-dmesg -T | grep -Ei 'oom|killed process|out of memory'
-journalctl -k --no-pager | grep -Ei 'oom|killed process|out of memory'
+journalctl -k --since "2 hours ago" \
+  | grep -Ei 'oom|out of memory|killed process'
 ```
 
-An OOM kill means the system crossed a memory boundary.
+Questions to answer:
 
-Important questions:
-
-- Was it host OOM or container OOM?
+- Was this a host OOM or container OOM?
 - Which process was killed?
-- Was the killed process the cause or only the victim?
-- Did memory grow slowly over time?
-- Did memory spike during a specific operation?
+- Was the killed process the largest consumer, or only the selected victim?
+- Did memory grow slowly?
+- Did one request cause a spike?
+- Did the process restart automatically?
 
-### 8.3 Container memory limits
+### Container memory
 
-Host memory is not enough.
-
-Always check container/cgroup memory separately.
+Host memory can look healthy while a cgroup reaches its own limit.
 
 For cgroup v2:
 
@@ -738,1806 +823,976 @@ cat /sys/fs/cgroup/memory.current
 cat /sys/fs/cgroup/memory.events
 ```
 
-Important `memory.events` fields:
+`memory.max` may contain the word `max`, meaning no explicit hard limit at that level.
 
-- `low`
-- `high`
-- `max`
-- `oom`
-- `oom_kill`
+Useful `memory.events` counters include:
 
-If `oom_kill` increases, the cgroup killed a process.
+```text
+high
+max
+oom
+oom_kill
+```
 
-### 8.4 Memory leak pattern
+An increasing `oom_kill` counter is direct evidence that the cgroup killed a process.
 
-A memory leak often looks like this:
-
-- Service starts healthy
-- Memory slowly rises
-- Latency increases
-- Garbage collection gets heavier
-- OOM or restart happens
-- Restart fixes it temporarily
-- Problem returns later
-
-Track process RSS over time:
+### Track process memory over time
 
 ```bash
-while true; do
-  date
-  ps -p <PID> -o pid,rss,vsz,%mem,cmd
-  sleep 10
+export PID=<process-id>
+
+while sleep 10; do
+  printf '\n%s\n' "$(date -Is)"
+  ps -p "$PID" -o pid,rss,vsz,%mem,etime,nlwp,cmd
 done
 ```
 
-If memory grows without dropping after work completes, suspect a leak.
+A leak pattern often looks like:
 
-### 8.5 Mini example: intermittent API failures caused by memory limit
+```text
+service starts healthy
+memory rises gradually
+latency and garbage collection increase
+process is killed or restarted
+restart restores service
+pattern repeats
+```
 
-Symptoms:
+Do not confuse caching with a leak. A useful question is whether memory returns after the workload and cache lifecycle should have completed.
 
-- only some requests fail
-- retries often succeed
-- one pod restarts more than others
+### Memory outside the obvious heap
 
-Investigation shows:
+For JVM, Python, and native workloads, process memory can include:
 
-- `memory.current` rises sharply during large requests
-- `memory.events` shows increasing `oom_kill`
-- the load balancer retries to another healthy pod
+```text
+runtime heap
+native allocations
+shared libraries
+memory-mapped files
+worker processes
+compression buffers
+Arrow or NumPy buffers
+page cache charged to a cgroup
+```
 
-The result looks intermittent from the client side.
+Increasing one application heap limit may not fix pressure elsewhere.
 
-The mechanism is deterministic: large requests cross the pod memory limit.
+### Other process limits
+
+Check:
+
+```bash
+cat "/proc/$PID/limits"
+```
+
+Important limits may include:
+
+```text
+open files
+processes
+stack size
+locked memory
+core file size
+```
+
+A process can fail under a limit even when the host has plenty of capacity.
 
 ---
 
-## 9. Disk and I/O Investigation
+## 8. Disk, filesystems, and I/O
 
-Disk issues often look like application issues.
+Storage problems often surface as application timeouts, high load, blocked tasks, or failed temporary files.
 
-Symptoms:
+### Capacity and inodes
 
-- Slow service
-- High load average
-- Jobs stuck
-- Random timeouts
-- Database slow
-- Log writes slow
-- Temporary files fail
-- Package install hangs
-
-### 9.1 Disk space
+Check both:
 
 ```bash
 df -h
 df -i
 ```
 
-Check both space and inodes.
+A filesystem can have free bytes and no free inodes.
 
-A filesystem can fail if it has free space but no free inodes.
-
-Find large directories:
+Find large directories and files:
 
 ```bash
-du -h --max-depth=1 /var 2>/dev/null | sort -h
-du -h --max-depth=1 /tmp 2>/dev/null | sort -h
+du -x -h --max-depth=1 /var 2>/dev/null | sort -h
+find /var -xdev -type f -size +500M -ls 2>/dev/null
 ```
 
-Find large files:
+Find deleted files that are still open:
 
 ```bash
-find /var -type f -size +500M 2>/dev/null -exec ls -lh {} \;
+lsof +L1
 ```
 
-### 9.2 I/O saturation
+This explains incidents where `df` reports a full filesystem but `du` cannot account for the used space.
+
+### I/O latency and queues
+
+Use:
 
 ```bash
 iostat -x 1
 ```
 
-Useful fields:
+Useful fields include:
 
-- `%util`: device utilization
-- `await`: average wait time
-- `r/s`, `w/s`: reads/writes per second
-- `rkB/s`, `wkB/s`: throughput
-- `aqu-sz`: average queue size
-
-If `await` and queue size rise during failures, disk is likely involved.
-
-### 9.3 Cloud disk limits
-
-Cloud disks often have hidden limits:
-
-- IOPS limit
-- Throughput limit
-- Burst credit limit
-- Volume type limit
-- Instance-level bandwidth limit
-
-This means the disk can be fast for a while, then slow later.
-
-Intermittent disk slowness can happen when burst credits run out.
-
-Check provider metrics when possible:
-
-- Read IOPS
-- Write IOPS
-- Read throughput
-- Write throughput
-- Queue depth
-- Burst balance
-- Volume throttling
-
-### 9.4 Disk-full patterns worth remembering
-
-A disk incident is not always "filesystem at 100%".
-
-Watch for:
-
-- inode exhaustion
-- deleted files held open
-- temporary directories growing without cleanup
-- one workload writing far more logs than normal
-- object download or extract step filling local disk
-- container writable layer growing unexpectedly
-
-These patterns often explain why a node fails while the rest of the fleet stays healthy.
-
----
-
-## 10. File Descriptor and Socket Exhaustion
-
-File descriptor exhaustion is a classic intermittent failure.
-
-It often appears only under traffic or after long runtime.
-
-Symptoms:
-
-- `Too many open files`
-- Failed connections
-- Failed log writes
-- Failed file reads
-- Random accept/connect errors
-- Service works after restart
-
-### 10.1 Check limits
-
-```bash
-ulimit -n
-cat /proc/<PID>/limits
+```text
+await
+aqu-sz
+r/s and w/s
+rkB/s and wkB/s
 ```
+
+Read `%util` carefully. Its interpretation varies across device types, virtualized storage, RAID, and modern NVMe. A high or low value alone is not a universal saturation signal.
+
+Prefer a combination of:
+
+```text
+latency
+queue depth
+throughput relative to known limits
+application-visible latency
+provider throttling metrics
+```
+
+### Cloud storage limits
+
+Cloud volumes may be constrained by:
+
+```text
+volume IOPS
+volume throughput
+burst balance
+instance-level storage bandwidth
+network bandwidth
+availability-zone placement
+```
+
+A volume can be fast until burst credits are exhausted, then become slow enough to trigger application timeouts.
+
+Compare OS metrics with provider metrics. The operating system cannot always show the enforcement layer outside the instance.
+
+### Temporary and ephemeral storage
 
 Look for:
 
 ```text
-Max open files
+large downloads
+archive extraction
+shuffle and spill
+container writable layers
+unbounded logs
+temporary files without cleanup
 ```
 
-### 10.2 Count open file descriptors
+In containers and Kubernetes, inspect ephemeral-storage requests, limits, and node disk pressure where applicable.
+
+A process may be healthy until one large job fills its temporary filesystem.
+
+### Filesystem errors
+
+Check recent kernel messages:
 
 ```bash
-ls /proc/<PID>/fd | wc -l
-lsof -p <PID> | wc -l
+journalctl -k --since "2 hours ago" \
+  | grep -Ei 'I/O error|filesystem|ext4|xfs|nvme|blk_update|reset'
 ```
 
-Track over time:
-
-```bash
-while true; do
-  date
-  ls /proc/<PID>/fd | wc -l
-  sleep 10
-done
-```
-
-If the count keeps rising, suspect a leak.
-
-### 10.3 Check socket states
-
-```bash
-ss -tan | awk '{print $1}' | sort | uniq -c | sort -nr
-```
-
-Common meanings:
-
-- Many `ESTAB`: many active connections
-- Many `TIME-WAIT`: high connection churn
-- Many `CLOSE-WAIT`: application may not close sockets
-- Many `SYN-SENT`: outbound connection problem
-- Many `SYN-RECV`: inbound connection pressure or SYN backlog issue
-
-### 10.4 Connection-pool reality check
-
-Sometimes the problem is not the OS limit itself. It is the application pool design.
-
-Examples:
-
-- too many short-lived outbound connections
-- connection reuse disabled
-- pool size much larger than dependency can handle
-- pool never closing dead sockets
-- retry storm creating bursts of new connections
-
-OS symptoms and application design often need to be read together.
+Do not repeatedly restart an application when the underlying filesystem or device is reporting errors.
 
 ---
 
-## 11. Network, DNS, HTTP and TLS Debugging
+## 9. File descriptors, sockets, and threads
 
-Network failures are often conditional.
+Descriptor and connection leaks commonly appear only under traffic or after long runtime.
 
-They may depend on:
+Typical symptoms:
 
-- Source node
-- Destination node
-- Region
-- Availability zone
-- DNS resolver
-- NAT gateway
-- Firewall rule
-- Proxy
-- Load balancer target
-- TLS certificate chain
-- Upstream health
-- IPv4 versus IPv6 path
-- Client clock accuracy
+```text
+Too many open files
+random connection failures
+failed log writes
+accept errors
+service works after restart
+```
 
-When debugging network issues, separate the problem into layers:
-
-1. Can the host resolve the name?
-2. Can it reach the destination IP and port?
-3. Can it complete the TLS handshake?
-4. Can it send the HTTP request and get the expected response?
-
-Do not treat "network issue" as one category. DNS, TCP, TLS, proxying, and HTTP all fail differently.
-
-### 11.1 Basic network checks
+### Check the limit and current count
 
 ```bash
-ip addr
-ip route
+export PID=<process-id>
+
+grep -i 'open files' "/proc/$PID/limits"
+
+find "/proc/$PID/fd" \
+  -mindepth 1 -maxdepth 1 \
+  2>/dev/null | wc -l
+```
+
+`lsof -p "$PID"` is useful for identifying what is open, but its line count is only a rough indicator because it can include a header and other entries.
+
+Track the descriptor count:
+
+```bash
+while sleep 10; do
+  printf '%s ' "$(date -Is)"
+  find "/proc/$PID/fd" \
+    -mindepth 1 -maxdepth 1 \
+    2>/dev/null | wc -l
+done
+```
+
+If it grows without returning to a baseline, inspect descriptor types:
+
+```bash
+lsof -p "$PID"
+```
+
+### Socket states
+
+Summarize TCP states:
+
+```bash
+ss -tanH \
+  | awk '{print $1}' \
+  | sort \
+  | uniq -c \
+  | sort -nr
+```
+
+Common clues:
+
+- many `ESTAB`: high active connection count
+- many `TIME-WAIT`: high connection churn
+- many `CLOSE-WAIT`: application may not be closing sockets
+- many `SYN-SENT`: outbound connection attempts are not completing
+- many `SYN-RECV`: inbound backlog or handshake pressure
+
+These are clues, not automatic diagnoses.
+
+For example, `TIME-WAIT` can be normal for a busy client. The useful question is whether its growth correlates with port exhaustion, latency, or failed connections.
+
+### Connection pools
+
+The OS may only show the result of an application-level pool problem:
+
+```text
+connection reuse disabled
+pool too small
+pool too large for dependency
+dead connections retained
+pool wait time grows
+retry storm creates more connections
+```
+
+Measure pool usage and wait time if the application exposes them.
+
+### Threads and process limits
+
+Inspect thread count:
+
+```bash
+ps -p "$PID" -o pid,nlwp,etime,cmd
+grep -i '^Threads:' "/proc/$PID/status"
+```
+
+Compare with:
+
+```bash
+grep -i 'max user processes' "/proc/$PID/limits"
+```
+
+A growing thread count can indicate a leak, blocked workers, or unbounded task creation.
+
+---
+
+## 10. DNS, TCP, TLS, HTTP, and dependencies
+
+Do not use "network problem" as the final category.
+
+A request path has several stages:
+
+```text
+name resolution
+    -> route
+    -> TCP connection
+    -> TLS handshake
+    -> proxy or load balancer
+    -> upstream application
+    -> response body
+```
+
+Test them separately.
+
+Set a target:
+
+```bash
+export HOST=service.example
+export PORT=443
+export URL=https://service.example/health
+```
+
+### DNS
+
+Inspect the active resolver:
+
+```bash
 resolvectl status 2>/dev/null || cat /etc/resolv.conf
-ping -c 4 dependency.example
-traceroute dependency.example 2>/dev/null || tracepath dependency.example
-mtr dependency.example
-ss -tan
 ```
 
-Check:
-
-- Is the interface up?
-- Is the default route correct?
-- Which resolver is being used?
-- Is packet loss visible?
-- Does the route differ between failing and healthy nodes?
-- Are there many connections stuck in `SYN-SENT`, `TIME-WAIT`, or `CLOSE-WAIT`?
-
-### 11.2 DNS checks
+Query normally:
 
 ```bash
-dig dependency.example
-dig dependency.example A
-dig dependency.example AAAA
-dig dependency.example +trace
+dig "$HOST"
+dig "$HOST" A
+dig "$HOST" AAAA
 ```
 
-Query a specific resolver:
+Query an approved resolver when comparison is useful:
 
 ```bash
-dig @8.8.8.8 dependency.example
-dig @1.1.1.1 dependency.example
+dig @<approved-resolver> "$HOST"
 ```
 
-Intermittent DNS problems may involve:
+Do not send internal hostnames to public resolvers.
 
-- Resolver overload
-- Bad cache
-- Short TTL
-- Split-horizon DNS
-- Search domain mistakes
-- IPv6 AAAA record issues
-- Internal DNS service instability
+Compare:
 
-Useful questions:
+```text
+healthy node vs failing node
+A vs AAAA
+default resolver vs approved comparison resolver
+cached result vs authoritative path
+```
 
-- Does the failing host resolve to the same IP as a healthy host?
-- Does the answer change across resolvers?
-- Is the process using the expected search domain?
-- Is IPv6 preferred even though the IPv6 path is unhealthy?
+`dig +trace` follows delegation from public DNS roots and is usually inappropriate for private split-horizon names.
 
-### 11.3 Plain TCP reachability
+### ICMP is weak evidence
 
-Before blaming HTTP or TLS, confirm that the target port is reachable.
+`ping` and `mtr` can be useful when ICMP is allowed, but a failed ping does not prove the application path is unreachable.
+
+ICMP may be blocked while TCP succeeds.
+
+Test the actual destination port:
 
 ```bash
-nc -vz dependency.example 443
-timeout 5 bash -c '</dev/tcp/dependency.example/443' && echo ok || echo failed
+nc -vz "$HOST" "$PORT"
 ```
 
-This helps separate:
-
-- Name resolution failure
-- TCP connect failure
-- TLS handshake failure
-- HTTP application failure
-
-### 11.4 HTTP methods and common status codes
-
-Know the basic methods:
-
-- `GET`: read
-- `POST`: create or submit action
-- `PUT`: replace or update
-- `DELETE`: remove
-
-Know common status codes:
-
-- `200`: success
-- `301`: permanent redirect
-- `302`: temporary redirect
-- `400`: bad request
-- `401`: unauthenticated
-- `403`: authenticated but not allowed
-- `404`: not found
-- `500`: server error
-- `502`: bad gateway
-- `503`: service unavailable
-- `504`: gateway timeout
-
-For SRE work, 502, 503, and 504 are especially important.
-
-Simple meanings:
-
-- `502`: proxy or load balancer got a bad response from upstream
-- `503`: service is unavailable or no healthy upstream is available
-- `504`: upstream did not respond before timeout
-
-Treat these as path clues, not just status codes.
-
-### 11.5 Curl debugging
+Or, when Bash TCP redirection is available:
 
 ```bash
-curl -v https://service.example
-curl -I https://service.example
-curl -IL https://service.example
-curl -sS -o /dev/null -w '%{http_code} %{time_total}\n' https://service.example
+timeout 5 bash -c "</dev/tcp/$HOST/$PORT" \
+  && echo connected \
+  || echo failed
 ```
 
-Use timing output:
+### HTTP timing
+
+Use curl to split the request into stages:
 
 ```bash
 cat > curl-format.txt <<'EOF_CURL'
-time_namelookup:   %{time_namelookup}\n
-time_connect:      %{time_connect}\n
-time_appconnect:   %{time_appconnect}\n
-time_pretransfer:  %{time_pretransfer}\n
-time_starttransfer:%{time_starttransfer}\n
-time_total:        %{time_total}\n
-http_code:         %{http_code}\n
+time_namelookup:    %{time_namelookup}\n
+time_connect:       %{time_connect}\n
+time_appconnect:    %{time_appconnect}\n
+time_starttransfer: %{time_starttransfer}\n
+time_total:         %{time_total}\n
+http_code:          %{http_code}\n
+remote_ip:          %{remote_ip}\n
 EOF_CURL
 
-curl -w '@curl-format.txt' -o /dev/null -s https://service.example
+curl --silent --show-error \
+  --output /dev/null \
+  --write-out '@curl-format.txt' \
+  "$URL"
 ```
 
-Useful variants:
+Interpretation:
+
+- high `time_namelookup`: resolver or DNS path
+- high `time_connect`: routing, firewall, NAT, or target acceptance
+- high `time_appconnect`: TLS handshake or certificate path
+- high `time_starttransfer`: proxy or upstream processing
+- high `time_total`: full response path, including body transfer
+
+Useful comparisons:
 
 ```bash
-curl -4 -v https://service.example
-curl -6 -v https://service.example
-curl -v --connect-timeout 3 --max-time 10 https://service.example
-curl -v --retry 3 --retry-delay 1 https://service.example
+curl -4 -v --connect-timeout 3 --max-time 15 "$URL"
+curl -6 -v --connect-timeout 3 --max-time 15 "$URL"
 ```
 
-These help answer:
-
-- Does only IPv6 fail?
-- Is the delay in DNS, connect, TLS, or upstream response?
-- Is the failure immediate or timeout-driven?
-- Do retries succeed because the issue is transient or path-dependent?
-
-To bypass DNS and test a known IP directly while preserving the hostname and SNI:
+Bypass DNS while preserving hostname and SNI:
 
 ```bash
-curl -v --resolve service.example:443:1.2.3.4 https://service.example
+curl -v \
+  --resolve "$HOST:$PORT:1.2.3.4" \
+  "$URL"
 ```
 
-This is one of the most useful ways to separate DNS problems from service or TLS problems.
+This separates a DNS answer problem from a service or TLS problem.
 
-### 11.6 Proxy checks
-
-A large number of "network" failures are really proxy problems.
-
-Check environment settings:
-
-```bash
-env | grep -i proxy
-```
-
-Common causes:
-
-- `HTTP_PROXY` or `HTTPS_PROXY` set unexpectedly
-- `NO_PROXY` missing internal domains
-- One process using the proxy while another bypasses it
-- Proxy authentication failure
-- Proxy certificate interception
-
-Always confirm whether the failing client is using a proxy.
-
-### 11.7 TLS checks
-
-```bash
-openssl s_client -connect service.example:443 -servername service.example
-```
+### Proxies
 
 Check:
 
-- Certificate expiry
-- Certificate chain
-- Hostname match
-- SNI
-- TLS protocol mismatch
-- Handshake delay
-
-Check certificate metadata directly:
-
 ```bash
-openssl s_client -connect service.example:443 -servername service.example </dev/null 2>/dev/null | openssl x509 -noout -dates -issuer -subject
+env | grep -iE '^(http|https|no)_proxy=' || true
 ```
 
-Force a specific TLS version if needed:
+Common differences include:
 
-```bash
-openssl s_client -connect service.example:443 -servername service.example -tls1_2
-openssl s_client -connect service.example:443 -servername service.example -tls1_3
+```text
+one process uses a proxy
+NO_PROXY misses an internal domain
+proxy authentication expires
+proxy injects a different certificate chain
+one node has different environment variables
 ```
 
-TLS failures often appear intermittent because different clients, proxies, resolvers, or routes may negotiate different certificates, protocols, or IP paths.
+### TLS
 
-Common TLS-specific causes:
+Inspect the handshake and certificate:
 
-- Expired certificate
-- Not-yet-valid certificate
-- Missing intermediate certificate
-- Wrong certificate served for the hostname
-- SNI mismatch
-- Old client versus new server protocol mismatch
-- Proxy interception
-- Different backend targets serving different chains
+```bash
+openssl s_client \
+  -connect "$HOST:$PORT" \
+  -servername "$HOST" \
+  </dev/null
+```
 
-### 11.8 Time and certificate validity
+Extract certificate metadata:
 
-TLS depends on correct local time.
+```bash
+openssl s_client \
+  -connect "$HOST:$PORT" \
+  -servername "$HOST" \
+  </dev/null 2>/dev/null \
+  | openssl x509 -noout -dates -issuer -subject
+```
 
-Check:
+Check local time:
 
 ```bash
 date -u
 timedatectl status
 ```
 
-If the client clock is wrong, a valid certificate may appear expired or not yet valid.
+TLS failures may vary by backend, proxy, client version, SNI, IPv4 or IPv6 path, and certificate chain.
 
-### 11.9 Practical interpretation
+### HTTP status codes are path clues
 
-Map symptoms to layers:
+A 502, 503, or 504 usually points toward an upstream or gateway path, but the exact meaning depends on the component that generated the response.
 
-- DNS lookup fails -> resolver, search domain, split-horizon DNS, or record issue
-- TCP connect fails -> routing, firewall, security group, NAT, or target port issue
-- TLS handshake fails -> certificate, SNI, protocol, chain, or clock issue
-- HTTP 502 -> upstream returned a bad or invalid response
-- HTTP 503 -> no healthy backend or service intentionally unavailable
-- HTTP 504 -> upstream path is reachable but too slow to respond
+Confirm:
 
-This turns vague reports like "the network is flaky" into a narrower and testable hypothesis.
+```text
+which proxy or service emitted the status
+which upstream it selected
+whether a request ID exists
+whether retries used another backend
+how long each request stage took
+```
 
-### 11.10 Mini example: one bad resolver
+Do not turn a status code into a root cause without identifying its source.
 
-Symptoms:
+### Dependency correlation
 
-- service works from most nodes
-- occasional timeouts only from one subset of nodes
-- upstream is healthy
+For databases, object storage, queues, and APIs, record:
 
-Investigation shows:
+```text
+request ID
+endpoint
+region
+latency
+retry count
+status or error code
+payload or object class
+caller node and version
+```
 
-- healthy nodes resolve the service quickly
-- failing nodes use a different resolver
-- that resolver sometimes returns slow or inconsistent answers
-
-The service is not flaky. Name resolution is.
-
-### 11.11 Operating rule
-
-Always compare the same request across:
-
-- Healthy node versus failing node
-- IPv4 versus IPv6
-- Default DNS versus known resolver
-- Direct path versus proxy path
-- DNS-based request versus forced IP with `--resolve`
-
-Intermittent network failures usually become clear when one path is isolated from the others.
+A dependency may be healthy overall while one operation, prefix, shard, region, or account path fails.
 
 ---
 
-## 12. Systemd and Service Debugging
+## 11. Services, containers, orchestrators, and cloud limits
 
-Many production services are managed by systemd.
+Production behavior is shaped by the control layer around the process.
 
-### 12.1 Basic service inspection
-
-```bash
-systemctl status service-name
-systemctl cat service-name
-systemctl show service-name
-journalctl -u service-name -n 200 --no-pager
-```
-
-### 12.2 Restart behavior
-
-Check restart policy:
-
-```bash
-systemctl show service-name | grep -Ei 'Restart|StartLimit'
-```
-
-Useful fields:
-
-- `Restart=`
-- `RestartSec=`
-- `StartLimitIntervalSec=`
-- `StartLimitBurst=`
-
-A service may appear intermittent because systemd keeps restarting it.
-
-### 12.3 Recent failures
-
-```bash
-journalctl -u service-name --since '1 hour ago' --no-pager
-journalctl -p warning..alert --since '1 hour ago' --no-pager
-```
-
-### 12.4 Kernel and boot logs
-
-```bash
-dmesg -T | tail -100
-journalctl -k --since '1 hour ago' --no-pager
-journalctl -b --no-pager
-```
-
-Look for:
-
-- OOM kills
-- Filesystem errors
-- Disk errors
-- Network device resets
-- Kernel warnings
-- Permission denials
-
-### 12.5 Unit-file details worth checking
-
-Intermittent service behavior is often shaped by the unit file itself.
+### systemd
 
 Inspect:
 
-- `ExecStart`
-- `Environment`
-- `EnvironmentFile`
-- `WorkingDirectory`
-- `Restart`
-- `TimeoutStartSec`
-- `TimeoutStopSec`
-- `LimitNOFILE`
-- ordering dependencies such as `After=` and `Requires=`
+```bash
+export SERVICE=example.service
 
-A service may be healthy in a shell but unhealthy under systemd because the runtime environment is different.
+systemctl status "$SERVICE"
+systemctl cat "$SERVICE"
+systemctl show "$SERVICE"
+journalctl -u "$SERVICE" --since "1 hour ago" --no-pager
+```
 
----
+Pay attention to:
 
-## 13. Containers and Docker Debugging
+```text
+ExecStart
+Environment and EnvironmentFile
+WorkingDirectory
+Restart and RestartSec
+StartLimit settings
+TimeoutStartSec and TimeoutStopSec
+LimitNOFILE
+After and Requires
+```
 
-Containers add another layer of limits.
+A command may succeed in an interactive shell and fail under systemd because the environment, identity, working directory, or limits differ.
 
-Always check both the container and the host.
+Repeated restarts can also hide the real failure. Check both the original exit and the restart policy.
 
-### 13.1 Basic Docker checks
+### Docker and compatible runtimes
+
+Basic inspection:
 
 ```bash
-docker ps
+export CONTAINER=<container-name>
+
 docker ps -a
-docker logs --tail 200 container-name
-docker inspect container-name
-docker stats
+docker logs --tail 200 "$CONTAINER"
+docker inspect "$CONTAINER"
+docker stats "$CONTAINER"
 ```
 
-Run a shell inside the container:
+Check exit state:
 
 ```bash
-docker exec -it container-name sh
+docker inspect "$CONTAINER" \
+  --format '{{.State.Status}} {{.State.ExitCode}} {{.State.OOMKilled}} {{.State.Error}}'
 ```
 
-or:
+Compare host and container limits. A healthy host does not prove the container has enough memory, CPU, PIDs, descriptors, or storage.
 
-```bash
-docker exec -it container-name bash
-```
-
-### 13.2 Container exits immediately
-
-Check:
-
-```bash
-docker ps -a
-docker logs container-name
-docker inspect container-name --format '{{.State.ExitCode}} {{.State.Error}}'
-```
-
-Common causes:
-
-- Bad entrypoint
-- Missing environment variable
-- Missing file
-- Permission issue
-- App crashes at startup
-- Health check kills the container
-
-### 13.3 Container memory and CPU limits
-
-```bash
-docker inspect container-name | grep -Ei 'Memory|NanoCpus|CpuQuota|CpuPeriod'
-docker stats container-name
-```
-
-Inside container:
-
-```bash
-cat /proc/self/limits
-cat /sys/fs/cgroup/memory.max 2>/dev/null
-cat /sys/fs/cgroup/cpu.max 2>/dev/null
-```
-
-The host may have plenty of resources while the container is constrained.
-
-### 13.4 Docker Compose checks
+For Docker Compose:
 
 ```bash
 docker compose ps
 docker compose logs --tail 200
 docker compose config
-docker compose restart service-name
 ```
 
-Common Compose issues:
+`depends_on` controls startup ordering. It does not prove the dependency is ready to serve requests.
 
-- Wrong service name
-- Missing environment variable
-- Volume path mismatch
-- Container DNS issue
-- Service starts before dependency is ready
-- Port conflict
+### Kubernetes
 
-Important point:
-
-`depends_on` controls startup order, not application readiness.
-
-A database container may be started but not ready to accept connections.
-
-### 13.5 Kubernetes mindset, even if you are not using Kubernetes
-
-The same ideas still apply in orchestrated environments:
-
-- pod restart count matters
-- readiness and liveness are different
-- resource requests and limits change behavior
-- one unhealthy node can create misleading symptoms
-- rolling updates can mix versions
-- service discovery and DNS are part of the failure path
-
-Even if the local tool here is Docker, think in layers, not containers alone.
-
----
-
-## 14. Cloud Platform Constraints
-
-Cloud infrastructure adds hidden enforcement layers.
-
-Two machines with the same OS can behave differently because of provider-level limits.
-
-### 14.1 Instance type differences
-
-Compare:
-
-- vCPU count
-- RAM
-- Disk type
-- Local SSD vs network disk
-- Network bandwidth
-- Instance-level block storage bandwidth
-- CPU architecture
-- Burstable vs fixed performance
-- GPU availability
-- Availability zone
-
-Useful node checks:
+Set:
 
 ```bash
-uname -a
-lscpu
-free -m
-lsblk
-df -h
-ip addr
-ip route
+export NS=<namespace>
+export POD=<pod-name>
 ```
 
-### 14.2 Burstable CPU
+Start with:
 
-Some cloud instances can burst above baseline only while they have CPU credits.
-
-Symptoms when credits run out:
-
-- Latency rises
-- Jobs slow down
-- Health checks fail
-- Timeouts increase
-- CPU appears capped
-
-Check provider metrics:
-
-- CPU credit balance
-- CPU credit usage
-- CPU utilization
-
-### 14.3 Object storage instability
-
-Object storage can fail intermittently due to:
-
-- Throttling
-- Slow requests
-- Timeout
-- Regional issue
-- Large object transfer pressure
-- Too much concurrency
-- Retry storm
-
-Application symptoms:
-
-- Upload fails sometimes
-- Download hangs
-- Partial transfer
-- Slow metadata/list calls
-- 500/503 from storage API
-
-Mitigations:
-
-- Use retries with backoff
-- Use request timeout
-- Limit concurrency
-- Make writes idempotent
-- Track request IDs
-- Track latency percentiles
-- Avoid infinite hangs
-
-### 14.4 IAM and permission issues
-
-IAM failures are usually deterministic, but they can appear intermittent when different nodes or roles are used.
+```bash
+kubectl get pod -n "$NS" "$POD" -o wide
+kubectl describe pod -n "$NS" "$POD"
+kubectl logs -n "$NS" "$POD" --timestamps
+kubectl logs -n "$NS" "$POD" --previous --timestamps
+kubectl get events -n "$NS" --sort-by=.lastTimestamp
+```
 
 Check:
 
-- Which role is attached?
-- Which credentials are active?
-- Are credentials expired?
-- Are different workers using different roles?
-- Is access denied only for some resources?
+```text
+restart count
+termination reason
+requests and limits
+node placement
+readiness and liveness
+image
+service account
+volume mounts
+recent events
+```
 
-Useful AWS checks:
+A Pod can be `Running` while the application is not ready, is disconnected from dependencies, or is failing requests.
+
+When only Pods on one node fail, inspect the node:
+
+```bash
+kubectl describe node <node-name>
+```
+
+Look for:
+
+```text
+MemoryPressure
+DiskPressure
+PIDPressure
+NetworkUnavailable
+NotReady
+taints
+runtime or CNI errors
+```
+
+### Cloud enforcement layers
+
+The operating system may not show limits enforced by the provider.
+
+Compare:
+
+```text
+instance family and size
+burstable CPU credits
+network bandwidth
+block-storage bandwidth
+volume IOPS and throughput
+local vs network storage
+capacity type
+availability zone
+provider maintenance events
+```
+
+For AWS identity checks:
 
 ```bash
 aws sts get-caller-identity
-aws s3 ls s3://bucket-name
 ```
 
-### 14.5 Provider events and hidden infrastructure drift
+Do not assume every worker uses the same role or credentials.
 
-Sometimes the issue is outside your service and outside your instance.
+Object storage can also fail conditionally through:
 
-Check for:
+```text
+throttling
+too much concurrency
+large transfers
+slow listings
+regional path
+expired credentials
+retry storms
+```
 
-- provider maintenance events
-- degraded availability zone
-- DNS/control-plane incidents
-- block storage impairment
-- network path instability
-- host retirement or migration
-
-If the timing of the incident lines up with a provider event, treat that as a serious clue.
+Track request IDs and compare provider metrics with application timings.
 
 ---
 
-## 15. Node Comparison Method
+## 12. Make the failure reproducible
 
-When only some nodes fail, assume the nodes differ until proven identical.
+The goal is to move from:
 
-Compare good node vs bad node.
-
-Collect:
-
-```bash
-hostname
-uptime
-uname -a
-cat /etc/os-release
-lscpu
-free -m
-lsblk
-df -h
-ip addr
-ip route
-ulimit -a
-cat /proc/self/limits
+```text
+sometimes fails
 ```
 
-Compare running service version:
+to:
 
-```bash
-systemctl status service-name
-systemctl cat service-name
-ps aux | grep service-name
+```text
+fails more often when X changes
 ```
 
-Compare packages:
+Perfect reproduction is useful, but a meaningful change in failure rate is already progress.
 
-Debian/Ubuntu:
-
-```bash
-dpkg -l | sort > packages.txt
-```
-
-RHEL/CentOS/Amazon Linux:
+### Repeat with timestamps
 
 ```bash
-rpm -qa | sort > packages.txt
-```
-
-Compare environment:
-
-```bash
-env | sort > env.txt
-```
-
-Compare kernel messages:
-
-```bash
-dmesg -T | tail -200 > dmesg-tail.txt
-```
-
-Then diff:
-
-```bash
-diff -u good/env.txt bad/env.txt
-diff -u good/packages.txt bad/packages.txt
-```
-
-Important differences:
-
-- Kernel version
-- Container runtime version
-- Instance type
-- CPU architecture
-- Memory size
-- Disk type
-- Mount options
-- DNS resolver
-- Proxy settings
-- Environment variables
-- Service version
-- Config file
-- Limits
-
-### 15.1 Node comparison checklist for stubborn incidents
-
-If a failure affects only one node, compare at least these:
-
-- OS and kernel
-- application version
-- unit file or startup command
-- environment variables
-- resource limits
-- DNS and proxy settings
-- clock and timezone
-- mounted filesystems
-- disk health and free space
-- recent local errors in `journalctl` and `dmesg`
-
-A real node comparison is boring, but boring comparisons solve real incidents.
-
----
-
-## 16. Reproducibility Engineering
-
-The goal is to turn "sometimes fails" into "fails when X happens".
-
-### 16.1 Run in a loop
-
-```bash
-for i in {1..100}; do
-  echo "run $i"
-  date
+for i in $(seq 1 100); do
+  printf 'run=%s time=%s\n' "$i" "$(date -Is)"
   ./run_command
   rc=$?
+
   if [ "$rc" -ne 0 ]; then
-    echo "failed on run $i with exit code $rc"
+    printf 'failed run=%s exit=%s\n' "$i" "$rc"
     break
   fi
 done
 ```
 
-### 16.2 Add timestamps
+Timestamps allow correlation with metrics and infrastructure events.
 
-```bash
-while true; do
-  date -Is
-  ./health_check.sh
-  sleep 5
-done
-```
-
-Timestamps allow you to match symptoms with metrics.
-
-### 16.3 Change one variable at a time
+### Change one variable at a time
 
 Examples:
 
-- Same command, different node
-- Same node, different time
-- Same workload, lower concurrency
-- Same workload, higher concurrency
-- Same workload, larger memory limit
-- Same workload, different disk
-- Same service, different dependency endpoint
-
-Do not change five variables at once.
-
-If the failure disappears, you will not know why.
-
-### 16.4 Increase pressure carefully
-
-Memory pressure:
-
-```bash
-stress-ng --vm 1 --vm-bytes 512M --timeout 60s
+```text
+same command, different node
+same node, different instance type
+same input, lower concurrency
+same input, higher concurrency
+same service, larger memory limit
+same request, direct path instead of proxy
+same workload, different dependency endpoint
 ```
 
-CPU pressure:
+If five variables change and the failure disappears, the experiment proves very little.
 
-```bash
-stress-ng --cpu 2 --timeout 60s
-```
+### Reduce a limit to expose the boundary
 
-I/O pressure:
-
-```bash
-stress-ng --hdd 1 --timeout 60s
-```
-
-Use stress tools only in safe environments unless approved.
-
-Do not run destructive load tests in production.
-
-### 16.5 Reduce limits to expose boundary
-
-Lower open file limit:
+In a controlled environment:
 
 ```bash
 ulimit -n 256
 ./run_command
 ```
 
-Lower stack size:
+Or run with a smaller container memory limit, fewer database connections, less temporary disk, or a stricter timeout.
+
+If the same failure appears sooner, the suspected boundary becomes more credible.
+
+### Increase pressure carefully
+
+Tools such as `stress-ng` can help in isolated environments:
 
 ```bash
-ulimit -s 4096
-./run_command
+stress-ng --cpu 2 --timeout 60s
+stress-ng --vm 1 --vm-bytes 512M --timeout 60s
+stress-ng --hdd 1 --timeout 60s
 ```
 
-Use this in controlled environments.
+Do not run destructive load experiments in production without explicit approval and a safe rollback plan.
 
-If the failure becomes easier to reproduce, you found a boundary.
+### Validate the mechanism
 
-### 16.6 Failure-rate thinking
+A useful root-cause test has three parts:
 
-Reproducibility does not always mean 100% failure.
+1. The suspected condition makes the failure more likely.
+2. Removing or raising the boundary makes it less likely.
+3. The observed logs and metrics match the mechanism.
 
-Sometimes the right question is:
+For example:
 
-- does the failure rate increase?
-- does latency get worse sooner?
-- does one condition make the issue much easier to study?
+```text
+high concurrency increases connection-pool wait time
+requests fail when pool wait reaches timeout
+raising pool size delays failure
+reducing concurrency removes failure
+```
 
-That is still progress.
-
-You do not need perfect reproduction to build confidence in a theory.
+That is stronger than noticing one error message after a restart.
 
 ---
 
-## 17. Observability: What to Measure
+## 13. Observability and alerts
 
-A useful graph moves with the failure.
+The best signal is one that moves with the failure and sits near the boundary.
 
-Do not only collect more logs.
+### Service signals
 
-Collect signals that explain system state.
+For request-driven systems, use:
 
-### 17.1 Golden signals
+```text
+rate
+errors
+duration
+```
 
-For services:
+Break them down by useful dimensions:
 
-- Latency
-- Traffic
-- Errors
-- Saturation
+```text
+route
+status
+node
+version
+region
+availability zone
+dependency
+request class
+```
 
-For infrastructure:
+### Resource signals
 
-- CPU usage
-- CPU steal
-- CPU throttling
-- Memory usage
-- OOM events
-- Disk usage
-- Disk I/O latency
-- Network errors
-- Open file descriptors
-- Connection states
-- Queue depth
+For infrastructure, ask:
 
-### 17.2 RED method
-
-For request-driven services:
-
-- Rate: how many requests
-- Errors: how many failed
-- Duration: how long requests take
-
-Useful labels:
-
-- Route
-- Status code
-- Node
-- Instance type
-- Region
-- Availability zone
-- Dependency
-
-### 17.3 USE method
-
-For resources:
-
-- Utilization: how busy
-- Saturation: how much queued
-- Errors: how many failures
-
-Apply USE to:
-
-- CPU
-- Memory
-- Disk
-- Network
-- Database connections
-- Thread pools
-- Queues
-
-### 17.4 Useful intermittent-failure dashboards
-
-Create dashboards that can answer:
-
-- Did latency rise before errors?
-- Did memory rise before restart?
-- Did file descriptors rise before failure?
-- Did disk await rise before timeout?
-- Did DNS latency rise?
-- Did one node have more errors?
-- Did one instance type have more errors?
-- Did retries increase before outage?
-- Did queue depth grow before timeouts?
-- Did CPU steal increase?
-- Did cgroup throttling increase?
-
-If you cannot answer these, the system is under-instrumented.
-
-### 17.5 Boundary-oriented metrics
-
-The best metrics for intermittent failures are often near the limit itself.
+```text
+utilization
+saturation
+errors
+```
 
 Examples:
 
-- memory high-water mark
-- open file descriptors as percent of limit
-- queue age, not only queue size
-- retry count by dependency
-- disk await, not only disk throughput
-- connection pool wait time
-- cgroup `oom_kill` count
-- cgroup `nr_throttled`
-- DNS lookup latency
-- TLS handshake latency
+```text
+CPU utilization, runnable queue, throttling
+memory usage, reclaim, OOM events
+disk throughput, queue, latency, errors
+connection count, pool wait, failed connects
+queue depth, queue age, processing rate
+```
 
-Instrument the boundary, not only the symptom.
+### Boundary-oriented metrics
 
----
+Useful metrics include:
 
-## 18. Alerts and Runbooks
+```text
+open descriptors as a percentage of the limit
+memory high-water mark
+cgroup oom_kill count
+cgroup CPU throttled time
+connection-pool wait time
+queue age
+dependency retry count
+DNS lookup latency
+TLS handshake latency
+disk await
+temporary storage usage
+error rate by node and version
+```
 
-A good alert should be actionable.
+A total CPU graph may not explain an intermittent timeout. Pool wait time or cgroup throttling might.
 
-Bad alert:
+### Alerts should describe impact or an approaching boundary
+
+Weak:
 
 ```text
 CPU > 80%
 ```
 
-Better alert:
+Stronger:
 
 ```text
-API p95 latency > 2 seconds and error rate > 5% for 15 minutes
+API p95 latency > 2 seconds and error rate > 5%
+for 15 minutes.
 ```
 
-Bad alert:
+Weak:
 
 ```text
-Disk warning
+Disk warning.
 ```
 
-Better alert:
+Stronger:
 
 ```text
-Root filesystem free space < 10% and predicted to fill within 4 hours
+Root filesystem has less than 10% free space and is
+projected to fill within four hours.
 ```
 
-### 18.1 Good alert properties
-
-A good alert is:
-
-- Specific
-- Actionable
-- Urgent
-- Owned by a team
-- Linked to a runbook
-- Low-noise
-
-### 18.2 Runbook template
-
-Use this structure:
+Useful boundary alerts include:
 
 ```text
-# Runbook: <Alert Name>
-
-## Meaning
-What this alert means.
-
-## Impact
-What users or systems are affected.
-
-## First checks
-Commands or dashboards to inspect first.
-
-## Immediate mitigation
-Safe steps to reduce impact.
-
-## Deeper investigation
-How to find root cause.
-
-## Escalation
-Who to contact and when.
-
-## Prevention
-What should be improved after the incident.
+descriptor usage above 80% of limit
+queue age rising while throughput falls
+cgroup OOM kills above zero
+one node has much higher error rate than peers
+disk latency above baseline with growing queue
+dependency handshake latency elevated
 ```
 
-### 18.3 Example: disk full runbook
+An alert should point toward a first decision, not merely report a number.
 
-Meaning:
+### Preserve history
 
-The filesystem is close to full.
+Live state disappears.
 
-First checks:
+Retain enough information to reconstruct:
 
-```bash
-df -h
-df -i
-du -h --max-depth=1 /var 2>/dev/null | sort -h
-lsof +L1
+```text
+application version
+node or Pod placement
+termination reason
+resource limits
+deployment time
+request or job ID
+dependency request ID
+key metrics
 ```
 
-Immediate mitigation:
-
-- Rotate or compress logs
-- Remove safe temporary files
-- Restart process holding deleted files if approved
-- Increase disk size if needed
-
-Prevention:
-
-- Add log rotation
-- Add disk growth alert
-- Move temp files to larger volume
-- Reduce noisy logs
-
-### 18.4 Example: memory pressure runbook
-
-First checks:
-
-```bash
-free -m
-vmstat 1
-ps aux --sort=-%mem | head
-dmesg -T | grep -Ei 'oom|killed process|out of memory'
-```
-
-Immediate mitigation:
-
-- Restart leaking service if safe
-- Reduce concurrency
-- Move workload to larger instance
-- Stop non-critical processes
-
-Prevention:
-
-- Add memory high-water metrics
-- Add cgroup OOM alerts
-- Investigate memory leak
-- Set safer concurrency limits
-
-### 18.5 Example: 502/503/504 runbook
-
-First checks:
-
-```bash
-curl -v https://service.example
-systemctl status service-name
-journalctl -u service-name -n 200 --no-pager
-ss -tanp
-```
-
-Interpretation:
-
-- 502: proxy received bad response from upstream
-- 503: service unavailable or no healthy upstream
-- 504: upstream timeout
-
-Check:
-
-- Is upstream process running?
-- Are health checks passing?
-- Are all nodes affected?
-- Is one node bad?
-- Is the dependency slow?
-- Did deployment happen recently?
-- Did traffic increase?
-
-Prevention:
-
-- Better health checks
-- Dependency timeout metrics
-- Error rate by upstream node
-- Safer deployment rollout
-- Circuit breaker or backoff
-
-### 18.6 Boundary-aware alerts
-
-The best alerts for this topic are often not "CPU high" or "memory high".
-
-They are alerts that say a boundary is being approached or crossed.
-
-Examples:
-
-- file descriptors above 80% of process limit
-- queue wait time rising faster than throughput
-- disk `await` above baseline for 15 minutes
-- TLS handshake latency p95 suddenly elevated
-- cgroup throttling increasing during latency spikes
-- one node showing much higher error rate than the rest
-
-A runbook should help the responder narrow the boundary, not drown them in commands.
+This is especially important for short-lived jobs, containers, and autoscaled infrastructure.
 
 ---
 
-## 19. CI/CD and Deployment-Related Intermittency
+## 14. Closing the incident
 
-Deployments can create intermittent failures when old and new versions run together.
+Do not close an incident because the service is currently healthy.
 
-Common causes:
+Re-read the story.
 
-- Backward-incompatible schema change
-- Mixed app versions
-- Cache format change
-- Config drift
-- Missing migration
-- Partial rollout
-- Bad health check
-- Slow startup
-- Dependency not ready
+Ask:
 
-Checks:
+- Does the explanation match the start time?
+- Does it explain the affected scope?
+- Does it explain why retry helped?
+- Does it explain why restart helped?
+- Does it explain why only some nodes or requests failed?
+- Do metrics and logs support the same mechanism?
+- Did the proposed fix remove the condition, or only increase headroom?
 
-```bash
-systemctl status service-name
-journalctl -u service-name --since '30 minutes ago' --no-pager
-ps aux | grep service-name
-git rev-parse HEAD 2>/dev/null
-```
-
-Questions:
-
-- Did the issue start after deployment?
-- Are all nodes on the same version?
-- Are migrations complete?
-- Are old workers still running?
-- Is the load balancer sending traffic to unhealthy nodes?
-- Does rollback fix it?
-
-Safer deployment practices:
-
-- Health checks that test real dependencies
-- Slow rollout
-- Easy rollback
-- Versioned config
-- Backward-compatible database changes
-- Separate deploy and migration steps
-- Monitor error rate during rollout
-
-### 19.1 Mixed-version failures are often misread
-
-A deployment issue may look intermittent because:
-
-- some nodes serve old code
-- some nodes serve new code
-- cache entries are written in different formats
-- one migration has not reached all environments
-- the load balancer keeps hitting a bad subset of nodes
-
-That is not randomness. It is rollout inconsistency.
-
----
-
-## 20. Common Intermittent Failure Patterns
-
-### 20.1 Works after restart
-
-Possible causes:
-
-- Memory leak
-- File descriptor leak
-- Stale connection pool
-- Bad cache state
-- Deadlock cleared by restart
-- DNS cache reset
-- Temporary files cleaned
-
-Do not stop at "restart fixed it".
-
-Ask what state the restart reset.
-
-### 20.2 Fails only under high concurrency
-
-Possible causes:
-
-- Race condition
-- Lock contention
-- Connection pool exhaustion
-- File descriptor exhaustion
-- Thread pool exhaustion
-- Database max connections
-- API rate limit
-- Queue overload
-
-Check:
-
-```bash
-ss -s
-lsof -p <PID> | wc -l
-ps -p <PID> -o nlwp
-```
-
-### 20.3 Fails only on one node
-
-Possible causes:
-
-- Bad node
-- Different config
-- Different version
-- Different kernel
-- Different instance type
-- Disk issue
-- DNS resolver issue
-- Clock skew
-- Local cache corruption
-
-Compare with a good node.
-
-### 20.4 Fails only after long runtime
-
-Possible causes:
-
-- Memory leak
-- FD leak
-- Log growth
-- Temp file growth
-- Cache growth
-- Token expiry
-- Stale connection
-- Clock/time drift
-
-Track process and filesystem state over time.
-
-### 20.5 Fails only during peak hours
-
-Possible causes:
-
-- CPU saturation
-- Disk saturation
-- Database saturation
-- Queue buildup
-- Rate limiting
-- NAT port exhaustion
-- Dependency overload
-
-Correlate with traffic and saturation metrics.
-
-### 20.6 Fails only during startup
-
-Possible causes:
-
-- Dependency not ready
-- DNS not ready
-- Race in service order
-- Slow initialization
-- Missing config
-- Health check too aggressive
-
-Check systemd ordering, container startup, and readiness checks.
-
-### 20.7 Fails only during large jobs
-
-Possible causes:
-
-- Memory spike
-- Disk temporary space
-- I/O throughput cap
-- Long dependency timeout
-- Large file descriptor use
-- Thread pool pressure
-- Object storage timeout
-
-Measure resource high-water marks.
-
-### 20.8 Fails only for one class of user or request
-
-Possible causes:
-
-- payload size difference
-- one auth path
-- one storage bucket or object prefix
-- one feature flag
-- one region-specific dependency
-- one code path with a slower query or larger memory footprint
-
-This is why scope matters. Not all "same endpoint" requests are operationally identical.
-
----
-
-## 21. Practical Investigation Flow
-
-Use this when you are unsure where to start.
-
-### Step 1: Confirm symptom
-
-Write one sentence:
+A good root-cause statement names the condition and boundary:
 
 ```text
-<service/job> fails with <error> when <condition>, affecting <scope> since <time>.
+Large requests caused the worker cgroup to exceed its memory limit.
+The kernel killed the worker, and the load balancer retried some
+requests on healthy workers, making the failure appear intermittent.
 ```
+
+A weak statement repeats the symptom:
+
+```text
+The service was flaky and restarted.
+```
+
+### Root cause and contributing factors
+
+Keep them separate.
 
 Example:
 
 ```text
-The API returns intermittent 504 errors during peak traffic, affecting about 10% of requests since 09:30 UTC.
+Root cause:
+A connection leak caused the service to reach its file descriptor limit.
+
+Contributing factors:
+No descriptor metric existed.
+The restart policy hid the first failure.
+The alert fired on request errors rather than approaching limit.
 ```
 
-### Step 2: Define scope
+### Prevention should target the mechanism
 
-Check:
+Possible follow-ups:
 
-- One user or many users?
-- One service or many services?
-- One node or all nodes?
-- One region or all regions?
-- One endpoint or all endpoints?
-- One instance type or all instance types?
-
-### Step 3: Check recent changes
-
-Look for:
-
-- Deployment
-- Config change
-- Traffic increase
-- New workload
-- New dependency version
-- Certificate change
-- DNS change
-- Cloud provider event
-- Scaling event
-
-### Step 4: Check system boundaries
-
-Run:
-
-```bash
-uptime
-free -m
-df -h
-df -i
-vmstat 1
-iostat -x 1
-mpstat 1
-ss -s
+```text
+fix leak
+set safer concurrency
+make writes idempotent
+add timeout and bounded retries
+expose pool wait time
+alert on descriptor usage
+add rollout guardrail
+preserve previous container logs
+compare version and node labels in dashboards
 ```
 
-### Step 5: Check service logs
-
-```bash
-systemctl status service-name
-journalctl -u service-name --since '1 hour ago' --no-pager
-```
-
-### Step 6: Check dependencies
-
-```bash
-dig dependency.example
-curl -v https://dependency.example
-```
-
-### Step 7: Compare good and bad cases
-
-Compare:
-
-- Node
-- Time
-- Request type
-- User type
-- Workload size
-- Dependency path
-- Version
-- Config
-
-### Step 8: Reproduce safely
-
-Use loop runs, lower limits, controlled concurrency, or test environment.
-
-### Step 9: Mitigate
-
-Examples:
-
-- Restart bad instance
-- Remove bad node from load balancer
-- Reduce concurrency
-- Increase timeout carefully
-- Increase memory/disk
-- Roll back deployment
-- Disable problematic feature
-- Fail over dependency
-
-Mitigation reduces impact.
-
-It does not replace root cause analysis.
-
-### Step 10: Prevent repeat
-
-Add:
-
-- Metric
-- Alert
-- Runbook
-- Test
-- Safer limit
-- Better retry/backoff
-- Better timeout
-- Better health check
-- Better deployment guardrail
-
-### Step 11: Re-read the story
-
-Before closing the incident, ask:
-
-- Does the proposed root cause explain the timing?
-- Does it explain the blast radius?
-- Does it explain why retry or restart helped?
-- Does it explain why only some nodes or requests failed?
-- Does it match the metrics?
-
-If not, the explanation is probably incomplete.
+Not every incident requires a large project. It does require at least one improvement that makes the next occurrence less likely or easier to diagnose.
 
 ---
 
-## 22. Root Cause Analysis Template
+## Appendix A: quick command reference
 
-Use simple language.
+Set values once:
 
-Avoid blame.
-
-```text
-## Summary
-What happened in 2-3 sentences.
-
-## Impact
-Who was affected and how badly.
-
-## Timeline
-Important events with timestamps.
-
-## Detection
-How we noticed the issue.
-
-## Root cause
-The condition that caused the failure.
-
-## Contributing factors
-What made it easier for the issue to happen or harder to detect.
-
-## Resolution
-What fixed or mitigated the issue.
-
-## Prevention
-What we will change to reduce repeat risk.
-
-## Follow-up actions
-Owner, action, deadline.
+```bash
+export SERVICE=example.service
+export PID=<process-id>
+export HOST=dependency.example
+export PORT=443
+export URL=https://dependency.example/health
+export CONTAINER=<container-name>
+export NS=<namespace>
+export POD=<pod-name>
 ```
 
-Good root cause:
-
-```text
-The service exceeded its container memory limit during large requests. The cgroup OOM killer terminated the worker process. The load balancer retried some requests, which made the issue appear intermittent.
-```
-
-Weak root cause:
-
-```text
-The service was flaky.
-```
-
-Better root cause names the boundary.
-
-### 22.1 Good RCA language patterns
-
-Prefer:
-
-- "The service exceeded..."
-- "The node used a different..."
-- "The deployment introduced..."
-- "The retry logic amplified..."
-- "The dependency slowed down because..."
-
-Avoid:
-
-- "The system randomly failed"
-- "The network was weird"
-- "We are not sure but maybe..."
-- "The restart fixed it"
-
-The RCA should name the mechanism, not only the symptom.
-
----
-
-## 23. Prevention Patterns
-
-### 23.1 Timeouts
-
-Every network call should have a timeout.
-
-Without timeouts, a dependency can hang your service.
-
-Use:
-
-- Connect timeout
-- Read timeout
-- Overall request timeout
-
-### 23.2 Retries with backoff
-
-Retries should not be immediate forever.
-
-Use:
-
-- Exponential backoff
-- Jitter
-- Maximum retry count
-- Idempotency keys for writes
-
-Bad retry behavior can create retry storms.
-
-### 23.3 Bulkheads
-
-Do not let one dependency consume all resources.
-
-Separate:
-
-- Thread pools
-- Connection pools
-- Queues
-- Worker pools
-
-### 23.4 Circuit breakers
-
-If a dependency is failing badly, stop sending unlimited traffic to it for a short time.
-
-This protects both systems.
-
-### 23.5 Backpressure
-
-When overloaded, reject or slow new work instead of allowing total collapse.
-
-Examples:
-
-- Queue limit
-- Rate limit
-- 429 response
-- Worker concurrency limit
-
-### 23.6 Health checks
-
-Health checks should test whether the service can actually serve traffic.
-
-But they should not be too expensive.
-
-Separate:
-
-- Liveness: should the process be restarted?
-- Readiness: should it receive traffic?
-
-### 23.7 Capacity planning
-
-Track trends:
-
-- CPU
-- Memory
-- Disk
-- Request rate
-- Queue depth
-- Error rate
-- Dependency latency
-
-Capacity issues become incidents when growth is invisible.
-
-### 23.8 Design for visible boundaries
-
-The best preventive design makes boundaries easier to see.
-
-Examples:
-
-- expose queue depth
-- expose connection pool wait time
-- emit dependency latency by upstream
-- record cgroup throttling and OOM events
-- label metrics by node, region, and version
-- preserve request IDs across retries
-
-If the boundary stays hidden, the incident will return as "flaky" again.
-
----
-
-## 24. Quick Reference Cheatsheet
-
-### When the incident starts
+### Host snapshot
 
 ```bash
 hostname
-date
+date -Is
 uptime
+uname -a
+cat /etc/os-release
 free -m
 df -h
 df -i
@@ -2545,92 +1800,188 @@ vmstat 1 5
 iostat -x 1 5
 mpstat 1 5
 ss -s
-systemctl status service-name
-journalctl -u service-name -n 100 --no-pager
 ```
 
-### When you suspect memory
+### Service
+
+```bash
+systemctl status "$SERVICE"
+systemctl cat "$SERVICE"
+systemctl show "$SERVICE"
+journalctl -u "$SERVICE" --since "1 hour ago" --no-pager
+journalctl -k --since "1 hour ago" --no-pager
+```
+
+### Process
+
+```bash
+ps -p "$PID" -o pid,ppid,cmd,%cpu,%mem,etime,nlwp
+cat "/proc/$PID/status"
+cat "/proc/$PID/limits"
+find "/proc/$PID/fd" -mindepth 1 -maxdepth 1 | wc -l
+lsof -p "$PID"
+```
+
+### Memory
 
 ```bash
 free -m
+vmstat 1
 ps aux --sort=-%mem | head
-dmesg -T | grep -Ei 'oom|killed process|out of memory'
+journalctl -k | grep -Ei 'oom|out of memory|killed process'
 cat /sys/fs/cgroup/memory.max 2>/dev/null
 cat /sys/fs/cgroup/memory.current 2>/dev/null
 cat /sys/fs/cgroup/memory.events 2>/dev/null
 ```
 
-### When you suspect disk or I/O
+### CPU
+
+```bash
+uptime
+top
+mpstat 1
+vmstat 1
+cat /sys/fs/cgroup/cpu.max 2>/dev/null
+cat /sys/fs/cgroup/cpu.stat 2>/dev/null
+```
+
+### Disk and I/O
 
 ```bash
 df -h
 df -i
 iostat -x 1
-du -h --max-depth=1 /var 2>/dev/null | sort -h
+du -x -h --max-depth=1 /var 2>/dev/null | sort -h
 lsof +L1
+journalctl -k | grep -Ei 'I/O error|filesystem|nvme|reset'
 ```
 
-### When you suspect file descriptors or sockets
+### Sockets and network
 
 ```bash
-ulimit -n
-cat /proc/<PID>/limits
-ls /proc/<PID>/fd | wc -l
 ss -s
-ss -tan | awk '{print $1}' | sort | uniq -c | sort -nr
-```
-
-### When you suspect network or dependency issues
-
-```bash
-dig dependency.example
-curl -v https://dependency.example
-curl -w '@curl-format.txt' -o /dev/null -s https://dependency.example
-env | grep -i proxy
-openssl s_client -connect service.example:443 -servername service.example
-```
-
-### When you suspect node drift
-
-```bash
-uname -a
-cat /etc/os-release
-lscpu
-env | sort
-cat /proc/self/limits
-ip route
+ss -tanH | awk '{print $1}' | sort | uniq -c | sort -nr
 resolvectl status 2>/dev/null || cat /etc/resolv.conf
+dig "$HOST"
+nc -vz "$HOST" "$PORT"
+curl -v --connect-timeout 3 --max-time 15 "$URL"
+env | grep -iE '^(http|https|no)_proxy=' || true
 ```
 
-### When you need to force reproduction
+### TLS
 
 ```bash
-for i in {1..100}; do ./run_command || break; done
-ulimit -n 256
-ulimit -s 4096
-stress-ng --cpu 2 --timeout 60s
-stress-ng --vm 1 --vm-bytes 512M --timeout 60s
+openssl s_client \
+  -connect "$HOST:$PORT" \
+  -servername "$HOST" \
+  </dev/null
+```
+
+### Docker
+
+```bash
+docker ps -a
+docker logs --tail 200 "$CONTAINER"
+docker inspect "$CONTAINER"
+docker stats "$CONTAINER"
+```
+
+### Kubernetes
+
+```bash
+kubectl get pod -n "$NS" "$POD" -o wide
+kubectl describe pod -n "$NS" "$POD"
+kubectl logs -n "$NS" "$POD" --timestamps
+kubectl logs -n "$NS" "$POD" --previous --timestamps
+kubectl get events -n "$NS" --sort-by=.lastTimestamp
 ```
 
 ---
 
-## 25. Final Principles
+## Appendix B: symptom-to-boundary map
 
-- Random usually means unmeasured.
-- A restart resets state. It does not explain the failure.
-- Retry success does not prove the system is healthy.
-- Logs are necessary, but metrics show boundaries.
-- Always compare good and bad cases.
-- Always check container limits separately from host capacity.
-- Always check cloud provider limits separately from OS metrics.
-- The failing component may be the victim, not the cause.
-- Reproducibility is more useful than log volume.
-- Name the exact limit the system crossed.
+| Symptom | Possible boundary | First evidence |
+| --- | --- | --- |
+| Works after restart | memory, descriptors, threads, stale pool, cache state | process trend, limits, previous logs |
+| Fails under concurrency | lock, pool, descriptors, queue, rate limit | pool wait, socket states, thread count |
+| Fails on one node | config, version, resolver, disk, host | node comparison |
+| Fails after long runtime | leak, token expiry, log growth, stale connection | time-series trend |
+| Fails at peak traffic | CPU, disk, database, queue, dependency | saturation and traffic correlation |
+| Fails during startup | ordering, readiness, DNS, config | service or orchestrator events |
+| Fails on large jobs | memory, temp disk, I/O cap, timeout | high-water marks by job size |
+| 502, 503, or 504 | proxy, upstream health, timeout path | emitter logs, request ID, curl timing |
+| High load, low CPU | blocked I/O or uninterruptible tasks | `vmstat`, `iostat`, `D` state |
+| Host healthy, container restarts | cgroup limit or orchestrator action | termination reason, cgroup events |
+| Only new version fails | rollout, schema, config, image | version comparison and timeline |
+| Retry succeeds | transient path, alternate backend, race | request IDs, backend selection, timing |
 
-An intermittent failure becomes solvable when you can say:
+---
+
+## Appendix C: runbook and RCA templates
+
+### Runbook template
 
 ```text
-It fails when <condition> causes <resource/dependency/limit> to cross <boundary>.
+# Runbook: <alert or symptom>
+
+## Meaning
+What the signal means and what it does not prove.
+
+## Impact
+Which users, services, or jobs may be affected.
+
+## First checks
+The smallest set of commands or dashboards needed to classify it.
+
+## Evidence to preserve
+Logs, events, process state, request IDs, or metrics that disappear.
+
+## Safe mitigation
+Steps that reduce impact without making the situation worse.
+
+## Deeper investigation
+How to compare healthy and unhealthy cases and identify the boundary.
+
+## Escalation
+Who owns the affected service, dependency, or infrastructure.
+
+## Prevention
+The likely metric, guardrail, test, or design change.
 ```
 
-That is the heart of SRE debugging.
+### Root-cause analysis template
+
+```text
+## Summary
+What happened in two or three sentences.
+
+## Impact
+Who was affected, how, and for how long.
+
+## Timeline
+Important events with timestamps.
+
+## Detection
+How the issue was noticed and whether detection was timely.
+
+## Root cause
+The condition and boundary that caused the failure.
+
+## Contributing factors
+What increased likelihood, impact, or diagnostic difficulty.
+
+## Mitigation and resolution
+What reduced impact and what removed the mechanism.
+
+## Verification
+Evidence that the explanation and fix are correct.
+
+## Follow-up actions
+Owner, action, priority, and target date.
+```
+
+The useful final question is always the same:
+
+> What changed between the healthy case and the failing case?
+
+Once that difference is measurable, the incident usually stops looking random.
