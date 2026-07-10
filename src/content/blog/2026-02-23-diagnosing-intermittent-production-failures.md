@@ -10,7 +10,7 @@ keywords:
   - "observability"
   - "reliability engineering"
   - "root cause analysis"
-urlSlug: "sre-playbook"
+urlSlug: "diagnosing-intermittent-production-failures"
 pinned: false
 ---
 
