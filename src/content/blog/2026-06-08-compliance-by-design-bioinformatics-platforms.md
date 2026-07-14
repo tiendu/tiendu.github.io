@@ -51,35 +51,6 @@ You can build the habits into your scripts, workflow engines, internal tools, an
 
 ---
 
-## Table of contents
-
-1. [The target architecture](#the-target-architecture)
-2. [Step 1: classify the data before building the workflow](#step-1-classify-the-data-before-building-the-workflow)
-3. [Step 2: stop using patient identifiers as system identifiers](#step-2-stop-using-patient-identifiers-as-system-identifiers)
-4. [Step 3: split manifests into operational and restricted metadata](#step-3-split-manifests-into-operational-and-restricted-metadata)
-5. [Step 4: design storage paths that do not leak meaning](#step-4-design-storage-paths-that-do-not-leak-meaning)
-6. [Step 5: define roles as actions, not job titles](#step-5-define-roles-as-actions-not-job-titles)
-7. [Step 6: separate view, run, download, administer, and support](#step-6-separate-view-run-download-administer-and-support)
-8. [Step 7: make audit logs structured from the beginning](#step-7-make-audit-logs-structured-from-the-beginning)
-9. [Step 8: make workflow logs safe by default](#step-8-make-workflow-logs-safe-by-default)
-10. [Step 9: capture workflow provenance automatically](#step-9-capture-workflow-provenance-automatically)
-11. [Step 10: pin containers, references, and dependencies](#step-10-pin-containers-references-and-dependencies)
-12. [Step 11: build redacted diagnostic bundles for support](#step-11-build-redacted-diagnostic-bundles-for-support)
-13. [Step 12: implement temporary support access](#step-12-implement-temporary-support-access)
-14. [Step 13: make exports explicit events](#step-13-make-exports-explicit-events)
-15. [Step 14: tag data with retention rules](#step-14-tag-data-with-retention-rules)
-16. [Step 15: track derived data lineage](#step-15-track-derived-data-lineage)
-17. [Step 16: control notebooks without killing research](#step-16-control-notebooks-without-killing-research)
-18. [Step 17: make region boundaries visible](#step-17-make-region-boundaries-visible)
-19. [Step 18: add CI checks for compliance mistakes](#step-18-add-ci-checks-for-compliance-mistakes)
-20. [Step 19: handle deletion as a workflow, not a button](#step-19-handle-deletion-as-a-workflow-not-a-button)
-21. [Step 20: add clinical change control when outputs affect patients](#step-20-add-clinical-change-control-when-outputs-affect-patients)
-22. [Minimal implementation roadmap](#minimal-implementation-roadmap)
-23. [Final checklist](#final-checklist)
-24. [References](#references)
-
----
-
 ## The target architecture
 
 A compliance-aware bioinformatics platform does not need to be complicated at first.
