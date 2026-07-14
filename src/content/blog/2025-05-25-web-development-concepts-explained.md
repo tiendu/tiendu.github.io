@@ -48,31 +48,6 @@ This guide is also intentionally comparative. It does not only explain what each
 
 ---
 
-## Table of Contents
-
-1. [The Big Picture](#the-big-picture)
-2. [Core Mapping](#core-mapping)
-3. [Finding the Building: Domain, DNS, IP, and URL](#finding-the-building-domain-dns-ip-and-url)
-4. [Browser, HTTP Requests, and HTTP Responses](#browser-http-requests-and-http-responses)
-5. [Frontend, Backend, and Database](#frontend-backend-and-database)
-6. [APIs: REST, GraphQL, RPC, and Versioning](#apis-rest-graphql-rpc-and-versioning)
-7. [Identity and Access: Auth, Sessions, Tokens, OAuth, and SSO](#identity-and-access-auth-sessions-tokens-oauth-and-sso)
-8. [Browser Storage: Cookies, localStorage, and sessionStorage](#browser-storage-cookies-localstorage-and-sessionstorage)
-9. [Security Concepts: HTTPS, CORS, CSRF, XSS, CSP, and Injection](#security-concepts-https-cors-csrf-xss-csp-and-injection)
-10. [Performance and Scaling](#performance-and-scaling)
-11. [Real-Time and Asynchronous Communication](#real-time-and-asynchronous-communication)
-12. [Deployment, Environments, Containers, and Infrastructure](#deployment-environments-containers-and-infrastructure)
-13. [Monitoring, Logging, and Reliability](#monitoring-logging-and-reliability)
-14. [Common Architecture Patterns](#common-architecture-patterns)
-15. [Data Flow Examples](#data-flow-examples)
-16. [Common Beginner Confusions](#common-beginner-confusions)
-17. [Decision Tables](#decision-tables)
-18. [Practical Rules of Thumb](#practical-rules-of-thumb)
-19. [Extended Reference Table](#extended-reference-table)
-20. [Final Mental Model](#final-mental-model)
-
----
-
 ## The Big Picture
 
 Imagine you are visiting a large company office.
