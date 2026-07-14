@@ -12,34 +12,6 @@ keywords:
 urlSlug: "python-expert-checklist"
 ---
 
-## Table of Contents
-
-1. [Why This Exists](#why-this-exists)
-2. [Build Boring Project Structures](#build-boring-project-structures)
-3. [Learn The Standard Library First](#learn-the-standard-library-first)
-4. [Learn To Read Tracebacks](#learn-to-read-tracebacks)
-5. [Log For Humans](#log-for-humans)
-6. [Know When To Use Async, Threads, Or Processes](#know-when-to-use-async-threads-or-processes)
-7. [Understand The GIL](#understand-the-gil)
-8. [Never Swallow Exceptions](#never-swallow-exceptions)
-9. [Understand Mutable Default Arguments](#understand-mutable-default-arguments)
-10. [Learn Context Managers](#learn-context-managers)
-11. [Circular Imports Usually Mean Bad Design](#circular-imports-usually-mean-bad-design)
-12. [Understand References And Mutability](#understand-references-and-mutability)
-13. [Know Shallow vs Deep Copy](#know-shallow-vs-deep-copy)
-14. [Floats Are Approximate](#floats-are-approximate)
-15. [Use Dataclasses](#use-dataclasses)
-16. [Learn Generators](#learn-generators)
-17. [Optimize Only After Measuring](#optimize-only-after-measuring)
-18. [Mock Responsibly](#mock-responsibly)
-19. [Multiprocessing Can Be Dangerous](#multiprocessing-can-be-dangerous)
-20. [Keep Dependencies Under Control](#keep-dependencies-under-control)
-21. [Write Python For Future You](#write-python-for-future-you)
-
----
-
-## Why This Exists
-
 Python is easy to start.
 
 It is much harder to keep a Python codebase healthy after it grows to:
