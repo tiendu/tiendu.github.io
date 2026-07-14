@@ -56,20 +56,6 @@ It is about organizing the data so most comparisons never happen.
 
 ---
 
-## Table of Contents
-
-1. [Start with a Linear Scan](#start-with-a-linear-scan)
-2. [Repeated Search Needs an Index](#repeated-search-needs-an-index)
-3. [Find Candidates, Then Verify Them](#find-candidates-then-verify-them)
-4. [Choose the Structure for the Question](#choose-the-structure-for-the-question)
-5. [Hash Indexes: Fast but Memory-Hungry](#hash-indexes-fast-but-memory-hungry)
-6. [Compact Exact Search: Suffix Arrays and FM-Indexes](#compact-exact-search-suffix-arrays-and-fm-indexes)
-7. [Store Less: Minimizers and Sketches](#store-less-minimizers-and-sketches)
-8. [How the Same Ideas Power Genome Search](#how-the-same-ideas-power-genome-search)
-9. [The General Engineering Pattern](#the-general-engineering-pattern)
-
----
-
 ## Start with a Linear Scan
 
 Consider:
