@@ -52,27 +52,6 @@ The point is to learn how each framework changes engineering decisions.
 
 ---
 
-## Table of contents
-
-1. [The short version: compliance becomes architecture](#the-short-version-compliance-becomes-architecture)
-2. [The data is rarely just data](#the-data-is-rarely-just-data)
-3. [A quick map of the frameworks](#a-quick-map-of-the-frameworks)
-4. [HIPAA: US healthcare data and ePHI](#hipaa-us-healthcare-data-and-ephi)
-5. [GDPR: EU personal, health, and genetic data](#gdpr-eu-personal-health-and-genetic-data)
-6. [NIH Genomic Data Sharing: controlled research access](#nih-genomic-data-sharing-controlled-research-access)
-7. [ISO 27001: security as a management system](#iso-27001-security-as-a-management-system)
-8. [FISMA: federal information security expectations](#fisma-federal-information-security-expectations)
-9. [NIST SP 800-53: the control catalog engineers should recognize](#nist-sp-800-53-the-control-catalog-engineers-should-recognize)
-10. [FDA software guidance: when software starts affecting patients](#fda-software-guidance-when-software-starts-affecting-patients)
-11. [How these frameworks collide in real work](#how-these-frameworks-collide-in-real-work)
-12. [Practical controls bioinformatics engineers should recognize](#practical-controls-bioinformatics-engineers-should-recognize)
-13. [Engineering checklists](#engineering-checklists)
-14. [What to learn first](#what-to-learn-first)
-15. [Reference glossary](#reference-glossary)
-16. [References](#references)
-
----
-
 ## The short version: compliance becomes architecture
 
 A lot of engineers talk about compliance as if it happens after the product is built.
