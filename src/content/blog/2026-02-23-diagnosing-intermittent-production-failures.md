@@ -50,28 +50,6 @@ The investigation is complete only when the timing, blast radius, and recovery b
 
 ---
 
-## Table of Contents
-
-1. [The operating model](#1-the-operating-model)
-2. [Start with the incident, not the command line](#2-start-with-the-incident-not-the-command-line)
-3. [Classify the failure](#3-classify-the-failure)
-4. [Five-minute triage](#4-five-minute-triage)
-5. [Compare healthy and unhealthy cases](#5-compare-healthy-and-unhealthy-cases)
-6. [CPU and scheduling](#6-cpu-and-scheduling)
-7. [Memory and process limits](#7-memory-and-process-limits)
-8. [Disk, filesystems, and I/O](#8-disk-filesystems-and-io)
-9. [File descriptors, sockets, and threads](#9-file-descriptors-sockets-and-threads)
-10. [DNS, TCP, TLS, HTTP, and dependencies](#10-dns-tcp-tls-http-and-dependencies)
-11. [Services, containers, orchestrators, and cloud limits](#11-services-containers-orchestrators-and-cloud-limits)
-12. [Make the failure reproducible](#12-make-the-failure-reproducible)
-13. [Observability and alerts](#13-observability-and-alerts)
-14. [Closing the incident](#14-closing-the-incident)
-15. [Appendix A: quick command reference](#appendix-a-quick-command-reference)
-16. [Appendix B: symptom-to-boundary map](#appendix-b-symptom-to-boundary-map)
-17. [Appendix C: runbook and RCA templates](#appendix-c-runbook-and-rca-templates)
-
----
-
 ## 1. The operating model
 
 Treat an intermittent failure as a threshold or path-dependent event until evidence shows otherwise.
