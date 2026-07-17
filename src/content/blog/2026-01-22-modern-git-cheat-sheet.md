@@ -1,6 +1,6 @@
 ---
-title: "Git: The Minimal Modern Cheat Sheet"
-date: 2026-01-22
+title: "Git: The Practical Modern Cheat Sheet"
+date: 2026-07-17
 description: "A concise Git reference for everyday branching, commits, rebasing, restoring, bisecting, worktrees, conflict recovery, and repository maintenance."
 topic: "Infrastructure & Automation"
 keywords:
@@ -9,10 +9,10 @@ keywords:
   - "Git rebase"
   - "Git bisect"
   - "cheat sheet"
-urlSlug: "git-minimal-cheatsheet"
+urlSlug: "git-practical-modern-cheatsheet"
 ---
 
-A condensed Git reference for day-to-day work. Focus: modern commands, clean commits, safe history, and recovery when things go wrong.
+A practical Git reference for day-to-day work. Focus: modern commands, clean commits, safe history, and recovery when things go wrong.
 
 ## Setup Once
 
@@ -22,7 +22,7 @@ git config --global push.autoSetupRemote true
 
 # Safe pull behavior: only fast-forward, never auto-merge or auto-rebase
 git config --global pull.ff only
-git config --global --unset pull.rebase 2>/dev/null || true
+git config --global --unset-all pull.rebase 2>/dev/null || true
 
 # Rebase helpers, only when you manually run rebase
 git config --global rebase.autoStash true
@@ -37,6 +37,8 @@ git config --global diff.colorMoved zebra
 # Editor
 git config --global core.editor "nvim"
 ```
+
+This setup makes `git pull` safe by default. It only allows fast-forward updates and refuses to guess whether you wanted a merge or a rebase.
 
 ---
 
@@ -53,6 +55,8 @@ Git usually moves changes through:
 ```text
 Working tree → Index → Commit
 ```
+
+Your working tree can be messy. Your commit history should explain how the system changed.
 
 ---
 
@@ -115,10 +119,16 @@ git commit -m "WIP: debug interrupted uploads"
 Clean them before merging:
 
 ```bash
-git rebase -i --autosquash origin/main
+git rebase -i origin/main
 ```
 
-> The working tree records how you worked. The commit history records how the system changed.
+For automatic cleanup, use `fixup!` commits:
+
+```bash
+git add -p
+git commit --fixup <commit>
+git rebase -i --autosquash origin/main
+```
 
 ---
 
@@ -243,9 +253,12 @@ Always preview `git clean` with `-n` first.
 |------|---------|------|
 | update remote refs | `git fetch` | safe; does not change your files |
 | update local `main` | `git pull --ff-only` | refuses accidental merge commits |
-| pull feature branch | `git pull --rebase` | when rebase-on-pull is not configured |
+| update private feature branch | `git fetch && git rebase origin/main` | keeps branch linear |
+| update shared feature branch | `git fetch && git merge origin/main` | avoids rewriting shared history |
 | push current branch | `git push` | auto-upstream when configured |
 | push new branch explicitly | `git push -u origin HEAD` | works without global config |
+
+`push` does not choose merge or rebase. That decision happens when you integrate remote changes into your local branch.
 
 ---
 
@@ -255,11 +268,16 @@ Always preview `git clean` with `-n` first.
 - **Merge** when preserving shared history matters.
 - Never rebase `main`, release branches, or branches other people use.
 
-Clean feature branch:
+Clean a private feature branch:
 
 ```bash
 git fetch
 git rebase origin/main
+
+# first push
+git push
+
+# after rewriting an already-pushed private branch
 git push --force-with-lease
 ```
 
@@ -401,6 +419,46 @@ Only rewrite commits that have not become shared history.
 | apply and keep | `git stash apply stash@{0}` |
 | apply and remove | `git stash pop` |
 | delete | `git stash drop stash@{0}` |
+
+---
+
+## Bisect
+
+Use `git bisect` to find the commit that introduced a bug.
+
+Start from a known bad commit and a known good commit:
+
+```bash
+git bisect start
+git bisect bad
+git bisect good <known-good-sha>
+```
+
+Git checks out a commit in the middle. Test it, then mark it:
+
+```bash
+git bisect good
+# or:
+git bisect bad
+```
+
+When finished:
+
+```bash
+git bisect reset
+```
+
+Automate the search with a test command:
+
+```bash
+git bisect start
+git bisect bad
+git bisect good <known-good-sha>
+git bisect run make test
+git bisect reset
+```
+
+A test command should return `0` for good and non-zero for bad.
 
 ---
 
