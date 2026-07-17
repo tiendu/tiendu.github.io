@@ -19,14 +19,23 @@ A condensed Git reference for day-to-day work. Focus: modern commands, clean com
 ```bash
 git config --global init.defaultBranch main
 git config --global push.autoSetupRemote true
-git config --global pull.rebase true
+
+# Safe pull behavior: only fast-forward, never auto-merge or auto-rebase
+git config --global pull.ff only
+git config --global --unset pull.rebase 2>/dev/null || true
+
+# Rebase helpers, only when you manually run rebase
 git config --global rebase.autoStash true
 git config --global rebase.autoSquash true
+
+# Cleanup / conflict quality
 git config --global fetch.prune true
 git config --global rerere.enabled true
 git config --global merge.conflictStyle zdiff3
 git config --global diff.colorMoved zebra
-git config --global core.editor "nvim"       # or "code --wait"
+
+# Editor
+git config --global core.editor "nvim"
 ```
 
 ---
