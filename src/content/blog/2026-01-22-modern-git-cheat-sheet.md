@@ -1,6 +1,7 @@
 ---
 title: "Git: The Practical Modern Cheat Sheet"
 date: 2026-01-22
+updated: 2026-07-19
 description: "A concise Git reference for everyday branching, commits, rebasing, restoring, bisecting, worktrees, conflict recovery, and repository maintenance."
 topic: "Infrastructure & Automation"
 keywords:
@@ -22,7 +23,6 @@ git config --global push.autoSetupRemote true
 
 # Safe pull behavior: only fast-forward, never auto-merge or auto-rebase
 git config --global pull.ff only
-git config --global --unset-all pull.rebase 2>/dev/null || true
 
 # Rebase helpers, only when you manually run rebase
 git config --global rebase.autoStash true
@@ -38,7 +38,9 @@ git config --global diff.colorMoved zebra
 git config --global core.editor "nvim"
 ```
 
-This setup makes `git pull` safe by default. It only allows fast-forward updates and refuses to guess whether you wanted a merge or a rebase.
+This setup makes `git pull` safe by default. It only allows fast-forward updates and refuses to guess whether you wanted a merge or a rebase. The configuration commands are Git commands rather than shell-specific cleanup logic, so they work consistently across common shells.
+
+`rebase.autoStash` is convenient, but it is not a substitute for checking `git status`. Reapplying the temporary stash can still produce conflicts.
 
 ---
 
@@ -48,7 +50,7 @@ This setup makes `git pull` safe by default. It only allows fast-forward updates
 |------|-------------------|--------------|
 | **Working tree** | files you are editing | `git status`, `git diff` |
 | **Index** | changes selected for the next commit | `git diff --staged` |
-| **HEAD** | latest commit on the current branch | `git show`, `git log` |
+| **HEAD** | currently checked-out commit, normally the tip of the current branch | `git show`, `git log` |
 
 Git usually moves changes through:
 
@@ -119,6 +121,7 @@ git commit -m "WIP: debug interrupted uploads"
 Clean them before merging:
 
 ```bash
+git fetch origin
 git rebase -i origin/main
 ```
 
@@ -148,7 +151,7 @@ git diff --staged
 make check
 git commit
 
-git fetch
+git fetch origin
 git rebase origin/main
 
 git log --oneline origin/main..HEAD
@@ -165,14 +168,16 @@ Use small branches with one clear purpose. Do not rebase a branch other people a
 Use a worktree for parallel work, reviews, or hotfixes without disturbing the current directory.
 
 ```bash
-git fetch
+git fetch origin
 git worktree add -b hotfix/critical ../repo-hotfix origin/main
-git worktree add ../repo-review feature/pr-123
+git worktree add --detach ../repo-review origin/feature/pr-123
 
 git worktree list
 git worktree remove ../repo-review
 git worktree prune
 ```
+
+The detached review worktree avoids claiming a local branch that may already be checked out elsewhere. Create a branch inside it only when you decide to make changes.
 
 For a quick interruption, a stash is fine. For longer or parallel work, prefer a worktree.
 
@@ -187,7 +192,7 @@ For a quick interruption, a stash is fine. For longer or parallel work, prefer a
 | initialize | `git init` |
 | add remote | `git remote add origin <url>` |
 | inspect remotes | `git remote -v` |
-| first push | `git push -u origin main` |
+| first push | `git push -u origin HEAD` |
 
 ---
 
@@ -198,6 +203,7 @@ For a quick interruption, a stash is fine. For longer or parallel work, prefer a
 | list branches | `git branch -vv` |
 | create and switch | `git switch -c name` |
 | switch | `git switch name` |
+| create local branch from remote | `git switch --track origin/name` |
 | rename current | `git branch -m newname` |
 | delete local safely | `git branch -d name` |
 | force-delete local | `git branch -D name` |
@@ -222,7 +228,8 @@ Prefer `-d`. Use `-D` only when you intentionally want to bypass Git's safety ch
 | Task | Command |
 |------|---------|
 | unstage file | `git restore --staged path` |
-| discard changes in file | `git restore path` |
+| discard unstaged changes in file | `git restore path` |
+| discard staged and unstaged changes | `git restore --source=HEAD --staged --worktree path` |
 | restore file from branch | `git restore --source <branch> -- path` |
 | preview untracked cleanup | `git clean -nd` |
 | delete untracked files | `git clean -fd` |
@@ -253,8 +260,8 @@ Always preview `git clean` with `-n` first.
 |------|---------|------|
 | update remote refs | `git fetch` | safe; does not change your files |
 | update local `main` | `git pull --ff-only` | refuses accidental merge commits |
-| update private feature branch | `git fetch && git rebase origin/main` | keeps branch linear |
-| update shared feature branch | `git fetch && git merge origin/main` | avoids rewriting shared history |
+| update private feature branch | run `git fetch origin`, then `git rebase origin/main` | keeps branch linear |
+| update shared feature branch | run `git fetch origin`, then `git merge origin/main` | avoids rewriting shared history |
 | push current branch | `git push` | auto-upstream when configured |
 | push new branch explicitly | `git push -u origin HEAD` | works without global config |
 
@@ -266,22 +273,22 @@ Always preview `git clean` with `-n` first.
 
 - **Rebase** a private feature branch to keep it current and linear.
 - **Merge** when preserving shared history matters.
-- Never rebase `main`, release branches, or branches other people use.
+- Never rewrite published commits on `main`, release branches, or branches other people use.
 
 Clean a private feature branch:
 
 ```bash
-git fetch
+git fetch origin
 git rebase origin/main
 
 # first push
 git push
 
 # after rewriting an already-pushed private branch
-git push --force-with-lease
+git push --force-with-lease --force-if-includes
 ```
 
-Use `--force-with-lease`, never plain `--force`.
+Use `--force-with-lease`, never plain `--force`. `--force-if-includes` adds another check that remote updates have been incorporated locally before Git replaces the remote branch. It is most useful for the normal private-branch rebase case; deliberate recovery may require a carefully scoped lease instead.
 
 ### Resolve a conflict
 
@@ -393,6 +400,14 @@ git commit --amend
 ```bash
 git add -p
 git commit --fixup <commit>
+git fetch origin
+git rebase -i --autosquash origin/main
+```
+
+To update the target commit's message as part of the fixup:
+
+```bash
+git commit --fixup=amend:<commit>
 git rebase -i --autosquash origin/main
 ```
 
@@ -413,11 +428,12 @@ Only rewrite commits that have not become shared history.
 | Task | Command |
 |------|---------|
 | stash tracked changes | `git stash push -m "wip"` |
-| include untracked files | `git stash -u` |
+| include untracked files | `git stash push -u -m "wip"` |
 | list | `git stash list` |
 | inspect | `git stash show -p stash@{0}` |
 | apply and keep | `git stash apply stash@{0}` |
 | apply and remove | `git stash pop` |
+| recover on a new branch | `git stash branch recovery/wip stash@{0}` |
 | delete | `git stash drop stash@{0}` |
 
 ---
@@ -458,7 +474,7 @@ git bisect run make test
 git bisect reset
 ```
 
-A test command should return `0` for good and non-zero for bad.
+A test command should return `0` for good, `1`–`127` except `125` for bad, and `125` when the current commit cannot be tested. Any other exit status aborts the bisect run.
 
 ---
 
@@ -469,9 +485,10 @@ A test command should return `0` for good and non-zero for bad.
 | list | `git tag` |
 | create annotated tag | `git tag -a v1.2.3 -m "v1.2.3"` |
 | push one tag | `git push origin v1.2.3` |
-| push all tags | `git push origin --tags` |
+| push commits plus reachable annotated tags | `git push --follow-tags` |
+| push every local tag | `git push origin --tags` |
 
-Prefer annotated tags for releases.
+Prefer annotated tags for releases. Use `--follow-tags` for normal release pushes; use `--tags` only when you intentionally want to publish every local tag.
 
 ---
 
@@ -536,6 +553,7 @@ Create a recovery branch first. Investigate before using `reset --hard`.
 
 ```bash
 git rebase --abort
+git merge --abort
 git cherry-pick --abort
 git am --abort
 ```
@@ -549,15 +567,16 @@ git am --abort
 ```bash
 git switch -c fix/moved-work
 git switch main
+git fetch origin
 git reset --hard origin/main
 ```
 
-Confirm the new branch contains the commit before resetting `main`.
+Confirm the new branch contains the commit before resetting `main`. Fetch first so `origin/main` reflects the current remote branch rather than an older local snapshot.
 
 ### Need a hotfix while other work is unfinished
 
 ```bash
-git fetch
+git fetch origin
 git worktree add -b hotfix/critical ../repo-hotfix origin/main
 cd ../repo-hotfix
 ```
@@ -565,8 +584,8 @@ cd ../repo-hotfix
 ### Review another branch without touching current work
 
 ```bash
-git fetch
-git worktree add ../repo-review <branch>
+git fetch origin
+git worktree add --detach ../repo-review origin/<branch>
 cd ../repo-review
 ```
 
@@ -575,10 +594,11 @@ cd ../repo-review
 ```bash
 git reflog
 git branch recovery/force-push <sha>
+git fetch origin
 git push --force-with-lease origin recovery/force-push:<target-branch>
 ```
 
-Verify the recovery commit before updating the remote branch.
+Verify the recovery commit before updating the remote branch. Fetch immediately before the push so the lease rejects a concurrent update made after your last check. This deliberate recovery command does not add `--force-if-includes`, because replacing the bad remote history is the point of the operation.
 
 ---
 
