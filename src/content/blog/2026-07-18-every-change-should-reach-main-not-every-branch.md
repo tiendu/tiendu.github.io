@@ -1,7 +1,7 @@
 ---
 title: "Every Change Should Reach Main. Not Every Branch Needs To."
 date: 2026-07-18
-description: "Why branches are temporary development paths, why stacked work is legitimate, and why AI-assisted development makes coherent commits and safe integration more important."
+description: "Why a clean main branch does not require ceremonial branch merges, how stacked pull requests and hotfixes can land safely, and when rebasing creates more risk than value."
 topic: "Infrastructure & Automation"
 keywords:
   - "Git"
@@ -10,6 +10,7 @@ keywords:
   - "stacked pull requests"
   - "Git history"
   - "Git rebase"
+  - "git range-diff"
   - "merge strategy"
   - "Git worktree"
   - "cherry-pick"
@@ -21,7 +22,7 @@ urlSlug: "every-change-should-reach-main-not-every-branch"
 
 I once worked in a team where a Git graph could become an emotional event.
 
-The code might compile. The tests might pass. The useful change might already be on its way into `main`.
+The code might compile. The tests might pass. The useful change might already be ready for `main`.
 
 But if one branch grew from another, and the child eventually landed while the parent did not, someone in leadership would look at the graph and say:
 
@@ -35,51 +36,75 @@ Sometimes nothing meaningful changed. The graph simply looked more complete.
 
 That is the problem.
 
-Every change the team intends to ship should reach `main`.
+Every **accepted change** the team intends to ship should reach `main`.
 
 Not every temporary branch has to.
 
 ---
 
-## What “clean history” meant
+## What clean history should mean
 
-This was more than a preference for clear commits or small pull requests.
+Linear production history has real benefits. It can make `git log`, release analysis, reverting, and bisecting easier. Clear commits and understandable pull requests are worth protecting.
 
-The expected graph followed stricter rules:
+But linearity is a policy for the history the team keeps. It does not require every temporary development path to receive a visible merge.
 
-- every branch should begin from `main`;
+In that team, “clean history” meant something stricter:
+
+- every branch should begin directly from `main`;
 - every branch should merge visibly back into `main`;
-- no parent should be left behind after a child lands;
+- no parent branch should be left behind after a child lands;
 - no stack should appear unresolved;
 - no side history should look abandoned.
 
 Every development path needed an obvious beginning and ending on `main`.
 
-That sounds tidy. It also treats every branch as a permanent unit of work.
+That sounds tidy. It also treats every branch as a permanent unit of delivery.
 
 It is not.
 
-A branch is often a temporary workspace. Its purpose is to help developers move safely, not to earn a ceremonial merge.
+A clean `main` is reviewed, tested, traceable, understandable, and deployable. A temporary branch only needs to help the team develop and integrate changes safely.
+
+> Clean production history is valuable. Ceremonial branch completion is not.
 
 ---
 
-## Branches are temporary workspaces
+## Branches are temporary lines of development
 
-A branch may exist because another pull request is still under review, the next change depends on unfinished code, a hotfix must be extracted, an experiment needs isolation, or a large change needs smaller review units.
+A Git branch names a line of development. It may exist because:
+
+- another pull request is still under review;
+- the next change depends on unfinished code;
+- an urgent fix must be extracted from a larger stack;
+- an experiment needs isolation;
+- a large change needs smaller review units;
+- two developers need a stable point from which to coordinate.
 
 None of those reasons promises that the branch's exact commits must later appear in `main`.
 
-Branches are paths. Some reach the destination directly. Some are replaced. Some are abandoned after their useful parts move elsewhere.
+Branches are paths. Some reach the destination directly. Some are rewritten. Some are replaced. Some are abandoned after their useful changes move elsewhere.
 
 Git should preserve understandable production changes. It does not need to preserve every route developers took to produce them.
 
+The distinction matters:
+
+- a **change** is behavior the team accepts;
+- a **commit** is one recorded version of that change;
+- a **branch** is a movable name pointing into development history;
+- a **pull request** is a review and integration process around some proposed result.
+
+Those things are related, but they are not interchangeable.
+
+A change can reach `main` through a squash merge, a merge commit, a rebase merge, a cherry-pick, or a deliberately reconstructed branch. The original branch may then have no remaining purpose.
+
+Deleting or closing it does not mean the work was lost.
+
 ---
 
-## When a child branch supersedes its parent
+## When a child pull request supersedes its parent
 
 Suppose development begins like this:
 
-### Before
+**During development**
 
 ```text
 main
@@ -92,39 +117,56 @@ A---B---C
 
 PR 2 depends on PR 1.
 
-As the work evolves, PR 1 becomes outdated while PR 2 becomes the actual solution. The child contains the useful result of the whole stack, so merging the parent separately no longer makes sense.
+While the stack is under development, PR 2 may target PR 1's branch. That lets reviewers see only the incremental change introduced by `F` and `G`, rather than reviewing `D` through `G` again.
 
-The team can update the child against current `main` and squash-merge its complete diff. It can also create a replacement branch from current `main` and deliberately replay the accepted result.
+Then the design evolves.
 
-### After
+PR 1 becomes outdated as a standalone proposal, while PR 2 becomes the actual complete solution. Merging PR 1 separately would add an intermediate state that the team no longer wants.
+
+The team has two reasonable options:
+
+1. retarget PR 2 to `main` and review its new cumulative diff;
+2. create a fresh integration branch from current `main` and deliberately replay the accepted result.
+
+Retargeting changes the comparison. The team is no longer reviewing only `F` and `G`; it is reviewing the complete result represented by `D` through `G`.
+
+That means the final integration needs a fresh check:
+
+- inspect the cumulative diff against current `main`;
+- rerun CI on the result that will actually land;
+- refresh approvals when the changed comparison makes earlier reviews stale;
+- squash or merge the accepted result;
+- close PR 1 with a note linking to where its useful work landed.
+
+**After integration**
 
 ```text
 main
-A---B---C---H---I---S  final child result landed
+A---B---C---H---I---S  accepted stack result
          \
-          D---E          parent PR closed
+          D---E         PR 1 closed as superseded
                \
-                F---G    original child history closed after landing
+                F---G   original PR 2 history closed after landing
 ```
 
-`S` represents the accepted result of the stack, not commits `F` and `G` magically detached from their parent. The useful changes from `D` through `G` reached `main` through one final integration path.
+`S` represents the accepted result of the stack. It does not represent `F` and `G` magically detached from their parent.
+
+The useful changes from `D` through `G` reached `main` through one final integration path. The original stack remained visible for review and traceability, but it did not need to become the permanent production graph.
 
 The parent did not need a separate funeral procession.
 
 ---
 
-## Pull requests are review units
+## Pull requests are review units, not independent universes
 
-A pull request gives reviewers a focused change to inspect. It is not an independent universe.
-
-Suppose a larger change needs four stages:
+Suppose a larger change has four logical stages:
 
 1. introduce an interface;
 2. migrate the current implementation;
 3. add a new backend;
 4. switch callers and add metrics.
 
-Combining everything into one enormous pull request keeps one branch directly connected to `main`. It also makes the work harder to review, test, understand, revert, and integrate.
+Forcing all four stages into one enormous pull request keeps one branch directly connected to `main`. It also makes the work harder to review, test, understand, revert, and integrate.
 
 A more practical structure is:
 
@@ -141,68 +183,57 @@ A---B---C
                             J---K  PR 4: switch callers
 ```
 
-*Later pull requests depend on earlier ones. That is a property of the work, not a Git mistake.*
+Later pull requests depend on earlier ones.
 
-Each pull request shows one logical layer. The graph looks more complicated because the work is more complicated.
+That is a property of the work, not a Git mistake.
 
-Flattening the graph does not flatten the dependency. It only hides or reconstructs it.
+Each pull request should be coherent and testable relative to its declared base. It does not always have to be independently mergeable into `main` on the day it is opened.
 
----
+The final cumulative result, however, must be reviewed and tested against the `main` it will enter.
 
-## AI made Git discipline more important
+This distinction keeps stacked work disciplined:
 
-AI made producing code cheap. It did not make integration cheap.
+- each layer has one primary purpose;
+- each layer can be reviewed without unrelated noise;
+- dependencies are explicit;
+- the complete stack is validated before integration;
+- obsolete intermediate proposals can be closed rather than ceremonially merged.
 
-A developer can generate hundreds or thousands of changed lines in an afternoon. The code may compile, tests may pass, and the pull request may look polished. Yet one branch may combine several intentions:
+The graph looks more complicated because the work is more complicated.
 
-- refactor an interface;
-- rename APIs;
-- add validation;
-- change retry behavior;
-- rewrite configuration;
-- alter tests and logging;
-- clean up unrelated code.
-
-Its conflict surface is enormous. A production fix may be buried inside refactoring. Nobody can confidently cherry-pick it. Reverting one behavior may revert five others. Rebasing asks someone to reconstruct several intentions against a moving `main`.
-
-Large AI-generated changes also encourage plausibility review: reviewers stop verifying behavior and start checking whether the code looks convincing.
-
-A healthier sequence is a set of coherent changes:
-
-```text
-1. introduce the interface
-2. migrate the existing implementation
-3. add validation
-4. add retries
-5. add metrics
-```
-
-Each unit can be reviewed, tested, reverted, stacked, or cherry-picked independently.
-
-A worktree isolates an experiment. A focused commit makes a hotfix extractable. A stack of small pull requests bounds each review. A temporary integration branch lets developers resolve conflicts without immediately rewriting the original stack.
-
-These are not Git rituals. They are safety boundaries around work that can grow faster than a team can understand it.
-
-> AI can generate a huge change in minutes. It cannot make that change easy to review, isolate, merge, revert, or recover.
+Flattening the graph does not flatten the dependency. It only hides it or reconstructs it somewhere else.
 
 ---
 
-## The hotfix case
+## The hotfix inside unfinished work
 
-Consider an important fix inside an unfinished stack:
+Now consider an important fix buried inside an unfinished stack:
 
 ```text
 main
 A---B---C---D---E
          \
-          H  important hotfix
+          H        important hotfix
            \
             F---G  unfinished dependent work
 ```
 
-The hotfix matters, but the surrounding stack may not be ready. Other branches may already depend on its current history.
+The hotfix matters, but the surrounding work may not be ready. Other branches may already depend on the current `H---F---G` history.
 
-Instead of rebasing the entire stack, the team can create a fresh branch from current `main`, cherry-pick or replay the fix, test it, and merge it there:
+One option is to rebase and restack everything immediately.
+
+That may be justified, but it may also turn one urgent fix into a larger coordination event.
+
+A smaller integration path is often safer:
+
+```bash
+git switch main
+git pull --ff-only
+git switch -c hotfix/upload-validation
+git cherry-pick <hotfix-commit>
+```
+
+Test the fix and merge that focused branch:
 
 ```text
 main
@@ -211,23 +242,46 @@ A---B---C---D---E---H'  hotfix landed
           H---F---G     original stack remains active temporarily
 ```
 
-`H'` is the same logical fix on a new base.
+`H'` is the same logical fix recorded as a new commit on a new base.
 
-The original branch containing `H` may never merge directly. The fix still landed, the active stack survived, and the remaining work can be cleaned up later.
+The original branch containing `H` may never merge directly. The fix still landed, the active stack survived, and the urgent production path stayed small.
 
-The graph may briefly look strange. Development kept moving.
+The story does not end there. Once `H'` is on `main`, the remaining stack should eventually stop trying to introduce `H` again.
 
-That is an engineering trade-off. Rejecting it merely because the graph looks incomplete is not engineering.
+For a private branch, the developer might deliberately replay only the unfinished commits after `H`:
+
+```bash
+git fetch origin
+git rebase --onto origin/main H feature-stack
+```
+
+That moves `F` and `G` onto current `main`, where the equivalent hotfix already exists.
+
+For a shared stack, a replacement branch may be safer than rewriting the branch beneath other developers. The team can create it from `origin/main`, replay only the unfinished work, verify the result, and retire the original stack in a coordinated way.
+
+The point is not that cleanup never happens.
+
+The point is that an urgent fix does not require immediate reconstruction of every dependent branch merely to make the graph look complete.
+
+The graph may briefly look strange.
+
+Development kept moving.
+
+That is an engineering trade-off. Rejecting it only because the graph looks incomplete is not engineering.
 
 ---
 
 ## Rebase does not make dependencies disappear
 
-Rebase is useful for cleaning a private branch, removing fixup commits, or replaying a small change onto current `main`.
+Rebase is useful.
+
+It can clean a private branch, combine fixup commits, remove accidental noise, or replay a small change onto current `main`.
 
 The problem is treating it as a ritual.
 
-### Before rebase
+Consider a parent and child stack:
+
+**Before rebase**
 
 ```text
 main
@@ -240,40 +294,52 @@ A---B---C
 
 Suppose `main` gains commits `H` and `I`. After rebasing the parent and restacking the child:
 
-### After rebase
+**After rebase**
 
 ```text
 main
 A---B---C---H---I
                  \
-                  D'---E'  rebased parent branch
+                  D'---E'  rebased parent
                          \
-                          F'---G'  reconstructed child branch
+                          F'---G'  reconstructed child
 ```
 
-The branches have not merged. Their dependency still exists. Developers merely reconstructed the stack on a new base.
+The dependency did not disappear.
 
-For a shared stack, that can mean new hashes, force pushes, stale comments, repeated CI, restacked children, repeated conflicts, and coordination with everyone using the old commits.
+The team reconstructed the same dependency on a newer base.
+
+For a small private stack, that may be cheap and worthwhile. For a shared stack, it may mean:
+
+- new commit hashes;
+- coordinated force pushes;
+- stale review comments;
+- repeated CI;
+- child branches restacked on rewritten parents;
+- repeated conflict resolution;
+- developers repairing local branches that still point to the old commits.
 
 Rebase often moves complexity from the graph into the developers' working day.
 
-Sometimes that is worth doing. Sometimes it is ceremony.
+Sometimes that is worth doing.
 
-### `pull --rebase` is not harmless synchronization
+Sometimes it is ceremony.
+
+### `git pull --rebase` is a history rewrite
 
 ```bash
 git pull --rebase
 ```
 
-This command fetches newer upstream history and replays local commits on top of it.
+This fetches newer upstream history and replays local commits on top of it.
 
-That may be uneventful when the branch is small and only slightly behind. It becomes riskier when the branch is old or another team has heavily modified the same code.
+That is usually uneventful when the local branch is small, private, and only slightly behind. It deserves more care when the branch is old or when upstream has heavily changed the same design.
 
 ```text
 main
 A---B---C---D---E  major upstream changes
          \
-          F---G     local work based on the older design
+          F---G    local work based on the older design
 ```
 
 After the rebase:
@@ -285,7 +351,7 @@ A---B---C---D---E
                   F'---G'  reconstructed local work
 ```
 
-Committed work is usually recoverable through the reflog. The subtler danger is a conflict resolved into code that appears correct but no longer expresses the original intent.
+Committed work is usually recoverable through the reflog. The subtler risk is a conflict resolution that looks reasonable but no longer expresses the original intent.
 
 ### A conflict can preserve the code and lose the intent
 
@@ -323,13 +389,15 @@ def upload(path, token):
     )
 ```
 
-Git can show the overlapping text. It cannot determine the intended final behavior.
+Git can show the overlapping text.
+
+It cannot determine the intended final behavior.
 
 A reasonable-looking resolution might preserve authentication, auditing, retries, and timeout handling while silently restoring `read_file()` instead of `read_and_validate()`.
 
 The script runs. File validation has disappeared.
 
-The opposite mistake is also possible: preserving validation while dropping authentication or auditing.
+The opposite mistake is also possible: validation survives while authentication or audit logging disappears.
 
 The intended combination might be:
 
@@ -346,7 +414,7 @@ def upload(path, token):
     )
 ```
 
-The resolution should be verified against every behavior that existed on either side:
+The result must be checked against every behavior that existed on either side:
 
 - file validation;
 - authentication;
@@ -354,37 +422,80 @@ The resolution should be verified against every behavior that existed on either 
 - retries;
 - timeout handling.
 
-> A rebase can preserve every line needed to compile while losing the reason the original change existed.
+This danger is not unique to rebase. A merge or cherry-pick conflict can also produce syntactically valid code that loses behavior.
 
-### Choose the safest integration path
+Rebase becomes particularly costly when an old series must be reconstructed commit by commit and dependent branches must follow the rewritten history.
+
+A temporary integration branch does not understand intent better than rebase. Its advantage is simpler: the original commits remain intact and available for comparison while the combined result is inspected.
+
+> A conflict can preserve every line needed to compile while losing the reason one side existed.
+
+---
+
+## Choose the safest integration path
 
 The answer is not to ban rebase.
 
-Rebase is reasonable when the branch is small, private, only slightly behind, and easy to verify. It becomes a poor default when the branch is old, shared, stacked, or heavily overlaps with current `main`.
+The answer is to choose an integration method based on the risk to the code and the people working on it.
 
-Preserve and inspect the current work before rewriting it:
+Before rewriting a branch, preserve and inspect it:
 
 ```bash
 git branch backup/before-integration
 git fetch origin
-git log --oneline --graph --left-right HEAD...origin/main
+
+git log --oneline --graph --decorate \
+  --left-right HEAD...origin/main
+
 git diff origin/main...HEAD
 ```
 
-If the overlap is substantial, create a temporary integration branch:
+If the branch is small, private, recent, and easy to verify, rebasing may be the cleanest option:
 
 ```bash
+git rebase origin/main
+```
+
+After a deliberate rewrite, compare the old and new patch series:
+
+```bash
+git range-diff \
+  origin/main...backup/before-integration \
+  origin/main...HEAD
+```
+
+`git range-diff` does not prove correctness. It helps reveal commits or patches that disappeared, appeared, or changed during reconstruction.
+
+It gives the team a better question than “Does the graph look clean?”
+
+> Does the rewritten series still express the same intended changes?
+
+If the rewritten branch was already published and the update is coordinated, prefer `--force-with-lease` over an unrestricted force push. It refuses to overwrite the remote branch when it has changed in an unexpected way.
+
+If the branch is old or heavily overlaps current `main`, create a temporary integration branch instead:
+
+```bash
+git switch feature-stack
 git switch -c integrate-current-main
 git merge origin/main
 ```
 
-The conflicts still require engineering judgment. But the original commits remain intact, dependent branches are not automatically rewritten, and the attempt can be reviewed or abandoned.
+The conflicts still require engineering judgment. But:
 
-For an isolated hotfix, cherry-picking onto a fresh branch from current `main` may be safer than rebasing the entire stack. When a rebase begins producing suspicious conflicts, abort it:
+- the original commits remain intact;
+- dependent branches are not automatically rewritten;
+- the integration attempt can be reviewed;
+- the attempt can be abandoned without reconstructing the original stack.
+
+For an isolated hotfix, cherry-picking onto a fresh branch from current `main` may be safer than rebasing everything around it.
+
+When a rebase begins producing suspicious conflicts, stop:
 
 ```bash
 git rebase --abort
 ```
+
+A useful default policy is:
 
 | Situation | Safer default |
 |---|---|
@@ -392,38 +503,83 @@ git rebase --abort
 | Old or heavily diverged branch | Integrate on a temporary branch |
 | Shared or stacked branch with dependents | Avoid rewriting unless coordinated |
 | Isolated urgent fix inside unfinished work | Cherry-pick onto a fresh branch from `main` |
-| Obsolete branch whose shipped work landed elsewhere | Close it without a ceremonial merge |
+| Child PR supersedes its parent | Review the cumulative result and close the obsolete parent |
+| Obsolete branch whose accepted work landed elsewhere | Close it without a ceremonial merge |
+
+These are defaults, not laws.
+
+The right method is the one that preserves behavior, reviewability, recoverability, and team coordination at the lowest reasonable cost.
 
 > Choose the safest integration method for the code, not the prettiest integration method for the graph.
 
 ---
 
+## Why AI makes this more important
+
+AI made producing code cheap.
+
+It did not make integration cheap.
+
+A developer can generate hundreds or thousands of changed lines in an afternoon. The result may compile, pass tests, and look polished while combining several intentions:
+
+- refactor an interface;
+- rename APIs;
+- add validation;
+- change retry behavior;
+- rewrite configuration;
+- alter logging and tests;
+- clean up unrelated code.
+
+The conflict surface becomes enormous.
+
+A production fix may be buried inside a refactor. Nobody can confidently cherry-pick it. Reverting one behavior may revert five others. Rebasing asks someone to reconstruct several intentions against a moving `main`.
+
+Large generated diffs also encourage plausibility review: reviewers stop verifying behavior and start checking whether the code looks convincing.
+
+A healthier sequence is a set of coherent changes:
+
+```text
+1. introduce the interface
+2. migrate the existing implementation
+3. add validation
+4. add retries
+5. add metrics
+```
+
+Each unit can be reviewed, tested, reverted, stacked, or extracted with less ambiguity.
+
+A worktree isolates an experiment. A focused commit makes a hotfix extractable. A stack of small pull requests bounds each review. A temporary integration branch lets developers combine histories without immediately rewriting the original work.
+
+These are not Git rituals.
+
+They are safety boundaries around work that can grow faster than a team can understand it.
+
+> AI can generate a huge change in minutes. It cannot make that change easy to review, isolate, merge, revert, or recover.
+
+---
+
 ## Keep changes coherent and `main` clean
 
-None of this is an argument for giant chaotic branches or endless stacks.
+None of this is an argument for giant chaotic branches, broken intermediate states, or endless stacks.
 
-Pull requests should have one primary purpose, remain reviewable, and leave the repository valid and testable. Commits should make important behavior easy to identify, extract, or revert.
+Pull requests should have one primary purpose. They should remain understandable and testable relative to their declared base. Important behavior should be easy to identify, extract, or revert.
 
 But small does not mean artificially independent.
 
-A stack of small pull requests can be safer than one enormous pull request forced to begin directly from `main`.
+A stack of coherent pull requests can be safer than one enormous pull request forced to begin directly from `main`.
 
 > Keep changes small and coherent. Let them depend on one another when the work genuinely depends on one another.
 
 `main` should be reviewed, tested, protected, understandable, and stable enough to deploy.
 
-Working branches have a different job. They support collaboration, experimentation, sequencing, and delivery. A private branch may be rebased. A temporary branch may be deleted. An obsolete parent may simply be closed.
+Working branches have a different job. They support experimentation, sequencing, collaboration, and delivery.
 
-Forcing every obsolete branch to merge is like requiring every draft of a document to be published.
+Some will merge directly. Some will be rebased. Some will be superseded. Some will exist only long enough to land a hotfix. Some will be closed after their accepted changes reach `main` through another path.
 
-The mistake is demanding that every intermediate path resemble final history. That turns Git into a presentation tool instead of a development tool.
+Requiring every intermediate branch to appear in permanent history is like requiring every draft of a document to be published.
 
-Keep `main` clean. Let working branches remain temporary.
+Keep `main` clean.
 
-Some will merge directly. Some will be rebased. Some will be superseded. Some will exist only long enough to land a hotfix. Some will be closed after their changes reach `main` through another path.
-
-That is not disorder.
-
-That is development.
+Let working branches remain temporary.
 
 > The code needs to reach `main`. The branch does not.
