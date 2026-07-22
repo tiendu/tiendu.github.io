@@ -177,7 +177,7 @@ The count also reveals practical impact. A 1% failure rate means:
 
 At scale, a small percentage can represent a large problem.
 
-> **Memory rule:** Whenever you see a percentage, ask, “How many out of how many?”
+> Whenever you see a percentage, ask, “How many out of how many?”
 
 ---
 
@@ -233,7 +233,7 @@ Relative change tells you how large the change is compared with the baseline. Ab
 
 Both can matter. Reporting only one invites misunderstanding.
 
-> **Memory rule:** Report the old value, the new value, the absolute difference, and the relative change.
+> Report the old value, the new value, the absolute difference, and the relative change.
 
 ---
 
@@ -344,7 +344,7 @@ Before averaging rates, decide what should receive equal weight:
 - every experiment;
 - every group.
 
-> **Memory rule:** A weighted average is a decision about whose experience counts how much.
+> A weighted average is a decision about whose experience counts how much.
 
 ---
 
@@ -531,7 +531,7 @@ Adjustment is not magic. It depends on what was measured and how the model was d
 
 Common grouping variables include workload size, customer tier, region, severity, ticket complexity, device type, traffic source, time of day, and model class.
 
-> **Memory rule:** Inspect the total, then split the data by groups that could affect the outcome.
+> Inspect the total, then split the data by groups that could affect the outcome.
 
 Do not split endlessly until you find a pleasing result. Choose groups that are relevant to the mechanism or decision.
 
@@ -598,7 +598,7 @@ A graph should make clear whether it shows:
 - a modelled trend;
 - seasonally adjusted values.
 
-> **Memory rule:** Every trend begins with a choice of window. Ask why that window was chosen.
+> Every trend begins with a choice of window. Ask why that window was chosen.
 
 ---
 
@@ -657,7 +657,7 @@ Before trusting a sample, ask:
 - Who could not be measured?
 - Is missingness related to the outcome?
 
-> **Memory rule:** More data reduces noise. It does not automatically reduce bias.
+> More data reduces noise. It does not automatically reduce bias.
 
 ---
 
@@ -815,7 +815,7 @@ Statistical thinking requires separating:
 2. **Uncertainty:** How precisely was it estimated?
 3. **Practical importance:** Would the difference change a decision?
 
-> **Memory rule:** Statistical significance asks about evidence against a model. It does not tell you whether the effect is large, useful, or true.
+> Statistical significance asks about evidence against a model. It does not tell you whether the effect is large, useful, or true.
 
 ---
 
@@ -929,7 +929,7 @@ Causal conclusions may be strengthened by:
 
 Every method has assumptions.
 
-> **Memory rule:** Correlation is an observation. Causation is an explanation that needs additional evidence.
+> Correlation is an observation. Causation is an explanation that needs additional evidence.
 
 ---
 
@@ -1066,7 +1066,7 @@ Ask:
 - What proportion of alerts are correct?
 - What happens after an alert?
 
-> **Memory rule:** The rarer the event, the more carefully you must interpret a positive alert.
+> The rarer the event, the more carefully you must interpret a positive alert.
 
 ---
 
@@ -1136,7 +1136,7 @@ When reading a chart, check:
 - Are two axes being compared?
 - Does the visual size match the numerical difference?
 
-> **Memory rule:** Read the axes before reading the story.
+> Read the axes before reading the story.
 
 ---
 
@@ -1200,7 +1200,7 @@ say:
 
 > Our goal is to resolve customer problems accurately with reasonable effort and delay. Closure time is one indicator.
 
-> **Memory rule:** A metric is a proxy for the goal, not the goal itself.
+> A metric is a proxy for the goal, not the goal itself.
 
 ---
 
