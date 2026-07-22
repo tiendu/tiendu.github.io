@@ -11,7 +11,7 @@ keywords:
   - "p-values"
   - "SRE metrics"
   - "data visualization"
-urlSlug: "statistics-made-simple"
+urlSlug: "statistics-made-practical"
 pinned: false
 ---
 
