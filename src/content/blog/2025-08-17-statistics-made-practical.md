@@ -25,9 +25,9 @@ The conclusions may still be wrong.
 
 A failure rate can double because failures increased from one to two. A system can have the better overall success rate while performing worse in every comparable workload group. A statistically detectable improvement can be too small to matter. A model can achieve 99.9% accuracy by predicting that a rare event never happens.
 
-Statistics is therefore not just about calculating numbers. It is about preventing correct numbers from telling the wrong story.
+Statistics is not just about calculating numbers. It is about preventing correct numbers from telling the wrong story.
 
-This guide uses examples from a platform that tracks jobs, failures, runtime, cost, customers, regions, and alerts. The same statistical traps also appear in engineering, operations, research, medicine, business, and everyday news.
+This guide mainly uses examples from software platforms and operational dashboards, but the same traps appear in research, medicine, business, and everyday news.
 
 The goal is not to turn you into a statistician. It is to build a habit:
 
@@ -37,7 +37,7 @@ The goal is not to turn you into a statistician. It is to build a habit:
 
 ## Every Metric Is Constructed
 
-Suppose A platform reports:
+Suppose a platform reports:
 
 ```text
 Job failure rate: 2.4%
@@ -88,7 +88,7 @@ Two teams can calculate different failure rates from the same platform because t
 
 ### Definitions can change silently
 
-Imagine The platform changes its retry behavior. Previously, every failed attempt was counted as a failed job. Now, only the final result is counted.
+Imagine the platform changes its retry behavior. Previously, every failed attempt was counted as a failed job. Now, only the final result is counted.
 
 The dashboard improves overnight:
 
@@ -183,7 +183,7 @@ At scale, a small percentage can represent a large problem.
 
 ## Percentage Points Are Not Percentage Change
 
-Suppose The platform's failure rate rises from 2% to 3%.
+Suppose the platform's failure rate rises from 2% to 3%.
 
 There are several correct ways to describe the change:
 
@@ -247,7 +247,7 @@ rate = numerator / denominator
 
 When a rate changes, people often stare only at the numerator.
 
-Suppose The platform's failure rate falls:
+Suppose the platform's failure rate falls:
 
 ```text
 June: 500 failures / 10,000 jobs = 5%
@@ -271,10 +271,9 @@ Which month was better?
 
 That depends on the question:
 
-- Did fewer jobs fail? July.
-- Was an individual submitted job less likely to fail? June.
-- Was customer impact lower? We need to know the size and importance of the failed jobs.
-- Did the platform process more useful work? We need more information.
+- Fewer jobs failed in July.
+- An individual submitted job was less likely to fail in June.
+- Customer impact still depends on the size and importance of the failed jobs.
 
 A rate compresses two quantities into one number. Always inspect both.
 
@@ -445,9 +444,9 @@ Do not choose a statistic because it looks best. Choose it because it matches th
 
 ---
 
-## Aggregation Can Reverse a Conclusion
+## Aggregation Can Reverse the Story
 
-Now consider two versions of a platform's job scheduler.
+Consider two versions of a platform's job scheduler.
 
 They process easy and difficult workloads:
 
@@ -457,7 +456,7 @@ They process easy and difficult workloads:
 | Difficult jobs | 192/263 = **73.0%** | 55/80 = **68.8%** |
 | Overall | 273/350 = **78.0%** | 289/350 = **82.6%** |
 
-Scheduler A has the higher success rate for both easy jobs and difficult jobs.
+Scheduler A has the higher success rate for both easy and difficult jobs.
 
 Yet Scheduler B has the higher overall success rate.
 
@@ -472,49 +471,29 @@ This is **Simpson's paradox**: a pattern appears within separate groups but reve
 
 ### Which answer is correct?
 
-Both tables answer legitimate but different questions.
+Both views answer different questions.
 
-The overall result answers:
+The overall result asks:
 
 > Under the workloads each scheduler actually received, which one produced the higher total success rate?
 
-The grouped results answer:
+The grouped result asks:
 
 > When jobs of comparable difficulty are compared, which scheduler performed better?
 
-If you are choosing a scheduler for the same workload mix tomorrow, the grouped comparison may be more useful.
-
-If you are describing what happened operationally last month, the overall result also matters.
+If you are choosing a scheduler for the same workload mix tomorrow, the grouped comparison may be more useful. If you are describing what happened last month, the overall result also matters.
 
 Simpson's paradox does not mean aggregated data is false. It means aggregation can mix together a performance effect and a composition effect.
 
-Common grouping variables include:
+### Population mix can create the same illusion
 
-- workload size;
-- customer tier;
-- region;
-- age;
-- disease severity;
-- ticket complexity;
-- device type;
-- traffic source;
-- time of day;
-- model class;
-- product category.
+A full reversal is not required. A change in population mix can make performance appear better or worse even when nothing changes within the underlying groups.
 
-> **Memory rule:** Always inspect the total, then split the data by groups that could affect the outcome.
-
-Do not split endlessly until you find a pleasing result. Choose groups that are relevant to the mechanism or decision.
-
----
-
-## Population Mix Can Change Without Performance Changing
-
-Suppose The platform's average runtime falls by 30% in July.
+Suppose the platform's average runtime falls by 30% in July.
 
 The engineering team celebrates an optimization.
 
-But the system processed a different workload:
+But the workload changed:
 
 ```text
 June:
@@ -528,13 +507,10 @@ July:
 
 Runtime may have stayed exactly the same within both job types. The overall average fell because July contained more easy work.
 
-This is a **composition effect**.
-
 The same trap appears when:
 
-- average support resolution time falls because fewer complex tickets arrive;
+- support resolution time falls because fewer complex tickets arrive;
 - hospital mortality changes because patient severity changes;
-- school results change because the student population changes;
 - cloud cost per job falls because jobs become smaller;
 - model accuracy changes because the class balance changes;
 - customer satisfaction rises because unhappy customers leave.
@@ -545,19 +521,25 @@ When comparing groups or periods, ask:
 
 Useful approaches include:
 
-- reporting results separately for important groups;
-- standardizing to a common population mix;
+- reporting important groups separately;
 - comparing like with like;
-- using regression or other adjustment carefully;
-- explicitly reporting the composition change.
+- standardizing to a common population mix;
+- explicitly reporting composition changes;
+- using regression or other adjustment carefully.
 
-Adjustment is not magic. It depends on which variables were measured and how the model was designed. But ignoring composition is often worse.
+Adjustment is not magic. It depends on what was measured and how the model was designed.
+
+Common grouping variables include workload size, customer tier, region, severity, ticket complexity, device type, traffic source, time of day, and model class.
+
+> **Memory rule:** Inspect the total, then split the data by groups that could affect the outcome.
+
+Do not split endlessly until you find a pleasing result. Choose groups that are relevant to the mechanism or decision.
 
 ---
 
 ## Time Windows Can Manufacture a Trend
 
-Suppose Platform incidents increased 40% compared with yesterday.
+Suppose platform incidents increased by 40% compared with yesterday.
 
 That sounds alarming.
 
@@ -583,7 +565,7 @@ A time comparison depends on:
 
 ### Cumulative metrics can hide current damage
 
-Imagine Suppose a platform achieved 99.99% availability for most of the month, then suffered a major outage today.
+Imagine a platform achieved 99.99% availability for most of the month, then suffered a major outage today.
 
 A month-to-date availability number may still look healthy because earlier successful traffic dominates the calculation.
 
@@ -746,7 +728,7 @@ Precision is not the same as accuracy.
 
 ## Statistical Significance Is Not Importance
 
-Suppose A platform tests a new scheduler on one million jobs.
+Suppose a platform tests a new scheduler on one million jobs.
 
 Average runtime changes from:
 
@@ -778,11 +760,9 @@ A small p-value can indicate tension between the observed data and the null mode
 
 It does **not** directly tell us:
 
-- the probability that the null hypothesis is true;
-- the probability that the research claim is true;
-- the probability that the result will replicate;
-- the size of the effect;
-- whether the effect matters;
+- whether the null hypothesis or research claim is true;
+- whether the result will replicate;
+- how large or useful the effect is;
 - whether the study design was sound.
 
 ### The 0.05 threshold is not a truth machine
@@ -841,7 +821,7 @@ Statistical thinking requires separating:
 
 ## Looking for More Patterns Creates More False Alarms
 
-Suppose A platform tracks 100 metrics across:
+Suppose a platform tracks 100 metrics across:
 
 - 12 regions;
 - 20 customer groups;
@@ -889,7 +869,7 @@ Ask:
 
 ## Correlation Is Not an Explanation
 
-Suppose A platform finds that days with more deployments also have more incidents.
+Suppose a platform finds that days with more deployments also have more incidents.
 
 The correlation is real.
 
@@ -955,7 +935,7 @@ Every method has assumptions.
 
 ## Accuracy Can Be Almost Useless
 
-Suppose A platform has one catastrophic job failure for every 1,000 jobs.
+Suppose a platform has one catastrophic job failure for every 1,000 jobs.
 
 A model predicts:
 
@@ -1162,7 +1142,7 @@ When reading a chart, check:
 
 ## A Metric Can Improve While the System Gets Worse
 
-Suppose A platform rewards the support team for closing tickets quickly.
+Suppose a platform rewards the support team for closing tickets quickly.
 
 Average closure time falls.
 
@@ -1290,27 +1270,9 @@ The important question is whether the larger body of evidence points in a consis
 
 > A surprising result is a reason to investigate, not a reason to stop thinking.
 
----
+Statistics cannot remove uncertainty. It helps us describe uncertainty more honestly.
 
-
-## Final Thoughts
-
-Numbers are useful because they compress reality.
-
-That is also why they can mislead.
-
-A percentage can hide its counts. An average can hide its distribution. An aggregate can hide differences between groups. A trend depends on its time window. A p-value says nothing about whether an effect matters. An accuracy score can hide class imbalance. A metric can reward the wrong behavior.
-
-The answer is not to distrust statistics. It is to avoid treating a number as if it explains itself.
-
-Every statistic was defined, collected, filtered, summarized, and presented by someone. Understanding those choices is what turns a calculation into useful evidence.
+A number may be correct while its interpretation is incomplete. The real skill is understanding what the number measures, what it leaves out, and how much weight the evidence deserves.
 
 Statistics becomes much less mysterious once you stop asking only, “Is this number correct?” and start asking, “What story can this number actually support?”
 
----
-
-## Further Reading
-
-- [American Statistical Association: Statement on Statistical Significance and P-Values](https://www.amstat.org/asa/files/pdfs/p-valuestatement.pdf)
-- [Google Machine Learning Crash Course: Accuracy, Precision, Recall, and Related Metrics](https://developers.google.com/machine-learning/crash-course/classification/accuracy-precision-recall)
-- [Google Machine Learning Crash Course: ROC and AUC](https://developers.google.com/machine-learning/crash-course/classification/roc-and-auc)
