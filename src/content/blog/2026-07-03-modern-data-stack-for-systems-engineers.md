@@ -1520,16 +1520,3 @@ Scale the machine before scaling the architecture.
 
 Add a platform layer only when the workload or operating model—not fashion—requires it.
 
----
-
-## Further reading
-
-- Apache Parquet: <https://parquet.apache.org/docs/>
-- Apache Iceberg: <https://iceberg.apache.org/docs/latest/>
-- DuckDB: <https://duckdb.org/docs/>
-- Apache Spark: <https://spark.apache.org/docs/latest/>
-- Trino: <https://trino.io/docs/current/>
-- Apache Airflow: <https://airflow.apache.org/docs/>
-- Apache Ranger: <https://ranger.apache.org/>
-- OpenTelemetry: <https://opentelemetry.io/docs/>
-- Prometheus instrumentation practices: <https://prometheus.io/docs/practices/instrumentation/>
