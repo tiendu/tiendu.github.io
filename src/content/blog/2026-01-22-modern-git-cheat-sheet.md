@@ -1,7 +1,6 @@
 ---
 title: "Git: The Practical Modern Cheat Sheet"
 date: 2026-01-22
-updated: 2026-07-19
 description: "A concise Git reference for everyday branching, commits, rebasing, restoring, bisecting, worktrees, conflict recovery, and repository maintenance."
 topic: "Infrastructure & Automation"
 keywords:

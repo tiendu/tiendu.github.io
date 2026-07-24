@@ -1,240 +1,214 @@
 ---
 title: "The Modern Data Stack for Systems Engineers"
 date: 2026-07-03
-description: "A systems-oriented guide to warehouses, lakes, lakehouses, Parquet, Iceberg, ETL, Spark, Trino, and deciding when data processing should scale beyond one machine."
+description: "A practical map of warehouses, data lakes, lakehouses, Parquet, Iceberg, Spark, Trino, Airflow, security, and monitoring for engineers who already understand infrastructure."
 topic: "Infrastructure & Automation"
 keywords:
-  - "modern data stack"
-  - "data engineering for systems engineers"
+  - "infrastructure"
   - "data engineering"
-  - "distributed data processing"
-  - "data warehouse"
-  - "data lake"
-  - "data lakehouse"
-  - "Apache Iceberg"
-  - "Apache Spark"
-  - "DuckDB"
-  - "Parquet"
-  - "Trino"
-  - "ETL"
-  - "ELT"
+  - "distributed systems"
+  - "observability"
+  - "security"
 urlSlug: "modern-data-stack-for-systems-engineers"
 pinned: true
 ---
 
-I came to data engineering from systems operations, cloud infrastructure,
-DevOps, and bioinformatics.
+If you already understand servers, storage, jobs, schedulers, permissions, and failure recovery, most of the modern data stack is familiar machinery with unfamiliar names.
 
-That background made some parts familiar:
+The confusing part is not usually the individual tools.
 
-```text
-storage
-distributed computation
-schedulers
-filesystems
-pipelines
-reliability
-```
+It is understanding which responsibility belongs to which layer.
 
-But the terminology was confusing.
-
-The same diagram might contain:
-
-```text
-warehouse
-lake
-lakehouse
-catalog
-Parquet
-Iceberg
-Spark
-Trino
-Airflow
-dbt
-Kafka
-bronze
-silver
-gold
-mesh
-```
-
-Some terms describe storage.
-
-Some describe computation.
-
-Some describe data organization.
-
-Some describe team ownership.
-
-Some are old ideas with new names.
-
-Some are mostly marketing.
-
-The confusing part is that they are often presented as if they belong to the same layer.
-
-They do not.
-
-For example:
-
-```text
-S3       -> storage
-Parquet  -> file format
-Iceberg  -> table format
-catalog  -> names and metadata
-Spark    -> distributed processing engine
-Trino    -> distributed SQL query engine
-Airflow  -> orchestration
-dbt      -> SQL transformation framework
-```
-
-These tools may appear in one platform.
-
-They are not competing answers to one question.
-
-The practical questions are:
-
-```text
-Where does the data live?
-How is it represented?
-Who changes it?
-Who queries it?
-How much processing is required?
-Who owns it?
-How is it trusted?
-```
-
-This is the map I wished I had when moving from infrastructure and scientific computing into the data engineering world.
-
----
-
-## The stack at a glance
-
-A useful way to read a data platform is from source to consumer:
-
-```text
-operational sources
-        |
-        v
-ingestion and CDC
-        |
-        v
-durable storage
-        |
-        +---- file format
-        +---- table format
-        +---- catalog
-        |
-        v
-processing and transformation
-        |
-        v
-serving and consumption
-```
-
-Two concerns sit across the whole stack:
-
-```text
-orchestration
-    -> coordinates when work runs and what depends on what
-
-governance, quality, and ownership
-    -> determine whether the resulting data can be trusted and used safely
-```
-
-A concrete implementation might be:
+A typical architecture diagram may contain:
 
 ```text
 Postgres
-    -> source system
-
-Kafka or a connector
-    -> ingestion
-
+Kafka
 S3
-    -> durable storage
-
 Parquet
-    -> file format
-
 Iceberg
-    -> table format
-
-catalog
-    -> table names and metadata
-
-DuckDB or Spark
-    -> transformation
-
-Trino or a warehouse
-    -> analytical access
-
+a catalog
+Spark
+Trino
 Airflow
-    -> orchestration
-
-dbt
-    -> SQL models and tests
+Ranger
+Prometheus
 ```
 
-Not every platform needs every layer.
+These are often drawn beside one another as if they are interchangeable products in one category.
 
-A small platform may only need:
+They are not.
 
-```text
-Postgres export
-        |
-        v
-Parquet on S3
-        |
-        v
-DuckDB
-        |
-        v
-one report
-```
+Some store data. Some describe how data is encoded. Some manage files as tables. Some execute computation. Some schedule work. Some control access. Some monitor the platform.
 
-The point is not to collect every component.
+This guide builds a practical map of those responsibilities.
 
-The point is to know which responsibility each component owns.
+The goal is not to teach every tool. It is to make terms such as **warehouse**, **data lake**, **lakehouse**, **Parquet**, **Iceberg**, **catalog**, **Spark**, **Trino**, **orchestration**, and **policy enforcement** fit into one understandable system.
+
+The most important principle is:
+
+> Use the smallest system that can complete the workload reliably, within the required time, and at acceptable cost.
 
 ---
 
-## 1. Start with the workload
+## The map in five minutes
 
-Most data systems serve two broad workload families:
+Imagine an application where users submit computational jobs.
+
+Postgres stores the operational state:
 
 ```text
-transactional workloads
-analytical workloads
+users
+projects
+analyses
+applications
+instance_types
+billing_records
 ```
 
-They have different shapes.
+The application uses this database to:
 
-### OLTP: running the application
+- create jobs;
+- update job status;
+- record start and end times;
+- calculate cost;
+- check permissions;
+- show users the current state.
 
-Online transaction processing, or OLTP, handles operational activity.
+Now management asks for a dashboard:
 
-Examples:
+- How many jobs ran each day?
+- What percentage failed?
+- Which applications are slowest?
+- Which instance types cost the most?
+- How many users were active?
+- Was the daily report ready by 06:00?
+
+At first, this sounds like a SQL problem.
+
+It quickly becomes an architecture problem.
+
+Large historical queries may compete with application traffic. The data may need to be stored in a cheaper analytical format. Multiple jobs may need to transform it. Analysts may need stable table names instead of raw object paths. Different teams may require different access. Operators must know whether the report is late, incomplete, or wrong.
+
+A simple analytical path might look like this:
 
 ```text
-create an account
-place an order
-update a job status
+Postgres
+    |
+    | export or CDC
+    v
+Parquet on S3
+    |
+    | transform
+    v
+curated analytical tables
+    |
+    | query
+    v
+dashboard
+```
+
+Several other responsibilities span that path:
+
+```text
+Airflow or another orchestrator
+    -> coordinates when work runs
+
+Ranger, IAM, or native permissions
+    -> controls who may access what
+
+monitoring and observability
+    -> show whether services and pipelines are healthy
+
+data-quality checks
+    -> verify that the result is usable
+
+catalog and lineage
+    -> explain what tables exist and where they came from
+```
+
+The complete mental model is:
+
+```text
+sources
+    -> record operational events
+
+ingestion
+    -> moves data
+
+storage
+    -> keeps durable bytes
+
+file formats
+    -> represent values inside files
+
+table formats
+    -> organize files as reliable tables
+
+catalogs
+    -> name and locate those tables
+
+engines
+    -> transform and query data
+
+resource managers
+    -> allocate machines and containers
+
+orchestrators
+    -> coordinate work
+
+policy systems
+    -> decide who may perform which actions
+
+enforcement points
+    -> apply those decisions
+
+monitoring
+    -> detects health, progress, and delay
+
+quality checks
+    -> validate the result
+
+owners
+    -> remain accountable
+```
+
+Everything else in this guide expands that map.
+
+---
+
+## Warehouse, data lake, and lakehouse
+
+These terms describe different ways to organize analytical data and computation.
+
+They are not three versions of the same product.
+
+### Start with OLTP and OLAP
+
+Before choosing an architecture, separate operational work from analytical work.
+
+An operational database handles current application activity:
+
+```text
+create a job
+update its status
 record a payment
 change a permission
+look up one analysis
 ```
 
-An OLTP system usually needs:
+This is usually called **online transaction processing**, or OLTP.
 
-```text
-small reads and writes
-low latency
-concurrent users
-strong correctness
-indexes
-frequent updates
-```
+An OLTP system commonly needs:
 
-A typical query may be:
+- small reads and writes;
+- low latency;
+- indexes;
+- frequent updates;
+- strong transactional correctness;
+- high application concurrency.
+
+A typical query looks like:
 
 ```sql
 SELECT status
@@ -242,1414 +216,408 @@ FROM analyses
 WHERE analysis_id = 'analysis-123';
 ```
 
-Or:
-
-```sql
-UPDATE analyses
-SET status = 'completed'
-WHERE analysis_id = 'analysis-123';
-```
-
-Postgres, MySQL, and similar databases commonly serve this role.
-
-The database exists to run the application.
-
-It is not automatically the best place to scan ten years of history for a company-wide report.
-
-### OLAP: analysing the system
-
-Online analytical processing, or OLAP, handles larger analytical queries.
-
-Examples:
+Analytical systems handle broader historical questions:
 
 ```text
-revenue by region for five years
-failure rate by instance type
-monthly active users
-cohort-level variant counts
-average job duration by application version
+failure rate by application version
+monthly cost by project
+average runtime by instance type
+active users by week
 ```
 
-An OLAP workload commonly needs:
+This is usually called **online analytical processing**, or OLAP.
 
-```text
-large scans
-aggregations
-joins
-historical data
-columnar storage
-high throughput
-```
+An OLAP system commonly needs:
 
-A typical query may be:
+- large scans;
+- aggregations;
+- joins;
+- historical data;
+- column-oriented storage;
+- high throughput;
+- analytical concurrency.
+
+A typical query looks like:
 
 ```sql
 SELECT
     instance_type,
     count(*) AS jobs,
-    avg(duration_seconds) AS mean_duration
+    avg(duration_seconds) AS average_duration
 FROM analysis_history
 WHERE started_at >= DATE '2026-01-01'
 GROUP BY instance_type;
 ```
 
-A warehouse, lakehouse, analytical database, or query engine may serve this work.
+Both systems may support SQL.
 
-The simple distinction is:
+That does not mean they are designed for the same workload.
 
-```text
-OLTP -> run the current operation
-OLAP -> understand many operations
-```
-
-Some modern systems support both.
-
-The workload distinction remains useful.
-
-### SQL does not define the architecture
-
-Postgres and a cloud warehouse may both accept:
-
-```sql
-SELECT ...
-```
-
-But they may be optimized for different work.
-
-A transactional database is usually designed around:
-
-```text
-point lookups
-small updates
-row-oriented access
-application concurrency
-```
-
-An analytical system is usually designed around:
-
-```text
-large scans
-column-oriented access
-aggregation
-historical data
-analytical concurrency
-```
-
-SQL is a language.
-
-It is not the architecture.
-
-Choose the system from the workload.
-
----
-
-## 2. Warehouse, lake, and lakehouse
+SQL is a language, not an architecture.
 
 ### What is a data warehouse?
 
-A data warehouse is a managed analytical system that brings data from multiple sources into tables designed for reporting, exploration, and large-scale SQL analysis.
-
-A traditional flow looks like:
-
-```text
-application databases
-CRM
-billing system
-files
-    |
-    v
-ETL
-    |
-    v
-data warehouse
-    |
-    v
-reports and dashboards
-```
+A data warehouse is a managed analytical system where data is presented as queryable tables.
 
 A warehouse commonly provides:
 
-```text
-managed tables
-schemas
-SQL
-access control
-query optimization
-concurrent analytics
-reliable writes
-```
+- managed storage;
+- SQL execution;
+- table management;
+- query optimization;
+- concurrency;
+- access control;
+- backup and operational tooling.
 
-The defining idea is not one vendor.
+A warehouse is attractive when the main priorities are:
 
-It is:
+- business reporting;
+- managed analytical SQL;
+- predictable operations;
+- fewer components to integrate;
+- limited platform-engineering effort.
 
-```text
-A managed analytical system where curated data is queried as tables.
-```
+The main benefit is integration.
 
-A warehouse is useful when the organization wants:
+Storage, compute, table metadata, permissions, and query operations are usually delivered as one managed platform.
 
-```text
-predictable SQL analytics
-strong table management
-business reporting
-central governance
-limited infrastructure work
-```
-
-A warehouse may become expensive, restrictive, or awkward when the platform needs to:
-
-```text
-retain enormous raw datasets
-process non-tabular files directly
-use several independent compute engines
-support custom scientific workflows
-integrate deeply with machine-learning systems
-```
-
-Modern warehouses increasingly support semi-structured data and external tables, so this is not a hard boundary.
-
-It is a trade-off between:
-
-```text
-one integrated managed system
-```
-
-and:
-
-```text
-a more open collection of storage and compute layers
-```
+That can reduce architectural flexibility, but it also removes a large amount of operational work.
 
 ### What is a data lake?
 
-A data lake is a repository for storing large amounts of data in files, usually on scalable storage.
+A data lake is a repository of files on scalable storage.
 
-In the cloud, this often means:
+It may contain:
 
-```text
-S3
-GCS
-ADLS
-```
+- Parquet;
+- CSV;
+- JSON;
+- logs;
+- images;
+- model artifacts;
+- BAM and VCF files;
+- application exports.
 
-A lake may contain:
+The lake separates durable storage from one particular compute engine.
 
-```text
-CSV
-JSON
-Parquet
-images
-logs
-model artifacts
-genomic files
-application exports
-```
+Different tools may read the same underlying objects.
 
-The basic pattern is:
+This flexibility is useful when:
 
-```text
-many producers
-    |
-    v
-object storage
-    |
-    v
-many possible processing engines
-```
+- data must be retained cheaply;
+- several formats are involved;
+- multiple engines need access;
+- raw history should be preserved;
+- storage must scale independently from compute.
 
-The lake separates durable storage from a particular database engine.
+A data lake does not automatically provide:
 
-This can provide:
+- reliable tables;
+- a current schema;
+- safe concurrent updates;
+- quality checks;
+- ownership;
+- access policies;
+- a query engine.
 
-```text
-cheap scalable storage
-open file access
-support for many data types
-independent compute
-long-term retention
-```
-
-But object storage alone does not create a good data platform.
-
-A directory full of files may still lack:
-
-```text
-reliable table updates
-schema control
-discoverability
-ownership
-quality checks
-access policies
-transaction history
-```
-
-A lake becomes a swamp when nobody knows:
-
-```text
-what the files mean
-which version is current
-who owns them
-whether they are complete
-whether they may be deleted
-```
+A bucket full of unexplained files is not a healthy data platform.
 
 The problem is not the lake.
 
 The problem is unmanaged data.
 
-### Schema-on-write and schema-on-read
-
-Schema-on-write means data is validated against a defined structure before or while it is written:
-
-```text
-input
-    |
-    v
-validate and transform
-    |
-    v
-managed table
-```
-
-This usually gives consumers cleaner data.
-
-It may reject or delay unexpected input.
-
-Schema-on-read means data is stored first and interpreted later:
-
-```text
-raw files
-    |
-    v
-reader supplies schema
-    |
-    v
-query result
-```
-
-This provides flexibility.
-
-It can also move confusion downstream.
-
-The practical answer is often both:
-
-```text
-retain raw input when useful
-        +
-enforce schemas for published datasets
-```
-
-"Store anything" is not the same as "trust anything."
-
 ### What is a lakehouse?
 
-A lakehouse is an architectural pattern that provides warehouse-like table management over data stored in a lake.
+A lakehouse is an architectural pattern that adds warehouse-like table management to data stored in a lake.
 
-The simplified idea is:
-
-```text
-data lake storage
-        +
-reliable table metadata
-        +
-analytical engines
-        +
-governance
-        =
-lakehouse
-```
-
-A common stack may look like:
+A simplified lakehouse might use:
 
 ```text
 S3
-    -> storage
+    -> object storage
 
 Parquet
-    -> data file format
+    -> analytical data files
 
 Iceberg
-    -> table format
+    -> table metadata and snapshots
 
 catalog
-    -> table names and metadata pointers
+    -> stable table names and metadata locations
 
 Spark
     -> large transformations
 
 Trino
     -> interactive SQL
-
-Airflow
-    -> orchestration
 ```
 
 No single line is the lakehouse.
 
 The architecture is the combination.
 
-A lakehouse aims to provide:
+A lakehouse can be useful when an organization wants:
 
-```text
-atomic table updates
-schema evolution
-snapshots
-time travel
-concurrent readers and writers
-table discovery
-multiple compatible engines
-```
-
-It may be useful when the organization wants:
-
-```text
-open storage
-separate compute
-large analytical tables
-several processing engines
-warehouse-like reliability
-```
+- open storage;
+- independent compute engines;
+- large shared analytical tables;
+- stronger update and snapshot semantics;
+- fewer dependencies on one warehouse vendor.
 
 It is not automatically simpler than a warehouse.
 
-It introduces more independent layers.
+Each independent layer must be integrated, upgraded, secured, monitored, and owned.
 
-Each layer must be compatible, secured, monitored, and upgraded.
+### How S3, Parquet, Iceberg, and a catalog fit together
 
-### A lakehouse is not just Parquet on S3
+This is one of the most important distinctions in the modern data stack.
 
-This is a collection of files:
+#### S3 stores objects
 
-```text
-s3://company-data/events/*.parquet
-```
-
-It may be perfectly useful.
-
-It is not automatically a managed table.
-
-Questions remain:
+S3 and similar object stores keep durable objects addressed by keys:
 
 ```text
-Which files belong to the current table?
-What if a write fails halfway?
-How is a delete represented?
-Can two writers update it safely?
-What schema is current?
-Can an older version be queried?
+s3://company-data/analysis-events/day=2026-07-23/part-0001.parquet
 ```
 
-A table format addresses many of these questions.
+Object storage knows that an object exists.
 
-### File format versus table format
+It does not understand that several objects form one analytical table.
 
-A file format describes how values are stored inside one file.
+#### Parquet describes data inside a file
 
-Examples:
-
-```text
-CSV
-JSON
-Parquet
-ORC
-Avro
-```
-
-Parquet is a column-oriented file format for analytical workloads.
+Parquet is a column-oriented file format.
 
 It supports:
 
-```text
-column pruning
-compression
-statistics
-typed values
-efficient scans
-```
+- typed values;
+- compression;
+- column pruning;
+- row-group statistics;
+- efficient analytical scans.
 
-A Parquet file does not know the complete history of a table.
+Suppose a table has 100 columns but a query needs only four.
 
-It is one file.
+A Parquet reader may avoid reading the other 96 columns.
 
-A table format manages a collection of data files as a logical table.
+Parquet is not a database.
 
-Examples:
+It is a way to encode tabular data inside files.
 
-```text
-Apache Iceberg
-Delta Lake
-Apache Hudi
-```
-
-A table format adds metadata describing:
+The boundary is:
 
 ```text
-which files belong to the table
-the table schema
-partitions
-snapshots
-committed changes
-deletes
-the current metadata version
+S3
+    -> stores the object
+
+Parquet
+    -> defines the structure inside the object
 ```
 
-The relationship is often:
+#### Iceberg manages many files as one table
+
+A Parquet file does not know:
+
+- which other files belong to the same table;
+- which schema is current;
+- which files were removed;
+- whether a multi-file write completed;
+- which version readers should see.
+
+A table format such as Apache Iceberg manages a collection of files as one logical table.
+
+It may track:
+
+- schemas;
+- partitions;
+- snapshots;
+- data files;
+- delete files;
+- committed metadata versions.
+
+Conceptually:
 
 ```text
-table format metadata
-        |
-        +---- Parquet file 1
-        +---- Parquet file 2
-        +---- Parquet file 3
+Iceberg metadata
+    |
+    +---- Parquet file 1
+    +---- Parquet file 2
+    +---- Parquet file 3
 ```
 
-The table format does not replace Parquet.
+Iceberg does not replace Parquet.
 
-It organizes files into a reliable table.
+It organizes Parquet files into a more reliable table.
 
-### What does ACID mean here?
+#### A catalog helps engines find the table
 
-ACID stands for:
-
-```text
-atomicity
-consistency
-isolation
-durability
-```
-
-For an analytical table, the most visible benefit is often atomic publication.
-
-Suppose a job writes 200 new files.
-
-Without a transaction-like commit, readers may observe:
-
-```text
-37 files
-then 92 files
-then 181 files
-then a failed job
-```
-
-With a table-format commit, the intended behavior is closer to:
-
-```text
-readers see old snapshot
-        |
-        v
-commit succeeds
-        |
-        v
-readers see new snapshot
-```
-
-The new table version becomes visible as one committed change.
-
-This does not make object storage behave exactly like Postgres.
-
-It gives analytical tables stronger publication and metadata guarantees.
-
-### What is a catalog?
-
-A catalog helps engines find named tables and their current metadata.
+A catalog maps a stable table name to the current table metadata.
 
 Instead of querying:
 
 ```text
-s3://company-data/warehouse/project_events/
+s3://company-data/warehouse/analysis-events/
 ```
 
 a user may query:
 
 ```sql
 SELECT *
-FROM analytics.project_events;
+FROM analytics.analysis_events;
 ```
 
-The catalog resolves the name:
+The catalog resolves:
 
 ```text
-analytics.project_events
+analytics.analysis_events
         |
         v
-current table metadata
+current Iceberg metadata
         |
         v
-data files
+Parquet data files
 ```
 
 A catalog may manage:
 
-```text
-table names
-namespaces
-metadata locations
-schemas
-ownership
-access information
-```
-
-The important distinction is:
-
-```text
-catalog != storage
-catalog != query engine
-catalog != file format
-```
+- table names;
+- namespaces;
+- schemas;
+- metadata locations;
+- properties;
+- ownership fields.
 
 A broader data catalog may also provide:
 
-```text
-search
-descriptions
-owners
-tags
-lineage
-quality signals
-business terminology
-```
+- search;
+- descriptions;
+- tags;
+- lineage;
+- quality indicators;
+- business terminology.
 
-Ask what metadata the product actually owns.
+But a catalog is not automatically a policy engine.
 
-Do not assume every tool called a catalog performs governance.
+A catalog may label a column as sensitive.
 
----
+An enforcement point must still block, mask, or filter access.
 
-## 3. Processing: scale the machine before the architecture
-
-Distributed computing is expensive before it is fast.
-
-The moment a job moves from one machine to a cluster, it gains:
+### The compact distinction
 
 ```text
-network communication
-serialization
-remote scheduling
-worker startup
-distributed logs
-partial failures
-retries
-data movement
-more infrastructure
-more ways to be wrong
-```
-
-Sometimes that cost is necessary.
-
-Often it is not.
-
-A 500 GB dataset does not automatically require Spark.
-
-Thirty thousand files do not automatically require a distributed data engine.
-
-A Kubernetes cluster does not automatically make data processing better.
-
-An HPC cluster does not mean every analysis should use every node.
-
-The practical question is not:
-
-```text
-Which distributed framework should we use?
-```
-
-It is:
-
-```text
-What is the smallest system that can finish this job reliably,
-within the required time, at an acceptable cost?
-```
-
-That may be:
-
-```text
-DuckDB on one machine
-Polars on one machine
-a Slurm job array
-a Kubernetes Job
-Spark
-Dask
-Trino
-MPI
-```
-
-The correct architecture starts by identifying the workload shape.
-
-Not by choosing the cluster.
-
-### One machine can do a surprising amount
-
-A modern machine may have:
-
-```text
-32-128 CPU cores
-256 GB to several TB of memory
-fast local NVMe storage
-high sequential read throughput
-no network shuffle
-no distributed scheduler overhead
-```
-
-One large machine is often easier to:
-
-```text
-develop on
-debug
-benchmark
-secure
-observe
-reproduce
-operate
-```
-
-It also fails in one place.
-
-That sounds bad, but it may still be easier than a job that can fail independently across:
-
-```text
-one driver
-twenty workers
-three storage services
-two networks
-one scheduler
-one autoscaler
-```
-
-Before distributing a workload, ask:
-
-```text
-Have we used a columnar format?
-Are we reading only the required columns?
-Are filters being pushed down?
-Can the engine stream or spill to disk?
-Is local storage fast enough?
-Is the query plan reasonable?
-Are we creating millions of tiny files?
-Would a larger machine solve the problem more cheaply?
-```
-
-If these questions have not been answered, adding workers is premature.
-
-You may distribute an inefficient query and make it inefficient on more machines.
-
-### Larger than memory does not mean larger than one machine
-
-A dataset may be larger than RAM while still being processable on one machine.
-
-DuckDB can spill intermediate work to disk.
-
-Polars can execute supported lazy queries through its streaming engine.
-
-That gives us a useful middle ground:
-
-```text
-small in-memory job
-        |
-        v
-single-machine out-of-core job
-        |
-        v
-distributed job
-```
-
-Many teams skip the middle step.
-
-They move directly from:
-
-```text
-Pandas ran out of memory
-```
-
-to:
-
-```text
-We need Spark.
-```
-
-That is usually too large a jump.
-
-The real conclusion may only be:
-
-```text
-This particular in-memory execution model is no longer suitable.
-```
-
-Try an analytical engine designed to scan columnar data before building a cluster.
-
-### A single-node DuckDB example
-
-Assume the data is stored as partitioned Parquet:
-
-```text
-events/
-├── day=2026-06-01/
-├── day=2026-06-02/
-├── day=2026-06-03/
-└── ...
-```
-
-A useful aggregation may be:
-
-```sql
-COPY (
-    SELECT
-        project_id,
-        count(*) AS event_count,
-        count(DISTINCT user_id) AS active_users
-    FROM read_parquet(
-        'events/**/*.parquet',
-        hive_partitioning = true
-    )
-    WHERE day >= DATE '2026-06-01'
-      AND event_type = 'analysis_completed'
-    GROUP BY project_id
-)
-TO 'project_summary.parquet'
-(FORMAT PARQUET, COMPRESSION ZSTD);
-```
-
-This is one process.
-
-But it can use:
-
-```text
-multiple CPU cores
-column pruning
-predicate pushdown
-parallel scans
-disk spilling
-vectorized execution
-```
-
-Do not count machines.
-
-Measure whether the job finishes within the real requirement.
-
-If it finishes in forty minutes and runs once per day, a cluster that reduces it to twelve minutes may not be an improvement.
-
-### There is no universal data-size threshold
-
-People often ask:
-
-```text
-At what dataset size should we use Spark?
-```
-
-There is no honest fixed answer.
-
-One terabyte may be easy if the job:
-
-```text
-reads three columns
-filters out 99.9% of rows
-performs a simple aggregation
-uses well-partitioned Parquet
-runs on fast storage
-```
-
-One hundred gigabytes may be difficult if the job:
-
-```text
-joins two wide tables
-has severe key skew
-sorts globally
-creates a huge intermediate result
-uses millions of tiny files
-runs from slow network storage
-```
-
-The important quantities include:
-
-```text
-columns read
-rows retained
-join cardinality
-group cardinality
-intermediate size
-shuffle size
-partition skew
-storage throughput
-required completion time
-concurrent jobs
-failure-recovery cost
-```
-
-The workload decides.
-
-Not the raw file size.
-
----
-
-## 4. Match the engine to the workload shape
-
-Most data processing falls into a few broad shapes.
-
-```text
-1. One analytical operation
-2. Many independent tasks
-3. One coordinated distributed dataflow
-4. Interactive SQL across large or separate sources
-5. Tightly coupled numerical or scientific computation
-```
-
-These shapes should not use the same tool merely because all of them involve data or multiple computers.
-
-### Shape 1: one analytical operation
-
-Example:
-
-```text
-Read Parquet.
-Filter records.
-Join a moderate metadata table.
-Group by project.
-Write a summary.
-```
-
-Start with:
-
-```text
-DuckDB
-Polars
-a database
-a well-written native program
-```
-
-Use a machine with:
-
-```text
-enough CPU
-enough memory for useful caching
-fast local SSD or NVMe
-high-throughput access to the input
-```
-
-This is usually the best starting point for:
-
-```text
-ad hoc analysis
-daily summaries
-data validation
-moderate joins
-feature extraction
-file conversion
-report generation
-```
-
-Move beyond one machine only when measurement shows a real limit.
-
-### Shape 2: many independent tasks
-
-Example:
-
-```text
-sample_00001.bam -> collect metrics -> sample_00001.json
-sample_00002.bam -> collect metrics -> sample_00002.json
-sample_00003.bam -> collect metrics -> sample_00003.json
-```
-
-Each task has its own input and output.
-
-One task does not need records produced by another task.
-
-This is embarrassingly parallel work.
-
-Use:
-
-```text
-a process pool on one machine
-Slurm job arrays on HPC
-Kubernetes Indexed Jobs
-a cloud batch service
-a workflow engine
-```
-
-Do not use Spark merely to launch many command-line tools.
-
-Spark is a distributed data engine.
-
-It is not a universal replacement for a batch scheduler.
-
-For 30,000 independent samples, a Slurm array may already provide:
-
-```text
-resource allocation
-queueing
-concurrency limits
-per-task status
-logs
-cancellation
-accounting
-```
-
-There is no distributed join.
-
-There is no shuffle.
-
-There is no reason to start a Spark cluster.
-
-### Shape 3: one coordinated distributed dataflow
-
-Now consider:
-
-```text
-Read variant tables for 30,000 samples.
-Join them with phenotype metadata.
-Filter failed samples.
-Group carriers by ancestry.
-Aggregate case and control counts.
-Write cohort-level tables.
-```
-
-This is not just 30,000 independent commands.
-
-Records from different partitions must be brought together.
-
-The job may require:
-
-```text
-distributed scans
-partitioned joins
-group-by across workers
-shuffle
-task-level retries
-coordinated output
-```
-
-This is where Spark becomes a reasonable default.
-
-The key signal is not:
-
-```text
-many files
-```
-
-It is:
-
-```text
-one logical operation requires data to move and combine across workers
-```
-
-Spark provides:
-
-```text
-an execution graph
-stages and tasks
-partitioned data movement
-shuffle
-failed-task retries
-distributed writes
-```
-
-That is valuable when the alternative is building those mechanisms ourselves.
-
-Spark is useful because it removes custom distributed coordination.
-
-It is not useful merely because the dataset sounds impressive.
-
-### Shape 4: interactive distributed SQL
-
-Suppose analysts repeatedly query:
-
-```text
-object-storage tables
-a relational database
-a metadata catalog
-another analytical system
-```
-
-They want:
-
-```sql
-SELECT
-    ancestry,
-    count(DISTINCT sample_id)
-FROM lake.variants
-JOIN postgres.samples USING (sample_id)
-WHERE chromosome = 22
-GROUP BY ancestry;
-```
-
-This is different from a scheduled transformation pipeline.
-
-The primary requirement is:
-
-```text
-interactive SQL over large or heterogeneous sources
-```
-
-Trino is designed for this shape.
-
-A practical split is:
-
-```text
-Spark    -> build and transform large datasets
-Trino    -> query datasets interactively
-Postgres -> serve transactional or indexed application data
-```
-
-These tools may coexist.
-
-Do not replace a transactional database with Trino.
-
-Do not start a Spark application for every dashboard query.
-
-### Shape 5: tightly coupled numerical computation
-
-Some distributed work is not table manipulation.
-
-Examples:
-
-```text
-large numerical simulation
-fluid dynamics
-molecular dynamics
-distributed linear algebra
-domain decomposition
-low-latency collective communication
-```
-
-These workloads may require:
-
-```text
-MPI
-fast interconnects
-coordinated process placement
-CPU affinity
-whole-node allocation
-topology awareness
-```
-
-Spark is usually not the right abstraction.
-
-The data may be distributed, but the operation is not a DataFrame shuffle.
-
-This is where HPC scheduling and MPI remain natural.
-
-Do not force every cluster problem into rows and columns.
-
-### Where Dask fits
-
-Dask is useful when the workload is strongly Python-native.
-
-It provides distributed collections and task scheduling for:
-
-```text
-DataFrame-like operations
-NumPy-style arrays
-custom Python functions
-scientific Python libraries
-interactive analysis
-irregular task graphs
-```
-
-A rough distinction is:
-
-```text
-structured, repeated production ETL
-    -> Spark is often the stronger default
-
-Python-native scientific computation
-    -> Dask may fit more naturally
-```
-
-This is not a law.
-
-Both can manipulate tabular data.
-
-Both can run in cloud or HPC environments.
-
-Benchmark the real operation.
-
-Also consider the team.
-
-A technically elegant Dask implementation is not operationally optimal if nobody can diagnose its scheduler, workers, memory behavior, and task graph.
-
----
-
-## 5. Do not confuse the layers
-
-A maintainable platform separates:
-
-```text
-orchestration
-execution engine
-resource manager
-storage
-```
-
-They are related.
-
-They are not the same job.
-
-### Orchestration
-
-Orchestration answers:
-
-```text
-What runs first?
-What depends on what?
-What should retry?
-What is the timeout?
-Which output belongs to which run?
-What happens after validation?
-```
-
-Examples include:
-
-```text
-Airflow
-Argo Workflows
-Slurm dependencies
-cloud workflow services
-a simple Makefile for small pipelines
-```
-
-An orchestrator may submit a Spark job.
-
-That does not mean it should implement Spark's shuffle.
-
-### Execution engine
-
-The execution engine answers:
-
-```text
-How is one computation divided?
-Where do partitions move?
-How are failed tasks retried?
-How are joins and aggregations executed?
-```
-
-Examples:
-
-```text
-DuckDB
-Polars
-Spark
-Dask
-Trino
-MPI
-```
-
-The correct engine follows the workload shape.
-
-### Resource manager
-
-The resource manager answers:
-
-```text
-Where does the process run?
-How much CPU and memory does it receive?
-Which users may run it?
-How is capacity shared?
-```
-
-Examples:
-
-```text
-Slurm
-Kubernetes
-YARN
-cloud batch services
-managed platform schedulers
-```
-
-Spark can use different resource managers.
-
-Do not choose Spark because you have Kubernetes.
-
-Do not choose Kubernetes because you chose Spark.
-
-### Storage
-
-Storage answers:
-
-```text
-Where does durable input live?
-Where does durable output live?
-How do workers access it?
-Where does temporary shuffle live?
-How are datasets versioned?
-```
-
-Examples:
-
-```text
-object storage
-parallel filesystems
-local NVMe
-network filesystems
-databases
-```
-
-Bad storage design can defeat an excellent engine.
-
-In practice, storage layout often matters more than the scheduler.
-
----
-
-## 6. Ingestion, transformation, and orchestration
-
-A data pipeline usually contains three broad activities.
-
-### Ingestion
-
-Move data from a source into the analytical platform.
-
-Examples:
-
-```text
-copy database tables
-receive events
-upload files
-capture database changes
-call an API
-```
-
-### Transformation
-
-Convert data into a more useful form.
-
-Examples:
-
-```text
-cast types
-deduplicate
-join reference data
-calculate metrics
-apply business rules
-aggregate
-```
-
-### Serving
-
-Expose data to its consumer.
-
-Examples:
-
-```text
-dashboard table
-SQL view
-API database
-feature table
-Parquet export
-search index
-```
-
-These stages may use different systems.
-
-A pipeline does not need one tool to perform everything.
-
-### ETL versus ELT
-
-ETL means:
-
-```text
-Extract
-Transform
-Load
-```
-
-The data is transformed before it is loaded into the analytical destination:
-
-```text
-source
-    |
-    v
-transformation system
-    |
-    v
 warehouse
+    -> integrated managed analytical system
+
+data lake
+    -> files on scalable storage
+
+lakehouse
+    -> lake storage plus stronger table management
+
+S3
+    -> stores objects
+
+Parquet
+    -> represents analytical values inside files
+
+Iceberg
+    -> manages files as a table
+
+catalog
+    -> names and locates the table
 ```
 
-ELT means:
+That is the core storage map.
+
+---
+
+## How data moves and gets computed
+
+Once the storage layers are clear, the next question is how data enters the platform and how work is executed.
+
+### Ingestion, transformation, and serving
+
+Most data pipelines contain three broad activities.
+
+#### Ingestion
+
+Ingestion moves data from a source into the analytical platform.
+
+Examples:
+
+- export a database table;
+- capture database changes;
+- receive events;
+- upload files;
+- call an API;
+- copy logs.
+
+For the running example:
 
 ```text
-Extract
-Load
-Transform
+Postgres analyses table
+        |
+        v
+daily Parquet export
 ```
 
-Raw or lightly processed data is loaded first.
-
-Transformation then runs inside the analytical platform:
+or:
 
 ```text
-source
-    |
-    v
-warehouse or lakehouse
-    |
-    v
-SQL transformations
+Postgres changes
+        |
+        v
+CDC connector
+        |
+        v
+object storage
 ```
 
-ETL may be preferable when:
+#### Transformation
 
-```text
-sensitive fields must be removed before loading
-the destination cannot process the raw format
-strict validation is required at the boundary
-network transfer should be reduced
-```
+Transformation converts source data into a more useful form.
 
-ELT may be preferable when:
+Examples:
 
-```text
-raw history should be retained
-transformations change frequently
-the destination has strong compute
-several derived models use the same source
-```
+- cast types;
+- normalize timestamps;
+- remove duplicates;
+- join reference data;
+- apply business rules;
+- calculate cost;
+- aggregate jobs by day.
 
-Real systems often use both.
-
-Do not redesign a pipeline merely to make the acronym modern.
-
-### What is dbt?
-
-dbt is primarily a transformation and modelling tool.
-
-A typical model is SQL:
+For example:
 
 ```sql
 SELECT
-    project_id,
-    count(*) AS completed_analyses
-FROM {{ ref('stg_analysis_events') }}
-WHERE status = 'completed'
-GROUP BY project_id;
+    date_trunc('day', started_at) AS day,
+    application_id,
+    count(*) AS jobs,
+    count(*) FILTER (WHERE status = 'failed') AS failed_jobs,
+    avg(duration_seconds) AS average_duration,
+    sum(cost) AS total_cost
+FROM analysis_events
+GROUP BY 1, 2;
 ```
 
-dbt helps organize transformations through:
+#### Serving
 
-```text
-model dependencies
-SQL compilation
-testing
-documentation
-lineage
-incremental models
-deployment workflows
-```
+Serving exposes the result to a consumer.
 
-dbt usually does not replace:
+Examples:
 
-```text
-the warehouse
-the lake
-the query engine
-the ingestion system
-the general workflow scheduler
-```
+- dashboard table;
+- SQL view;
+- API database;
+- Parquet export;
+- search index.
 
-It tells an analytical engine what transformations to run.
-
-The engine still performs the computation.
+The ingestion tool, transformation engine, and serving system do not need to be the same product.
 
 ### Batch, streaming, and CDC
 
-Batch processing handles a bounded collection:
+Batch processing handles a bounded input:
 
 ```text
 read yesterday's records
@@ -1658,7 +626,7 @@ write the result
 stop
 ```
 
-Stream processing handles continuing input:
+Streaming handles a continuing input:
 
 ```text
 read events
@@ -1667,7 +635,7 @@ emit results
 continue
 ```
 
-Change data capture, or CDC, records source database changes:
+Change data capture, or CDC, records changes from a source database:
 
 ```text
 insert
@@ -1675,18 +643,9 @@ update
 delete
 ```
 
-CDC may replicate operational data into:
+CDC is a movement mechanism.
 
-```text
-a warehouse
-a lakehouse
-a search system
-another database
-```
-
-CDC is a data movement technique.
-
-It is not automatically a complete streaming architecture.
+It does not automatically mean that the entire downstream platform must be a real-time streaming system.
 
 For example:
 
@@ -1700,1174 +659,877 @@ CDC connector
 object storage
     |
     v
-hourly merge
+hourly batch merge
 ```
 
-This uses CDC as input but processes the destination in batches.
+The source mechanism and the processing model are separate decisions.
 
-The source mechanism and processing model are separate decisions.
+### ETL and ELT
 
-Streaming introduces its own concepts, including state, event time, watermarks, checkpoints, and replay. Those belong in a separate stream-processing discussion rather than being mixed into every batch architecture.
-
-### What is a DAG?
-
-DAG means directed acyclic graph.
-
-It is a graph of dependencies with no loop back to an earlier task.
+ETL means:
 
 ```text
-A -> B -> D
- \-> C -/
+Extract -> Transform -> Load
 ```
 
-Here:
+The data is transformed before reaching the analytical destination.
+
+ELT means:
 
 ```text
-B depends on A
-C depends on A
-D depends on B and C
+Extract -> Load -> Transform
 ```
 
-The DAG describes execution order.
+Raw or lightly processed data is loaded first, then transformed inside the analytical platform.
 
-It does not automatically describe the internal work of a distributed engine.
+ETL can make sense when:
 
-A Spark job may have its own internal execution graph while also appearing as one task in an Airflow DAG.
+- sensitive fields must be removed before loading;
+- strict validation is required at the boundary;
+- the destination cannot read the source format;
+- network transfer should be reduced.
 
-Different layers can have different DAGs.
+ELT can make sense when:
+
+- raw history should be preserved;
+- transformations change frequently;
+- several downstream models share the same source;
+- the analytical platform has strong compute.
+
+Real systems often use both.
+
+The acronym should follow the requirement, not the other way around.
+
+### Choose the execution model by workload shape
+
+The right engine depends on what the work must do.
+
+#### One machine: DuckDB or Polars
+
+Start with one machine when the workload is a single analytical operation such as:
+
+```text
+read Parquet
+filter records
+join a moderate reference table
+group by project
+write a summary
+```
+
+DuckDB and Polars can process substantial analytical workloads on one machine.
+
+They may support:
+
+- column pruning;
+- filter pushdown;
+- streaming execution;
+- disk spill;
+- parallel processing.
+
+A dataset larger than memory does not automatically require a cluster.
+
+The important question is whether the workload can complete on one machine within the required time and cost.
+
+#### Many independent tasks: use a batch scheduler
+
+Suppose the workload looks like:
+
+```text
+sample_00001.bam -> collect metrics -> sample_00001.json
+sample_00002.bam -> collect metrics -> sample_00002.json
+sample_00003.bam -> collect metrics -> sample_00003.json
+```
+
+Each task owns its input and output.
+
+One task does not need data from another task.
+
+Use:
+
+- a process pool;
+- Slurm arrays;
+- cloud batch;
+- Kubernetes Jobs;
+- a workflow engine.
+
+Do not use Spark merely to launch many unrelated command-line tools.
+
+Spark is a distributed data engine.
+
+It is not a universal batch scheduler.
+
+#### Coordinated distributed transformation: Spark
+
+Spark becomes useful when one logical operation requires coordinated work across machines.
+
+Examples:
+
+- distributed joins;
+- group-by across partitions;
+- large shuffles;
+- coordinated writes;
+- task-level retries.
+
+The important signal is not:
+
+```text
+many files
+```
+
+It is:
+
+```text
+one operation requires data to move and combine across workers
+```
+
+That is the workload shape Spark was designed to handle.
+
+#### Interactive distributed SQL: Trino
+
+Trino is useful when many users need interactive SQL over distributed data sources.
+
+It may query:
+
+- object-storage tables;
+- relational databases;
+- metadata catalogs;
+- other analytical systems.
+
+A practical division is:
+
+```text
+Spark
+    -> build and transform large datasets
+
+Trino
+    -> query those datasets interactively
+
+Postgres
+    -> run transactional application workloads
+```
+
+These systems can coexist because they own different responsibilities.
+
+### Scale the machine before the architecture
+
+Before introducing distributed processing, ask:
+
+- Are we using a columnar format?
+- Are we reading only required columns?
+- Are filters pushed down?
+- Can the engine stream or spill?
+- Is the query plan reasonable?
+- Is local storage fast enough?
+- Are there millions of tiny files?
+- Would a larger machine solve the problem more cheaply?
+
+A distributed system adds:
+
+- network communication;
+- serialization;
+- worker startup;
+- remote scheduling;
+- partial failures;
+- retries;
+- distributed logs;
+- more operational dependencies.
+
+Sometimes that cost is necessary.
+
+Often it is not.
 
 ---
 
-## 7. Storage layout before cluster size
+## Coordination, security, and monitoring
 
-A good analytical layout commonly uses:
+A working data path still needs coordination, access control, and operational visibility.
 
-```text
-Parquet
-explicit schemas
-useful partitioning
-moderately sized files
-compression
-versioned output paths
-```
+These responsibilities should not be hidden inside one vague word such as governance.
 
-A poor layout commonly uses:
+### Orchestration is not execution
 
-```text
-CSV as the main analytical store
-millions of tiny files
-one directory with unbounded objects
-partitions on high-cardinality values
-mixed schemas
-mutable output paths
-```
+An orchestrator answers:
 
-The same cluster can feel ten times slower because the data layout is wrong.
+- What runs first?
+- What depends on what?
+- When should it run?
+- What happens after failure?
+- How are retries and backfills handled?
 
-Do not solve a file-layout problem with more workers.
+Examples include Airflow, Dagster, Prefect, and Argo Workflows.
 
-### Why Parquet is usually the default
-
-Parquet stores data by column.
-
-That lets analytical engines avoid reading columns the query does not use.
-
-It also supports metadata that enables pruning and efficient scans.
-
-CSV remains useful for:
+For the running example:
 
 ```text
-small exports
-human inspection
-interchange with limited systems
+export_postgres
+        |
+        v
+validate_raw
+        |
+        v
+build_daily_metrics
+        |
+        v
+run_quality_checks
+        |
+        v
+publish_dashboard
 ```
 
-It is usually a poor durable analytical format because it has:
+Airflow coordinates those steps.
+
+It does not replace the engine that performs the transformation.
+
+One Airflow task may launch DuckDB, Spark, dbt, or another program.
+
+Similarly:
 
 ```text
-no embedded schema
-expensive parsing
-weak type guarantees
-no native column pruning
-larger representation
+Airflow
+    -> coordinates work
+
+Spark
+    -> executes distributed transformations
+
+Kubernetes, YARN, or Slurm
+    -> allocates resources
+
+S3
+    -> stores durable data
 ```
 
-Convert early when repeated analysis is expected.
+Keeping those boundaries clear prevents category mistakes.
 
-### Partition for pruning, not decoration
+### Security is a request flow
 
-A layout such as:
+Suppose Alice runs:
+
+```sql
+SELECT *
+FROM finance.employee_salary;
+```
+
+Several responsibilities are involved.
+
+#### Authentication
+
+Authentication answers:
 
 ```text
-events/day=2026-07-01/
-events/day=2026-07-02/
-events/day=2026-07-03/
+Who is the requester?
 ```
 
-is useful when queries frequently filter by day.
+Examples include:
 
-The engine may skip entire directories.
+- OIDC;
+- SAML;
+- Kerberos;
+- LDAP-backed login;
+- cloud identity;
+- service credentials.
 
-A layout such as:
+Authentication establishes that the requester is Alice.
+
+It does not automatically decide what Alice may access.
+
+#### Authorization
+
+Authorization answers:
 
 ```text
-events/user_id=000000001/
-events/user_id=000000002/
-...
-```
-
-may create millions of partitions.
-
-That can make file listing and planning expensive.
-
-Partition by columns that:
-
-```text
-are commonly filtered
-have manageable cardinality
-produce reasonably sized groups
-remain stable
-```
-
-Do not partition every column that appears in a `WHERE` clause.
-
-### Tiny files are a distributed tax
-
-These are different operational problems:
-
-```text
-10 TB in 100 files
-```
-
-and:
-
-```text
-10 TB in 10 million files
-```
-
-With millions of tiny files, the engine spends significant work on:
-
-```text
-listing
-opening
-metadata
-task creation
-scheduling
-small reads
-output bookkeeping
-```
-
-The driver or coordinator may become the bottleneck before workers process meaningful data.
-
-Compact tiny outputs into larger analytical files.
-
-Do this intentionally.
-
-Do not wait until every downstream query pays the tax.
-
-### Do not force one output file
-
-The opposite mistake is:
-
-```python
-result.coalesce(1).write.parquet(output_path)
-```
-
-A single file sounds convenient.
-
-For a large result, it removes parallel output.
-
-One task becomes responsible for the final write.
-
-Use multiple reasonably sized files for analytical data.
-
-Create one CSV only after the result has been reduced to something genuinely small.
-
-### When a table format becomes useful
-
-Plain partitioned Parquet is often enough.
-
-A table format becomes useful when the platform needs:
-
-```text
-snapshots
-schema evolution
-partition evolution
-concurrent writers
-atomic publication
-time travel
-incremental updates
-```
-
-Do not add a table format only because the dataset is large.
-
-Add it when file directories are no longer a sufficient transaction and metadata model.
-
-This is another layer to operate.
-
-It should solve a real problem.
-
----
-
-## 8. Performance, skew, and cost
-
-Input size alone is not a resource plan.
-
-A common mistake is:
-
-```text
-The input is 4 TB.
-We need 4 TB of aggregate worker memory.
-```
-
-That may be too much.
-
-It may also be far too little.
-
-The difficult part may be:
-
-```text
-one side of a join
-a hash table
-a sort
-a skewed group
-a broadcast
-shuffle buffers
-Python workers
-native allocations
-```
-
-Estimate and measure:
-
-```text
-bytes read
-bytes retained after filters
-largest join side
-intermediate rows
-shuffle bytes
-peak memory per task
-spill volume
-task duration distribution
-```
-
-Then choose:
-
-```text
-partition count
-worker memory
-worker cores
-number of workers
-local disk
-```
-
-### More cores per worker are not always better
-
-Suppose one worker has:
-
-```text
-32 cores
-64 GB memory
-```
-
-If it runs 32 memory-heavy tasks concurrently, each task has little memory headroom.
-
-A configuration with fewer cores per worker may be more stable.
-
-The balance depends on:
-
-```text
-memory per task
-I/O wait
-serialization cost
-Python process overhead
-garbage collection
-data skew
-```
-
-Watch actual task behavior.
-
-Do not maximize every numeric setting.
-
-### Data skew defeats simple arithmetic
-
-Imagine grouping by `project_id`.
-
-Most projects have:
-
-```text
-10,000 records
-```
-
-One project has:
-
-```text
-2 billion records
-```
-
-Hash partitioning may send the hot key to one task.
-
-The cluster then looks like:
-
-```text
-999 tasks finished
-1 task running for hours
-one worker using most of its memory
-```
-
-Adding more workers does not automatically split one key.
-
-Possible responses include:
-
-```text
-pre-aggregation
-salting hot keys
-separating pathological values
-better partitioning
-adaptive execution
-changing the algorithm
-```
-
-A distributed system can still have a single hot spot.
-
-### Benchmark representative work
-
-Do not benchmark only:
-
-```text
-ten rows
-```
-
-That measures startup.
-
-Do not begin with:
-
-```text
-the entire production dataset
-```
-
-That makes every mistake expensive.
-
-Build a representative slice containing:
-
-```text
-real schemas
-real file sizes
-real key distributions
-real skew
-real join cardinality
-real compression
-```
-
-Measure:
-
-```text
-wall time
-CPU time
-peak memory
-bytes read
-bytes written
-spill
-shuffle
-task count
-failed tasks
-output file count
-cost
-```
-
-Then compare:
-
-```text
-one machine
-larger one machine
-small distributed cluster
-larger distributed cluster
-```
-
-The result may surprise you.
-
-### Performance is not only wall time
-
-A cluster may finish faster while consuming more total resources.
-
-Example:
-
-```text
-one machine:
-4 hours x 32 cores = 128 core-hours
-
-eight machines:
-1 hour x 32 cores x 8 = 256 core-hours
-```
-
-The cluster halves wall time and doubles CPU consumption.
-
-That may be correct if the deadline matters.
-
-It may be wasteful if the job runs overnight with no urgency.
-
-Optimize for the real objective:
-
-```text
-deadline
-cost
-throughput
-latency
-operator time
-reliability
-```
-
-Do not optimize only for an attractive runtime screenshot.
-
-### Concurrency is a separate reason to scale
-
-A single machine may process one job well.
-
-The platform may still need multiple machines because:
-
-```text
-fifty users submit jobs concurrently
-several daily pipelines overlap
-interactive queries coexist with batch work
-one failure must not block every workload
-```
-
-Distinguish:
-
-```text
-one job needs many machines
-```
-
-from:
-
-```text
-the service needs many machines to run many jobs
-```
-
-The second case may be solved by scheduling multiple single-node jobs rather than distributing each job internally.
-
----
-
-## 9. Organizing and governing the data
-
-### Bronze, silver, and gold
-
-The medallion pattern organizes data by refinement.
-
-A common interpretation is:
-
-```text
-bronze -> raw or minimally changed data
-silver -> validated, normalized, deduplicated data
-gold   -> business-ready or consumption-ready data
+What may Alice do?
 ```
 
 For example:
 
 ```text
-bronze.analysis_events
-    raw application events
+Alice may:
+    SELECT job status
+    SELECT application name
+    SELECT aggregated cost
 
-silver.analysis_events
-    parsed timestamps
-    valid identifiers
-    duplicates removed
-
-gold.daily_project_activity
-    one row per project and day
+Alice may not:
+    SELECT user email
+    SELECT individual billing records
+    UPDATE analytical tables
 ```
 
-The names are optional.
+Authorization may apply to:
 
-The important idea is:
+- catalogs;
+- schemas;
+- tables;
+- columns;
+- rows;
+- topics;
+- object paths;
+- administrative actions.
 
-```text
-preserve a recoverable input
-publish a trusted normalized layer
-build consumer-specific outputs
-```
+#### Enforcement
 
-Not every dataset needs exactly three layers.
+A policy matters only when a component enforces it.
 
-A tiny pipeline may need only:
+The enforcement point may be:
 
-```text
-raw
-curated
-```
+- the database;
+- the query engine;
+- the object store;
+- the message broker;
+- the API gateway;
+- the application.
 
-Do not create empty copies merely to satisfy bronze, silver, and gold.
+It may:
 
-Layers should represent meaningful contracts.
+- allow the request;
+- deny the request;
+- mask a column;
+- filter rows;
+- restrict an operation.
 
-### Raw does not mean lawless
+#### Audit
 
-A raw layer may preserve source values.
+Audit records answer:
 
-It should still have operational rules:
+- Who attempted the action?
+- Which resource was involved?
+- Was access allowed or denied?
+- Which policy produced the decision?
+- When did it happen?
 
-```text
-immutable objects
-ingestion timestamp
-source identifier
-schema version
-checksum
-retention policy
-access restrictions
-```
+An audit record is not the same as a normal application error log.
 
-Without those controls, "raw" may mean:
+### Where Apache Ranger fits
 
-```text
-unknown files placed somewhere
-```
+Apache Ranger is one example of a centralized policy and auditing layer for supported data services.
 
-That is not recoverability.
-
-That is archaeology.
-
-### What is a data mart?
-
-A data mart is a focused analytical dataset for a department, domain, or use case.
-
-Examples:
+Conceptually:
 
 ```text
-finance mart
-support mart
-marketing mart
-clinical operations mart
-```
-
-A mart can live in a:
-
-```text
-warehouse
-lakehouse
-database
-```
-
-It describes purpose and scope more than storage technology.
-
-### Facts, dimensions, and semantic layers
-
-A fact table records events or measurements:
-
-```text
-fact_analysis_run
-
-analysis_id
-project_id
-user_id
-instance_type_id
-started_at
-duration_seconds
-cost
-status
-```
-
-A dimension describes an entity:
-
-```text
-dim_instance_type
-
-instance_type_id
-provider
-family
-cpu_count
-memory_gib
-storage_type
-```
-
-A semantic layer defines shared business meaning above raw tables:
-
-```text
-active user
-completed analysis
-monthly revenue
-failed job
-customer
-```
-
-Without shared definitions, five dashboards may calculate the same metric differently.
-
-The goal is:
-
-```text
-one agreed definition
-instead of
-twenty unrelated SQL fragments
-```
-
-### Metadata, lineage, governance, and quality
-
-Metadata is data about data:
-
-```text
-table name
-columns
-types
-owner
-description
-updated time
-storage location
-```
-
-Lineage describes where data came from and what depends on it:
-
-```text
-source.events
+identity
     |
     v
-silver.events
+request to Trino, Hive, Kafka, or another service
     |
     v
-gold.daily_activity
+Ranger-integrated enforcement point
+    |
+    +---- allow
+    +---- deny
+    +---- row filter
+    +---- column mask
     |
     v
-dashboard
+security audit event
 ```
 
-Governance defines:
+A useful mental model is:
 
 ```text
-who may access the data
-how long it is retained
-where it may be stored
-who owns it
-how sensitive fields are handled
+Ranger Admin
+    -> policy control plane
+
+Ranger plugin or integration
+    -> enforcement point
+
+Ranger audit
+    -> security decision record
 ```
 
-Data quality checks whether the data meets defined expectations:
+Ranger is not:
+
+- the identity provider;
+- object storage;
+- a query engine;
+- a table format;
+- a general metadata catalog;
+- a monitoring platform.
+
+Many platforms use native warehouse permissions, cloud IAM, managed governance services, or engine-specific controls instead.
+
+Ranger is an example of the layer, not a universal requirement.
+
+### Governance is not enforcement
+
+A catalog may label a field as:
 
 ```text
-IDs are unique
-required values are present
-timestamps are valid
-counts are within expected ranges
-references exist
-freshness is acceptable
+classification: personal_data
 ```
 
-Buying a catalog does not create governance.
-
-Drawing lineage does not create quality.
-
-Each requires ownership and operational action.
-
-### Data products and data mesh
-
-A data product is an analytical dataset or service treated as a supported product for consumers.
-
-It should have:
+A policy document may state:
 
 ```text
-clear purpose
-known owner
-documented schema
-quality expectations
-access method
-change process
-consumer feedback
+Only support managers may access personal data.
 ```
 
-Calling every table a data product does not improve it.
+Neither statement alone stops a query.
 
-The idea matters when a team accepts responsibility for usability and reliability.
+Governance becomes operational when:
 
-Data mesh is mainly an organizational approach built around:
+1. identity is established;
+2. policy is evaluated;
+3. the request is enforced;
+4. the decision is audited;
+5. someone owns the policy.
+
+The useful systems question is:
+
+> Where is this rule actually enforced?
+
+### Monitoring is a cross-cutting plane
+
+Monitoring does not sit at the end of the pipeline.
+
+Every component must expose signals.
 
 ```text
-domain-oriented data ownership
-data as a product
-self-service platform capabilities
-federated governance
+source
+  -> ingestion
+  -> storage
+  -> processing
+  -> serving
+  -> consumer
+       ^
+       |
+metrics, logs, events, traces, checks, and alerts
+from every layer
 ```
 
-It is not:
+A practical distinction is:
 
 ```text
-a storage engine
-a table format
-a vendor product
-a reason to decentralize without standards
+Monitoring
+    -> Are known things behaving as expected?
+
+Observability
+    -> Do we have enough evidence to investigate
+       unexpected behaviour?
 ```
 
-It addresses organizational scale.
+Monitoring may detect that a daily report is late.
 
-A small company with three data engineers may not need it.
+Observability helps explain whether the delay came from ingestion lag, a slow transformation, a catalog outage, or an output commit failure.
 
-Do not solve a technical storage problem with an organizational slogan.
+### Monitor more than infrastructure
 
-Data fabric is an even broader integration term.
+Traditional infrastructure monitoring focuses on:
 
-Its definition varies significantly between vendors.
+- CPU;
+- memory;
+- disk;
+- network;
+- process availability.
 
-When someone proposes one, ask:
+A data platform needs those signals, but it also needs:
 
 ```text
-Which systems are connected?
-What metadata is shared?
-How is access enforced?
-What is automated?
-Which components are new?
+service health
+pipeline progress
+data freshness
+data validity
+consumer outcome
 ```
 
-A name is not an implementation.
+For the running example:
+
+```text
+Infrastructure health
+    -> Are the workers and storage systems healthy?
+
+Service health
+    -> Are Airflow, Spark, Trino, and the catalog functioning?
+
+Pipeline health
+    -> Did the workflow start, progress, and complete?
+
+Data health
+    -> Is the output fresh, complete, and valid?
+
+Consumer outcome
+    -> Was the dashboard ready by 06:00?
+```
+
+These layers are not interchangeable.
+
+A pipeline can be technically successful and still produce unusable data:
+
+```text
+Airflow task: succeeded
+Spark job: succeeded
+output table: created
+row count: 0
+dashboard: wrong
+```
+
+That is why process monitoring does not replace data-quality checks.
+
+### Progress is a first-class signal
+
+A process may be alive but stuck.
+
+For example:
+
+```text
+process exists             yes
+CPU usage                   2%
+memory usage                stable
+errors                      none
+records processed           unchanged for 45 minutes
+latest output partition     six hours old
+```
+
+Useful progress indicators include:
+
+- records processed;
+- bytes processed;
+- latest source offset;
+- latest event timestamp;
+- current stage;
+- completed tasks versus total tasks;
+- latest committed partition;
+- last successful checkpoint.
+
+For data pipelines, progress and freshness are often more important than raw host utilization.
+
+### Alert on outcomes that require action
+
+A useful rule is:
+
+> Alert when someone needs to act.
+
+Good alerts include:
+
+- The 06:00 report will miss its deadline.
+- The ingestion backlog exceeds the recovery window.
+- The latest published partition is too old.
+- Automated retries are exhausted.
+- The output row count is far below normal.
+- Storage will fill before the team can respond.
+
+CPU spikes, individual task retries, and temporary latency increases may still be useful diagnostic metrics.
+
+They are not always paging conditions.
+
+The strongest operational path is:
+
+```text
+consumer outcome
+    -> pipeline
+        -> task
+            -> service
+                -> infrastructure
+```
+
+Do not force operators to inspect CPU graphs to discover that a business report is missing.
 
 ---
 
-## 10. Practical cloud and HPC patterns
+## When the stack should grow
 
-### Cloud
+A modern data platform should grow by encountering real limits, not by copying a reference architecture.
 
-A strong default is:
+### Stage 1: query the operational database
+
+The smallest system may be:
 
 ```text
-object storage
-        +
-Parquet
-        +
-DuckDB or Polars first
-        +
-cloud batch for independent tasks
-        +
-managed Spark for genuine distributed transformations
-        +
-Trino when interactive distributed SQL is required
+Postgres
+    |
+    v
+report
 ```
 
-Use Kubernetes when it is already a supported platform and the workload benefits from sharing that environment.
+This is acceptable when:
 
-Do not build Kubernetes specifically to host a handful of Spark jobs.
+- data volume is small;
+- analytical queries are infrequent;
+- application performance is unaffected;
+- the query is easy to maintain.
 
-Keep durable data outside temporary compute.
+Do not create a lakehouse merely because the report is analytical.
 
-Keep shuffle near the workers.
+### Stage 2: separate historical analysis
 
-### HPC
-
-A strong default is:
+A limitation appears:
 
 ```text
-parallel filesystem
-        +
-large single-node jobs for moderate analytics
-        +
-Slurm arrays for independent tasks
-        +
-temporary Spark or Dask clusters for distributed dataflow
-        +
-MPI for tightly coupled numerical work
+Large scans compete with application traffic.
 ```
 
-Let Slurm remain the resource manager.
-
-Do not introduce another permanent scheduler without a clear need.
-
-Use:
+The design becomes:
 
 ```text
-shared storage -> durable input and output
-local scratch  -> shuffle, spill, and temporary work
+Postgres
+    |
+    | nightly export
+    v
+Parquet on S3
+    |
+    v
+DuckDB
+    |
+    v
+report
 ```
 
-Sending all temporary data through a shared filesystem can create a storage bottleneck that looks like a compute problem.
+Now the analytical workload has independent storage and compute.
 
-### A bioinformatics example
+### Stage 3: add stronger table management
 
-Consider 30,000 samples.
-
-A reasonable design is:
+Another limitation appears:
 
 ```text
-Per-sample alignment and variant calling
-    -> Slurm arrays, cloud batch, or workflow tasks
+Several jobs update the same dataset.
 
-Per-sample QC outputs
-    -> durable JSON or Parquet
+Consumers need one consistent current version.
 
-QC consolidation
-    -> DuckDB or Polars on one machine first
-
-Large cohort-wide joins and aggregations
-    -> Spark only if the single-node path is insufficient
-
-Interactive cohort queries
-    -> Trino or a database, depending on the access pattern
+Schema and partition changes are difficult to manage.
 ```
 
-This is not architectural inconsistency.
-
-It is matching each stage to its workload shape.
-
-Do not invoke Spark because the original BAM collection was large.
-
-The relevant data for the QC summary may be a table with only 30,000 rows.
-
-Architecture follows the current operation.
-
-Not the largest file somewhere in the workflow.
-
----
-
-## 11. Reliability and operations
-
-### Failure recovery changes the design
-
-A distributed job should assume partial failure.
-
-Workers may disappear because of:
+The design becomes:
 
 ```text
-hardware failure
-spot interruption
-node eviction
-out-of-memory kills
-network loss
-disk pressure
-process crashes
-```
-
-The engine may retry tasks.
-
-That is useful.
-
-It does not make every failure transient.
-
-Retries will not repair:
-
-```text
-bad input
-wrong schema
-invalid credentials
-deterministic code bugs
-output permission errors
-permanently undersized workers
-corrupt dependencies
-```
-
-Bound retries.
-
-Surface deterministic failures quickly.
-
-Do not spend six hours proving the same configuration is wrong twenty times.
-
-### Make outputs idempotent
-
-A retry should not silently duplicate or corrupt output.
-
-Prefer:
-
-```text
-run-specific output paths
-staging before publication
-manifests
-atomic or transactional promotion
-validation before replacing current data
-```
-
-Example:
-
-```text
-derived/staging/run-20260703-001/
-derived/manifests/run-20260703-001.json
-derived/published/current
-```
-
-The flow becomes:
-
-```text
-compute
-validate
-publish
-retain previous version
-```
-
-This is safer than writing directly over the last known-good result.
-
-### Preserve evidence before cleanup
-
-When a job fails, the natural response is:
-
-```text
-change something
-delete the failed resources
-run it again
-```
-
-That may destroy the evidence required to understand the incident.
-
-Capture:
-
-```text
-driver or scheduler logs
-worker failure reasons
-resource configuration
-input version
-output path
-application version
-container image digest
-node names
-start and end timestamps
-retry history
-storage errors
-scheduler events
-```
-
-This supports:
-
-```text
-debugging
-incident review
-audit requirements
-cost analysis
-customer communication
-reproducibility
-```
-
-A successful retry does not explain the original failure.
-
-Collect evidence while it still exists.
-
----
-
-## 12. Common category mistakes
-
-### Comparing Parquet with Iceberg
-
-Incorrect:
-
-```text
-Should we use Parquet or Iceberg?
-```
-
-Better:
-
-```text
-Should the Iceberg table store data in Parquet?
-Do plain Parquet directories already meet the requirement?
-```
-
-### Comparing S3 with a warehouse
-
-Incorrect:
-
-```text
-S3 versus warehouse
-```
-
-Better:
-
-```text
-Object storage plus which metadata and compute layers
-versus a managed analytical system?
-```
-
-### Comparing Airflow with Spark
-
-Incorrect:
-
-```text
-Should Airflow or Spark run the pipeline?
-```
-
-Better:
-
-```text
-Should Airflow coordinate a Spark job?
-```
-
-### Comparing Kafka with Flink
-
-Incorrect:
-
-```text
-Kafka versus Flink
-```
-
-Better:
-
-```text
-Do we need a durable event log?
-Do we need stateful processing over that log?
-```
-
-### Calling every object-storage platform a lakehouse
-
-A lakehouse needs more than a bucket.
-
-Ask where the reliable table abstraction comes from.
-
-### Calling every curated table a data product
-
-A product needs ownership, documentation, quality, and consumers.
-
-### Installing the whole stack at once
-
-This is not a requirement:
-
-```text
-Kafka
-Spark
-Flink
-Trino
-Airflow
-Iceberg
-Kubernetes
-dbt
+S3
+    |
+Parquet files
+    |
+Iceberg table
+    |
 catalog
 ```
 
-Each layer should enter because a simpler design reached a measured limit.
+This is where a table format and catalog become useful.
 
-Not because the component appeared in a reference architecture.
+Not because the data is fashionable.
+
+Because directories of files no longer provide a sufficient table and commit model.
+
+### Stage 4: add distributed computation
+
+Another limitation appears:
+
+```text
+A representative transformation cannot meet its deadline
+on one machine, even after improving the data layout and query plan.
+```
+
+Now Spark may be justified.
+
+The important evidence is:
+
+- one logical operation needs coordinated work;
+- data must move across workers;
+- one machine cannot meet the requirement;
+- the additional operational cost is acceptable.
+
+### Stage 5: add interactive distributed SQL
+
+Another requirement appears:
+
+```text
+Many analysts need interactive SQL across shared tables and sources.
+```
+
+Now Trino or a warehouse may be justified.
+
+This is a serving and query-concurrency requirement, not merely a transformation requirement.
+
+### Stage 6: add centralized policy controls
+
+Another requirement appears:
+
+```text
+Different teams need different table, column, and row access.
+
+Policies must be applied consistently and audited.
+```
+
+Native engine permissions may be enough at first.
+
+A centralized policy system such as Ranger becomes useful when:
+
+- policies span several integrated services;
+- masking or row filtering is required;
+- audit needs are stronger;
+- centralized policy ownership reduces operational inconsistency.
+
+### Stage 7: add outcome-oriented monitoring
+
+Another failure appears:
+
+```text
+The workflow is running, but nobody notices that the report is six hours late.
+```
+
+Now the platform needs:
+
+- freshness metrics;
+- progress metrics;
+- outcome dashboards;
+- actionable alerts;
+- named owners;
+- runbooks.
+
+This is not merely “install Prometheus.”
+
+The design must first decide what success means.
+
+For example:
+
+```text
+SLI
+    -> percentage of daily reports available by 06:00
+
+SLO
+    -> 99% per month
+
+alert
+    -> projected completion is later than 06:00
+
+owner
+    -> data-platform on-call
+```
+
+The architecture should become more complex only when each new layer solves a real operating problem.
 
 ---
 
-## 13. A compact tool guide
+## The final responsibility map
 
-| Workload or responsibility | Start with |
-|---|---|
-| Application transactions | Postgres, MySQL, or another OLTP database |
-| Managed analytical SQL | Data warehouse or analytical database |
-| Open file-based analytical storage | Object storage plus Parquet |
-| Reliable shared tables on object storage | Iceberg, Delta Lake, or Hudi |
-| Moderate analytical work | DuckDB or Polars |
-| Independent files or samples | Process pool, Slurm array, cloud batch, or Kubernetes Job |
-| Large joins and aggregations | Spark |
-| Python-native distributed science | Dask |
-| Interactive distributed SQL | Trino |
-| Tightly coupled numerical computation | MPI under an HPC scheduler |
-| SQL transformation models | dbt |
-| Workflow coordination | Airflow or another orchestrator |
-| Source database change capture | CDC connector |
-| Shared metric definitions | Semantic layer |
-| Domain-owned supported datasets | Data products |
-
-The table is a starting point.
-
-The workload remains the decision.
-
----
-
-## 14. A practical decision tree
+The modern data stack becomes easier to understand when every term is reduced to the responsibility it owns.
 
 ```text
-Is this application state or analytical data?
-|
-+-- Application state
-|   -> Start with an OLTP database.
-|
-+-- Analytical data
-    |
-    +-- Do we want managed SQL with few moving parts?
-    |   -> Consider a warehouse or analytical database.
-    |
-    +-- Do we need open files or independent compute?
-        -> Consider object storage and Parquet.
-            |
-            +-- Are plain versioned files enough?
-            |   -> Keep the system simple.
-            |
-            +-- Do we need snapshots, concurrent writes,
-                schema evolution, deletes, or time travel?
-                -> Add a table format and catalog.
+operational database
+    -> runs the current application state
+
+warehouse
+    -> provides an integrated analytical system
+
+data lake
+    -> stores open files on scalable storage
+
+lakehouse
+    -> adds stronger table management to lake storage
+
+object storage
+    -> stores durable objects
+
+Parquet
+    -> represents analytical data inside files
+
+Iceberg, Delta Lake, or Hudi
+    -> manage files as reliable tables
+
+catalog
+    -> names and locates tables
+
+ingestion
+    -> moves source data into the platform
+
+DuckDB or Polars
+    -> execute analytical work on one machine
+
+batch scheduler
+    -> runs many independent jobs
+
+Spark
+    -> executes coordinated distributed transformations
+
+Trino
+    -> provides interactive distributed SQL
+
+Airflow or another orchestrator
+    -> coordinates schedules and dependencies
+
+Kubernetes, YARN, Slurm, or cloud batch
+    -> allocate resources
+
+identity provider
+    -> establishes who the requester is
+
+policy system
+    -> decides what the requester may do
+
+enforcement point
+    -> applies the decision
+
+audit system
+    -> records access decisions
+
+monitoring
+    -> detects whether known expectations are being met
+
+observability
+    -> provides evidence for investigating unexpected behaviour
+
+data-quality checks
+    -> determine whether the result is valid
+
+catalog and lineage tools
+    -> explain what data exists and where it came from
+
+owners
+    -> remain accountable for policies, pipelines, and datasets
 ```
 
-Then choose the execution model:
+The most common mistakes come from confusing those boundaries:
 
 ```text
-Does the job fit comfortably on one machine?
-|
-+-- Yes
-|   -> DuckDB, Polars, SQL, or another local tool.
-|
-+-- No or not within the required time
-    |
-    +-- Can it stream or spill on one larger machine?
-    |   -> Try that first and measure.
-    |
-    +-- Are tasks independent by file, sample, or parameter?
-    |   -> Use a batch scheduler.
-    |
-    +-- Does one operation require distributed joins,
-    |   aggregation, shuffle, or shared task recovery?
-    |   -> Use Spark or possibly Dask.
-    |
-    +-- Is the primary need interactive distributed SQL?
-    |   -> Use Trino.
-    |
-    +-- Is the work tightly coupled numerical computation?
-        -> Use MPI and an HPC scheduler.
+Parquet is not a database.
+
+Iceberg is not a replacement for Parquet.
+
+A catalog is not automatically a policy engine.
+
+Ranger is not an identity provider.
+
+Airflow is not a processing engine.
+
+Kubernetes is not a data engine.
+
+Monitoring a process is not the same as validating its output.
+
+A data lake is not automatically a lakehouse.
+
+A lakehouse is not one product.
 ```
 
-Then ask:
+The practical decision is not:
 
 ```text
-How is the data moved?
-    -> ingestion, ETL, ELT, or CDC
-
-How is work coordinated?
-    -> simple script, scheduler, or orchestrator
-
-How is the data consumed?
-    -> dashboard, SQL, application database, API, or files
-
-Who owns it?
-    -> central team, domain team, or named data-product owner
+Which modern stack should we install?
 ```
 
----
-
-## Practical boundary
-
-Use an OLTP database to run the application.
-
-Use a warehouse when managed analytical SQL and fewer moving parts are the priority.
-
-Use a data lake when open, scalable file storage and independent processing matter.
-
-Use a lakehouse when lake storage genuinely needs reliable shared tables across analytical engines.
-
-Use Parquet as a file format for columnar analytical data.
-
-Use Iceberg, Delta Lake, or Hudi when a collection of files needs stronger table semantics.
-
-Use DuckDB or Polars when one machine is enough.
-
-Use a batch scheduler when tasks are independent.
-
-Use Spark when one logical operation genuinely requires distributed coordination.
-
-Use Dask when the work fits Python-native distributed collections or task graphs.
-
-Use Trino when the requirement is interactive SQL across distributed sources.
-
-Use MPI when processes must communicate as a tightly coupled numerical program.
-
-Use dbt to organize SQL transformations and tests.
-
-Use Airflow or another orchestrator when workflows have meaningful schedules and dependencies.
-
-Use data products and data mesh only when ownership and organizational scale justify them.
-
-The best data architecture is not the one with the newest noun or the most workers.
-
-It is the smallest system where every layer has a clear responsibility:
+It is:
 
 ```text
-storage stores
-formats represent
-tables organize
-catalogs locate
-engines compute
-resource managers allocate
-orchestrators coordinate
-models explain
-governance controls
-owners remain accountable
+What problem exists now?
+
+Which layer owns that problem?
+
+Can the current system solve it more simply?
+
+What operational cost will the new layer introduce?
+
+How will we secure, monitor, recover, and own it?
 ```
+
+Use the smallest system that satisfies the real requirement.
 
 Scale the machine before scaling the architecture.
 
-Add a platform layer only when the workload—not fashion—requires it.
+Add a platform layer only when the workload or operating model—not fashion—requires it.
+
+---
+
+## Further reading
+
+- Apache Parquet: <https://parquet.apache.org/docs/>
+- Apache Iceberg: <https://iceberg.apache.org/docs/latest/>
+- DuckDB: <https://duckdb.org/docs/>
+- Apache Spark: <https://spark.apache.org/docs/latest/>
+- Trino: <https://trino.io/docs/current/>
+- Apache Airflow: <https://airflow.apache.org/docs/>
+- Apache Ranger: <https://ranger.apache.org/>
+- OpenTelemetry: <https://opentelemetry.io/docs/>
+- Prometheus instrumentation practices: <https://prometheus.io/docs/practices/instrumentation/>
