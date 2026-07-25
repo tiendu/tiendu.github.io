@@ -1,12 +1,12 @@
 ---
-title: "The Platypus Problem: Why Software Should Model Capabilities, Not Categories"
-date: 2026-03-08
-description: "Conventional OOP asks what an object is and builds inheritance trees around the answer. Software usually needs something simpler: what can this thing actually do?"
+title: "The Platypus Problem: Behavior First, Behavior Only"
+date: 2026-07-25
+description: "Categories cannot reliably predict capability. Extensible software grows by composing behavioral contracts instead of freezing incomplete knowledge into inheritance hierarchies."
 topic: "Software Engineering"
 keywords:
+  - "behavior-first design"
   - "capability-oriented design"
   - "inheritance"
-  - "composition"
   - "protocols"
   - "structural typing"
   - "software architecture"
@@ -18,13 +18,15 @@ The platypus is a mammal.
 
 It also lays eggs.
 
-It secretes milk through patches of skin, searches underwater using electroreceptors in its bill, and the male carries venomous ankle spurs.
+It secretes milk through patches of skin, hunts underwater using electroreceptors in its bill, and the male carries venomous ankle spurs.
 
-None of this makes the platypus a broken mammal. It only makes it a problem for anyone who assumed that the category *mammal* guaranteed a neat set of behaviors.
+None of this makes the platypus broken.
+
+It only makes the platypus a problem for a model that assumed the category *mammal* completely determined behavior.
 
 Software makes this mistake constantly.
 
-We begin with a label, build a class around it, attach behavior to the class, and then force every subtype to inherit the promise.
+We observe several familiar objects, extract what they appear to have in common, place those operations on a parent class, and treat that incomplete observation as a permanent contract.
 
 ```python
 class Mammal:
@@ -32,61 +34,119 @@ class Mammal:
         ...
 ```
 
-Then the platypus arrives:
+Then the platypus appears:
 
 ```python
 class Platypus(Mammal):
     pass
 ```
 
-The classification is correct.
+The biological classification may be correct.
 
-The contract is not.
+The software contract is not.
 
 The platypus did not break the hierarchy. The hierarchy promised behavior that the category never guaranteed.
 
-That is the problem with inheritance.
+That is the platypus problem:
 
-## Conventional OOP Asks the Wrong Question
+> We design a model from what we know today, then reality reveals behavior the model never predicted.
 
-Object-oriented programming is often taught through taxonomy:
+The lesson is not that we should have predicted the platypus.
+
+We could not have.
+
+The lesson is that incomplete knowledge should never have been frozen into a family-wide behavioral contract.
+
+## The Original Model Looked Reasonable
+
+Bad abstractions rarely begin as obviously bad abstractions.
+
+They begin with examples that appear consistent.
+
+Suppose every mammal known to the original system gives birth to live young. The model looks natural:
 
 ```python
-class Animal:
-    pass
-
-
-class Mammal(Animal):
-    pass
-
-
-class Dog(Mammal):
-    pass
+class Mammal:
+    def give_birth_to_live_young(self) -> None:
+        ...
 ```
 
-The explanation is easy to understand:
+But the class does more than classify an object. It makes a promise:
 
 ```text
-A dog is a mammal.
-A mammal is an animal.
+Anything accepted as a Mammal supports live birth.
 ```
 
-This may be useful for classifying living things.
+Then the platypus arrives.
 
-It does not follow that it is useful for designing software.
-
-Most callers do not care what an object *is*. They care what it can do, what it promises to do, and whether it can keep that promise.
-
-A function crossing a river does not need a mammal:
+Now the system can lie:
 
 ```python
-def cross_river(animal: Mammal) -> None:
-    animal.swim()
+class Platypus(Mammal):
+    def give_birth_to_live_young(self) -> None:
+        raise NotImplementedError("Platypuses lay eggs")
 ```
 
-That signature is dishonest. Many mammals cannot swim well enough for the operation, while many non-mammals can.
+It can weaken the contract with flags and conditionals:
 
-The function needs a swimmer:
+```python
+if mammal.gives_live_birth:
+    mammal.give_birth_to_live_young()
+else:
+    ...
+```
+
+Or it can rebuild the hierarchy around every discovery:
+
+```text
+Mammal
+`-- EggLayingMammal
+    `-- VenomousEggLayingMammal
+        `-- ElectroreceptiveVenomousEggLayingMammal
+```
+
+The hierarchy is no longer modelling a stable family. It is chasing independent behaviors by inventing new identities.
+
+Egg-laying, venom delivery, swimming, and electroreception are not levels in one tree.
+
+They are separate capabilities.
+
+The hierarchy fails because it has only one main way to express difference: ancestry.
+
+Reality does not share that limitation.
+
+## Categories Cannot Predict Capability
+
+A category answers:
+
+```text
+What kind of thing is this?
+```
+
+A behavioral contract answers:
+
+```text
+What can I safely ask this thing to do?
+```
+
+Those questions are not equivalent.
+
+Inheritance hides the difference:
+
+```python
+class Platypus(Mammal):
+    ...
+```
+
+This says that `Platypus` belongs to the `Mammal` family.
+
+In software, it also says that a `Platypus` can be used anywhere a `Mammal` is expected and can keep every promise made by `Mammal`.
+
+That second claim is much stronger.
+
+A caller does not need a family name. It needs a guarantee.
+
+If an operation needs something that can swim, it should ask for a swimmer:
 
 ```python
 from typing import Protocol
@@ -101,572 +161,423 @@ def cross_river(subject: Swimmer) -> None:
     subject.swim()
 ```
 
-The subject could be a platypus, a duck, a robot, or an amphibious vehicle.
+The operation does not care whether the subject is a mammal, bird, fish, robot, or submarine.
 
-The caller does not care.
-
-It needs one capability. A common ancestor contributes nothing.
-
-## Categories Are Not Contracts
-
-A category answers:
+It cares about one promise:
 
 ```text
-What kind of thing is this?
+This thing can swim.
 ```
 
-A contract answers:
+That is behavior-first design.
+
+## The Consumer Defines the Promise
+
+A behavior should be named where it becomes useful.
+
+The river-crossing workflow defines `Swimmer` because swimming is what the workflow requires:
+
+```python
+class Platypus:
+    def swim(self) -> None:
+        print("Swimming")
+
+
+platypus = Platypus()
+cross_river(platypus)
+```
+
+No inheritance is required.
+
+Later, reproduction becomes relevant. Only then do we name the new capability:
+
+```python
+class EggLayer(Protocol):
+    def lay_eggs(self) -> None:
+        ...
+
+
+def observe_reproduction(subject: EggLayer) -> None:
+    subject.lay_eggs()
+```
+
+The concrete object can provide it:
+
+```python
+class Platypus:
+    def swim(self) -> None:
+        print("Swimming")
+
+    def lay_eggs(self) -> None:
+        print("Laying eggs")
+```
+
+The old `Swimmer` contract does not change.
+
+The old `cross_river()` workflow does not change.
+
+Only the new reproduction workflow depends on `EggLayer`.
+
+New knowledge produced a new contract, not a new ancestry.
+
+That is the safe extension rule:
+
+> When new behavior becomes relevant, define the smallest contract that needs it and implement that behavior only where it is real.
+
+Do not widen an old parent class.
+
+Do not give every existing object a new obligation.
+
+Leave old promises alone.
+
+## Behavior Forms a Graph, Not a Tree
+
+A platypus may satisfy several independent contracts:
 
 ```text
-What can I safely ask this thing to do?
+Platypus
+|- Swimmer
+|- EggLayer
+|- Venomous
+`- Electroreceptive
 ```
 
-Inheritance quietly pretends those are the same question.
-
-When we write:
+Other things may share only some of them:
 
 ```text
-Platypus IS-A Mammal
+Dolphin
+|- Swimmer
+`- LiveBearer
+
+Snake
+|- EggLayer
+`- Venomous
+
+Submarine
+|- Swimmer
+`- Electroreceptive
 ```
 
-and then place behavior on `Mammal`, we are also saying:
+The submarine matters.
+
+It has no meaningful place in the animal hierarchy, yet it can participate in operations that require swimming or electrical detection.
+
+Categories separate things that can perform the same operation.
+
+Behavior connects them through the promise that actually matters.
+
+A taxonomy is a tree.
+
+Capabilities form a graph.
+
+Software systems are graphs of dependencies, workflows, and effects. Behavior fits that shape naturally.
+
+## From One Object to an Entire Architecture
+
+The platypus argument does not stop at class design.
+
+Apply the same rule recursively.
+
+A checkout workflow does not need to know the complete identity of every component. It needs a set of behaviors:
 
 ```text
-Platypus supports every operation promised by Mammal.
+Checkout
+|- Priceable
+|- Reservable
+|- Chargeable
+`- Notifiable
 ```
 
-Those statements are not equivalent.
-
-The same mistake appears in ordinary application code:
+A deployment workflow may require:
 
 ```text
-S3Storage IS-A StorageProvider
-PostgresRepository IS-A Repository
-SlackNotifier IS-A NotificationService
+Deployment
+|- Buildable
+|- Testable
+|- Deployable
+|- Observable
+`- Rollbackable
 ```
 
-The names sound reasonable. Then the base type grows:
-
-```python
-class StorageProvider:
-    def read(self, key: str) -> bytes:
-        ...
-
-    def write(self, key: str, data: bytes) -> None:
-        ...
-
-    def delete(self, key: str) -> None:
-        ...
-
-    def list(self, prefix: str) -> list[str]:
-        ...
-
-    def create_signed_url(self, key: str) -> str:
-        ...
-```
-
-Soon, one implementation is read-only. Another cannot list efficiently. A local filesystem does not create signed URLs. An archive supports writes but not deletion.
-
-Developers respond with `NotImplementedError`, capability flags, subtype checks, empty methods, and documentation explaining which inherited operations are not really supported.
-
-```python
-class ReadOnlyArchive(StorageProvider):
-    def write(self, key: str, data: bytes) -> None:
-        raise NotImplementedError("This storage is read-only")
-```
-
-At that point, the parent is no longer a contract.
-
-It is a wish list.
-
-Once a subtype must explain which inherited promises it cannot keep, inheritance has already failed.
-
-## Shallow Inheritance Does Not Fix the Lie
-
-The usual advice is to avoid *deep* inheritance.
-
-That misses the point.
-
-A one-level hierarchy can still express the wrong relationship:
+A data pipeline may require:
 
 ```text
-StorageProvider
-`-- ReadOnlyArchive
+Pipeline
+|- Readable
+|- Transformable
+|- Writable
+|- Retryable
+`- Observable
 ```
 
-The tree is shallow.
+Each implementation can satisfy one or more contracts independently.
 
-The contract is still false.
+A payment adapter can be `Chargeable` without inheriting from a universal `PaymentMethod` base class.
 
-The problem is not how many levels the hierarchy contains. The problem is coupling behavior to identity.
+A queue, database, or local file can be `Readable` without sharing ancestry.
 
-Split the behavior instead:
+A container platform and a shell script can both be `Deployable` even though they are completely different kinds of things.
+
+The architecture becomes a composition of promises:
 
 ```python
-from typing import Protocol
-
-
-class Reader(Protocol):
-    def read(self, key: str) -> bytes:
+class Chargeable(Protocol):
+    def charge(self, amount: int) -> str:
         ...
 
 
-class Writer(Protocol):
-    def write(self, key: str, data: bytes) -> None:
+class Notifiable(Protocol):
+    def notify(self, message: str) -> None:
         ...
 
 
-class ObjectLister(Protocol):
-    def list(self, prefix: str) -> list[str]:
-        ...
+def complete_checkout(
+    payment: Chargeable,
+    notifier: Notifiable,
+    amount: int,
+) -> None:
+    receipt = payment.charge(amount)
+    notifier.notify(f"Payment completed: {receipt}")
 ```
 
-A read-only archive satisfies `Reader`.
+The workflow depends only on the behaviors it invokes.
 
-An object store may satisfy all three.
+Nothing else is architecturally relevant to it.
 
-Neither implementation must inherit from a universal storage ancestor. Each simply provides the behavior it actually supports.
-
-This is a much stronger guarantee than a family name.
-
-## A Type Should Be a Promise, Not a Badge
-
-Traditional inheritance treats a type as membership:
+This scales because the same rule works at every level:
 
 ```text
-You belong to this family.
+object -> capability
+module -> port
+service -> API contract
+workflow -> required effects
+system -> composition of behaviors
 ```
 
-For software architecture, a type is more useful as a promise:
+The whole architecture can therefore be built from behavioral boundaries rather than identity hierarchies.
+
+## What “Behavior Only” Means
+
+Behavior only does **not** mean that data, state, identity, or concrete objects disappear.
+
+It means they do not define the dependency structure.
+
+- Data is consumed and produced by behavior.
+- State is changed through behavior.
+- Identity selects which state behavior acts upon.
+- Invariants restrict valid behavior.
+- Persistence records or restores state transitions.
+- Authorization controls who may invoke behavior.
+- Services expose behavior across a network.
+- Workflows compose several behaviors into a larger one.
+
+A bank account may still have identity and state:
+
+```python
+class Account:
+    def __init__(self, balance: int) -> None:
+        self._balance = balance
+
+    def withdraw(self, amount: int) -> None:
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+
+        if amount > self._balance:
+            raise ValueError("Insufficient funds")
+
+        self._balance -= amount
+```
+
+But a consumer that only needs withdrawal should depend on the behavior it uses:
+
+```python
+class Withdrawable(Protocol):
+    def withdraw(self, amount: int) -> None:
+        ...
+```
+
+The account remains a concrete object.
+
+Its identity still exists.
+
+Its state still matters.
+
+Its invariants still hold.
+
+None of that requires callers to depend on a taxonomic hierarchy.
+
+Nouns may describe the domain.
+
+Verbs can structure the architecture.
+
+## Behavior Is More Than a Method Name
+
+A protocol is not just a matching method signature.
+
+A real behavioral contract also includes meaning:
 
 ```text
-You can perform this operation with these semantics.
+withdraw(amount):
+- rejects invalid amounts
+- rejects amounts above the available balance
+- changes the balance exactly once
+- leaves state unchanged when it fails
+- defines how retries are handled
 ```
 
-Consider a checkout workflow:
+Behavior includes:
 
-```python
-from typing import Protocol
+- preconditions
+- postconditions
+- failure semantics
+- state transitions
+- side effects
+- ordering guarantees
+- idempotency
+- concurrency rules
 
+Structural typing makes contracts easy to adopt, but the architecture depends on implementations keeping the full promise.
 
-class PaymentProcessor(Protocol):
-    def charge(self, amount_cents: int) -> str:
-        ...
-```
-
-Concrete implementations provide the capability:
-
-```python
-class StripePayments:
-    def charge(self, amount_cents: int) -> str:
-        return "stripe-payment-id"
-
-
-class BankTransferPayments:
-    def charge(self, amount_cents: int) -> str:
-        return "bank-transfer-id"
-```
-
-They do not inherit from `PaymentProcessor`.
-
-Python's [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol) uses structural typing: an implementation can satisfy the contract by providing the required behavior. The protocol declaration uses class syntax, but the concrete implementations do not join its family tree.
-
-```python
-class CheckoutService:
-    def __init__(self, payments: PaymentProcessor) -> None:
-        self.payments = payments
-
-    def checkout(self, amount_cents: int) -> str:
-        return self.payments.charge(amount_cents)
-```
-
-The checkout service does not ask:
+The question is not merely:
 
 ```text
-Are you a descendant of PaymentProcessor?
+Does this object have the method?
 ```
 
-It asks:
+It is:
 
 ```text
-Can you charge this amount and return a payment identifier?
+Can this implementation safely keep the behavior the consumer expects?
 ```
 
-That is all the workflow needs to know.
+That is still behavior-first.
 
-## Capabilities Should Be Defined by the Consumer
+## Existing Objects Can Be Adapted
 
-A common mistake is replacing a giant base class with a giant interface.
-
-The syntax changes. The design does not.
+Sometimes an existing object already provides the capability under a different interface:
 
 ```python
-class UniversalRepository(Protocol):
-    def get(self, item_id: str) -> object:
-        ...
-
-    def save(self, item: object) -> None:
-        ...
-
-    def delete(self, item_id: str) -> None:
-        ...
-
-    def search(self, query: str) -> list[object]:
-        ...
-
-    def begin_transaction(self) -> None:
-        ...
+class LegacyPlatypus:
+    def use_ankle_spur(self) -> None:
+        print("Using the ankle spur")
 ```
 
-This still tries to describe every repository from the provider's point of view.
-
-Start with the caller instead.
-
-What is the smallest promise this workflow requires?
+A new workflow expects:
 
 ```python
-class UserReader(Protocol):
-    def get_user(self, user_id: str) -> "User | None":
+class Venomous(Protocol):
+    def deliver_venom(self) -> None:
         ...
 ```
 
-Another workflow may need a separate capability:
+Adapt the old behavior:
 
 ```python
-class UserWriter(Protocol):
-    def save_user(self, user: "User") -> None:
-        ...
+class VenomousAdapter:
+    def __init__(self, platypus: LegacyPlatypus) -> None:
+        self._platypus = platypus
+
+    def deliver_venom(self) -> None:
+        self._platypus.use_ankle_spur()
 ```
 
-The implementation may support both. The callers do not need to know that.
+The old implementation remains unchanged.
 
-This is the important direction of ownership:
+The new consumer remains small.
+
+No ancestry is invented merely to connect them.
+
+## A Little Duplication Is Often Safer
+
+Inheritance is often introduced only to avoid repeating a few lines.
+
+That is a weak reason to create a permanent relationship.
+
+A small amount of local duplication may be more honest than making one implementation inherit another implementation's assumptions.
+
+If shared behavior later becomes substantial and stable, extract the mechanism through composition:
+
+```python
+class SwimmingMotion:
+    def swim(self) -> None:
+        print("Swimming")
+
+
+class Platypus:
+    def __init__(self, motion: SwimmingMotion) -> None:
+        self._motion = motion
+
+    def swim(self) -> None:
+        self._motion.swim()
+```
+
+Reuse the behavior.
+
+Do not manufacture a family tree merely to reuse code.
+
+## Behavior First, Behavior Only
+
+The platypus did not expose a defective animal.
+
+It exposed a defective assumption:
 
 ```text
-The consumer defines the capability.
-The implementation chooses how to provide it.
+Category determines capability.
 ```
 
-Contracts discovered from actual use are usually smaller and more honest than abstractions invented to describe an entire category.
+Once that assumption is removed, the model becomes simpler.
 
-## Composition Preserves Independent Change
+A river-crossing operation needs a `Swimmer`.
 
-Inheritance becomes especially painful when several features vary independently.
+A reproduction study needs an `EggLayer`.
 
-Imagine vehicles that differ by:
+A venom study needs something `Venomous`.
 
-- power system
-- navigation
-- cargo handling
-- telemetry
-- autonomous control
-- regional compliance
+A checkout needs something `Chargeable`.
 
-A class tree tries to combine those decisions into identities:
+A deployment needs something `Deployable` and `Rollbackable`.
 
-```text
-AutonomousElectricCargoTruck
-ManualHybridPassengerCar
-AutonomousHydrogenDeliveryVan
-```
+A pipeline needs something `Readable`, `Writable`, and `Observable`.
 
-Every new capability multiplies the combinations.
+None of these consumers needs a complete ancestry.
 
-Composition keeps independent decisions independent:
+They need promises.
 
-```python
-from typing import Protocol
+The platypus is therefore more than an awkward exception to a poorly designed class hierarchy.
 
+It demonstrates why inheritance is the wrong primitive for modelling an open world.
 
-class PowerSystem(Protocol):
-    def start(self) -> None:
-        ...
+Real things combine capabilities that no category can completely predict. New knowledge arrives continuously. A stable architecture cannot depend on having already discovered the final taxonomy.
 
+It can depend on behavior.
 
-class Navigator(Protocol):
-    def route_to(self, destination: str) -> None:
-        ...
+When a new capability becomes relevant:
 
+1. name the behavior
+2. define the smallest useful contract
+3. implement it where the behavior is real
+4. adapt existing code when necessary
+5. leave unrelated contracts and consumers unchanged
 
-class Telemetry(Protocol):
-    def publish(self) -> None:
-        ...
+Repeat this rule at every level and the architecture becomes a graph of behavioral contracts, state transitions, and workflows.
 
+Concrete objects may remain.
 
-class Vehicle:
-    def __init__(
-        self,
-        power: PowerSystem,
-        navigator: Navigator,
-        telemetry: Telemetry,
-    ) -> None:
-        self.power = power
-        self.navigator = navigator
-        self.telemetry = telemetry
+Domain nouns may remain.
 
-    def start(self) -> None:
-        self.power.start()
+Identity and state may remain.
 
-    def navigate(self, destination: str) -> None:
-        self.navigator.route_to(destination)
+But they no longer control the dependency structure.
 
-    def report_status(self) -> None:
-        self.telemetry.publish()
-```
+> A system may contain nouns, but its architecture needs only promises, transitions, and compositions of behavior.
 
-The system is assembled at its boundary:
+We cannot know every future capability.
 
-```python
-vehicle = Vehicle(
-    power=ElectricMotor(),
-    navigator=GpsNavigator(),
-    telemetry=CloudTelemetry(),
-)
-```
+We can only avoid turning present ignorance into a permanent parent class.
 
-One decision can change without inventing another subtype:
-
-```python
-vehicle = Vehicle(
-    power=HydrogenFuelCell(),
-    navigator=OfflineNavigator(),
-    telemetry=LocalTelemetry(),
-)
-```
-
-Composition is not merely more flexible.
-
-It reflects the fact that these behaviors change for different reasons.
-
-Inheritance compresses independent choices into one identity. Composition allows each choice to remain separate.
-
-## Errors Do Not Form a Useful Family Tree Either
-
-Exception hierarchies are often offered as the safe, obvious use of inheritance:
-
-```text
-StorageError
-|- StorageNotFoundError
-|- StoragePermissionError
-`- StorageTimeoutError
-```
-
-It looks tidy until the caller needs to make decisions.
-
-Is the error retryable?
-
-Is it temporary?
-
-Is it safe to show the user?
-
-Should it trigger an alert?
-
-Can another provider handle it?
-
-Does it require compensation?
-
-A timeout might be network-related, temporary, retryable, and alertable only after repeated failures. Those are independent dimensions. One family tree cannot represent them without becoming arbitrary or relying on multiple inheritance.
-
-Model the information directly:
-
-```python
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class Failure:
-    code: str
-    message: str
-    retryable: bool
-    user_visible: bool
-    alertable: bool
-```
-
-Now the caller can inspect the property it actually cares about:
-
-```python
-def handle_failure(failure: Failure) -> None:
-    if failure.retryable:
-        schedule_retry()
-
-    if failure.alertable:
-        notify_operations()
-
-    if failure.user_visible:
-        show_message(failure.message)
-```
-
-Python requires raised exceptions to derive from `BaseException`, so some inheritance is mechanically unavoidable when using the exception mechanism. That is a language constraint, not evidence that application failures naturally form a stable taxonomy.
-
-Inheritance may be required by syntax.
-
-It should not be trusted as a model of the domain.
-
-## Framework Inheritance Is Plumbing
-
-Frameworks sometimes require subclassing:
-
-```python
-class UserController(FrameworkController):
-    ...
-```
-
-That does not make inheritance a good architectural model.
-
-Keep it at the edge:
-
-```python
-class UserController(FrameworkController):
-    def __init__(self, service: "UserService") -> None:
-        self.service = service
-
-    def get(self, user_id: str) -> object:
-        return self.service.get_user(user_id)
-```
-
-The inherited class adapts the framework to the application.
-
-The application core does not inherit from framework types. It exposes ordinary behavior and depends on small capabilities.
-
-Treat framework-required inheritance as integration syntax:
-
-```text
-Framework
-    |
-    v
-Thin inherited adapter
-    |
-    v
-Application capabilities
-```
-
-It should remain shallow, isolated, and uninteresting.
-
-Inheritance is sometimes unavoidable plumbing.
-
-It should not become architecture.
-
-## This Is Not a Rejection of Objects
-
-Objects can still be useful.
-
-They can hold state, protect invariants, coordinate a lifecycle, and group cohesive behavior.
-
-A bank account may enforce withdrawal rules. A job may control transitions between queued, running, completed, and failed. A connection pool may manage resources and cleanup.
-
-The problem is not bundling related state and behavior.
-
-The problem is taxonomy-driven OOP:
-
-```text
-Every noun becomes a class.
-Every category becomes a parent.
-Every similarity becomes inheritance.
-```
-
-An object should exist because the system benefits from its state, behavior, identity, or invariants—not because a noun appeared in a requirement.
-
-Objects are fine.
-
-Family trees are the problem.
-
-## Architecture Is About Containing Change
-
-A payment provider changes its API.
-
-A database is replaced.
-
-A notification channel is added.
-
-A cloud service becomes too expensive.
-
-A test must run without network access.
-
-Change is unavoidable.
-
-Architecture determines how far it spreads.
-
-If business logic constructs vendor clients directly, understands their response formats, catches their provider-specific exceptions, and calls their APIs everywhere, one infrastructure change leaks across the system.
-
-A capability boundary contains it:
-
-```text
-Stable workflow
-      |
-      v
-Small behavioral contract
-      |
-      v
-Replaceable adapter
-      |
-      v
-Volatile technology
-```
-
-The checkout workflow needs something that can charge.
-
-The report generator needs something that can read records.
-
-The alert workflow needs something that can deliver a message.
-
-They do not need Stripe, PostgreSQL, S3, Slack, or a universal parent type.
-
-Good architecture does not eliminate change.
-
-It prevents one change from becoming everybody's problem.
-
-## Practical Rules
-
-Start with the caller, not the class tree.
-
-Ask for the smallest behavior the caller actually needs.
-
-Do not put unsupported methods into a parent contract.
-
-Do not inherit for code reuse.
-
-Do not model independent capabilities as subclasses.
-
-Represent independent properties as data or separate capabilities.
-
-Compose implementations at the application boundary.
-
-Keep language- or framework-required inheritance at the edge.
-
-When you are about to write:
-
-```python
-class B(A):
-    ...
-```
-
-ask:
-
-```text
-Does the caller truly need B to be A?
-
-Or does it only need B to perform one useful behavior?
-```
-
-Most of the time, the second question reveals the better design.
-
-## Back to the Platypus
-
-The platypus only looks like a problem when the model assumes that categories determine behavior.
-
-Once swimming, egg-laying, milk production, electroreception, and venom are understood as separate capabilities, nothing is broken.
-
-The platypus does not need an exception method.
-
-It does not need a flag explaining that it is a strange mammal.
-
-It does not need to apologize for violating a parent contract that should never have existed.
-
-It simply has the capabilities it has.
-
-Software should work the same way.
-
-> Stop building family trees. Start modelling promises.
-
-Do not make an object prove what it is when all you need to know is what it can do.
+> Do not rebuild the family tree every time reality surprises you.
+>
+> Model the behavior when it becomes relevant.
+>
+> **Behavior first. Behavior only.**
 
