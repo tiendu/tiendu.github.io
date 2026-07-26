@@ -1,6 +1,6 @@
 ---
 title: "The Platypus Problem: Behavior First, Behavior Only"
-date: 2026-07-25
+date: 2026-03-08
 description: "Categories cannot reliably predict capability. Extensible software grows by composing behavioral contracts instead of freezing incomplete knowledge into inheritance hierarchies."
 topic: "Software Engineering"
 keywords:
