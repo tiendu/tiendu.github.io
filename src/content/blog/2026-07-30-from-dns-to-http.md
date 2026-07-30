@@ -1,7 +1,7 @@
 ---
-title: "Networking, But Only the Useful Stuff"
+title: "From DNS to HTTP"
 date: 2026-07-30
-description: "A practical networking reference for TCP, UDP, IP, DNS, TLS, HTTP, proxies, load balancers, common ports, Linux commands, and systematic troubleshooting."
+description: "A practical guide to TCP, UDP, IP, DNS, TLS, HTTP, proxies, ports, status codes, and network troubleshooting."
 topic: "Infrastructure & Automation"
 keywords:
   - "networking"
