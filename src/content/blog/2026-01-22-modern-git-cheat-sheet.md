@@ -141,9 +141,10 @@ git switch main
 git pull --ff-only
 
 git switch -c feature/x
-# edit...
+git branch --show-current   # confirm you are on the intended branch
 
-git status
+# edit...
+git status --short --branch
 git diff
 git add -p
 git diff --staged
@@ -153,10 +154,13 @@ git commit
 git fetch origin
 git rebase origin/main
 
+git branch --show-current   # confirm again before pushing
 git log --oneline origin/main..HEAD
 git diff --stat origin/main...HEAD
 git push
 ```
+
+Before editing or pushing, confirm that you are on the intended branch. A quick `git branch --show-current` prevents work from accidentally landing on `main` or another unrelated branch.
 
 Use small branches with one clear purpose. Do not rebase a branch other people are using.
 
@@ -508,6 +512,8 @@ git clean -nd
 Before pushing:
 
 ```bash
+git branch --show-current
+git status --short --branch
 git log --oneline origin/main..HEAD
 git diff --stat origin/main...HEAD
 ```
