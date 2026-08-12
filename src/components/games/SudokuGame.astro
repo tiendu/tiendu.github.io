@@ -1,0 +1,50 @@
+---
+import "../../styles/components/arcade.css";
+import "../../styles/components/sudoku-game.css";
+---
+<section
+  class="arcade-panel sudoku-panel"
+  data-sudoku-game
+  aria-label="Sudoku game"
+  hidden
+>
+  <div class="arcade-scoreboard sudoku-scoreboard" aria-live="polite">
+    <span>MODE <output data-sudoku-difficulty>STANDARD</output></span>
+    <span>BLANKS <output data-sudoku-blanks>--</output></span>
+    <span>TIME <output data-sudoku-timer>00:00</output></span>
+  </div>
+
+  <div class="sudoku-difficulties" role="group" aria-label="Sudoku difficulty">
+    <button type="button" data-sudoku-difficulty-button="casual">CASUAL</button>
+    <button type="button" data-sudoku-difficulty-button="standard" aria-pressed="true">STANDARD</button>
+    <button type="button" data-sudoku-difficulty-button="expert">EXPERT</button>
+  </div>
+
+  <div
+    class="sudoku-grid"
+    data-sudoku-grid
+    role="grid"
+    tabindex="0"
+    aria-label="Sudoku board"
+  ></div>
+
+  <p class="sudoku-message" data-sudoku-message aria-live="polite" hidden></p>
+
+  <div class="sudoku-number-pad" aria-label="Sudoku number pad">
+    {Array.from({ length: 9 }, (_, index) => (
+      <button type="button" data-sudoku-number={index + 1}>{index + 1}</button>
+    ))}
+  </div>
+
+  <div class="sudoku-actions" aria-label="Sudoku actions">
+    <button type="button" data-sudoku-control="notes" aria-pressed="false">NOTES</button>
+    <button type="button" data-sudoku-control="undo">UNDO</button>
+    <button type="button" data-sudoku-control="erase">ERASE</button>
+    <button type="button" data-sudoku-control="new">NEW</button>
+    <button type="button" data-sudoku-action="exit">EXIT</button>
+  </div>
+
+  <p class="arcade-help sudoku-help">
+    ARROWS / HJKL MOVE · 1-9 ENTER · N NOTES · U UNDO · R NEW · ESC EXIT
+  </p>
+</section>

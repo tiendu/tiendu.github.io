@@ -1,0 +1,222 @@
+/* Sudoku: compact monochrome terminal puzzle. */
+
+.sudoku-panel {
+  max-width: 560px;
+}
+
+.sudoku-scoreboard {
+  display: grid;
+  font-size: 0.82rem;
+  gap: 0.4rem 1rem;
+  grid-template-columns: repeat(3, auto);
+  justify-content: space-between;
+  letter-spacing: 0.07em;
+}
+
+.sudoku-difficulties,
+.sudoku-actions,
+.sudoku-number-pad {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.sudoku-difficulties {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sudoku-actions {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.sudoku-number-pad {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+}
+
+.sudoku-difficulties button,
+.sudoku-actions button,
+.sudoku-number-pad button {
+  background: rgb(199 240 139 / 4%);
+  border: 1px solid rgb(199 240 139 / 22%);
+  border-radius: 2px;
+  color: var(--terminal-green);
+  cursor: pointer;
+  font-family: var(--font-terminal);
+  letter-spacing: 0.05em;
+  min-height: 38px;
+  padding: 0.4rem 0.25rem;
+  touch-action: manipulation;
+}
+
+.sudoku-difficulties button:hover,
+.sudoku-difficulties button:focus-visible,
+.sudoku-actions button:hover,
+.sudoku-actions button:focus-visible,
+.sudoku-number-pad button:hover,
+.sudoku-number-pad button:focus-visible,
+.sudoku-difficulties button[aria-pressed="true"],
+.sudoku-actions button.is-active {
+  background: rgb(199 240 139 / 12%);
+  border-color: var(--terminal-green-dim);
+  color: var(--terminal-green-bright);
+}
+
+.sudoku-actions button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.sudoku-grid {
+  aspect-ratio: 1;
+  background: #020704;
+  border: 2px solid rgb(199 240 139 / 65%);
+  box-shadow:
+    inset 0 0 30px rgb(0 0 0 / 58%),
+    0 0 18px rgb(199 240 139 / 6%);
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  overflow: hidden;
+  width: 100%;
+}
+
+.sudoku-grid:focus-visible {
+  outline: 1px solid var(--terminal-green-dim);
+  outline-offset: 3px;
+}
+
+.sudoku-cell {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgb(199 240 139 / 15%);
+  border-right: 1px solid rgb(199 240 139 / 15%);
+  color: var(--terminal-green);
+  cursor: pointer;
+  display: grid;
+  font-family: var(--font-terminal);
+  font-size: clamp(1.05rem, 5vw, 1.55rem);
+  justify-items: center;
+  min-height: 0;
+  padding: 0;
+  position: relative;
+  text-shadow: 0 0 6px rgb(199 240 139 / 12%);
+}
+
+.sudoku-cell:nth-child(9n) {
+  border-right: 0;
+}
+
+.sudoku-cell:nth-child(n + 73) {
+  border-bottom: 0;
+}
+
+.sudoku-cell:nth-child(3n):not(:nth-child(9n)) {
+  border-right: 2px solid rgb(199 240 139 / 48%);
+}
+
+.sudoku-cell:nth-child(n + 19):nth-child(-n + 27),
+.sudoku-cell:nth-child(n + 46):nth-child(-n + 54) {
+  border-bottom: 2px solid rgb(199 240 139 / 48%);
+}
+
+.sudoku-cell.is-related {
+  background: rgb(199 240 139 / 3.5%);
+}
+
+.sudoku-cell.is-matching {
+  background: rgb(199 240 139 / 8%);
+}
+
+.sudoku-cell.is-selected {
+  background: rgb(199 240 139 / 15%);
+  box-shadow: inset 0 0 0 1px var(--terminal-green-dim);
+  color: var(--terminal-green-bright);
+  z-index: 1;
+}
+
+.sudoku-cell.is-given .sudoku-cell-value {
+  color: var(--terminal-green-bright);
+  font-weight: 700;
+}
+
+.sudoku-cell.is-conflict {
+  background: rgb(255 120 120 / 11%);
+  box-shadow: inset 0 0 0 1px rgb(255 150 150 / 58%);
+}
+
+.sudoku-cell-value,
+.sudoku-cell-notes {
+  grid-area: 1 / 1;
+}
+
+.sudoku-cell-notes {
+  align-self: stretch;
+  color: var(--terminal-green-dim);
+  display: grid;
+  font-size: clamp(0.42rem, 1.8vw, 0.62rem);
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  justify-self: stretch;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.sudoku-cell-notes span {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.sudoku-message {
+  color: var(--terminal-green-bright);
+  font-size: 0.92rem;
+  letter-spacing: 0.12em;
+  margin: 0;
+  text-align: center;
+}
+
+.sudoku-panel.is-complete .sudoku-grid {
+  animation: sudoku-complete-flash 420ms steps(2, end) 2;
+}
+
+.sudoku-help {
+  font-size: 0.7rem;
+  letter-spacing: 0.045em;
+  line-height: 1.45;
+}
+
+@keyframes sudoku-complete-flash {
+  50% {
+    filter: brightness(1.45);
+  }
+}
+
+@media (max-width: 520px) {
+  .sudoku-panel {
+    gap: 0.6rem;
+  }
+
+  .sudoku-scoreboard {
+    font-size: 0.7rem;
+  }
+
+  .sudoku-difficulties button,
+  .sudoku-actions button,
+  .sudoku-number-pad button {
+    font-size: 0.76rem;
+    min-height: 36px;
+  }
+
+  .sudoku-actions {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .sudoku-help {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sudoku-panel.is-complete .sudoku-grid {
+    animation: none;
+  }
+}
