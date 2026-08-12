@@ -20,13 +20,36 @@ import "../../styles/components/sudoku-game.css";
     <button type="button" data-sudoku-difficulty-button="expert">EXPERT</button>
   </div>
 
-  <div
-    class="sudoku-grid"
-    data-sudoku-grid
-    role="grid"
-    tabindex="0"
-    aria-label="Sudoku board"
-  ></div>
+  <div class="arcade-board-frame sudoku-board-frame">
+    <div
+      class="sudoku-grid"
+      data-sudoku-grid
+      role="grid"
+      tabindex="0"
+      aria-label="Sudoku board"
+    ></div>
+
+    <div class="arcade-overlay sudoku-overlay" data-sudoku-overlay hidden>
+      <strong>SAVED PUZZLE</strong>
+      <span>CONTINUE WHERE YOU LEFT OFF</span>
+      <div
+        class="arcade-resume-picker sudoku-resume-picker"
+        data-sudoku-resume-picker
+        role="group"
+        aria-label="Resume saved Sudoku puzzle"
+        hidden
+      >
+        <button type="button" data-sudoku-resume="continue">
+          CONTINUE
+          <small data-sudoku-resume-summary>SAVED PUZZLE</small>
+        </button>
+        <button type="button" data-sudoku-resume="new">
+          NEW PUZZLE
+          <small>DISCARD SAVE</small>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <p class="sudoku-message" data-sudoku-message aria-live="polite" hidden></p>
 

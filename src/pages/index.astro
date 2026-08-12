@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import SnakeGame from "../components/games/SnakeGame.astro";
 import CraneGame from "../components/games/CraneGame.astro";
 import ChickenRunGame from "../components/games/ChickenRunGame.astro";
+import SudokuGame from "../components/games/SudokuGame.astro";
 import SystemHeader from "../components/SystemHeader.astro";
 import "../styles/system.css";
 import "../styles/pages/home.css";
@@ -132,6 +133,8 @@ import "../styles/pages/home.css";
 
             <p class="chicken-mobile-help">JUMP · FLAP · STAY FREE</p>
           </div>
+
+          <SudokuGame />
 
           <form class="terminal-shell" data-terminal-shell hidden>
             <span class="prompt">TIENDU@HOME</span>

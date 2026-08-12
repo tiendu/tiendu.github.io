@@ -1,4 +1,4 @@
-export type ArcadeGameId = "snake" | "crane" | "chicken";
+export type ArcadeGameId = "snake" | "crane" | "chicken" | "sudoku";
 
 export type GameCommandAction =
   | "start"
@@ -50,6 +50,12 @@ export const GAME_EVENTS = {
     command: "tiendu:chicken-command",
     status: "tiendu:chicken-status",
     exit: "tiendu:chicken-exit",
+  },
+  sudoku: {
+    start: "tiendu:sudoku-start",
+    command: "tiendu:sudoku-command",
+    status: "tiendu:sudoku-status",
+    exit: "tiendu:sudoku-exit",
   },
 } as const;
 

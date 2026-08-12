@@ -7,7 +7,7 @@ import {
   type ScoreExitDetail,
 } from "./shared/events";
 
-export type GameId = "snake" | "crane" | "chicken";
+export type GameId = "snake" | "crane" | "chicken" | "sudoku";
 type ExitDetail = ScoreExitDetail | ChickenExitDetail;
 
 interface ArcadeHost {
@@ -122,6 +122,25 @@ const definitions: readonly GameDefinition[] = [
       return `FREE RANGE CLOSED · SCORE ${format(score(chicken.score), 4)} · HIGH ${format(score(chicken.highScore), 4)} · SPEED ${format(speedLevel, 2)}`;
     },
   },
+  {
+    id: "sudoku",
+    load: async () => {
+      const { mountSudokuGames } = await import("./sudoku");
+      mountSudokuGames();
+    },
+    aliases: ["sudoku"],
+    startEvent: GAME_EVENTS.sudoku.start,
+    commandEvent: GAME_EVENTS.sudoku.command,
+    statusEvent: GAME_EVENTS.sudoku.status,
+    exitEvent: GAME_EVENTS.sudoku.exit,
+    rootSelector: "[data-sudoku-game]",
+    progressSelector: "[data-sudoku-difficulty]",
+    actionSelector: "[data-sudoku-action]",
+    pauseSelector: '[data-sudoku-action="pause"]',
+    readyStatus: (difficulty, fine) =>
+      `${difficulty} · READY · ${fine ? "ARROWS/HJKL · 1-9" : "USE CONTROLS"}`,
+    exitMessage: () => "SUDOKU CLOSED",
+  },
 ];
 
 function setPauseButton(
@@ -143,6 +162,7 @@ function normalizeProgress(value: string, id: GameId): string {
   const cleaned = value.trim().toUpperCase();
   if (id === "snake") return cleaned || "--";
   if (id === "crane") return cleaned ? cleaned.padStart(3, "0") : "000";
+  if (id === "sudoku") return cleaned || "STANDARD";
   return cleaned ? cleaned.padStart(2, "0") : "01";
 }
 

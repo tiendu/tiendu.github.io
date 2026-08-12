@@ -340,7 +340,7 @@ function mountTerminal(wrapper: HTMLElement): void {
 
     if (command === "help") {
       showResponse(
-        "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TOPICS · ABOUT · SNAKE · CRANE · CHICKEN · CLEAR",
+        "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TOPICS · ABOUT · SNAKE · CRANE · CHICKEN · SUDOKU · CLEAR",
       );
       return;
     }
