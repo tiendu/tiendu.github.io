@@ -1,16 +1,16 @@
 ---
-title: Self-Hosted Runners Are Not Self-Hosted CI
+title: "Self-Hosted Runners Are Not Self-Hosted CI"
 date: 2026-08-11
-description: GitHub Actions went down, and it reminded me of something obvious that I had somehow stopped thinking about: owning the runner is not the same as owning CI.
-topic: Infrastructure & Automation
+description: "GitHub Actions went down, and it reminded me of something obvious that I had somehow stopped thinking about: owning the runner is not the same as owning CI."
+topic: "Infrastructure & Automation"
 keywords:
-  - CI/CD
-  - GitHub Actions
-  - Jenkins
-  - self-hosted runners
-  - DevOps
-  - reliability
-urlSlug: self-hosted-runners-are-not-self-hosted-ci
+  - "CI/CD"
+  - "GitHub Actions"
+  - "Jenkins"
+  - "self-hosted runners"
+  - "DevOps"
+  - "reliability"
+urlSlug: "self-hosted-runners-are-not-self-hosted-ci"
 ---
 
 I used to look at Jenkins and think:
