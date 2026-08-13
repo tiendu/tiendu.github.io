@@ -94,7 +94,19 @@ Real systems are full of stupid constraints.
 
 Production machines are weird. Containers are minimal. A package you expect to be there isn't. Permissions are different. The network is half broken. There's no package manager. There's no internet access. The documentation tells you to run some command that simply doesn't exist on the machine in front of you.
 
-You rarely get the nice clean environment from the tutorial.
+And sometimes the tools are there, just not **your** tools.
+
+Maybe your favourite shell isn't installed. Maybe there's no `zsh`, no nice prompt, no aliases, no shell functions you've accumulated over the years. Maybe the editor on the machine is plain old `vi` when you're used to Neovim, VS Code, or an IDE with a pile of plugins doing things for you.
+
+Sure, you could start copying dotfiles around and rebuilding your comfortable environment.
+
+But sometimes you're on a production machine because something is already broken. Spending twenty minutes making the shell feel like home isn't the job.
+
+You work with what you have.
+
+That's another reason I think versatility matters. I love my tools, and I've spent years making them comfortable, but I don't want to become dependent on that comfort. I should still be able to sit down in front of a boring shell, a stock editor, and a small set of Unix utilities and get something done.
+
+You rarely get the nice clean environment from the tutorial, and you definitely don't always get your own workstation.
 
 After dealing with enough of these situations, you slowly stop asking:
 
@@ -140,19 +152,20 @@ Not because knowing weird Unix tricks makes someone a better engineer.
 
 And definitely not because I expect anyone to memorize all of them.
 
-What I want to see is whether someone can still make progress when the environment is incomplete.
+What I want to see is whether someone can still make progress when the environment isn't the one they're comfortable with.
 
 Can you reframe the problem?
 
-Can you figure out what capabilities you actually need?
+Can you figure out what capability you actually need?
 
 Can you use what you still have?
 
+Can you work with an unfamiliar shell, a stock editor, and whatever happens to be installed?
+
 Can you keep moving with limited resources?
 
-That's the real skill.
+To me, that's a big part of being versatile as an engineer.
 
-Not knowing the perfect command.
+Having favourite tools is great. I certainly have mine.
 
-Knowing how to work when the perfect tool isn't there.
-
+Just don't become useless without them.
