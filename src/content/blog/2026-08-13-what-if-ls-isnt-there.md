@@ -20,7 +20,7 @@ One of my favourite little Linux questions is stupidly simple:
 >
 > How do you find the contents of the current directory and everything below it?
 
-I like questions like this because they're a quick way to get a feel for how someone troubleshoots under constraints.
+I like questions like this because they're a quick way to get a feel for how someone thinks when the usual tools aren't available.
 
 I'm not particularly interested in whether they know five replacements for `ls`. The interesting part is what happens after the obvious answer disappears.
 
@@ -31,6 +31,20 @@ find .
 ```
 
 Good.
+
+You might also notice that the shell itself can already tell you something:
+
+```bash
+printf '%s\n' *
+```
+
+or, less carefully:
+
+```bash
+echo *
+```
+
+Those aren't recursive, so they don't completely solve the original problem. But that's part of the exercise too: figure out what you already have, what it gives you, and what you're still missing.
 
 Now pretend `find` isn't there either.
 
@@ -66,11 +80,11 @@ There are plenty of answers, and honestly I don't care much which one someone re
 
 The useful part is realizing that **you don't actually need `ls`**.
 
-What you need is something capable of walking the filesystem and telling you what it finds.
+What you need is some way to inspect the filesystem.
 
 Once you phrase the problem that way, the solution space gets much bigger.
 
-`find` does it because that's its job. `tree` does it because it needs to draw the directory tree. `tar` does it because it needs to discover files before building an archive. `rsync` does it because it needs to know what can be synchronized. A programming language can just ask the filesystem directly.
+`find` does it because that's its job. `tree` does it because it needs to draw the directory tree. `tar` does it because it needs to discover files before building an archive. `rsync` does it because it needs to know what can be synchronized. A programming language can ask the filesystem directly. Even shell globbing can get you part of the way there without invoking another program at all.
 
 Different tools, same underlying capability.
 
@@ -78,7 +92,7 @@ This is the kind of thinking I care about in troubleshooting.
 
 Real systems are full of stupid constraints.
 
-Production machines are weird. Containers are minimal. A package you expect to be there isn't. Permissions are different. The network is half broken. The documentation tells you to run some command that simply doesn't exist on the machine in front of you.
+Production machines are weird. Containers are minimal. A package you expect to be there isn't. Permissions are different. The network is half broken. There's no package manager. There's no internet access. The documentation tells you to run some command that simply doesn't exist on the machine in front of you.
 
 You rarely get the nice clean environment from the tutorial.
 
@@ -88,7 +102,7 @@ After dealing with enough of these situations, you slowly stop asking:
 
 And start asking:
 
-*What am I actually trying to find out?*
+*What am I actually trying to find out, and what do I still have available?*
 
 No `curl`?
 
@@ -102,7 +116,7 @@ No `grep`?
 
 I don't need an executable called `grep`. I need something capable of searching text.
 
-That sounds like a small distinction, but I think it's a big part of becoming good at troubleshooting.
+That sounds like a small distinction, but I think it's a big part of becoming good at systems work.
 
 If your mental model is tied to commands, losing a command can stop you.
 
@@ -126,13 +140,19 @@ Not because knowing weird Unix tricks makes someone a better engineer.
 
 And definitely not because I expect anyone to memorize all of them.
 
-I just want to see what happens when the easy answer is gone.
+What I want to see is whether someone can still make progress when the environment is incomplete.
 
 Can you reframe the problem?
 
+Can you figure out what capabilities you actually need?
+
 Can you use what you still have?
 
-Can you keep moving?
+Can you keep moving with limited resources?
 
-That's troubleshooting under constraints.
+That's the real skill.
+
+Not knowing the perfect command.
+
+Knowing how to work when the perfect tool isn't there.
 
