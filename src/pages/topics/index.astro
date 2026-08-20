@@ -1,26 +1,16 @@
 ---
 import { getCollection } from "astro:content";
-import { TOPIC_DETAILS, getTopicOrder } from "../../data/topics";
 import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
-import { getTopicRoute } from "../../utils/posts";
+import { getTopicRoute, getTopicSummaries } from "../../utils/posts";
 
 const posts = await getCollection("blog", ({ data }) => !data.draft);
-const topics = [...new Set(posts.map((post) => post.data.topic))]
-  .map((topic) => ({
-    name: topic,
-    count: posts.filter((post) => post.data.topic === topic).length,
-    description:
-      topic in TOPIC_DETAILS
-        ? TOPIC_DETAILS[topic as keyof typeof TOPIC_DETAILS].description
-        : `Notes filed under ${topic}.`,
-  }))
-  .sort((a, b) => getTopicOrder(a.name) - getTopicOrder(b.name));
+const topics = getTopicSummaries(posts);
 ---
 
 <SystemPageLayout
   title="Topics"
   moduleCode="TOPIC-DIRECTORY"
-  description="Browse the archive through six clear subject areas. Each note belongs to one topic."
+  description="Browse the archive by topic."
   counter={`${topics.length} TOPICS`}
   active="topics"
 >
@@ -29,7 +19,6 @@ const topics = [...new Set(posts.map((post) => post.data.topic))]
       <a class="taxonomy-card" href={getTopicRoute(topic.name)}>
         <p>{String(index + 1).padStart(2, "0")} / TOPIC</p>
         <h2>{topic.name}</h2>
-        <p>{topic.description}</p>
         <span class="taxonomy-card-footer">
           <span>{topic.count} POSTS</span>
           <span>OPEN TOPIC →</span>

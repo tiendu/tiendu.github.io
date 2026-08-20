@@ -2,7 +2,7 @@
 title: "Bash, But Only the Useful Stuff"
 date: 2025-11-20
 description: "A practical Bash reference for navigation, text processing, loops, functions, strict mode, traps, pipelines, debugging, and safe shell automation."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "Bash"
   - "Linux"

@@ -3,7 +3,7 @@ title: "Podman Container Builds: Simple vs Multi-Stage"
 date: 2026-04-09
 last_modified_at: 2026-07-03
 description: "A practical comparison of simple and multi-stage Podman builds, backed by a small Python image benchmark."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "Podman"
   - "containers"

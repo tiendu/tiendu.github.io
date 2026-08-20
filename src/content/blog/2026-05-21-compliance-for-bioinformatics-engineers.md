@@ -2,7 +2,7 @@
 title: "Compliance for Bioinformatics Engineers: HIPAA, GDPR, NIH GDS, ISO 27001, FISMA, NIST 800-53, and FDA Software Guidance"
 date: 2026-05-21
 description: "A practical engineering guide to HIPAA, GDPR, NIH GDS, ISO 27001, FISMA, NIST 800-53, FDA guidance, controlled data, auditability, and platform design."
-topic: "Bioinformatics Engineering"
+topic: "Bioinformatics"
 keywords:
   - "bioinformatics"
   - "compliance"

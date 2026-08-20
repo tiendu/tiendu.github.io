@@ -2,7 +2,7 @@
 title: "Git Worktree and Git Subtree: Practical Tools Most Developers Underuse"
 date: 2025-03-01
 description: "A practical guide to Git worktree for parallel branches and Git subtree for vendoring or maintaining external repositories."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "Git"
   - "Git worktree"

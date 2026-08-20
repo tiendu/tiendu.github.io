@@ -2,7 +2,7 @@
 title: "Where Did the Spark Job Stop?"
 date: 2026-07-10
 description: "Notes from debugging an existing Spark-on-Kubernetes deployment by following the job from driver creation to executor scheduling, registration, task execution, and output."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "Apache Spark"
   - "Kubernetes"

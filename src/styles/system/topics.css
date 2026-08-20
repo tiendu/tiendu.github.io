@@ -13,7 +13,7 @@
   color: inherit;
   display: flex;
   flex-direction: column;
-  min-height: 220px;
+  min-height: 165px;
   padding: clamp(1rem, 2.5vw, 1.5rem);
   text-decoration: none;
   transition:
@@ -43,13 +43,6 @@
   font-size: clamp(1.15rem, 2vw, 1.5rem);
   line-height: 1.15;
   margin: 1.1rem 0 0;
-}
-
-.taxonomy-card h2 + p {
-  color: var(--system-dim);
-  font-size: 0.96rem;
-  line-height: 1.6;
-  margin: 0.8rem 0 1.4rem;
 }
 
 .taxonomy-card-footer {

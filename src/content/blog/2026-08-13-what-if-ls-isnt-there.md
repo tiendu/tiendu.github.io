@@ -2,7 +2,7 @@
 title: "What If ls Isn't There?"
 date: 2026-08-13
 description: "A small Linux question about what happens when the obvious tool disappears."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "Linux"
   - "problem solving"

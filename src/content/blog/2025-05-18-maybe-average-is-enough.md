@@ -2,7 +2,7 @@
 title: "Maybe Average Is Enough"
 date: 2025-05-18
 description: "A personal reflection on ambition, the fear of being ordinary, and learning to build a life that does not depend on being exceptional."
-topic: "Essays & Career"
+topic: "Essays"
 keywords:
   - "personal essay"
   - "ambition"

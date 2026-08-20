@@ -2,7 +2,7 @@
 title: "The Modern Data Stack for Systems Engineers"
 date: 2026-07-03
 description: "A practical map of warehouses, data lakes, lakehouses, Parquet, Iceberg, Spark, Trino, Airflow, security, and monitoring for engineers who already understand infrastructure."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "infrastructure"
   - "data engineering"

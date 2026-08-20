@@ -2,7 +2,7 @@
 title: "Functional Annotation in Bioinformatics: KEGG, GO, EggNOG, InterPro, Pfam, CAZy, CARD, and Beyond"
 date: 2023-01-22
 description: "A practical guide to KEGG, GO, EggNOG, InterPro, Pfam, CAZy, CARD, UniProt, and combining databases for reliable functional annotation."
-topic: "Bioinformatics Engineering"
+topic: "Bioinformatics"
 keywords:
   - "bioinformatics"
   - "functional annotation"

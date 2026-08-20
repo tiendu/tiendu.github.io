@@ -2,7 +2,7 @@
 title: "Diagnosing Intermittent Production Failures"
 date: 2026-02-23
 description: "A field reference for turning apparently random production failures into measurable conditions using timelines, comparisons, system evidence, and controlled reproduction."
-topic: "Reliability & Operations"
+topic: "Systems & Reliability"
 keywords:
   - "production debugging"
   - "incident investigation"

@@ -2,7 +2,7 @@
 title: "A Quiet Farewell to Bioinformatics"
 date: 2026-06-17
 description: "A personal career reflection on bioinformatics, compensation, meaning, stability, engineering work, and choosing the kind of life a profession can support."
-topic: "Essays & Career"
+topic: "Essays"
 keywords:
   - "bioinformatics career"
   - "career change"

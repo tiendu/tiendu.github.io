@@ -12,11 +12,10 @@ import {
 
 interface Props {
   name: string;
-  description: string;
   posts: BlogPost[];
 }
 
-const { name, description, posts } = Astro.props;
+const { name, posts } = Astro.props;
 const sortedPosts = sortPosts(posts);
 const route = getTopicRoute(name);
 const pageUrl = new URL(route, Astro.site ?? new URL(SITE.url)).href;
@@ -25,7 +24,6 @@ const structuredData = [
     "@type": "CollectionPage",
     "@id": `${pageUrl}#collection`,
     name: `${name} topic`,
-    description,
     url: pageUrl,
     inLanguage: SITE.language,
     isPartOf: { "@id": `${SITE.url}/#website` },
@@ -60,7 +58,6 @@ const structuredData = [
 <SystemPageLayout
   title={name}
   moduleCode="TOPIC-ARCHIVE"
-  description={description}
   counter={`${sortedPosts.length} RECORDS`}
   structuredData={structuredData}
   active="topics"

@@ -2,7 +2,7 @@
 title: "Compliance Controls I Would Build Into a Bioinformatics Platform"
 date: 2026-06-08
 description: "Engineering notes on safer identifiers, scoped access, audit events, provenance, exports, retention, and support access in bioinformatics platforms."
-topic: "Reliability & Operations"
+topic: "Systems & Reliability"
 keywords:
   - bioinformatics platforms
   - compliance engineering

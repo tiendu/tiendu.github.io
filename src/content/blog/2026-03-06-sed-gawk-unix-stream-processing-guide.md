@@ -2,7 +2,7 @@
 title: "sed & gawk Survival Guide: Practical Unix Stream Processing"
 date: 2026-03-06
 description: "A practical sed and gawk guide for filtering, transforming, joining, aggregating, and validating text and tabular data in Unix pipelines."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "sed"
   - "gawk"

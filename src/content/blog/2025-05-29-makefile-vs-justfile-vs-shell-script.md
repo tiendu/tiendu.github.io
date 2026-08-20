@@ -2,7 +2,7 @@
 title: "Makefile vs justfile vs Shell Script: Choosing the Right Automation Tool"
 date: 2025-05-29
 description: "A practical comparison of Makefile, justfile, and shell scripts, with decision criteria and reusable automation patterns for software projects."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "Makefile"
   - "justfile"

@@ -2,7 +2,7 @@
 title: "The Request Should Survive the Tool"
 date: 2026-07-24
 description: "Why I prefer curl and Python requests when API calls need to be reproducible, debuggable, and operationally reliable."
-topic: "Reliability & Operations"
+topic: "Systems & Reliability"
 keywords:
   - "curl"
   - "Python requests"

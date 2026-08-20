@@ -2,7 +2,7 @@
 title: "Bringing Pixi to Nextflow: A Practical Alternative to Conda"
 date: 2025-05-10
 description: "How to use Pixi environments with Nextflow for faster dependency resolution, lockfile-based reproducibility, and portable bioinformatics workflows."
-topic: "Bioinformatics Engineering"
+topic: "Bioinformatics"
 keywords:
   - "Nextflow"
   - "Pixi"

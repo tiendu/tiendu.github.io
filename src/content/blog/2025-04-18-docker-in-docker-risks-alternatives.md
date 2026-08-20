@@ -3,7 +3,7 @@ title: "Understanding Docker-in-Docker: Power, Risks, and Safer Alternatives"
 date: 2025-04-18
 last_modified_at: 2026-07-03
 description: "How Docker-in-Docker and Docker socket binding work, how an ordinary CI job can become a host breach, and how to design safer container build pipelines."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "Docker"
   - "Docker-in-Docker"

@@ -2,7 +2,7 @@
 title: "Test the Failure Boundaries"
 date: 2026-08-17
 description: "How I think about testing from a reliability perspective: start from user journeys, identify where things can break, test the important boundaries, and make failures easier to diagnose."
-topic: "Reliability & Operations"
+topic: "Systems & Reliability"
 keywords:
   - "testing"
   - "reliability engineering"

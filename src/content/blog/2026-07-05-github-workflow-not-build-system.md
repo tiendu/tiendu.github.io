@@ -2,7 +2,7 @@
 title: "Your GitHub Workflow Is Not Your Build System"
 date: 2026-07-05
 description: "Why CI/CD workflows should orchestrate builds and environment selection instead of containing build, test, configuration, packaging, and deployment logic."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "CI/CD"
   - "GitHub Actions"

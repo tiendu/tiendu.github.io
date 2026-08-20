@@ -2,7 +2,7 @@
 title: "Reliable Large File Transfers: Integrity, Retries, Resumability, and Recovery"
 date: 2026-06-21
 description: "A practical guide to reliable large-file transfers with rsync, checksums, temporary files, retries, resumability, object storage, safe streaming, verification, and failure recovery."
-topic: "Reliability & Operations"
+topic: "Systems & Reliability"
 keywords:
   - "file transfer"
   - "rsync"

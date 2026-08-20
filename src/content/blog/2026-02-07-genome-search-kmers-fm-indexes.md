@@ -2,7 +2,7 @@
 title: "From HELLOWORLD to Genome Search: How String Indexes Work"
 date: 2026-02-07
 description: "A simple explanation of how indexes, seeds, hash tables, FM-indexes, minimizers, and sketches make repeated string search fast."
-topic: "Bioinformatics Engineering"
+topic: "Bioinformatics"
 keywords:
   - "bioinformatics"
   - "string search"

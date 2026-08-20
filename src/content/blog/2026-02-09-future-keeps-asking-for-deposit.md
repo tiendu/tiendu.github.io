@@ -2,7 +2,7 @@
 title: "The Future Keeps Asking for a Deposit"
 date: 2026-02-09
 description: "A personal essay about postponing life, paying for imagined futures, and noticing what ambition quietly asks us to sacrifice in the present."
-topic: "Essays & Career"
+topic: "Essays"
 keywords:
   - "personal essay"
   - "ambition"

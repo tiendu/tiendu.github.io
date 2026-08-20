@@ -2,7 +2,7 @@
 title: "ETL vs ELT in Bioinformatics: Why Storing Raw Data Can Save Your Project"
 date: 2026-03-28
 description: "A practical comparison of ETL and ELT for bioinformatics, focusing on raw-data retention, reproducibility, reanalysis, storage cost, and evolving pipelines."
-topic: "Bioinformatics Engineering"
+topic: "Bioinformatics"
 keywords:
   - "bioinformatics"
   - "data engineering"

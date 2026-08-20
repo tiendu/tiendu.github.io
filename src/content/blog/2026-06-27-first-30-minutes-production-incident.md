@@ -2,7 +2,7 @@
 title: "The First 30 Minutes of a Production Incident"
 date: 2026-06-27
 description: "A practical incident-response checklist for stabilizing production, preserving evidence, building a timeline, assigning roles, and choosing safe mitigations."
-topic: "Reliability & Operations"
+topic: "Systems & Reliability"
 keywords:
   - "incident response"
   - "SRE"

@@ -2,7 +2,7 @@
 title: "Networking, But Only the Useful Stuff"
 date: 2026-07-30
 description: "Practical Linux commands for inspecting interfaces, routes, DNS, sockets, TLS, HTTP, LAN devices, packet flow, and common network failures."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "networking"
   - "TCP"

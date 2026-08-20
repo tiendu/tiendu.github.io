@@ -2,7 +2,7 @@
 title: "Vim: The 20 Keystrokes That Matter"
 date: 2026-06-25
 description: "A compact Vim guide to the movement, editing, operators, search, files, windows, buffers, macros, and commands that matter in everyday development."
-topic: "Infrastructure & Automation"
+topic: "Systems & Reliability"
 keywords:
   - "Vim"
   - "text editor"

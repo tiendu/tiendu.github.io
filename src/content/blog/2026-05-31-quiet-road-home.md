@@ -2,7 +2,7 @@
 title: "The Quiet Road Home"
 date: 2026-05-31
 description: "A personal essay about driving home late on a Sunday night, observing other lives in passing, and confronting loneliness, time, and ordinary existence."
-topic: "Essays & Career"
+topic: "Essays"
 keywords:
   - "personal essay"
   - "loneliness"

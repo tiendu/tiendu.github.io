@@ -2,7 +2,7 @@
 title: "That Strange Feeling That Something Is Missing"
 date: 2026-06-07
 description: "A personal essay about endless wanting, algorithmic distraction, imagined completeness, and the persistent feeling that the next thing will finally be enough."
-topic: "Essays & Career"
+topic: "Essays"
 keywords:
   - "personal essay"
   - "consumerism"

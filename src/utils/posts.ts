@@ -41,6 +41,18 @@ export function getTopicRoute(topic: string): string {
   return `/topics/${slugifyLabel(topic)}/`;
 }
 
+export function getTopicSummaries(posts: BlogPost[]) {
+  const counts = new Map<string, number>();
+
+  for (const post of posts) {
+    counts.set(post.data.topic, (counts.get(post.data.topic) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
 export function wordCount(body: string): number {
   return body
     .replace(/```[\s\S]*?```/g, " ")

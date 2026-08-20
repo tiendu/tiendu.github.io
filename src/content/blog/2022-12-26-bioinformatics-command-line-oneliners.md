@@ -2,7 +2,7 @@
 title: "Useful Bioinformatics One-liners"
 date: 2022-12-26
 description: "A tested collection of Bash, awk, sed, grep, samtools, FASTA, FASTQ, and tabular-data one-liners for everyday bioinformatics work."
-topic: "Bioinformatics Engineering"
+topic: "Bioinformatics"
 keywords:
   - "bioinformatics"
   - "command line"
