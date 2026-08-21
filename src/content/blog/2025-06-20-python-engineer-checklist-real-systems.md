@@ -1,354 +1,653 @@
 ---
-title: "The Python Engineer Checklist: Lessons From Real Systems"
+title: "The Python Engineer Checklist: What Actually Matters in Real Systems"
 date: 2025-06-20
-description: "A practical Python engineering checklist covering packaging, typing, testing, logging, exceptions, concurrency, performance, interfaces, and maintainability."
+description: "A practical checklist for Python systems that have to survive production: packaging, failures, diagnostics, testing, retries, concurrency, memory, dependencies, and performance."
 topic: "Software Engineering"
 keywords:
   - "Python"
   - "software engineering"
+  - "reliability"
   - "testing"
   - "type hints"
+  - "packaging"
   - "maintainability"
 urlSlug: "python-expert-checklist"
 ---
 
-Python is easy to start.
+Python is easy to write. Operating Python systems is the harder part.
 
-It is much harder to keep a Python codebase healthy after it grows to:
+At some point I stopped caring much about Python trivia. I care more about questions like these:
 
-- Thousands of files
-- Multiple developers
-- Background workers
-- APIs
-- CLI tools
-- Scheduled jobs
-- Data pipelines
+- Does the package work outside the repository root?
+- If it fails, is there enough evidence to debug it?
+- Can a timeout create duplicate work?
+- Are retries, queues, workers, and connections bounded?
+- Do tests cover the boundaries that actually fail?
+- Can the environment be reproduced later?
+- What happens if the process dies halfway through?
 
-Most production failures are not caused by Python syntax.
+That is the checklist I use now.
 
-They are caused by:
+## 1. The package should work from anywhere
 
-- Bad structure
-- Hidden complexity
-- Weak error handling
-- Poor concurrency decisions
-- Dependency sprawl
+A lot of Python import problems are packaging problems.
 
-This guide focuses on the problems that repeatedly appear in real systems.
+This works:
 
----
+```bash
+cd my-project
+python scripts/run.py
+```
 
-## Build Boring Project Structures
+Then CI, a container, or an installed CLI runs it from somewhere else and gets:
 
-Most import problems are architecture problems.
+```text
+ModuleNotFoundError
+```
 
-Bad signs:
+Keep these separate in your head:
 
-- Deep folder nesting
-- Multiple entrypoints
-- Random import styles
-- Scripts that only work from one directory
-- Heavy use of `sys.path` hacks
+```text
+source tree
+current working directory
+installed package
+sys.path
+```
 
-A good structure is boring.
+A normal layout can be boring:
 
 ```text
 project/
-|- pyproject.toml
-|- src/
-|  `- mytool/
-|     |- cli.py
-|     |- api.py
-|     |- models.py
-|     `- services/
-`- tests/
+├── pyproject.toml
+├── src/
+│   └── mytool/
+│       ├── __init__.py
+│       ├── cli.py
+│       └── services/
+└── tests/
 ```
 
-Rules:
+What matters is whether it installs and runs as an installed package.
 
-- Use one `pyproject.toml`
-- Install packages properly
-- Avoid modifying `PYTHONPATH`
-- Keep imports absolute and predictable
+```bash
+python -m venv /tmp/mytool-venv
+/tmp/mytool-venv/bin/python -m pip install .
 
-Good structure prevents entire categories of bugs.
-
----
-
-## Learn The Standard Library First
-
-Many Python projects depend on too many libraries.
-
-Before installing a package, ask:
-
-```text
-Can the standard library already do this?
+cd /tmp
+/tmp/mytool-venv/bin/python -c 'import mytool'
 ```
 
-Useful modules:
+If it has a CLI, test that too.
 
-### Files
+```bash
+mytool --help
+```
+
+Things like this are usually a smell:
 
 ```python
-from pathlib import Path
-import shutil
-import tempfile
+import sys
+sys.path.append("../../somewhere")
 ```
 
-### Collections
+So is requiring this for normal startup:
+
+```bash
+export PYTHONPATH=$PWD
+```
+
+Also avoid doing real work during import:
 
 ```python
-from collections import Counter
-from collections import defaultdict
+# surprising during import
+client = connect_to_database()
+config = load_remote_config()
 ```
 
-### Functional Programming
+Imports should normally define things, not start half the application.
+
+## 2. Failures are evidence
+
+Do not throw away the original error.
 
 ```python
-from functools import lru_cache
-from itertools import chain
-```
-
-### Concurrency
-
-```python
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import ProcessPoolExecutor
-```
-
-### Debugging
-
-```python
-import logging
-import traceback
-import pdb
-```
-
-### Example
-
-```python
-from functools import lru_cache
-
-@lru_cache(maxsize=None)
-def fib(n):
-    if n < 2:
-        return n
-    return fib(n - 1) + fib(n - 2)
-```
-
-Many external dependencies exist only because people never learned the standard library.
-
----
-
-## Learn To Read Tracebacks
-
-Many developers read only the last error line.
-
-The real answer is often higher in the traceback.
-
-Bad:
-
-```text
-ValueError
-```
-
-Good:
-
-```text
-Where did it start?
-What arguments were passed?
-What code path led here?
-```
-
-A traceback is a story.
-
-Read it from bottom to top.
-
----
-
-## Log For Humans
-
-Logs should answer questions.
-
-Bad:
-
-```python
-print("Error")
-```
-
-Slightly better:
-
-```python
-logging.error("Error occurred")
-```
-
-Useful:
-
-```python
-logging.error(
-    "Failed to load config file %s",
-    config_path
-)
-```
-
-Best:
-
-```python
-import logging
-
 try:
-    run()
+    do_work()
 except Exception:
-    logging.exception("Pipeline execution failed")
-```
-
-`logging.exception()` automatically includes the traceback.
-
----
-
-## Know When To Use Async, Threads, Or Processes
-
-This is one of the most important Python skills.
-
-### Asyncio
-
-Use for:
-
-- HTTP requests
-- APIs
-- Database connections
-- Network I/O
-
-Example:
-
-```python
-import asyncio
-
-async def fetch():
-    await asyncio.sleep(1)
-    return 42
-
-async def main():
-    results = await asyncio.gather(
-        *(fetch() for _ in range(5))
-    )
-
-    print(results)
-
-asyncio.run(main())
-```
-
-### Threads
-
-Use for:
-
-- Blocking I/O
-- File operations
-- Existing libraries that block
-
-```python
-from concurrent.futures import ThreadPoolExecutor
-```
-
-### Processes
-
-Use for:
-
-- CPU-heavy work
-- Data science
-- Image processing
-- Large computations
-
-```python
-from concurrent.futures import ProcessPoolExecutor
-```
-
-Simple rule:
-
-| Problem | Tool |
-|----------|------|
-| Network I/O | asyncio |
-| Blocking I/O | Threads |
-| CPU Work | Processes |
-
----
-
-## Understand The GIL
-
-Sooner or later somebody says:
-
-```text
-Python threads are slow.
-```
-
-The real issue is the Global Interpreter Lock (GIL).
-
-Only one Python thread executes Python bytecode at a time.
-
-This means:
-
-```text
-CPU work -> use processes
-I/O work -> threads are usually fine
-```
-
-Example:
-
-```python
-from concurrent.futures import ProcessPoolExecutor
-```
-
-for CPU-heavy workloads.
-
-Not:
-
-```python
-from threading import Thread
-```
-
----
-
-## Never Swallow Exceptions
-
-This is one of the worst patterns in Python.
-
-Bad:
-
-```python
-try:
-    risky()
-except:
     pass
 ```
 
-You just deleted useful debugging information.
+Obviously bad. This is only slightly better:
 
-Better:
+```python
+try:
+    load_config(path)
+except Exception:
+    raise RuntimeError("config failed")
+```
+
+Keep the cause:
+
+```python
+try:
+    load_config(path)
+except OSError as exc:
+    raise ConfigError(f"cannot load {path}") from exc
+```
+
+Broad exception handling is fine at real boundaries: a CLI entry point, worker loop, scheduler, or request handler. But the boundary should record the failure before translating or returning it.
+
+```python
+def main() -> int:
+    try:
+        run()
+    except ConfigError:
+        logger.exception("startup failed")
+        return 2
+    except Exception:
+        logger.exception("unexpected failure")
+        return 1
+    return 0
+```
+
+Do not collapse every failure into the same thing. A timeout, connection refusal, `404`, invalid input, and crashed dependency mean different things and often require different actions.
+
+### Log enough to follow one operation
+
+This is not enough:
+
+```python
+logger.error("request failed")
+```
+
+Carry identifiers through the system:
+
+```python
+logger.exception(
+    "result registration failed",
+    extra={
+        "request_id": request_id,
+        "job_id": job_id,
+        "attempt": attempt,
+    },
+)
+```
+
+For a job system I want to be able to trace:
+
+```text
+request_id
+  -> job_id
+    -> queue message
+      -> worker
+        -> output
+```
+
+State transitions are useful too:
+
+```text
+job accepted
+job queued
+job started
+job finished
+result registered
+```
+
+For elapsed time, use a monotonic clock:
+
+```python
+from time import monotonic
+
+started = monotonic()
+run_job()
+elapsed = monotonic() - started
+```
+
+And do not turn "more observability" into logging tokens, passwords, cookies, authorization headers, or private payloads.
+
+## 3. Make important boundaries explicit
+
+This is typed, but not very informative:
+
+```python
+def submit(config: dict) -> dict:
+    ...
+```
+
+This gives me an actual contract:
+
+```python
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class JobSpec:
+    image: str
+    command: list[str]
+    retries: int = 0
+
+@dataclass(frozen=True)
+class JobHandle:
+    job_id: str
+
+
+def submit(spec: JobSpec) -> JobHandle:
+    ...
+```
+
+For mapping-shaped external data, `TypedDict` is often enough. For behavior, `Protocol` is useful:
+
+```python
+from typing import Protocol
+
+class ObjectStore(Protocol):
+    def get(self, key: str) -> bytes: ...
+    def put(self, key: str, data: bytes) -> None: ...
+```
+
+I care most about typing at boundaries:
+
+- API inputs and outputs
+- configuration
+- database records
+- domain IDs
+- nullable values
+- public functions
+- subsystem interfaces
+
+The point is not 100% type coverage. The point is making important assumptions visible.
+
+## 4. Tests should reduce the search space
+
+The labels `unit`, `integration`, and `end-to-end` only matter if they tell me what the test proves.
+
+For retry logic, a unit test can answer:
+
+```text
+Does a permanent error stop immediately?
+Does a transient error retry?
+Does it stop after N attempts?
+Is backoff calculated correctly?
+```
+
+No database or container is needed.
+
+A mocked object-storage client can prove that `put_object()` was called with certain arguments. It cannot prove that credentials work, multipart behavior matches your assumptions, metadata survives, or the installed SDK accepts those arguments.
+
+That is integration-test territory.
+
+End-to-end tests answer a different question:
+
+```text
+Can the user still complete the important journey?
+```
+
+For example:
+
+```text
+authenticate
+  -> upload
+    -> submit
+      -> wait
+        -> download result
+```
+
+I usually think about tests like this:
+
+| Test | What it should prove |
+|---|---|
+| Unit | Local decisions and transformations |
+| Integration | Real dependency contracts |
+| End-to-end | Critical user journeys |
+| Smoke | The built/deployed artifact can start |
+| Regression | A specific bug stays fixed |
+
+The rule I use most often:
+
+> Test at the lowest boundary that can prove the behavior you care about.
+
+A thousand unit tests cannot prove that the package actually installs. So test that too.
+
+## 5. Timeouts, retries, and idempotency belong together
+
+Retry syntax is easy. Retry semantics are not.
+
+```python
+for attempt in range(3):
+    try:
+        return call_service()
+    except TimeoutError:
+        ...
+```
+
+Now consider:
+
+```text
+client -> create job
+server -> job created
+server -> response lost
+client -> timeout
+client -> retry
+```
+
+Did we create one job or two?
+
+A timeout means the caller did not receive a response in time. It does not prove that the server did nothing.
+
+For state-changing operations, retries often need idempotency. One common approach is a stable request key:
+
+```python
+submit_job(
+    spec,
+    idempotency_key="dataset-123-step-prepare-v4",
+)
+```
+
+When I review retry code, I check:
+
+- Which failures are retryable?
+- Is the operation safe to repeat?
+- Is there an attempt limit?
+- Is there backoff and jitter?
+- Does each attempt have a timeout?
+- Is there an overall deadline?
+- What happens after the last attempt?
+
+Do not blindly retry this:
 
 ```python
 except Exception:
-    logging.exception("Operation failed")
+    retry()
 ```
 
-Even better:
+Bad input will probably still be bad after sleeping for 30 seconds.
+
+Also keep the total budget in mind:
+
+```text
+10 s caller deadline
+├── attempt 1
+├── backoff
+├── attempt 2
+├── backoff
+└── attempt 3
+```
+
+Three 10-second attempts do not fit into a 10-second contract.
+
+## 6. Concurrency needs a resource budget
+
+Python gives us threads, `asyncio`, processes, multiple interpreters, plus native libraries that create their own threads.
+
+The first question should be: **what becomes scarce?**
+
+This is dangerous with a huge input:
 
 ```python
-except FileNotFoundError:
-    ...
-except PermissionError:
+await asyncio.gather(*(fetch(url) for url in urls))
+```
+
+Bound it:
+
+```python
+sem = asyncio.Semaphore(50)
+
+async def bounded_fetch(url: str):
+    async with sem:
+        return await fetch(url)
+```
+
+Same idea for executors:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+with ThreadPoolExecutor(max_workers=16) as pool:
     ...
 ```
 
-Handle specific failures whenever possible.
+Every worker costs something:
 
----
+```text
+CPU
+RAM
+socket
+file descriptor
+database connection
+temporary disk
+remote API capacity
+```
 
-## Understand Mutable Default Arguments
+Thirty-two processes are useless if each needs 4 GB RAM. Two hundred threads are useless if the database allows 50 connections.
 
-One of Python's oldest traps.
+On conventional GIL-enabled CPython, CPU-heavy pure-Python threads generally do not scale across cores as people expect. Processes remain a common choice for CPU-bound Python. Newer CPython also has free-threaded builds, and Python 3.14 added `InterpreterPoolExecutor`.
 
-Bad:
+For NumPy, BLAS, PyTorch, TensorFlow, and similar libraries, measure first. They may already use native threads. Eight Python workers each starting eight BLAS threads can produce 64 runnable threads without you intending it.
+
+## 7. Most memory problems start with something unbounded
+
+Common examples:
+
+```text
+unbounded queue
+unbounded cache
+unbounded batch
+unbounded result list
+unbounded worker count
+unbounded asyncio tasks
+read whole file before processing
+```
+
+This materializes the whole file:
+
+```python
+lines = file.readlines()
+```
+
+This streams it:
+
+```python
+for line in file:
+    process(line)
+```
+
+Generators help for the same reason:
+
+```python
+def records(path):
+    with open(path) as handle:
+        for line in handle:
+            yield parse(line)
+```
+
+Queues should often be bounded too:
+
+```python
+from queue import Queue
+
+queue = Queue(maxsize=1000)
+```
+
+That creates backpressure instead of letting producers turn RAM into a buffer.
+
+For Python allocations, `tracemalloc` is useful:
+
+```python
+import tracemalloc
+
+tracemalloc.start()
+# workload
+snapshot = tracemalloc.take_snapshot()
+
+for stat in snapshot.statistics("lineno")[:20]:
+    print(stat)
+```
+
+But distinguish:
+
+```text
+Python heap
+process RSS
+system available memory
+container/cgroup limit
+GPU/native memory
+```
+
+A process can look fine from Python's allocator and still get OOM-killed by the container.
+
+## 8. Treat subprocesses and shutdown as part of the system
+
+A subprocess is not just another function call.
+
+This ignores failure:
+
+```python
+subprocess.run(["tool", "input.txt"])
+```
+
+Prefer explicit behavior:
+
+```python
+import subprocess
+
+result = subprocess.run(
+    ["tool", "input.txt"],
+    check=True,
+    capture_output=True,
+    text=True,
+    timeout=300,
+)
+```
+
+Think about exit codes, timeouts, stdout/stderr size, working directory, environment variables, signals, and partial output.
+
+Avoid `shell=True` unless shell behavior is actually required. Passing untrusted strings through a shell is also an injection risk.
+
+Shutdown deserves the same attention. Containers stop. Deployments roll. Users press Ctrl-C. Schedulers terminate jobs.
+
+For a worker I usually want:
+
+```text
+stop accepting new work
+signal workers
+finish or cancel in-flight work
+flush important state
+exit within the grace period
+```
+
+But do not depend on graceful shutdown for correctness. `SIGKILL`, crashes, and machine loss exist.
+
+Persistent state should recover from that:
+
+- leases expire
+- stale `RUNNING` jobs can be reconciled
+- temporary files are identifiable
+- checkpoints are durable
+- state-changing operations are idempotent where possible
+
+Graceful shutdown is useful. Recoverable ungraceful shutdown matters more.
+
+## 9. Dependencies are operational decisions
+
+The standard library is worth knowing:
+
+```text
+pathlib
+logging
+subprocess
+concurrent.futures
+itertools
+functools
+tempfile
+shutil
+sqlite3
+json
+csv
+```
+
+But "fewer dependencies" is not enough as a rule. A mature library can be safer than maintaining a home-grown replacement forever.
+
+Before adding one, I care about:
+
+- what behavior it buys us
+- transitive dependencies
+- release churn
+- Python-version support
+- wheels/platform support
+- licensing
+- API stability
+- security history
+- how hard it would be to replace
+
+For applications, the runtime should be reproducible enough to investigate later. Package versions alone are not always enough:
+
+```text
+Python version
+package versions
+OS/base image
+CPU architecture
+system libraries
+CUDA/runtime versions when relevant
+```
+
+Useful first checks:
+
+```bash
+python --version
+python -m pip list
+python -m pip check
+uname -a
+```
+
+For libraries, exact pins are usually too restrictive. Use sensible compatibility ranges and test the versions you claim to support.
+
+The point is not zero dependencies. It is knowing what environment produced the behavior in front of you.
+
+## 10. Measure the bottleneck you actually have
+
+Start simple:
+
+```bash
+python -m cProfile script.py
+```
+
+For small snippets:
+
+```python
+import timeit
+```
+
+For Python allocations:
+
+```python
+import tracemalloc
+```
+
+But application latency may be elsewhere:
+
+```text
+CPU
+disk I/O
+network
+DNS
+database
+queue wait
+lock contention
+serialization
+startup/import time
+memory pressure
+```
+
+If CPU is low and latency is high, more CPU probably will not help.
+
+If adding workers makes the program slower, they may be fighting over the same disk, lock, connection pool, or remote service.
+
+Profile at the layer where the delay exists.
+
+## 11. Python details that still cause real bugs
+
+The language details matter when they explain actual failures.
+
+### Mutable defaults
 
 ```python
 def add(item, items=[]):
@@ -356,420 +655,164 @@ def add(item, items=[]):
     return items
 ```
 
-Many beginners expect:
+That list is reused across calls.
 
-```python
-add(1)
-add(2)
-```
-
-to return:
-
-```python
-[1]
-[2]
-```
-
-Actual result:
-
-```python
-[1]
-[1, 2]
-```
-
-The list is shared.
-
-Correct version:
+Usually:
 
 ```python
 def add(item, items=None):
     if items is None:
         items = []
-
     items.append(item)
-
     return items
 ```
 
-Use mutable defaults only when you intentionally want shared state.
-
----
-
-## Learn Context Managers
-
-Do not rely on cleanup happening magically.
-
-Good:
+### Assignment does not copy
 
 ```python
-with open("data.txt") as f:
-    content = f.read()
-```
-
-Bad:
-
-```python
-f = open("data.txt")
-content = f.read()
-```
-
-Context managers guarantee cleanup.
-
-You can build your own:
-
-```python
-class Resource:
-
-    def __enter__(self):
-        print("acquire")
-        return self
-
-    def __exit__(self, *exc):
-        print("release")
-```
-
----
-
-## Circular Imports Usually Mean Bad Design
-
-Bad:
-
-```python
-# a.py
-from b import foo
-
-# b.py
-from a import bar
-```
-
-The fix is usually architectural.
-
-Move shared logic into a third module.
-
-```python
-shared.py
-```
-
-that both modules depend on.
-
-Circular imports are often symptoms rather than root causes.
-
----
-
-## Understand References And Mutability
-
-Python variables hold references.
-
-Example:
-
-```python
-a = [1, 2, 3]
+a = [1, 2]
 b = a
+b.append(3)
+
+assert a == [1, 2, 3]
 ```
 
-Many beginners think:
+Both names refer to the same list.
 
-```text
-a owns list
-b owns another list
-```
-
-Reality:
-
-```text
-a ----\
-       -> same list
-b ----/
-```
-
-Changing one changes both.
-
-```python
-b.append(4)
-
-print(a)
-```
-
-Output:
-
-```python
-[1, 2, 3, 4]
-```
-
-This explains many "weird" bugs.
-
----
-
-## Know Shallow vs Deep Copy
-
-Example:
+### Shallow copies still share nested objects
 
 ```python
 import copy
 
 a = [[1, 2]]
-
 b = copy.copy(a)
-c = copy.deepcopy(a)
+b[0].append(3)
+
+assert a == [[1, 2, 3]]
 ```
 
-Shallow copy:
+`deepcopy()` can help, but it is not magic isolation. Understand the object graph first.
 
-```text
-Outer container copied
-Inner objects shared
-```
-
-Deep copy:
-
-```text
-Everything copied
-```
-
-Many production bugs come from accidental shallow copies.
-
----
-
-## Floats Are Approximate
-
-This surprises everybody once.
-
-```python
-0.1 + 0.2
-```
-
-Result:
-
-```python
-0.30000000000000004
-```
-
-Never compare floats directly.
-
-Bad:
+### Floats are approximate
 
 ```python
 0.1 + 0.2 == 0.3
+# False
 ```
 
-Better:
+When you mean numerical closeness:
 
 ```python
 import math
-
-math.isclose(
-    0.1 + 0.2,
-    0.3
-)
+math.isclose(0.1 + 0.2, 0.3)
 ```
 
-For money:
+### Iterators are consumable
 
 ```python
-from decimal import Decimal
+it = iter([1, 2, 3])
+
+list(it)
+# [1, 2, 3]
+
+list(it)
+# []
 ```
 
----
+This matters when the iterator is a file, generator, cursor, or streaming API.
 
-## Use Dataclasses
-
-Many classes exist only to hold data.
-
-Instead of:
+### `finally` can hide results and exceptions
 
 ```python
-class User:
-
-    def __init__(self, name, age):
-        self.name = name
-        self.age = age
+def f():
+    try:
+        return 1
+    finally:
+        return 2
 ```
 
-Use:
+The `finally` return wins.
+
+### `except Exception` does not catch everything
+
+`KeyboardInterrupt`, `SystemExit`, and `GeneratorExit` inherit from `BaseException`, not `Exception`.
+
+That is usually useful. A generic application error handler should not casually swallow Ctrl-C.
+
+### Context managers define resource lifetime
 
 ```python
-from dataclasses import dataclass
-
-@dataclass
-class User:
-    name: str
-    age: int
+with open(path) as handle:
+    ...
 ```
 
-Cleaner.
+The same pattern applies to locks, transactions, temporary directories, connections, and sessions.
 
-Less boilerplate.
+### Circular imports often mean coupling
 
-Easier to maintain.
+Moving an import inside a function can break the cycle. Sometimes that is enough. Sometimes it only hides the fact that two modules know too much about each other.
 
----
+## The checklist
 
-## Learn Generators
+### Packaging
 
-Generators save memory.
+- [ ] The project installs cleanly.
+- [ ] It works outside the repository root.
+- [ ] Startup does not require `PYTHONPATH` hacks.
+- [ ] Imports do not unexpectedly start services or heavy work.
+- [ ] The built artifact has a smoke test.
 
-Bad:
+### Failures and diagnostics
 
-```python
-lines = file.readlines()
-```
+- [ ] Exceptions keep useful tracebacks and causes.
+- [ ] Logs carry request/job/object IDs across boundaries.
+- [ ] Important state transitions and durations are recorded.
+- [ ] Secrets are not logged.
 
-Good:
+### Tests and interfaces
 
-```python
-for line in file:
-    process(line)
-```
+- [ ] Important boundaries have explicit contracts.
+- [ ] Unit tests cover local decisions.
+- [ ] Integration tests exercise real dependency behavior.
+- [ ] End-to-end tests cover a few critical journeys.
+- [ ] A failing test narrows down the broken layer.
 
-Or:
+### Distributed behavior
 
-```python
-def numbers():
-    for i in range(1000000):
-        yield i
-```
+- [ ] Network calls have timeouts.
+- [ ] Retries are bounded and selective.
+- [ ] State-changing retries are safe.
+- [ ] Retry attempts fit inside an overall deadline.
+- [ ] Partial failure has a recovery path.
 
-Generators are one of Python's most useful features for large datasets.
+### Resources
 
----
+- [ ] Worker counts are bounded.
+- [ ] Queues have backpressure where needed.
+- [ ] Connection pools have sensible limits.
+- [ ] Large inputs can be processed incrementally.
+- [ ] Multiprocessing memory cost is understood.
+- [ ] Native-library parallelism is not accidentally oversubscribed.
 
-## Optimize Only After Measuring
+### Operations
 
-Many Python engineers waste time optimizing the wrong thing.
+- [ ] Subprocess failures and timeouts are checked.
+- [ ] Shutdown behavior is defined.
+- [ ] The system can recover if graceful shutdown never happens.
+- [ ] Runtime and dependency versions are reproducible enough to debug.
+- [ ] Performance work starts with measurement.
 
-Before optimizing:
+### Maintainability
 
-Measure.
+- [ ] The code is readable without knowing a trick.
+- [ ] Dependencies justify their maintenance cost.
+- [ ] Abstractions solve a real problem.
+- [ ] Another engineer can operate the system without reconstructing the author's intent.
 
-Useful tools:
+That is much closer to what I mean by being good at Python.
 
-```python
-cProfile
-timeit
-tracemalloc
-```
+Knowing the language matters. But the harder questions usually come later: what happens when the network stalls, the process dies halfway through, the input is 100 times larger, or the package runs somewhere you did not expect?
 
-Example:
+And when it fails, what evidence is left behind?
 
-```bash
-python -m cProfile script.py
-```
-
-Guessing is not profiling.
-
----
-
-## Mock Responsibly
-
-Mocks are useful.
-
-Too many mocks are dangerous.
-
-Good candidates:
-
-- External APIs
-- Databases
-- Cloud services
-- Expensive operations
-
-Bad candidates:
-
-- Internal business logic
-- Simple helper functions
-
-Test behavior.
-
-Not implementation details.
-
----
-
-## Multiprocessing Can Be Dangerous
-
-Multiprocessing solves GIL problems.
-
-It also introduces:
-
-- Serialization issues
-- Startup overhead
-- Debugging complexity
-- Memory duplication
-
-Prefer:
-
-```python
-from concurrent.futures import ProcessPoolExecutor
-```
-
-over raw multiprocessing.
-
-Example:
-
-```python
-from concurrent.futures import ProcessPoolExecutor
-
-def square(x):
-    return x * x
-
-with ProcessPoolExecutor() as pool:
-    results = list(pool.map(square, range(10)))
-```
-
-Simple.
-
-Predictable.
-
----
-
-## Keep Dependencies Under Control
-
-Every dependency is:
-
-- More code
-- More security risk
-- More updates
-- More maintenance
-
-Ask:
-
-```text
-Do I really need this package?
-```
-
-Before installing:
-
-```bash
-pip install something
-```
-
-Good engineers remove dependencies whenever possible.
-
----
-
-## Write Python For Future You
-
-The goal is not clever code.
-
-The goal is code that still makes sense six months later.
-
-Prefer:
-
-```python
-for item in items:
-    process(item)
-```
-
-over:
-
-```python
-results = [
-    transform(x)
-    for x in items
-    if valid(x)
-]
-```
-
-when the comprehension becomes difficult to read.
-
-The best Python code is usually boring.
-
-Boring code survives production.
+Python syntax is usually the easy part.
