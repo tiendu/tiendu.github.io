@@ -1,5 +1,5 @@
 ---
-title: "Getting Out of GitHub Actions: A KISS Migration to Jenkins"
+title: "Getting Out of GitHub Actions: A Simple Migration to Jenkins"
 date: 2026-08-27
 description: "A small, practical migration from GitHub Actions to Jenkins without rebuilding your CI in Groovy."
 topic: "Systems & Reliability"
