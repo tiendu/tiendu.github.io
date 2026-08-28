@@ -1,83 +1,99 @@
 ---
 title: "Let the Chunk Tell You Where It Belongs"
 date: 2026-08-28
-description: "A small file-transfer idea: use chunk size as an address, pad the tail to preserve it, and keep recovery possible even when filenames or metadata disappear."
+description: "A small reliability idea for resumable file transfers: encode chunk position in chunk size so surviving bytes remain useful even when progress metadata disappears."
 topic: "Systems & Reliability"
 keywords:
   - "file transfer"
   - "chunked download"
+  - "resumable download"
   - "checksums"
   - "reliability engineering"
   - "recovery"
   - "Python"
-  - "metadata"
 urlSlug: "self-identifying-file-chunks"
 pinned: false
 ---
 
-I was thinking about chunked downloads again.
+I was thinking about resumable downloads again.
 
-The usual design is obvious. Split a large file into chunks and keep metadata for every piece:
+Suppose I am downloading a 200 GB file in parallel.
 
-```text
-file A
-chunk 17
-offset 268435456
-size 16777216
-checksum ...
-complete true
-```
+A bunch of chunks finish.
 
-That works.
+Then the process dies.
 
-But now the payload depends on bookkeeping somewhere else.
+Worse, the little SQLite database tracking progress is gone too.
 
-A database. A sidecar JSON file. A manifest entry. A filename with the chunk number baked into it.
+But the downloaded bytes are still sitting there as temporary files.
 
-Lose that metadata and I can end up with perfectly good chunks that the downloader no longer knows how to use.
-
-I wanted less state.
-
-## Start with stacks of paper
-
-Imagine I have a blue document.
-
-Instead of cutting it into equal stacks, I make the stacks slightly different:
+Something like:
 
 ```text
-Blue document:
-
-102 pages
-101 pages
-100 pages
-99 pages
+tmp-a91c
+tmp-17dd
+tmp-88fa
+tmp-b011
 ...
 ```
 
-Now I throw the stacks on the floor.
+Now I have an annoying question:
+
+> Which chunk is which?
+
+A normal downloader might have kept that answer somewhere else:
 
 ```text
-100
-102
-99
-101
+tmp-a91c
+    -> chunk 83
+    -> offset 5326766080
+    -> complete
+```
+
+If the bookkeeping disappears, perfectly good downloaded bytes can become useless.
+
+I do not like that failure mode.
+
+A resumable transfer should not become unrecoverable just because its bookkeeping disappeared while the bytes survived.
+
+## Let the chunk tell me
+
+Imagine one document split into stacks of paper:
+
+```text
+12 pages
+11 pages
+10 pages
+9 pages
+...
+```
+
+Now throw the stacks on the floor:
+
+```text
+10
+12
+9
+11
 ```
 
 I still know the order:
 
 ```text
-102 -> 101 -> 100 -> 99
+12 -> 11 -> 10 -> 9
 ```
 
-I do not need to write `1`, `2`, `3`, `4` on the stacks.
+No labels.
 
-Their sizes already tell me.
+The stack height tells me where it belongs.
 
-For a file, the page count becomes the chunk size.
+That is the idea.
+
+For a download, page count becomes chunk size.
 
 ## The byte version
 
-Suppose I want chunks around 16 MiB.
+Suppose my chunks are around 16 MiB.
 
 ```python
 BASE_SIZE = 16 * 1024 * 1024
@@ -99,7 +115,7 @@ chunk 3 = 16,776,448 bytes
 
 The difference is tiny compared with the chunk itself.
 
-But every valid size now has meaning.
+But each valid size maps to one chunk index.
 
 ```python
 def chunk_index(size: int) -> int:
@@ -111,70 +127,40 @@ def chunk_index(size: int) -> int:
     return delta // STEP
 ```
 
-Now the filename is not part of the identity.
+Now recovery starts with:
 
 ```python
 size = path.stat().st_size
 index = chunk_index(size)
 ```
 
-Rename the chunk to `foo`, `tmp-123`, or `whatever`.
+The temporary filename does not matter.
+
+Rename the chunk to `foo`, `whatever`, or `tmp-123`.
 
 Its size still tells me which chunk it is.
 
-## The first stack anchors the document
+## The offset is derived too
 
-Back to the blue document:
+Back to the paper stacks.
 
-```text
-102 -> 101 -> 100 -> 99
-```
-
-The 102-page stack is the anchor.
-
-If I later recover only:
+The 10-page stack starts after:
 
 ```text
-101
-100
-99
+12 + 11 = 23 pages
 ```
 
-and I know this blue sequence starts at 102, then I know the first stack is missing.
-
-The same thing happens with file chunks:
+The 9-page stack starts after:
 
 ```text
-BASE_SIZE -> first chunk
+12 + 11 + 10 = 33 pages
 ```
 
-The first chunk is not special because it needs extra metadata.
+I do not need to write an offset on every stack.
 
-It is special because it is the beginning of the size sequence.
+I can derive it from the sequence.
 
-## The offset comes from the sequence
-
-The paper version is simple.
-
-The 100-page stack starts after:
-
-```text
-102 + 101 = 203 pages
-```
-
-The 99-page stack starts after:
-
-```text
-102 + 101 + 100 = 303 pages
-```
-
-I do not need to write the offset on every stack.
-
-I can derive it from the stack sizes before it.
-
-The byte version is the same.
-
-For an arithmetic sequence:
+For the byte version:
 
 ```python
 def chunk_offset(index: int) -> int:
@@ -192,133 +178,165 @@ index = chunk_index(size)
 offset = chunk_offset(index)
 ```
 
-On POSIX systems I can write the chunk directly into the destination file:
+On POSIX systems I can write the chunk directly into the final file:
 
 ```python
 os.pwrite(fd, data, offset)
 ```
 
-So:
+So the relationship is:
 
 ```text
 chunk size
-    -> chunk identity
-    -> offset
+    -> chunk index
+    -> byte offset
 ```
 
-No separate chunk number.
+That is enough to reconstruct placement.
 
-No separate offset table.
+## The tail breaks the pattern
 
-## The final stack is where things break
+The final chunk is the awkward one.
 
-Now suppose the blue document contains **305 real pages**.
+Suppose my paper document has 35 real pages.
 
-My stack sequence is:
+The stack sequence is:
 
 ```text
-102
-101
-100
-99
+12
+11
+10
+9
 ...
 ```
 
 Add them:
 
 ```text
-102             = 102
-102 + 101       = 203
-102 + 101 + 100 = 303
+12             = 12
+12 + 11        = 23
+12 + 11 + 10   = 33
 ```
 
-There are still two pages left.
+There are two pages left.
 
-The next encoded stack should be:
+If I store the final stack naturally, I get:
 
 ```text
-99 pages
+12
+11
+10
+2
+```
+
+Now the last stack has lost its identity.
+
+It no longer looks like the fourth stack in the sequence.
+
+## Temporary padding fixes it
+
+Instead, I keep the final stack at its expected size:
+
+```text
+2 real pages
+7 blank pages
+-------------
+9 pages total
+```
+
+Now the stored stacks are still:
+
+```text
+12 -> 11 -> 10 -> 9
+```
+
+The blank pages are padding.
+
+**Padding preserves the shape that tells me where the chunk belongs.**
+
+For a downloader, the same thing can happen with the final temporary chunk.
+
+Suppose the next encoded chunk should logically be:
+
+```text
+15.9 MiB
 ```
 
 but only:
 
 ```text
-305 - 303 = 2 real pages
+3.2 MiB
 ```
 
-remain.
+of the source file remain.
 
-If I store the tail naturally, I get:
+The temporary object can still have the encoded logical size.
+
+After assembly, the padding disappears.
+
+The final file contains only real bytes.
+
+## The chunks are not the product
+
+This part matters.
+
+I am not proposing a permanent storage format where every file carries padded chunks forever.
+
+The final file is the product.
+
+The chunks are temporary recovery objects.
+
+The lifecycle is:
 
 ```text
-Blue document:
-
-102
-101
-100
-2
+download starts
+    ↓
+temporary chunks accumulate
+    ↓
+process crashes
+    ↓
+scan surviving chunks
+    ↓
+size -> chunk index -> offset
+    ↓
+resume missing ranges
+    ↓
+assemble final file
+    ↓
+delete temporary chunks
 ```
 
-That 2-page stack has lost the pattern.
+So padding is temporary structural redundancy.
 
-It no longer tells me where it belongs.
+And it does not necessarily mean transmitting or physically writing a giant block of zeroes.
 
-## Padding keeps the address
+Depending on the implementation and filesystem, the receiver can establish the logical size locally, for example with truncation or sparse-file behavior.
 
-Instead, I keep the final stack at the height it was supposed to have:
+The important thing is that the temporary chunk keeps the size that identifies it.
+
+## The original size tells me what to keep
+
+I do not need a separate `padding_length`.
+
+For the paper example:
 
 ```text
-Blue final stack:
-
-2 real pages
-97 blank pages
---------------
-99 pages total
+original document size = 35 pages
 ```
 
-Now the stored document is still:
+The final stack starts after:
 
 ```text
-102 -> 101 -> 100 -> 99
-```
-
-The final stack looks exactly like the chunk it is supposed to be.
-
-The blank pages are padding.
-
-Padding is not there just to fill space.
-
-**Padding preserves the shape that tells me where the chunk belongs.**
-
-The byte version is exactly the same.
-
-If the encoded final chunk should be 16,776,448 bytes but only 3 MiB of payload remain, I write the real payload and pad the rest.
-
-From the outside, the chunk still has its encoded size.
-
-## The original document size tells me what is real
-
-I do not need to store a separate padding length.
-
-For the blue document:
-
-```text
-real document size = 305 pages
-```
-
-The final stack starts at page:
-
-```text
-102 + 101 + 100 = 303
+12 + 11 + 10 = 33 pages
 ```
 
 So:
 
 ```text
-305 - 303 = 2 real pages
+35 - 33 = 2 real pages
 ```
 
-Everything after those two pages in the 99-page stack is padding.
+The remaining seven are padding.
 
 For files:
 
@@ -326,524 +344,19 @@ For files:
 real_tail_size = original_size - final_chunk_offset
 ```
 
-Or I can simply rebuild the padded file and trim it:
+Or just assemble the padded chunks and trim the final file:
 
 ```python
 os.ftruncate(fd, original_size)
 ```
 
-So from:
+That keeps the metadata small.
 
-```text
-base size
-step
-original file size
-```
+## Leave some space between valid sizes
 
-I can derive:
+I would not make chunk sizes differ by one byte.
 
-```text
-how many chunks exist
-which chunk is first
-which chunk is final
-the expected size of every chunk
-the offset of every chunk
-how many bytes in the tail are real
-how much padding to remove
-```
-
-That is a lot of state I do not have to persist for every piece.
-
-## Now add red and yellow documents
-
-One document is easy.
-
-The interesting problem is many files.
-
-So I add two more documents.
-
-The blue stacks live around 100 pages.
-
-The red stacks live around 200.
-
-The yellow stacks live around 300.
-
-```text
-Blue document:
-
-102
-101
-100
-99
-...
-
-Red document:
-
-202
-201
-200
-199
-...
-
-Yellow document:
-
-302
-301
-300
-299
-...
-```
-
-Now I throw all three documents onto the floor:
-
-```text
-200
-101
-302
-99
-201
-300
-102
-199
-301
-100
-202
-299
-```
-
-I can still see three families:
-
-```text
-100-ish -> Blue
-200-ish -> Red
-300-ish -> Yellow
-```
-
-Then inside each family:
-
-```text
-Blue:
-102 -> 101 -> 100 -> 99
-
-Red:
-202 -> 201 -> 200 -> 199
-
-Yellow:
-302 -> 301 -> 300 -> 299
-```
-
-The stack height now carries two pieces of information:
-
-```text
-rough height
-    -> which document?
-
-exact height
-    -> which stack?
-```
-
-## Chunk size as a hierarchical address
-
-In bytes, the same idea is:
-
-```text
-coarse size range
-    -> file identity
-
-fine decrement
-    -> chunk position
-```
-
-One simple encoding is:
-
-```python
-encoded_size = (
-    BASE
-    - file_index * FILE_STRIDE
-    - chunk_index * CHUNK_STEP
-)
-```
-
-The important rule is that the size ranges for different files cannot overlap.
-
-Conceptually:
-
-```text
-Blue lives in one size band.
-Red lives in another.
-Yellow lives in another.
-```
-
-Each band also needs a defined capacity. If a file can outgrow its band, allocate a larger band or another band before splitting it.
-
-Then one physical chunk size maps to exactly one:
-
-```text
-(file, chunk)
-```
-
-The exact arithmetic is just an implementation detail.
-
-The invariant is what matters:
-
-> One valid chunk size must decode to exactly one `(file, chunk)` pair.
-
-## Why padding matters even more with many documents
-
-Now the paper analogy earns its keep.
-
-The blue document has:
-
-```text
-102
-101
-100
-99
-```
-
-and the 99-page stack contains:
-
-```text
-2 real pages
-97 blank pages
-```
-
-The red document ends partway through its final stack too:
-
-```text
-202
-201
-200
-199
-```
-
-with:
-
-```text
-7 real pages
-192 blank pages
-```
-
-The yellow document ends in its 299-page stack:
-
-```text
-302
-301
-300
-299
-```
-
-with:
-
-```text
-11 real pages
-288 blank pages
-```
-
-With padding, the stored stacks stay regular:
-
-```text
-Blue:
-102
-101
-100
-99
-
-Red:
-202
-201
-200
-199
-
-Yellow:
-302
-301
-300
-299
-```
-
-Throw every stack onto the floor:
-
-```text
-200
-99
-302
-101
-199
-300
-201
-102
-299
-100
-202
-301
-```
-
-Nothing is ambiguous.
-
-The 99-page stack still belongs to Blue.
-
-The 199-page stack still belongs to Red.
-
-The 299-page stack still belongs to Yellow.
-
-Now remove the padding.
-
-The same three documents become:
-
-```text
-Blue:
-102
-101
-100
-2
-
-Red:
-202
-201
-200
-7
-
-Yellow:
-302
-301
-300
-11
-```
-
-Throw those stacks onto the floor:
-
-```text
-200
-2
-302
-101
-7
-300
-201
-102
-11
-100
-202
-301
-```
-
-The regular stacks are still easy.
-
-But what are:
-
-```text
-2
-7
-11
-```
-
-They are probably tails.
-
-But which tail belongs to which document?
-
-Did `2` come from Blue?
-
-Did `7` come from Red?
-
-Could `11` belong to Blue instead?
-
-Are any of them damaged stacks rather than tails?
-
-With dozens or hundreds of documents, I do not want to try candidate tails, rebuild files, hash them, fail, and try again.
-
-Padding prevents the ambiguity before it exists.
-
-Instead of storing the natural tail sizes:
-
-```text
-2
-7
-11
-```
-
-I keep their encoded stack heights:
-
-```text
-99
-199
-299
-```
-
-The real page count is inside the stack.
-
-The outside shape still carries the address.
-
-So even the final chunk obeys:
-
-```text
-size
-    -> file
-    -> chunk
-    -> offset
-```
-
-That is why padding is part of the encoding, not just an implementation trick.
-
-## Filenames can disappear
-
-Take all the blue, red, and yellow stacks and rename them:
-
-```text
-foo
-bar
-tmp-17
-whatever
-x
-```
-
-The paper does not care what somebody wrote on the outside.
-
-A 102-page stack is still the first Blue stack.
-
-A 199-page stack is still the final encoded Red stack.
-
-A 299-page stack is still the final encoded Yellow stack.
-
-The same thing happens with files.
-
-```python
-size = path.stat().st_size
-file_id, chunk_index = decode_size(size)
-```
-
-The filename never enters the lookup.
-
-So a chunk can survive:
-
-```text
-rename
-move
-copy
-restore from backup
-loss of a temporary database
-```
-
-and still keep its logical identity.
-
-## How badly can recovery break?
-
-This is where I care less about perfect reconstruction and more about graceful degradation.
-
-Suppose I lose the filenames.
-
-That is fine.
-
-The size still tells me which family and which chunk I have.
-
-Suppose I lose the temporary chunk database.
-
-Still fine.
-
-The chunks still carry their own structural address.
-
-Suppose I forget the exact Blue base, but the first Blue stack survives:
-
-```text
-102
-101
-100
-99
-```
-
-Then the largest stack is a good candidate for the base.
-
-If some chunks are missing, the observed gaps can still tell me something about the spacing.
-
-For example:
-
-```python
-from math import gcd
-
-sizes = sorted(sizes, reverse=True)
-
-spacing = 0
-
-for a, b in zip(sizes, sizes[1:]):
-    spacing = gcd(spacing, a - b)
-```
-
-But I would not call that the original step with certainty.
-
-If the real sequence was:
-
-```text
-102
-101
-100
-99
-98
-```
-
-and I only recover:
-
-```text
-102
-100
-98
-```
-
-the observed differences are `2, 2`.
-
-The GCD is `2`, even though the original step was `1`.
-
-So recovered spacing is evidence, not magic.
-
-With enough neighboring chunks, I may recover the original step exactly.
-
-With fewer chunks, I may only recover a coarser candidate.
-
-Now mix several documents:
-
-```text
-99, 100, 101, 102
-
-199, 200, 201, 202
-
-299, 300, 301, 302
-```
-
-Even if I forget the exact Blue, Red, and Yellow bases, the large gaps still reveal three families.
-
-Inside each family, the smaller gaps still reveal the local order.
-
-So I may lose the human names:
-
-```text
-Blue
-Red
-Yellow
-```
-
-but still recover:
-
-```text
-Document 1:
-102 -> 101 -> 100 -> 99
-
-Document 2:
-202 -> 201 -> 200 -> 199
-
-Document 3:
-302 -> 301 -> 300 -> 299
-```
-
-At some point, enough anchors can disappear that exact recovery becomes impossible.
-
-That is normal.
-
-The useful property is that losing one piece of bookkeeping does not immediately make all the chunks meaningless.
-
-## Keep some distance between valid sizes
-
-I would not encode file chunks one byte apart.
-
-This:
+This looks neat:
 
 ```text
 16,777,216
@@ -852,9 +365,9 @@ This:
 16,777,213
 ```
 
-looks neat, but losing one byte could make one valid chunk look like another valid chunk.
+but losing one byte could make one valid chunk look like the next valid chunk.
 
-I prefer some space:
+I prefer some distance:
 
 ```text
 16,777,216
@@ -874,17 +387,13 @@ if delta % STEP != 0:
 
 The unused sizes become a cheap structural check.
 
-In the paper analogy, instead of allowing every possible stack height, I deliberately leave some heights unused.
-
-A damaged stack is then less likely to accidentally become another valid stack.
-
 ## I still keep a checksum
 
-The stack height tells me what the chunk is.
+Size tells me identity.
 
-It does not tell me whether the contents are correct.
+It does not prove the bytes are correct.
 
-A 100-page stack could still contain the wrong pages.
+A chunk can have the right size and still contain bad data.
 
 So I keep an MD5 for each completed chunk.
 
@@ -918,9 +427,11 @@ The hash does not have to tell me which chunk it belongs to.
 
 The size already did that.
 
-## Recovery becomes boring
+## Crash recovery becomes simple
 
-Suppose I have a directory full of garbage names:
+Now go back to the failed 200 GB download.
+
+I have a directory full of anonymous temporary files:
 
 ```text
 tmp-a91c
@@ -933,103 +444,116 @@ whatever
 I scan them:
 
 ```python
+surviving = {}
+
 for path in parts:
     size = path.stat().st_size
-    file_id, index = decode_size(size)
+
+    try:
+        index = chunk_index(size)
+    except ValueError:
+        continue
+
+    surviving[index] = path
 ```
 
-Verify the chunk:
+Now I know which chunks survived.
+
+If I have expected hashes:
 
 ```python
-if md5(path) != hashes[file_id][index]:
-    raise ValueError("bad chunk")
+for index, path in list(surviving.items()):
+    if md5(path) != hashes[index]:
+        del surviving[index]
 ```
 
-Derive the offset:
+The missing chunk indexes are just:
 
 ```python
-offset = chunk_offset(file_id, index)
+missing = [
+    index
+    for index in range(expected_chunk_count)
+    if index not in surviving
+]
 ```
 
-Then write it:
+Those are the ranges I download again.
+
+The chunks I already paid bandwidth and time for stay useful.
+
+That is the whole point.
+
+## Then assemble
+
+Once every chunk is present:
 
 ```python
-position = offset
+fd = os.open(
+    "output.bin",
+    os.O_RDWR | os.O_CREAT,
+    0o644,
+)
 
-with open(path, "rb") as src:
-    while block := src.read(1024 * 1024):
-        os.pwrite(fd, block, position)
-        position += len(block)
+try:
+    for index, path in sorted(surviving.items()):
+        position = chunk_offset(index)
+
+        with open(path, "rb") as src:
+            while block := src.read(1024 * 1024):
+                os.pwrite(fd, block, position)
+                position += len(block)
+
+    os.ftruncate(fd, original_size)
+
+finally:
+    os.close(fd)
 ```
 
-When the file is complete:
+Then delete the temporary chunks.
 
-```python
-os.ftruncate(fd, original_size)
-```
+No special long-term format.
 
-Done.
+No permanent padding.
 
-No recovery database first. No filename parsing.
+Just a transfer that can recover more of its own state from the bytes that survived.
 
-The chunks already carry enough structure to tell me where they belong.
+## I am not trying to eliminate metadata
 
-## Recovery should degrade gracefully
+This still needs a small transfer definition.
 
-The failure modes now look like this:
+Something like:
 
 ```text
-lose filenames
-    -> still recover file groups and chunk order
-
-lose the temporary chunk database
-    -> still derive identity and offset from size
-
-lose hashes
-    -> lose byte-level verification, keep structural recovery
-
-forget exact bases
-    -> may still recover families and candidate spacing
-
-lose too many anchors
-    -> exact recovery may become impossible
-```
-
-That is the behavior I want.
-
-Not perfect immortality.
-
-Just fewer ways for one lost metadata file to make everything else useless.
-
-## The manifest can stay small
-
-I am not trying to eliminate metadata.
-
-I am trying to eliminate duplicated state.
-
-A small manifest can keep the things that are actually source-of-truth information:
-
-```text
-file id
+source
 original file size
-size-band parameters
-ordered chunk hashes
+base chunk size
+step
+expected chunk count
+chunk hashes
 ```
 
-I do not need to persist this for every chunk:
+That is fine.
+
+Those are source-of-truth values.
+
+What I want to avoid depending on is mutable duplicated state like:
 
 ```text
-chunk id
+temporary filename
+chunk index
 offset
 expected size
-completion flag
+complete = true
 ```
 
-Those values are consequences of the encoding.
+when most of it can be derived.
 
-Store the truth once.
+The distinction is:
 
-Derive the rest.
+```text
+store what cannot be derived
+derive what can
+```
 
 ## Why I like this
 
@@ -1039,41 +563,36 @@ Storage is cheap.
 
 Synchronization bugs are not.
 
-The usual design has:
+A conventional resumable download often has:
 
 ```text
-payload <-> metadata record
+temporary bytes
+        ↕
+progress metadata
 ```
 
 and both sides have to survive and agree.
 
-This design moves some of that information into the shape of the stored chunk itself:
+I would rather make the temporary chunks slightly more self-describing:
 
 ```text
-coarse size band
-    -> file grouping
-
-fine size decrement
-    -> chunk identity
-    -> order
+chunk size
+    -> chunk index
     -> offset
 
-base size
-    -> anchors the beginning
-
 padding
-    -> keeps the tail inside the same encoding
-
-original file size
-    -> removes the padding
+    -> keeps the tail inside the same rule
 
 hash
     -> verifies the bytes
+
+original file size
+    -> removes the padding
 ```
 
-Rename a chunk, move it, or copy it somewhere else and its identity still survives.
+If the progress database survives, great.
 
-Forget some parameters and the geometry may still tell me how the pieces group and order themselves.
+If it does not, the downloaded bytes still have something to say about themselves.
 
 The rule I keep coming back to is simple:
 
@@ -1083,4 +602,4 @@ I have been calling these self-identifying chunks.
 
 I do not know if that is the right name.
 
-But I like systems where losing one piece of bookkeeping does not make all the data around it useless.
+But I like resumable transfers that can survive losing some bookkeeping without throwing away perfectly good data.
