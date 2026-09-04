@@ -13,13 +13,11 @@ urlSlug: "bash-useful-stuff"
 ---
 
 A condensed, practical Bash reference for day-to-day scripting.
-
 Not a Bash tutorial. Just the things that repeatedly matter in real scripts.
 
 Bash-specific features are marked where relevant.
 
 ---
-
 ## Quotes & Substitution
 
 | Pattern | Meaning | Example |
@@ -50,7 +48,6 @@ Correct:
 ```bash
 mkdir "$name"
 ```
-
 ### Notes
 
 - Single quotes are safest for literal text.
@@ -58,13 +55,11 @@ mkdir "$name"
 - Prefer `$(cmd)` over old backticks: `` `cmd` ``.
 
 ---
-
 ## Pipes & Redirection
-
 | Pattern | Meaning | Example |
 |---|---|---|
-| `cmd1 | cmd2` | pipe stdout | `ls | wc -l` |
-| `cmd1 |& cmd2` | pipe stdout+stderr | `make |& tee log` |
+| `cmd1 \| cmd2` | pipe stdout | `ls \| wc -l` |
+| `cmd1 \|& cmd2` | pipe stdout+stderr | `make \|& tee log` |
 | `>` | overwrite stdout | `echo hi > x` |
 | `>>` | append stdout | `echo hi >> x` |
 | `<` | stdin from file | `wc -l < x` |
@@ -74,9 +69,8 @@ mkdir "$name"
 | `1>&2` | stdout to stderr | `echo hi 1>&2` |
 | `<<<` | here-string | `grep hi <<< "$x"` |
 | `<<EOF` | heredoc | `cat <<EOF` |
-| `tee` | pipe + save | `echo hi | tee x` |
-| `>|` | force overwrite | `echo hi >| x` |
-
+| `tee` | pipe + save | `echo hi \| tee x` |
+| `>\|` | force overwrite | `echo hi >\| x` |
 ### File descriptors
 
 | FD | Meaning |
@@ -101,7 +95,6 @@ cmd > out.log 2>&1
 ```
 
 ---
-
 ## Process Substitution (Bash)
 
 | Pattern | Meaning | Example |
@@ -112,9 +105,7 @@ cmd > out.log 2>&1
 Useful when a command expects filenames instead of stdin.
 
 ---
-
 ## Parameter Expansion
-
 | Pattern | Meaning | Example |
 |---|---|---|
 | `${v:-x}` | default if unset/empty | `${a:-hi}` |
@@ -129,7 +120,6 @@ Useful when a command expects filenames instead of stdin.
 | `${#v}` | length | `${#s}` |
 | `${v:pos}` | substring | `${s:2}` |
 | `${v:pos:len}` | bounded substring | `${s:1:3}` |
-
 ### Common patterns
 
 Get filename:
@@ -169,7 +159,6 @@ Output:
 | `[abc]` | char class | `file[1-9]` |
 | `{a,b}` | alternation | `{dev,prod}.cfg` |
 | `{1..5}` | sequence | `{1..3}` |
-
 ### Example
 
 ```bash
@@ -202,7 +191,6 @@ done
 ---
 
 ## Links: Hardlink & Symlink
-
 ### Commands
 
 | Command | Meaning | Example |
@@ -213,7 +201,6 @@ done
 | `readlink -f x` | resolve real path | `readlink -f link` |
 | `unlink x` | remove link | `unlink link` |
 | `ls -li` | inspect inode | `ls -li file copy` |
-
 ### Hardlink vs Symlink
 
 | Feature | Hardlink | Symlink |
@@ -235,7 +222,6 @@ Hardlink:
 - another name for the same file
 
 ---
-
 ## Variables & Environment
 
 | Pattern | Meaning | Example |
@@ -261,7 +247,6 @@ Child processes only inherit exported variables.
 ---
 
 ## IFS, Reading & Arrays (Bash)
-
 ### IFS
 
 | Pattern | Meaning |
@@ -270,9 +255,7 @@ Child processes only inherit exported variables.
 | `IFS=$'\n'` | newline-only split |
 | `IFS=:` | colon split |
 | `IFS= read -r line` | safe raw line read |
-
 ### Arrays
-
 | Pattern | Meaning | Example |
 |---|---|---|
 | `a=(x y z)` | create array | `a=(1 2 3)` |
@@ -284,7 +267,6 @@ Child processes only inherit exported variables.
 | `read -ra a` | split input into array | `read -ra a <<< "$s"` |
 | `readarray -t a` | read lines into array | `readarray -t a < file.txt` |
 | `mapfile -t a` | same as `readarray` | `mapfile -t a < file.txt` |
-
 ### Why `IFS= read -r` matters
 
 ```bash
@@ -318,7 +300,6 @@ printf '%s\n' "${lines[@]}"
 ```
 
 ---
-
 ## Common Internal Variables
 
 | Variable | Meaning |
@@ -336,7 +317,6 @@ printf '%s\n' "${lines[@]}"
 | `$RANDOM` | random int |
 | `$LINENO` | current line |
 | `${BASH_SOURCE[0]}` | script path |
-
 ### Notes
 
 Always prefer:
@@ -363,7 +343,6 @@ because it preserves argument boundaries safely.
 | `function f {}` | Bash alternative | non-POSIX |
 | `$1 "$@"` | function args | `echo "$1"` |
 | `return n` | function exit code | `return 42` |
-
 ### Return vs output
 
 This does not return a string:
@@ -399,7 +378,6 @@ else
   echo small
 fi
 ```
-
 ### case
 
 Usually cleaner than long if-chains.
@@ -425,7 +403,6 @@ esac
 ```
 
 Regex works only inside `[[ ]]`.
-
 ### Numeric operators
 
 | Operator | Meaning |
@@ -466,7 +443,6 @@ Example:
 ```
 
 ---
-
 ## Loops
 
 | Pattern | Meaning | Example |
@@ -486,7 +462,6 @@ done
 ```
 
 Always quote loop variables.
-
 ### Avoid pipe subshell surprises
 
 This may run the loop in a subshell:
@@ -526,7 +501,6 @@ echo "$count"
 ```
 
 ---
-
 ## find
 
 | Command | Meaning |
@@ -546,7 +520,6 @@ find . -name "*.log"
 
 find . -type f -exec rm -- {} \;
 ```
-
 ### Safe filename handling
 
 Prefer:
@@ -573,7 +546,6 @@ This safely handles:
 | `xargs -P4` | parallel jobs |
 | `xargs -I{}` | placeholder substitution |
 | `xargs bash -c` | run shell snippet |
-
 ### Parallel compression
 
 ```bash
@@ -599,8 +571,6 @@ Why the `_ {}` pattern?
 - `"$1"` keeps filenames safe
 
 ---
-
-
 ## Everyday Text Tools
 
 | Command | Use | Example |
@@ -610,10 +580,9 @@ Why the `_ {}` pattern?
 | `awk` | field processing | `awk '{print $1}' file` |
 | `cut` | select columns | `cut -f1 sample.tsv` |
 | `sort` | sort lines | `sort names.txt` |
-| `uniq -c` | count repeats | `sort x | uniq -c` |
+| `uniq -c` | count repeats | `sort x \| uniq -c` |
 | `column -t` | align table | `column -t file.tsv` |
 | `head` / `tail` | inspect edges | `tail -f app.log` |
-
 ### Useful one-liners
 
 ```bash
@@ -629,7 +598,6 @@ column -t -s $'\t' file.tsv | less -S
 Keep these simple. If parsing becomes complex, switch to Python.
 
 ---
-
 ## Hidden Characters
 
 Some files look normal but contain hidden characters.
@@ -673,7 +641,6 @@ Look for:
 ```
 
 Fix it:
-
 ```bash
 dos2unix script.sh
 ```
@@ -687,7 +654,6 @@ sed -i 's/\r$//' script.sh
 Useful for scripts, config files, TSV files, manifests, and anything copied from Windows.
 
 ---
-
 ## Archives & Transfers
 
 | Command | Meaning |
@@ -698,7 +664,6 @@ Useful for scripts, config files, TSV files, manifests, and anything copied from
 | `gunzip file.gz` | decompress file |
 | `rsync -av src/ dst/` | sync directory |
 | `rsync -av --dry-run src/ dst/` | preview sync |
-
 ### Inspect before extracting
 
 List the archive first:
@@ -722,7 +687,6 @@ tar -xzf archive.tar.gz -C extracted
 | `.tar.xz` | `J` |
 | `.tar.bz2` | `j` |
 | `.tar` | none |
-
 ### Undo extraction into the wrong directory
 
 `tar` has no real undo. The archive can identify extracted paths, but it cannot restore files that were overwritten.
@@ -732,7 +696,6 @@ For a `.tar.gz` extracted into the current directory:
 ```bash
 archive="archive.tar.gz"
 target="$PWD"
-
 # Remove extracted files and symlinks
 tar -tzf "$archive" |
   sed 's#^\./##' |
@@ -747,7 +710,6 @@ tar -tzf "$archive" |
       rm -v -- "$path"
     fi
   done
-
 # Remove extracted directories only when empty
 tar -tzf "$archive" |
   sed 's#^\./##' |
@@ -769,7 +731,6 @@ tar -tzf "$archive" |
 This preserves unrelated files and non-empty directories. Use `tar -tJf` for `.tar.xz`, or `tar -tf` for an uncompressed `.tar`.
 
 Examples:
-
 ```bash
 tar -czf results.tar.gz results/
 
@@ -779,7 +740,6 @@ rsync -av --progress data/ backup/data/
 Use `rsync` when copying many files. It resumes better than plain `cp`.
 
 ---
-
 ## curl
 
 | Pattern | Meaning |
@@ -798,11 +758,9 @@ curl -fsSL "https://example.com/file.txt" -o file.txt
 
 curl -H "Authorization: Bearer $TOKEN" "https://api.example.com/items"
 ```
-
 Avoid piping remote scripts directly into `bash` unless you trust the source.
 
 ---
-
 ## Date & Time
 
 | Command | Meaning |
@@ -821,7 +779,6 @@ log="run_${stamp}.log"
 ```
 
 ---
-
 ## Job Control
 
 | Pattern | Meaning |
@@ -849,7 +806,6 @@ wait "$pid2"
 For serious parallel work, prefer `xargs -P`, GNU Parallel, Nextflow, Snakemake, or a job scheduler.
 
 ---
-
 ## Debugging
 
 | Pattern | Meaning |
@@ -871,7 +827,6 @@ fi
 ```
 
 ---
-
 ## Dry Run Pattern
 
 Useful before destructive commands.
@@ -901,7 +856,6 @@ esac
 ```
 
 ---
-
 ## Script Safety Flags
 
 ```bash
@@ -931,7 +885,6 @@ set -o pipefail
 ```
 
 the pipeline fails correctly.
-
 ### Notes
 
 - `set -e` has edge cases and is not perfect error handling.
@@ -950,7 +903,6 @@ trap 'echo "error at line $LINENO" >&2' ERR
 ---
 
 ## Argument Parsing
-
 ### Required and optional positional args
 
 ```bash
@@ -963,7 +915,6 @@ Meaning:
 - `$1` is required
 - `$2` is optional
 - default output is `out.txt`
-
 ### Small flag parser
 
 ```bash
@@ -996,11 +947,9 @@ done
   exit 1
 }
 ```
-
 This is enough for many small scripts.
 
 ---
-
 ## Logging & Errors
 
 ### Log to stderr
@@ -1038,7 +987,6 @@ Example:
 ```
 
 ---
-
 ## Temporary Files & Cleanup
 
 Bad:
@@ -1073,7 +1021,6 @@ trap cleanup EXIT
 ```
 
 ---
-
 ## Check Required Commands
 
 ```bash
@@ -1092,7 +1039,6 @@ need_cmd samtools
 Useful when scripts run on different machines.
 
 ---
-
 ## Practical Script Template
 
 ```bash
@@ -1125,7 +1071,6 @@ main() {
   [[ -f "$input" ]] || die "not a file: $input"
 
   log "processing $input"
-
   # real work here
 }
 
@@ -1135,7 +1080,6 @@ main "$@"
 This is a good default for small production scripts.
 
 ---
-
 ## ShellCheck
 
 Run this on serious Bash scripts:
@@ -1171,7 +1115,6 @@ rm -- "$file"
 ```
 
 The `--` protects against filenames starting with `-`.
-
 ### Parsing `ls`
 
 Bad:
@@ -1221,7 +1164,6 @@ Good:
 cd "$dir" || die "cannot cd into $dir"
 rm -- *.tmp
 ```
-
 ### Too much Bash magic
 
 Bash is good glue.
