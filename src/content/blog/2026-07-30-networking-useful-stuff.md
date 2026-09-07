@@ -746,7 +746,7 @@ A request may be sent through a proxy instead of directly to the destination.
 
 | Command | Use |
 |---|---|
-| `env | grep -i proxy` | inspect proxy environment variables |
+| `env \| grep -i proxy` | inspect common proxy environment variables |
 | `curl -v -x http://proxy:3128 URL` | use an explicit proxy |
 | `curl --noproxy '*' URL` | bypass configured proxies |
 | `curl --noproxy host URL` | bypass the proxy for one host |
@@ -1195,6 +1195,121 @@ A connection that works on the host may still fail inside a container because it
 
 ---
 
+## macOS
+
+Most of the troubleshooting model in this note is the same on macOS, but many Linux networking commands such as `ip`, `ss`, `resolvectl`, `ethtool`, and `systemctl` are not available by default.
+
+The useful macOS equivalents are:
+
+| What | macOS |
+|---|---|
+| Interfaces and addresses | `ifconfig` |
+| Find interface names | `networksetup -listallhardwareports` |
+| IP of one interface | `ipconfig getifaddr en0` |
+| Routing table | `netstat -rn` |
+| Route to a destination | `route -n get 8.8.8.8` |
+| Default route | `route -n get default` |
+| ARP table | `arp -a` |
+| IPv6 neighbours | `ndp -a` |
+| DNS configuration | `scutil --dns` |
+| System hostname lookup | `dscacheutil -q host -a name example.com` |
+| Listening sockets | `sudo lsof -nP -iTCP -sTCP:LISTEN` |
+| All network sockets | `netstat -anv` |
+| Packet capture | `sudo tcpdump -ni en0` |
+| Packet capture interfaces | `tcpdump -D` |
+| PF firewall rules | `sudo pfctl -sr` |
+
+Do not assume Wi-Fi is always `en0`. Check first:
+
+```bash
+networksetup -listallhardwareports
+```
+
+For a quick local inspection:
+
+```bash
+ifconfig
+netstat -rn
+scutil --dns
+arp -a
+```
+
+To see which route macOS would use:
+
+```bash
+route -n get 8.8.8.8
+```
+
+The output includes the selected gateway and interface.
+
+For DNS, `dig` still works:
+
+```bash
+dig example.com
+dig +short example.com
+dig @1.1.1.1 example.com
+```
+
+But, as on Linux, `dig` is not necessarily the same path an application uses. To ask the macOS system resolver:
+
+```bash
+dscacheutil -q host -a name example.com
+```
+
+This distinction becomes especially useful with VPNs, split DNS, and multiple resolver configurations. `scutil --dns` shows the resolver state macOS is actually maintaining.
+
+`nc`, `curl`, `openssl`, `ping`, `traceroute`, `lsof`, and `tcpdump` are also available, so much of the rest of this note transfers directly:
+
+```bash
+nc -vz host 443
+curl -v https://host/
+openssl s_client -connect host:443 -servername host
+ping -c 3 host
+traceroute host
+```
+
+macOS does not have Linux's `ss`. For a quick listener check, `lsof` is usually easier:
+
+```bash
+sudo lsof -nP -iTCP -sTCP:LISTEN
+```
+
+For one port:
+
+```bash
+sudo lsof -nP -iTCP:8080
+```
+
+Packet capture is similar, but do not blindly copy Linux examples using `-i any`. Find the interface first:
+
+```bash
+tcpdump -D
+sudo tcpdump -ni en0 host 203.0.113.42 and port 443
+```
+
+One useful macOS-specific command is:
+
+```bash
+networkQuality
+```
+
+It gives a quick measurement of upload capacity, download capacity, and responsiveness. It does not replace the troubleshooting steps above, but it is useful when the complaint is simply 'the network feels slow'.
+
+The commands are different. The troubleshooting order is not:
+
+```text
+interface
+→ DNS
+→ route
+→ reachability
+→ port
+→ TLS
+→ HTTP
+→ application
+```
+
+---
+
 ## Common Failure Patterns
 
 ### Name resolves, but connection times out
@@ -1491,6 +1606,7 @@ sudo nft list ruleset
 sudo iptables -L -n -v
 sudo ufw status verbose
 ```
+
 ---
 
 The useful question is rarely:
@@ -1502,4 +1618,3 @@ It is:
 > What was the last boundary that worked?
 
 Start there.
-
