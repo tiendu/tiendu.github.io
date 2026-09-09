@@ -62,7 +62,10 @@ const structuredData = [
   active="topics"
 >
   <section class="taxonomy-archive" aria-label={`${name} notes`}>
-    <p class="taxonomy-archive-count">{sortedPosts.length} NOTES</p>
+    <div class="taxonomy-archive-toolbar">
+      <a class="taxonomy-back" href="/topics/">← TOPICS</a>
+      <span class="taxonomy-archive-count">{sortedPosts.length} NOTES</span>
+    </div>
 
     <ol class="topic-log-list">
       {sortedPosts.map((post) => (
@@ -75,6 +78,7 @@ const structuredData = [
             <span class="topic-log-read">
               {readingTime(post.body ?? "")} min
             </span>
+            <span class="topic-log-selector" aria-hidden="true">&gt;</span>
           </a>
         </li>
       ))}

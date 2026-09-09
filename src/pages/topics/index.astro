@@ -21,7 +21,8 @@ const topics = getTopicSummaries(posts);
         </span>
         <h2>{topic.name}</h2>
         <span class="taxonomy-card-footer">
-          <span>{topic.count} posts →</span>
+          <span>{topic.count} posts</span>
+          <span class="taxonomy-selector" aria-hidden="true">&gt;</span>
         </span>
       </a>
     ))}

@@ -114,9 +114,12 @@ const structuredData = [
 
     <section class="article-console" aria-labelledby="article-title">
       <header class="article-system-header">
-        <a class="article-topic" href={getTopicRoute(post.data.topic)}>
-          {post.data.topic}
-        </a>
+        <nav class="article-context" aria-label="Article context">
+          <a class="article-back" href="/posts/">← POSTS</a>
+          <a class="article-topic" href={getTopicRoute(post.data.topic)}>
+            {post.data.topic}
+          </a>
+        </nav>
 
         <h1 id="article-title" class="article-title p-name">
           {post.data.title}
@@ -153,11 +156,12 @@ const structuredData = [
           <ol>
             {relatedPosts.map((relatedPost) => (
               <li>
-                <time datetime={relatedPost.data.date.toISOString()}>
-                  {formatCompactDate(relatedPost.data.date)}
-                </time>
-                <a href={getPostRoute(relatedPost)}>
-                  {relatedPost.data.title}
+                <a class="related-post-link" href={getPostRoute(relatedPost)}>
+                  <time datetime={relatedPost.data.date.toISOString()}>
+                    {formatCompactDate(relatedPost.data.date)}
+                  </time>
+                  <span class="related-post-title">{relatedPost.data.title}</span>
+                  <span class="related-post-selector" aria-hidden="true">&gt;</span>
                 </a>
               </li>
             ))}
@@ -166,8 +170,11 @@ const structuredData = [
       )}
 
       <nav class="post-navigation" aria-label="Article navigation">
-        <a href="/posts/">← ALL POSTS</a>
-        <a href={getTopicRoute(post.data.topic)}>{post.data.topic} →</a>
+        <a href="/posts/">← POSTS</a>
+        <a class="post-navigation-topic" href={getTopicRoute(post.data.topic)}>
+          <span class="post-navigation-topic-label">{post.data.topic}</span>
+          <span class="post-navigation-selector" aria-hidden="true">&gt;</span>
+        </a>
       </nav>
     </section>
   </div>

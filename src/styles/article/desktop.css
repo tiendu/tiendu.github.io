@@ -1,6 +1,7 @@
 /* Desktop reading comfort ----------------------------------------------- */
 
 @media (min-width: 721px) {
+  .article-back,
   .article-topic,
   .post-meta {
     font-size: 0.78rem;
@@ -79,6 +80,7 @@
     width: 100%;
   }
 
+  .article-back,
   .article-topic,
   .post-meta {
     font-size: 0.74rem;
@@ -134,6 +136,7 @@
   }
 
   .article-title,
+  .article-back,
   .article-topic,
   .post-meta {
     color: black;

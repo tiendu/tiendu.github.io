@@ -56,16 +56,35 @@
 
 .operator-links a,
 .operator-links a:visited {
+  align-items: center;
   color: var(--system-amber);
+  display: inline-flex;
   font-family: var(--font-mono);
   font-size: 0.76rem;
+  gap: 0.35rem;
   letter-spacing: 0.06em;
+  min-height: 32px;
   text-decoration: none;
 }
 
-.operator-links a:hover {
+.operator-link-mark {
+  color: var(--system-text);
+  font-size: 0.85em;
+  text-shadow: var(--system-glow-soft);
+}
+
+.operator-links a:hover,
+.operator-links a:focus-visible {
+  color: var(--system-bright);
   text-decoration: underline;
+  text-shadow: var(--system-glow-soft);
   text-underline-offset: 0.2em;
+}
+
+.operator-links a:hover .operator-link-mark,
+.operator-links a:focus-visible .operator-link-mark {
+  color: var(--system-bright);
+  text-shadow: var(--system-glow-hot);
 }
 
 .about-copy {

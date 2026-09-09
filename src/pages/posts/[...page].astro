@@ -93,6 +93,7 @@ const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`)
                   </a>
                   <span> · {readingTime(post.body ?? "")} min</span>
                 </p>
+                <span class="log-entry-selector" aria-hidden="true">&gt;</span>
               </li>
             );
           })}
@@ -123,6 +124,7 @@ const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`)
                   </a>
                   <span> · {readingTime(post.body ?? "")} min</span>
                 </p>
+                <span class="log-entry-selector" aria-hidden="true">&gt;</span>
               </li>
             );
           })}

@@ -45,7 +45,7 @@
   border-bottom: 1px solid var(--system-line);
   display: grid;
   gap: 0.3rem 0.9rem;
-  grid-template-columns: 6.75rem minmax(0, 1fr);
+  grid-template-columns: 6.75rem minmax(0, 1fr) 1.15rem;
   margin-inline: calc(-1 * var(--log-entry-gutter));
   padding: 0.8rem var(--log-entry-gutter);
   position: relative;
@@ -132,6 +132,26 @@
   outline: none;
 }
 
+.log-entry-selector {
+  align-self: center;
+  color: var(--system-text);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 700;
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  justify-self: end;
+  line-height: 1;
+  pointer-events: none;
+  position: relative;
+  text-shadow: var(--system-glow-soft);
+  transition:
+    color 130ms ease,
+    text-shadow 130ms ease,
+    transform 130ms ease;
+  z-index: 2;
+}
+
 .log-entry:has(.log-post-link:focus-visible) .log-post-link,
 .log-entry:has(.log-post-link:active) .log-post-link {
   color: var(--system-bright);
@@ -146,6 +166,13 @@
   text-shadow: var(--system-glow-soft);
 }
 
+.log-entry:has(.log-post-link:focus-visible) .log-entry-selector,
+.log-entry:has(.log-post-link:active) .log-entry-selector {
+  color: var(--system-bright);
+  text-shadow: var(--system-glow-hot);
+  transform: translateX(0.08rem);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .log-entry:has(.log-post-link:hover) .log-post-link {
     color: var(--system-bright);
@@ -156,6 +183,12 @@
   .log-entry:has(.log-post-link:hover) .log-subline {
     color: var(--system-text);
     text-shadow: var(--system-glow-soft);
+  }
+
+  .log-entry:has(.log-post-link:hover) .log-entry-selector {
+    color: var(--system-bright);
+    text-shadow: var(--system-glow-hot);
+    transform: translateX(0.08rem);
   }
 }
 
@@ -174,25 +207,61 @@
 
 .log-topic-link,
 .log-topic-link:visited {
-  color: inherit;
+  color: var(--system-text);
+  display: inline-block;
+  letter-spacing: 0.055em;
   margin: -0.2rem;
   padding: 0.2rem;
   position: relative;
   text-decoration: none;
+  text-transform: uppercase;
   z-index: 2;
+}
+
+.log-topic-link::before {
+  content: "[";
+  margin-right: 0.16em;
+}
+
+.log-topic-link::after {
+  content: "]";
+  margin-left: 0.16em;
 }
 
 .log-topic-link:hover,
 .log-topic-link:focus-visible {
   color: var(--system-bright);
-  text-decoration: underline;
-  text-shadow: var(--system-glow);
-  text-underline-offset: 0.2em;
+  text-decoration: none;
+  text-shadow: var(--system-glow-hot);
 }
 
-.log-entry:has(.log-post-link:active) {
-  background: rgb(255 177 92 / 10%);
-  box-shadow: inset 3px 0 0 var(--system-text);
+.log-topic-link:focus-visible {
+  outline: 1px solid var(--system-text);
+  outline-offset: 2px;
+}
+
+/* Touch keeps the same navigation grammar without pretending hover exists. */
+@media (hover: none), (pointer: coarse) {
+  .log-entry {
+    --log-entry-gutter: 0;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+
+  .log-post-link {
+    text-shadow: var(--system-glow-soft);
+  }
+
+  .log-topic-link {
+    align-items: center;
+    display: inline-flex;
+    min-height: 32px;
+  }
+
+  .log-entry:has(.log-post-link:active) .log-post-link,
+  .log-entry:has(.log-post-link:active) .log-entry-selector {
+    text-shadow: var(--system-glow-hot);
+  }
 }
 
 /* Search is deliberately a single control; results reuse the archive rows. */
@@ -208,30 +277,52 @@
   gap: 0.65rem;
 }
 
+.post-search-field {
+  align-items: center;
+  border: 1px solid var(--system-line-strong);
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 44px;
+  min-width: 0;
+}
+
+.post-search-field:focus-within {
+  border-color: var(--system-text);
+  outline: 1px solid var(--system-text);
+  outline-offset: 2px;
+}
+
+.post-search-prompt {
+  color: var(--system-text);
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  padding-left: 0.8rem;
+  text-shadow: var(--system-glow-soft);
+  white-space: nowrap;
+}
+
 .post-search-control input {
   background: transparent;
-  border: 1px solid var(--system-line-strong);
+  border: 0;
   border-radius: 0;
   color: var(--system-bright);
   flex: 1 1 auto;
   font-family: var(--font-mono);
   font-size: 0.88rem;
   letter-spacing: 0.035em;
-  min-height: 44px;
+  min-height: 42px;
   min-width: 0;
-  padding: 0.65rem 0.8rem;
+  outline: 0;
+  padding: 0.6rem 0.8rem 0.6rem 0.45rem;
   text-transform: uppercase;
 }
 
 .post-search-control input::placeholder {
   color: rgb(233 161 74 / 38%);
   opacity: 1;
-}
-
-.post-search-control input:focus {
-  border-color: var(--system-text);
-  outline: 1px solid var(--system-text);
-  outline-offset: 2px;
 }
 
 .post-search-control input::-webkit-search-cancel-button {
@@ -280,6 +371,10 @@
     font-size: 16px;
   }
 
+  .post-search-prompt {
+    font-size: 0.76rem;
+  }
+
   .post-search-control button,
   .post-search-status {
     font-size: 0.72rem;
@@ -298,10 +393,11 @@
   }
 
   .log-entry {
-    --log-entry-gutter: 0.55rem;
-    gap: 0.3rem;
-    grid-template-columns: 1fr;
-    padding: 0.8rem var(--log-entry-gutter);
+    --log-entry-gutter: 0;
+    gap: 0.3rem 0.65rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-inline: 0;
+    padding: 0.9rem 0;
   }
 
   .log-date,
@@ -309,6 +405,14 @@
   .log-subline {
     grid-column: 1;
     grid-row: auto;
+  }
+
+  .log-entry-selector {
+    align-self: center;
+    font-size: 0.88rem;
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    padding-left: 0.2rem;
   }
 
   .log-date {

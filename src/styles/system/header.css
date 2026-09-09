@@ -64,6 +64,7 @@
 .system-nav a:visited {
   border-bottom: 1px solid transparent;
   color: var(--system-dim);
+  align-items: center;
   display: inline-flex;
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -78,15 +79,36 @@
   font-size: 0.55rem;
 }
 
-.system-nav a:hover,
-.system-nav a[aria-current="page"] {
+.system-nav a:hover {
   border-bottom-color: var(--system-text);
   color: var(--system-bright);
   text-decoration: none;
 }
 
+.system-nav a[aria-current="page"] {
+  border-bottom-color: transparent;
+  color: var(--system-bright);
+  text-decoration: none;
+}
+
+/* Brackets are the persistent "selected control" cue throughout the UI. */
+.system-nav a[aria-current="page"]::before {
+  content: "[";
+  margin-right: -0.18rem;
+}
+
+.system-nav a[aria-current="page"]::after {
+  content: "]";
+  margin-left: -0.18rem;
+}
+
+.system-nav a[aria-current="page"] {
+  text-shadow: var(--system-glow-soft);
+}
+
 .system-nav .system-home-link {
   color: var(--system-dim);
+  margin-left: 0.7rem;
 }
 
 /* Generic system-page links are brighter; inactive primary nav stays dim. */
@@ -138,6 +160,15 @@ body.system-interface .system-nav a:not(:hover):not([aria-current="page"]):visit
   }
 }
 
+
+@media (pointer: coarse) {
+  .system-nav a,
+  .system-nav a:visited {
+    min-height: 40px;
+    padding-block: 0.55rem;
+  }
+}
+
 @media (max-width: 560px) {
   .system-topbar-inner {
     gap: 0.45rem;
@@ -160,6 +191,12 @@ body.system-interface .system-nav a:not(:hover):not([aria-current="page"]):visit
   .system-nav a,
   .system-nav a:visited {
     font-size: 0.8rem;
+    min-height: 40px;
+    padding-block: 0.55rem;
+  }
+
+  .system-nav .system-home-link {
+    margin-left: 0.2rem;
   }
 
   .system-nav a span {

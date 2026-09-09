@@ -24,12 +24,19 @@
 }
 
 .related-posts li {
-  align-items: baseline;
   border-bottom: 1px solid var(--system-line);
+}
+
+.related-post-link,
+.related-post-link:visited {
+  align-items: baseline;
+  color: inherit;
   display: grid;
   gap: 1rem;
-  grid-template-columns: 6.5rem minmax(0, 1fr);
+  grid-template-columns: 6.5rem minmax(0, 1fr) 1rem;
+  min-height: 48px;
   padding: 0.8rem 0;
+  text-decoration: none;
 }
 
 .related-posts time {
@@ -40,34 +47,90 @@
   text-transform: uppercase;
 }
 
-.related-posts li a,
-.related-posts li a:visited {
+.related-post-title {
   color: var(--system-text);
   font-size: 1rem;
   line-height: 1.4;
-  text-decoration: none;
+  transition:
+    color 130ms ease,
+    text-shadow 130ms ease;
 }
 
-.related-posts li a:hover,
-.related-posts li a:focus-visible {
+.related-post-selector {
+  color: var(--system-text);
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  font-weight: 700;
+  justify-self: end;
+  text-shadow: var(--system-glow-soft);
+  transition:
+    color 130ms ease,
+    text-shadow 130ms ease,
+    transform 130ms ease;
+}
+
+.related-post-link:focus-visible {
+  background: var(--system-faint);
+  outline: 1px solid var(--system-text);
+  outline-offset: -1px;
+}
+
+.related-post-link:focus-visible .related-post-title,
+.related-post-link:focus-visible .related-post-selector {
   color: var(--system-bright);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+  text-shadow: var(--system-glow-hot);
+}
+
+.related-post-link:focus-visible .related-post-selector {
+  transform: translateX(0.08rem);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .related-post-link:hover {
+    background: var(--system-faint);
+  }
+
+  .related-post-link:hover .related-post-title,
+  .related-post-link:hover .related-post-selector {
+    color: var(--system-bright);
+    text-shadow: var(--system-glow-hot);
+  }
+
+  .related-post-link:hover .related-post-selector {
+    transform: translateX(0.08rem);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .related-post-title {
+    text-shadow: var(--system-glow-soft);
+  }
 }
 
 @media (max-width: 600px) {
-  .related-posts li {
-    gap: 0.25rem;
-    grid-template-columns: 1fr;
+  .related-post-link,
+  .related-post-link:visited {
+    gap: 0.25rem 0.65rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.9rem 0;
   }
 
   .related-posts time {
     font-size: 0.72rem;
+    grid-column: 1;
+    grid-row: 1;
   }
 
-  .related-posts li a,
-  .related-posts li a:visited {
+  .related-post-title {
     font-size: 1.04rem;
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .related-post-selector {
+    align-self: center;
+    grid-column: 2;
+    grid-row: 1 / span 2;
   }
 }
 

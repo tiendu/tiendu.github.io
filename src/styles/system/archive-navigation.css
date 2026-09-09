@@ -26,6 +26,14 @@
   text-underline-offset: 0.2em;
 }
 
+
+.pagination-edge a,
+.pagination-edge a:visited {
+  align-items: center;
+  display: inline-flex;
+  min-height: 36px;
+}
+
 .pagination-edge span {
   color: rgb(233 161 74 / 28%);
 }
@@ -44,16 +52,28 @@
 
 .pagination-pages a,
 .pagination-pages span {
-  display: block;
-  min-width: 2rem;
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 36px;
+  min-width: 2.2rem;
   padding: 0.3rem 0.4rem;
   text-align: center;
 }
 
 .pagination-pages span[aria-current="page"] {
-  background: var(--system-faint);
   color: var(--system-bright);
-  outline: 1px solid var(--system-line-strong);
+  text-shadow: var(--system-glow-soft);
+}
+
+.pagination-pages span[aria-current="page"]::before {
+  content: "[";
+  margin-right: 0.12em;
+}
+
+.pagination-pages span[aria-current="page"]::after {
+  content: "]";
+  margin-left: 0.12em;
 }
 
 @media (min-width: 761px) {

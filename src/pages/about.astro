@@ -24,7 +24,8 @@ import SystemPageLayout from "../layouts/SystemPageLayout.astro";
               target={external ? "_blank" : undefined}
               rel={external ? "noopener noreferrer" : undefined}
             >
-              {label}
+              <span>{label}</span>
+              <span class="operator-link-mark" aria-hidden="true">↗</span>
             </a>
           ))
         }
@@ -67,9 +68,9 @@ import SystemPageLayout from "../layouts/SystemPageLayout.astro";
         <h2 id="work-heading">The questions underneath the system</h2>
 
         <ul class="question-list">
-          <li><span aria-hidden="true">&gt;</span> Why did this job fail after two days?</li>
-          <li><span aria-hidden="true">&gt;</span> Where did the storage go?</li>
-          <li><span aria-hidden="true">&gt;</span> Why is this still retrying?</li>
+          <li><span aria-hidden="true">—</span> Why did this job fail after two days?</li>
+          <li><span aria-hidden="true">—</span> Where did the storage go?</li>
+          <li><span aria-hidden="true">—</span> Why is this still retrying?</li>
         </ul>
 
         <p class="about-stack">

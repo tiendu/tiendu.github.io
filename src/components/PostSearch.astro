@@ -31,15 +31,18 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
 ---
 <section class="post-search" data-post-search aria-label="Search notes">
   <div class="post-search-control">
-    <label class="sr-only" for="post-search-input">Search notes</label>
-    <input
-      id="post-search-input"
-      data-post-search-input
-      type="search"
-      autocomplete="off"
-      spellcheck="false"
-      placeholder="SEARCH NOTES..."
-    />
+    <div class="post-search-field">
+      <span class="post-search-prompt" aria-hidden="true">SEARCH &gt;</span>
+      <label class="sr-only" for="post-search-input">Search notes</label>
+      <input
+        id="post-search-input"
+        data-post-search-input
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="NOTES..."
+      />
+    </div>
     <button type="button" data-post-search-clear hidden>CLEAR</button>
   </div>
 
@@ -51,7 +54,7 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
     </header>
     <ol class="log-list" data-post-search-list></ol>
     <p class="system-empty-state" data-post-search-empty hidden>
-      NO MATCHING NOTES.
+      NO MATCHES.
     </p>
   </section>
 
@@ -156,7 +159,10 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
         const runtime = createTextElement("span", "", ` · ${record.minutes} min`);
         subline.append(topic, runtime);
 
-        item.append(date, main, subline);
+        const selector = createTextElement("span", "log-entry-selector", ">");
+        selector.setAttribute("aria-hidden", "true");
+
+        item.append(date, main, subline, selector);
         return item;
       };
 
@@ -190,7 +196,7 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
           .map(({ record }) => record);
 
         list.replaceChildren(...matches.map(renderRecord));
-        count.textContent = `${matches.length}`;
+        count.textContent = `${matches.length} ${matches.length === 1 ? "MATCH" : "MATCHES"}`;
         status.textContent = `${matches.length} ${matches.length === 1 ? "match" : "matches"}`;
         results.hidden = false;
         empty.hidden = matches.length !== 0;

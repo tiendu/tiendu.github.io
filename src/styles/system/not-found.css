@@ -26,14 +26,32 @@
 
 .system-error-panel nav a,
 .system-error-panel nav a:visited {
+  align-items: center;
   color: var(--system-amber);
+  display: inline-flex;
   font-family: var(--font-mono);
   font-size: 0.76rem;
+  gap: 0.4rem;
   letter-spacing: 0.06em;
+  min-height: 36px;
   text-decoration: none;
 }
 
-.system-error-panel nav a:hover {
+.system-error-panel nav a span {
+  color: var(--system-text);
+  font-weight: 700;
+  text-shadow: var(--system-glow-soft);
+}
+
+.system-error-panel nav a:hover,
+.system-error-panel nav a:focus-visible {
+  color: var(--system-bright);
   text-decoration: underline;
   text-underline-offset: 0.2em;
+}
+
+.system-error-panel nav a:hover span,
+.system-error-panel nav a:focus-visible span {
+  color: var(--system-bright);
+  text-shadow: var(--system-glow-hot);
 }
