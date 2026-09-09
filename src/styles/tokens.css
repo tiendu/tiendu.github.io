@@ -11,6 +11,12 @@
     Consolas,
     monospace;
   --font-terminal: "VT323", var(--font-mono);
+  --font-panel:
+    "Barlow Condensed",
+    "Arial Narrow",
+    "Roboto Condensed",
+    "Helvetica Neue",
+    sans-serif;
 
   --paper: #f3efe5;
   --paper-light: #fbf8f1;

@@ -44,8 +44,8 @@
 
 .taxonomy-index {
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-panel);
+  font-size: 0.84rem;
   letter-spacing: 0.06em;
 }
 
@@ -69,8 +69,8 @@
 
 .taxonomy-card-footer span {
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-panel);
+  font-size: 0.84rem;
   letter-spacing: 0.07em;
   text-transform: none;
   white-space: nowrap;
@@ -78,7 +78,7 @@
 
 .taxonomy-card-footer .taxonomy-selector {
   color: var(--system-text);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0;
   text-shadow: var(--system-glow-soft);
@@ -128,8 +128,8 @@
   align-items: center;
   color: var(--system-text);
   display: inline-flex;
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-panel);
+  font-size: 0.84rem;
   letter-spacing: 0.06em;
   min-height: 32px;
   padding-block: 0.3rem;
@@ -146,8 +146,8 @@
 
 .taxonomy-archive-count {
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-panel);
+  font-size: 0.84rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -195,8 +195,8 @@
 .topic-log-entry time,
 .topic-log-read {
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-panel);
+  font-size: 0.84rem;
   letter-spacing: 0.045em;
   white-space: nowrap;
 }
@@ -218,8 +218,8 @@
 .topic-log-selector {
   align-self: center;
   color: var(--system-text);
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
+  font-family: var(--font-panel);
+  font-size: 1rem;
   font-weight: 700;
   grid-column: 4;
   justify-self: end;
@@ -267,7 +267,7 @@
 
   .taxonomy-back,
   .taxonomy-archive-count {
-    font-size: 0.74rem;
+    font-size: 0.8rem;
   }
 
   .taxonomy-archive-toolbar {
@@ -283,7 +283,7 @@
 
   .topic-log-entry time,
   .topic-log-read {
-    font-size: 0.74rem;
+    font-size: 0.8rem;
   }
 
   .topic-log-entry time {
@@ -321,7 +321,7 @@
 
   .taxonomy-index,
   .taxonomy-card-footer span {
-    font-size: 0.74rem;
+    font-size: 0.8rem;
   }
 
   .taxonomy-card h2 {

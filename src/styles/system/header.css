@@ -29,7 +29,7 @@
   color: var(--system-bright);
   display: grid;
   flex: 0 0 auto;
-  font-family: var(--font-mono);
+  font-family: var(--font-panel);
   line-height: 1.15;
   text-decoration: none;
 }
@@ -40,15 +40,16 @@
 }
 
 .system-brand-name {
-  font-size: 0.94rem;
-  font-weight: 650;
-  letter-spacing: 0.075em;
+  font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
 .system-brand-model {
   color: var(--system-dim);
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.13em;
   margin-top: 0.24rem;
 }
 
@@ -66,17 +67,18 @@
   color: var(--system-dim);
   align-items: center;
   display: inline-flex;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-family: var(--font-panel);
+  font-size: 0.94rem;
+  font-weight: 600;
   gap: 0.35rem;
-  letter-spacing: 0.055em;
+  letter-spacing: 0.11em;
   padding: 0.35rem 0 0.3rem;
   text-decoration: none;
 }
 
 .system-nav a span {
   color: rgb(233 161 74 / 42%);
-  font-size: 0.55rem;
+  font-size: 0.68rem;
 }
 
 .system-nav a:hover {
@@ -123,16 +125,16 @@ body.system-interface .system-nav a:not(:hover):not([aria-current="page"]):visit
 
 @media (min-width: 761px) {
   .system-brand-name {
-    font-size: 1.02rem;
+    font-size: 1.2rem;
   }
 
   .system-brand-model {
-    font-size: 0.76rem;
+    font-size: 0.82rem;
   }
 
   .system-nav a,
   .system-nav a:visited {
-    font-size: 0.82rem;
+    font-size: 1rem;
   }
 
   .system-nav a span {
@@ -177,7 +179,7 @@ body.system-interface .system-nav a:not(:hover):not([aria-current="page"]):visit
   }
 
   .system-brand-name {
-    font-size: 1rem;
+    font-size: 1.18rem;
   }
 
   .system-brand-model {
@@ -190,7 +192,7 @@ body.system-interface .system-nav a:not(:hover):not([aria-current="page"]):visit
 
   .system-nav a,
   .system-nav a:visited {
-    font-size: 0.8rem;
+    font-size: 0.98rem;
     min-height: 40px;
     padding-block: 0.55rem;
   }

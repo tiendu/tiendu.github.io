@@ -7,6 +7,10 @@ import "@fontsource-variable/nunito/wght-italic.css";
 import "@fontsource-variable/source-code-pro";
 import "@fontsource-variable/source-code-pro/wght-italic.css";
 import "@fontsource/vt323";
+import "@fontsource/barlow-condensed";
+import "@fontsource/barlow-condensed/500.css";
+import "@fontsource/barlow-condensed/600.css";
+import "@fontsource/barlow-condensed/700.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 
@@ -17,6 +21,10 @@ interface Props {
   description?: string;
   image?: string;
   imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  socialTitle?: string;
+  socialDescription?: string;
   article?: boolean;
   terminal?: boolean;
   system?: boolean;
@@ -28,6 +36,10 @@ const {
   description = SITE.description,
   image,
   imageAlt,
+  imageWidth,
+  imageHeight,
+  socialTitle,
+  socialDescription,
   article = false,
   terminal = false,
   system = false,
@@ -43,6 +55,8 @@ const siteBase = Astro.site ?? new URL(SITE.url);
 const canonicalPath = Astro.url.pathname.replace(/\.html\/$/, ".html");
 const canonical = new URL(canonicalPath, siteBase);
 const socialImage = image ? new URL(image, siteBase) : undefined;
+const resolvedSocialTitle = socialTitle ?? pageTitle;
+const resolvedSocialDescription = socialDescription ?? description;
 const resolvedImageAlt =
   imageAlt ?? (title ? `${title} — ${SITE.title}` : SITE.title);
 const usesSystemChrome = system || article;
@@ -99,9 +113,9 @@ const serializedJsonLd = JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta property="og:type" content={article ? "article" : "website"} />
-    <meta property="og:site_name" content={SITE.title} />
-    <meta property="og:title" content={pageTitle} />
-    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content={SITE.shortTitle} />
+    <meta property="og:title" content={resolvedSocialTitle} />
+    <meta property="og:description" content={resolvedSocialDescription} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content="en_US" />
     {
@@ -109,6 +123,8 @@ const serializedJsonLd = JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
         <>
           <meta property="og:image" content={socialImage} />
           <meta property="og:image:alt" content={resolvedImageAlt} />
+          {imageWidth && <meta property="og:image:width" content={String(imageWidth)} />}
+          {imageHeight && <meta property="og:image:height" content={String(imageHeight)} />}
         </>
       )
     }
@@ -117,8 +133,8 @@ const serializedJsonLd = JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
       name="twitter:card"
       content={socialImage ? "summary_large_image" : "summary"}
     />
-    <meta name="twitter:title" content={pageTitle} />
-    <meta name="twitter:description" content={description} />
+    <meta name="twitter:title" content={resolvedSocialTitle} />
+    <meta name="twitter:description" content={resolvedSocialDescription} />
     {
       socialImage && (
         <>

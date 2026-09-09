@@ -16,8 +16,8 @@
 
 .archive-section-header h2 {
   color: var(--system-text);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-family: var(--font-panel);
+  font-size: 0.9rem;
   font-weight: 650;
   letter-spacing: 0.11em;
   line-height: 1.1;
@@ -27,8 +27,8 @@
 
 .archive-section-header > span {
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-panel);
+  font-size: 0.84rem;
   letter-spacing: 0.07em;
   white-space: nowrap;
 }
@@ -86,8 +86,8 @@
 .log-date,
 .log-subline {
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-panel);
+  font-size: 0.84rem;
   letter-spacing: 0.04em;
   transition:
     color 130ms ease,
@@ -135,8 +135,8 @@
 .log-entry-selector {
   align-self: center;
   color: var(--system-text);
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
+  font-family: var(--font-panel);
+  font-size: 1rem;
   font-weight: 700;
   grid-column: 3;
   grid-row: 1 / span 2;
@@ -295,8 +295,8 @@
 .post-search-prompt {
   color: var(--system-text);
   flex: 0 0 auto;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-family: var(--font-panel);
+  font-size: 0.9rem;
   font-weight: 650;
   letter-spacing: 0.07em;
   padding-left: 0.8rem;
@@ -334,8 +334,8 @@
   border: 1px solid var(--system-line-strong);
   color: var(--system-text);
   cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-panel);
+  font-size: 0.86rem;
   letter-spacing: 0.055em;
   min-height: 46px;
   padding-inline: 0.9rem;
@@ -350,8 +350,8 @@
 
 .post-search-status {
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-family: var(--font-panel);
+  font-size: 0.82rem;
   letter-spacing: 0.055em;
   margin: 0.6rem 0 0;
   max-width: none;
@@ -416,7 +416,7 @@
   }
 
   .log-date {
-    font-size: 0.74rem;
+    font-size: 0.8rem;
     padding-top: 0;
   }
 
@@ -425,6 +425,6 @@
   }
 
   .log-subline {
-    font-size: 0.74rem;
+    font-size: 0.8rem;
   }
 }

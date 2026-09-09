@@ -21,8 +21,8 @@
 .system-module-code,
 .system-section-code {
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-family: var(--font-panel);
+  font-size: 0.84rem;
   letter-spacing: 0.1em;
   margin: 0 0 0.7rem;
   max-width: none;
@@ -79,8 +79,8 @@ body.system-interface a[target="_blank"]::after {
   border-top: 1px solid var(--system-line);
   color: var(--system-dim);
   display: flex;
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-family: var(--font-panel);
+  font-size: 0.86rem;
   gap: 1rem;
   justify-content: space-between;
   letter-spacing: 0.07em;
@@ -107,8 +107,8 @@ body.system-interface a[target="_blank"]::after {
 .system-empty-state {
   border-top: 1px solid var(--system-line);
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-family: var(--font-panel);
+  font-size: 0.82rem;
   letter-spacing: 0.08em;
   padding: 1.25rem 0;
   text-transform: uppercase;
@@ -117,7 +117,7 @@ body.system-interface a[target="_blank"]::after {
 @media (min-width: 761px) {
   .system-module-code,
   .system-section-code {
-    font-size: 0.74rem;
+    font-size: 0.86rem;
   }
 
   .system-description {
@@ -141,13 +141,13 @@ body.system-interface a[target="_blank"]::after {
 
   .system-module-code,
   .system-section-code {
-    font-size: 0.72rem;
+    font-size: 0.82rem;
   }
 
   .system-module-footer {
     align-items: flex-start;
     flex-direction: column;
-    font-size: 0.76rem;
+    font-size: 0.84rem;
     margin-top: 2.6rem;
   }
 }

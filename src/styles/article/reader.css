@@ -48,8 +48,8 @@
 .article-topic:visited {
   align-items: center;
   display: inline-flex;
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-family: var(--font-panel);
+  font-size: 0.82rem;
   letter-spacing: 0.07em;
   min-height: 30px;
   text-decoration: none;
@@ -115,8 +115,8 @@
   color: var(--system-dim);
   display: flex;
   flex-wrap: wrap;
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-family: var(--font-panel);
+  font-size: 0.82rem;
   gap: 0.5rem;
   letter-spacing: 0.05em;
   margin-top: 0.85rem;
@@ -152,8 +152,8 @@
   align-self: start;
   border-left: 1px solid var(--system-line-strong);
   color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-family: var(--font-panel);
+  font-size: 0.82rem;
   line-height: 1.5;
   max-height: calc(100dvh - 7rem);
   overflow-y: auto;
@@ -173,7 +173,7 @@
 
 .toc-header strong {
   color: var(--system-bright);
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   letter-spacing: 0.08em;
 }
 
@@ -286,7 +286,7 @@
 
 .post-content a[target="_blank"]::after {
   content: "↗";
-  font-family: var(--font-mono);
+  font-family: var(--font-panel);
   font-size: 0.72em;
   margin-left: 0.18em;
 }
@@ -393,8 +393,8 @@
 .post-content th {
   border-bottom-color: var(--article-border-strong);
   color: var(--article-heading);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-family: var(--font-panel);
+  font-size: 0.76rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -429,7 +429,7 @@
   bottom: max(1rem, env(safe-area-inset-bottom));
   color: var(--system-bright);
   cursor: pointer;
-  font-family: var(--font-mono);
+  font-family: var(--font-panel);
   font-size: 1rem;
   height: 44px;
   position: fixed;

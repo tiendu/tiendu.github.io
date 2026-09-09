@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
+    "@fontsource/barlow-condensed": "5.2.8",
     "@fontsource-variable/figtree": "5.2.7",
     "@fontsource-variable/nunito": "5.2.7",
     "@fontsource-variable/source-code-pro": "5.2.7",

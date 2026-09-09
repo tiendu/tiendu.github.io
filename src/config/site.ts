@@ -1,6 +1,6 @@
 export const SITE = {
   title: "Tien Du's Engineering Notes",
-  shortTitle: "Tien's notes",
+  shortTitle: "Tien's Notes",
   description:
     "Practical notes on platform operations, reliability, infrastructure, software engineering, bioinformatics, and scientific computing.",
   author: "Tien Du",

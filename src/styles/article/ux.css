@@ -38,8 +38,8 @@
   border: 1px solid var(--article-border-strong);
   color: var(--system-dim);
   cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-family: var(--font-panel);
+  font-size: 0.8rem;
   letter-spacing: 0.06em;
   padding: 0.38rem 0.55rem;
   position: absolute;
@@ -70,8 +70,8 @@
   align-items: center;
   color: var(--system-amber);
   display: inline-flex;
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-family: var(--font-panel);
+  font-size: 0.82rem;
   letter-spacing: 0.045em;
   min-height: 36px;
   text-decoration: none;
@@ -125,7 +125,7 @@
     border-bottom: 1px solid var(--system-line-strong);
     border-top: 1px solid var(--system-line-strong);
     display: block;
-    font-family: var(--font-mono);
+    font-family: var(--font-panel);
     margin: 0 auto 1.5rem;
     max-width: 860px;
   }
@@ -133,7 +133,7 @@
   .toc-mobile > summary {
     color: var(--system-bright);
     cursor: pointer;
-    font-size: 0.78rem;
+    font-size: 0.88rem;
     letter-spacing: 0.08em;
     align-items: center;
     display: flex;
@@ -183,7 +183,7 @@
     border-left: 1px solid transparent;
     color: var(--system-dim);
     display: block;
-    font-size: 0.78rem;
+    font-size: 0.88rem;
     line-height: 1.45;
     min-height: 36px;
     padding: 0.45rem 0.6rem;
@@ -208,7 +208,7 @@
   .post-navigation a,
   .post-navigation a:visited,
   .code-copy-button {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
   }
 }
 
