@@ -85,7 +85,7 @@ const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`)
                   {formatCompactDate(post.data.date)}
                 </time>
                 <div class="log-main">
-                  <h3><a href={postRoute}>{post.data.title}</a></h3>
+                  <h3><a class="log-post-link" href={postRoute}>{post.data.title}</a></h3>
                 </div>
                 <p class="log-subline">
                   <a class="log-topic-link" href={getTopicRoute(post.data.topic)}>
@@ -115,7 +115,7 @@ const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`)
                   {formatCompactDate(post.data.date)}
                 </time>
                 <div class="log-main">
-                  <h3><a href={postRoute}>{post.data.title}</a></h3>
+                  <h3><a class="log-post-link" href={postRoute}>{post.data.title}</a></h3>
                 </div>
                 <p class="log-subline">
                   <a class="log-topic-link" href={getTopicRoute(post.data.topic)}>

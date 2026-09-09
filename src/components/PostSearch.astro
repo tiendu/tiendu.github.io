@@ -144,7 +144,7 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
         const main = document.createElement("div");
         main.className = "log-main";
         const heading = document.createElement("h3");
-        const title = createTextElement("a", "", record.title);
+        const title = createTextElement("a", "log-post-link", record.title);
         title.href = record.route;
         heading.append(title);
         main.append(heading);
