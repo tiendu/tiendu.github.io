@@ -10,7 +10,7 @@ src/styles/
 ├── tokens.css                 Shared colors, fonts, and primitive values
 ├── global.css                 Reset, accessibility, and global layout helpers
 ├── system.css                 Import manifest for the dark system interface
-├── system/                    Header, archives, projects, topics, and breakpoints
+├── system/                    Header, frame, archives, projects, topics, and their breakpoints
 ├── article.css                Import manifest for article pages
 ├── article/                   Reader, discovery, desktop, and article UX rules
 ├── pages/home.css             Import manifest for the terminal homepage
@@ -42,10 +42,12 @@ cascade order.
    a clear prefix such as `.snake-`, `.post-`, or `.system-`.
 4. Do not add `<style>` blocks or `style="..."` attributes to Astro files.
 5. Keep stylesheet manifests as imports and comments only.
-6. Do not casually reorder manifest imports; later files may intentionally refine
-   earlier declarations.
-7. Split a stylesheet before it grows beyond 500 lines.
-8. Run `make verify` before pushing.
+6. Do not use a late catch-all override stylesheet for page redesigns. Change the
+   owning stylesheet directly and keep component breakpoints beside that component.
+7. Do not casually reorder manifest imports; later files may intentionally refine
+   shared base declarations.
+8. Split a stylesheet before it grows beyond 500 lines.
+9. Run `make verify` before pushing.
 
 ## Automated guard
 

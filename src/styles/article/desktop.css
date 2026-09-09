@@ -1,13 +1,9 @@
 /* Desktop reading comfort ----------------------------------------------- */
 
 @media (min-width: 721px) {
-  .article-doc-strip,
+  .article-topic,
   .post-meta {
-    font-size: 0.72rem;
-  }
-
-  .article-description {
-    font-size: clamp(1.04rem, 1.7vw, 1.2rem);
+    font-size: 0.78rem;
   }
 
 
@@ -31,23 +27,15 @@
     font-size: 0.74rem;
   }
 
-  .article-system-footer {
-    font-size: 0.68rem;
-  }
 }
 
 @media (min-width: 961px) {
   .toc-desktop {
-    font-size: 0.73rem;
-  }
-
-  .toc-header span,
-  .toc-header small {
-    font-size: 0.6rem;
+    font-size: 0.78rem;
   }
 
   .toc-header strong {
-    font-size: 0.69rem;
+    font-size: 0.74rem;
   }
 }
 
@@ -68,7 +56,7 @@
 
 @media (max-width: 720px) {
   .article-title {
-    font-size: clamp(2.25rem, 12vw, 4rem);
+    font-size: clamp(2.15rem, 10vw, 3.4rem);
     max-width: none;
   }
 
@@ -77,32 +65,13 @@
   }
 
   .post-meta {
-    display: grid;
-    gap: 0.28rem;
-  }
-
-  .post-meta > span[aria-hidden="true"] {
-    display: none;
-  }
-
-  .article-system-footer {
-    align-items: start;
-    grid-template-columns: 1fr auto;
-  }
-
-  .article-system-footer span {
-    text-align: right;
-  }
-
-  .article-system-footer a:last-child {
-    grid-column: 1 / -1;
-    justify-self: start;
+    gap: 0.4rem;
   }
 }
 
 @media (max-width: 480px) {
   .article-console {
-    padding-inline: max(0.7rem, env(safe-area-inset-left));
+    padding-inline: max(0.9rem, env(safe-area-inset-left));
   }
 
   .article-sheet {
@@ -110,9 +79,9 @@
     width: 100%;
   }
 
-  .article-doc-strip,
+  .article-topic,
   .post-meta {
-    font-size: 0.72rem;
+    font-size: 0.74rem;
   }
 
 
@@ -133,9 +102,6 @@
     font-size: 0.72rem;
   }
 
-  .article-system-footer {
-    font-size: 0.7rem;
-  }
 
   .back-to-top {
     bottom: max(0.75rem, env(safe-area-inset-bottom));
@@ -152,7 +118,6 @@
   .system-topbar,
   .toc-desktop,
   .toc-mobile,
-  .article-system-footer,
   .back-to-top {
     display: none !important;
   }
@@ -169,7 +134,7 @@
   }
 
   .article-title,
-  .article-doc-strip,
+  .article-topic,
   .post-meta {
     color: black;
   }

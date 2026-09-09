@@ -10,7 +10,6 @@ import {
   formatDate,
   getTopicRoute,
   getPostRoute,
-  getPostSlug,
   getRelatedPosts,
   readingTime,
   sortPosts,
@@ -31,27 +30,17 @@ const hasToc = headings.some(({ depth }) => depth === 2 || depth === 3);
 const allPosts = await getCollection("blog", ({ data }) => !data.draft);
 const sortedPosts = sortPosts(allPosts);
 const relatedPosts = getRelatedPosts(post, sortedPosts);
-const currentPostIndex = sortedPosts.findIndex(({ id }) => id === post.id);
-const newerPost =
-  currentPostIndex > 0 ? sortedPosts[currentPostIndex - 1] : undefined;
-const olderPost =
-  currentPostIndex >= 0 && currentPostIndex < sortedPosts.length - 1
-    ? sortedPosts[currentPostIndex + 1]
-    : undefined;
 const description = post.data.description;
 const articleUrl = new URL(
   getPostRoute(post),
   Astro.site ?? new URL(SITE.url),
 ).href;
 
-const year = post.data.date.getUTCFullYear();
-const month = String(post.data.date.getUTCMonth() + 1).padStart(2, "0");
-const day = String(post.data.date.getUTCDate()).padStart(2, "0");
-const docId = `LOG-${year}${month}${day}-${getPostSlug(post)
-  .slice(0, 12)
-  .toUpperCase()}`;
 const publishedDate = post.data.date.toISOString();
 const modifiedDate = (post.data.updatedDate ?? post.data.date).toISOString();
+const hasDistinctUpdate =
+  post.data.updatedDate &&
+  post.data.updatedDate.getTime() !== post.data.date.getTime();
 const structuredData = [
   {
     "@type": "BlogPosting",
@@ -125,34 +114,26 @@ const structuredData = [
 
     <section class="article-console" aria-labelledby="article-title">
       <header class="article-system-header">
-        <p class="article-doc-strip">DOCUMENT / {docId}</p>
+        <a class="article-topic" href={getTopicRoute(post.data.topic)}>
+          {post.data.topic}
+        </a>
+
         <h1 id="article-title" class="article-title p-name">
           {post.data.title}
         </h1>
 
-        <p class="article-description">{description}</p>
-
-        <div class="post-meta" aria-label="Document metadata">
+        <div class="post-meta" aria-label="Article metadata">
           <time class="dt-published" datetime={publishedDate}>
             {formatDate(post.data.date)}
           </time>
           <span aria-hidden="true">·</span>
-          <span>{readingTime(post.body ?? "")} min read</span>
-          {post.data.updatedDate && (
+          <span>{readingTime(post.body ?? "")} min</span>
+          {hasDistinctUpdate && post.data.updatedDate && (
             <>
               <span aria-hidden="true">·</span>
               <span>updated {formatDate(post.data.updatedDate)}</span>
             </>
           )}
-        </div>
-
-        <div class="post-taxonomy" aria-label="Post classification">
-          <p class="post-topic">
-            <span>TOPIC</span>
-            <a href={getTopicRoute(post.data.topic)}>
-              {post.data.topic}
-            </a>
-          </p>
         </div>
       </header>
 
@@ -168,56 +149,26 @@ const structuredData = [
 
       {relatedPosts.length > 0 && (
         <section class="related-posts" aria-labelledby="related-posts-title">
-          <header>
-            <p class="article-doc-strip">RELATED / SAME SYSTEM</p>
-            <h2 id="related-posts-title">Continue reading</h2>
-          </header>
+          <h2 id="related-posts-title">RELATED</h2>
           <ol>
             {relatedPosts.map((relatedPost) => (
               <li>
                 <time datetime={relatedPost.data.date.toISOString()}>
                   {formatCompactDate(relatedPost.data.date)}
                 </time>
-                <div>
-                  <a href={getPostRoute(relatedPost)}>
-                    {relatedPost.data.title}
-                  </a>
-                  <span>{relatedPost.data.topic}</span>
-                </div>
+                <a href={getPostRoute(relatedPost)}>
+                  {relatedPost.data.title}
+                </a>
               </li>
             ))}
           </ol>
         </section>
       )}
 
-      <nav class="post-navigation" aria-label="More notes">
-        <a class="post-navigation-topic" href={getTopicRoute(post.data.topic)}>
-          ← ALL {post.data.topic.toUpperCase()} NOTES
-        </a>
-
-        {(newerPost || olderPost) && (
-          <div class="post-navigation-chronology">
-            {newerPost && (
-              <a href={getPostRoute(newerPost)}>
-                <span>NEWER NOTE</span>
-                <strong>{newerPost.data.title}</strong>
-              </a>
-            )}
-            {olderPost && (
-              <a href={getPostRoute(olderPost)}>
-                <span>OLDER NOTE</span>
-                <strong>{olderPost.data.title}</strong>
-              </a>
-            )}
-          </div>
-        )}
+      <nav class="post-navigation" aria-label="Article navigation">
+        <a href="/posts/">← ALL POSTS</a>
+        <a href={getTopicRoute(post.data.topic)}>{post.data.topic} →</a>
       </nav>
-
-      <footer class="article-system-footer">
-        <a href="/posts/">LOG ARCHIVE</a>
-        <span>{docId}</span>
-        <a href="/">HOME</a>
-      </footer>
     </section>
   </div>
 

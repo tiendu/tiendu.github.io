@@ -5,7 +5,7 @@ body.terminal-home {
   --system-bg: #050301;
   --system-text: #e9a14a;
   --system-bright: #ffd27a;
-  --system-dim: #8f5528;
+  --system-dim: #a96c37;
   --system-faint: rgb(233 161 74 / 6%);
   --system-line: rgb(233 161 74 / 17%);
   --system-line-strong: rgb(233 161 74 / 32%);
@@ -74,7 +74,7 @@ body.system-interface::after {
   );
   content: "";
   inset: 0;
-  opacity: 0.22;
+  opacity: 0.18;
   pointer-events: none;
   position: fixed;
   z-index: 999;
@@ -84,11 +84,15 @@ body.system-interface :is(
   .system-brand,
   .system-module-code,
   .system-section-code,
-  .article-doc-strip,
+  .article-topic,
   .post-meta,
   .toc-desktop,
   .system-module-footer,
-  .article-system-footer
+  .archive-section-header h2,
+  .project-content h2 a,
+  .taxonomy-card h2,
+  .about-copy h2,
+  .operator-identity h2
 ) {
   text-shadow: var(--system-glow-soft);
 }

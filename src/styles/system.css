@@ -1,10 +1,9 @@
 /*
  * System UI stylesheet manifest.
  *
- * Keep rules in the narrowest ownership file possible. This manifest controls
- * cascade order; do not reorder imports casually.
+ * Rules live with the component they style. Each owner stylesheet also owns
+ * its breakpoints so there is no late catch-all override layer.
  */
-
 @import "./system/theme.css";
 @import "./system/header.css";
 @import "./system/frame.css";
@@ -12,8 +11,5 @@
 @import "./system/archive-navigation.css";
 @import "./system/projects.css";
 @import "./system/about.css";
-@import "./system/not-found.css";
-@import "./system/desktop.css";
-@import "./system/responsive.css";
 @import "./system/topics.css";
-@import "./system/ux.css";
+@import "./system/not-found.css";

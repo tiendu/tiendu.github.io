@@ -11,21 +11,9 @@ import {
 interface Props {
   posts: BlogPost[];
 }
-
 const { posts } = Astro.props;
 const sortedPosts = sortPosts(posts);
-const pinnedIds = new Map(
-  sortedPosts
-    .filter(({ data }) => data.pinned)
-    .map((post, index) => [post.id, `P${String(index + 1).padStart(2, "0")}`]),
-);
-const normalIds = new Map(
-  sortedPosts
-    .filter(({ data }) => !data.pinned)
-    .map((post, index) => [post.id, String(index + 1).padStart(3, "0")]),
-);
 const searchIndex = sortedPosts.map((post) => ({
-  id: pinnedIds.get(post.id) ?? normalIds.get(post.id) ?? "---",
   title: post.data.title,
   description: post.data.description,
   topic: post.data.topic,
@@ -41,52 +29,29 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
   "\\u003c",
 );
 ---
-
-<section class="post-search" data-post-search aria-labelledby="post-search-label">
-  <div class="post-search-heading">
-    <div>
-      <p class="system-section-code">SEARCH</p>
-      <h2 id="post-search-label">Find a note</h2>
-    </div>
-    <span aria-hidden="true">/</span>
-  </div>
-
+<section class="post-search" data-post-search aria-label="Search notes">
   <div class="post-search-control">
-    <label class="sr-only" for="post-search-input">Search posts</label>
+    <label class="sr-only" for="post-search-input">Search notes</label>
     <input
       id="post-search-input"
       data-post-search-input
       type="search"
       autocomplete="off"
       spellcheck="false"
-      placeholder="TITLE, TOPIC, OR KEYWORD"
+      placeholder="SEARCH NOTES..."
     />
     <button type="button" data-post-search-clear hidden>CLEAR</button>
   </div>
 
-  <p class="post-search-status" data-post-search-status role="status" aria-live="polite">
-    PRESS / TO SEARCH
-  </p>
-
+  <p class="post-search-status sr-only" data-post-search-status role="status" aria-live="polite"></p>
   <section class="post-search-results" data-post-search-results hidden aria-label="Search results">
-    <div class="archive-section-header">
-      <div>
-        <p class="system-section-code">RESULTS</p>
-        <h2>Matching notes</h2>
-      </div>
-      <span data-post-search-count>0 RECORDS</span>
-    </div>
-
-    <div class="log-table-head" aria-hidden="true">
-      <span>ID</span>
-      <span>DATE</span>
-      <span>SUBJECT</span>
-      <span>TOPIC</span>
-    </div>
-
+    <header class="archive-section-header">
+      <h2>RESULTS</h2>
+      <span data-post-search-count></span>
+    </header>
     <ol class="log-list" data-post-search-list></ol>
     <p class="system-empty-state" data-post-search-empty hidden>
-      NO MATCHING NOTES FOUND.
+      NO MATCHING NOTES.
     </p>
   </section>
 
@@ -97,10 +62,8 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
     set:html={serializedSearchIndex}
   ></script>
 </section>
-
 <script>
   interface SearchRecord {
-    id: string;
     title: string;
     description: string;
     topic: string;
@@ -119,60 +82,30 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
 
     for (const root of roots) {
       root.dataset.searchReady = "true";
-
-      const input = root.querySelector<HTMLInputElement>(
-        "[data-post-search-input]",
-      );
-      const clearButton = root.querySelector<HTMLButtonElement>(
-        "[data-post-search-clear]",
-      );
-      const status = root.querySelector<HTMLElement>(
-        "[data-post-search-status]",
-      );
-      const results = root.querySelector<HTMLElement>(
-        "[data-post-search-results]",
-      );
-      const count = root.querySelector<HTMLElement>(
-        "[data-post-search-count]",
-      );
-      const list = root.querySelector<HTMLOListElement>(
-        "[data-post-search-list]",
-      );
-      const empty = root.querySelector<HTMLElement>(
-        "[data-post-search-empty]",
-      );
-      const data = root.querySelector<HTMLScriptElement>(
-        "[data-post-search-data]",
-      );
-
-      if (
-        !input ||
-        !clearButton ||
-        !status ||
-        !results ||
-        !count ||
-        !list ||
-        !empty ||
-        !data
-      ) {
+      const input = root.querySelector<HTMLInputElement>("[data-post-search-input]");
+      const clearButton = root.querySelector<HTMLButtonElement>("[data-post-search-clear]");
+      const status = root.querySelector<HTMLElement>("[data-post-search-status]");
+      const results = root.querySelector<HTMLElement>("[data-post-search-results]");
+      const count = root.querySelector<HTMLElement>("[data-post-search-count]");
+      const list = root.querySelector<HTMLOListElement>("[data-post-search-list]");
+      const empty = root.querySelector<HTMLElement>("[data-post-search-empty]");
+      const data = root.querySelector<HTMLScriptElement>("[data-post-search-data]");
+      if (!input || !clearButton || !status || !results || !count || !list || !empty || !data) {
         continue;
       }
 
       let records: SearchRecord[] = [];
-
       try {
         records = JSON.parse(data.textContent ?? "[]") as SearchRecord[];
       } catch {
-        status.textContent = "SEARCH INDEX UNAVAILABLE";
+        status.textContent = "Search index unavailable";
         input.disabled = true;
         continue;
       }
 
       const documentBody = root.closest<HTMLElement>(".system-document-body");
       const archiveSections = Array.from(
-        documentBody?.querySelectorAll<HTMLElement>(
-          ":scope > .archive-section",
-        ) ?? [],
+        documentBody?.querySelectorAll<HTMLElement>(":scope > .archive-section") ?? [],
       );
 
       const normalize = (value: string) =>
@@ -186,12 +119,7 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
       const searchableRecords = records.map((record) => ({
         record,
         haystack: normalize(
-          [
-            record.title,
-            record.description,
-            record.topic,
-            ...record.keywords,
-          ].join(" "),
+          [record.title, record.description, record.topic, ...record.keywords].join(" "),
         ),
       }));
 
@@ -210,10 +138,6 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
         const item = document.createElement("li");
         item.className = "log-entry";
 
-        const number = createTextElement("a", "log-number", record.id);
-        number.href = record.route;
-        number.setAttribute("aria-label", `Open ${record.title}`);
-
         const date = createTextElement("time", "log-date", record.date);
         date.dateTime = record.dateTime;
 
@@ -227,21 +151,12 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
 
         const subline = document.createElement("p");
         subline.className = "log-subline";
-        const topic = createTextElement(
-          "a",
-          "log-topic-link",
-          record.topic,
-        );
+        const topic = createTextElement("a", "log-topic-link", record.topic);
         topic.href = record.topicRoute;
-        const separator = document.createElement("br");
-        const runtime = createTextElement(
-          "span",
-          "",
-          `${record.minutes} MIN READ`,
-        );
-        subline.append(topic, separator, runtime);
+        const runtime = createTextElement("span", "", ` · ${record.minutes} min`);
+        subline.append(topic, runtime);
 
-        item.append(number, date, main, subline);
+        item.append(date, main, subline);
         return item;
       };
 
@@ -257,32 +172,26 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
         results.hidden = true;
         empty.hidden = true;
         clearButton.hidden = true;
-        status.textContent = "PRESS / TO SEARCH";
+        status.textContent = "";
         setArchiveVisibility(true);
-
-        if (focus) {
-          input.focus();
-        }
+        if (focus) input.focus();
       };
 
       const updateResults = () => {
         const normalizedQuery = normalize(input.value);
         const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
-
         if (tokens.length === 0) {
           clearSearch(false);
           return;
         }
 
         const matches = searchableRecords
-          .filter(({ haystack }) =>
-            tokens.every((token) => haystack.includes(token)),
-          )
+          .filter(({ haystack }) => tokens.every((token) => haystack.includes(token)))
           .map(({ record }) => record);
 
         list.replaceChildren(...matches.map(renderRecord));
-        count.textContent = `${matches.length} ${matches.length === 1 ? "RECORD" : "RECORDS"}`;
-        status.textContent = `${matches.length} ${matches.length === 1 ? "MATCH" : "MATCHES"} FOR “${input.value.trim()}”`;
+        count.textContent = `${matches.length}`;
+        status.textContent = `${matches.length} ${matches.length === 1 ? "match" : "matches"}`;
         results.hidden = false;
         empty.hidden = matches.length !== 0;
         clearButton.hidden = false;
@@ -299,7 +208,6 @@ const serializedSearchIndex = JSON.stringify(searchIndex).replaceAll(
           target instanceof HTMLTextAreaElement ||
           target instanceof HTMLSelectElement ||
           (target instanceof HTMLElement && target.isContentEditable);
-
         if (event.key === "/" && !targetIsEditable) {
           event.preventDefault();
           input.focus();

@@ -11,7 +11,6 @@ import {
   sortPosts,
   type BlogPost,
 } from "../../utils/posts";
-
 interface Props {
   currentPage: number;
   totalPages: number;
@@ -22,7 +21,6 @@ interface Props {
   searchPosts: BlogPost[];
   firstRecordNumber: number;
 }
-
 export const getStaticPaths: GetStaticPaths = async () => {
   const pageSize = 12;
   const allPosts = sortPosts(
@@ -31,11 +29,9 @@ export const getStaticPaths: GetStaticPaths = async () => {
   const pinned = allPosts.filter(({ data }) => data.pinned);
   const normalPosts = allPosts.filter(({ data }) => !data.pinned);
   const totalPages = Math.max(1, Math.ceil(normalPosts.length / pageSize));
-
   return Array.from({ length: totalPages }, (_, index) => {
     const currentPage = index + 1;
     const start = index * pageSize;
-
     return {
       params: { page: currentPage === 1 ? undefined : String(currentPage) },
       props: {
@@ -51,16 +47,12 @@ export const getStaticPaths: GetStaticPaths = async () => {
     };
   });
 };
-
 const {
   currentPage,
   totalPages,
-  totalPosts,
-  totalNormalPosts,
   pinned,
   posts,
   searchPosts,
-  firstRecordNumber,
 } = Astro.props;
 
 const pageTitle = currentPage === 1 ? "Posts" : `Posts — Page ${currentPage}`;
@@ -70,46 +62,25 @@ const pageDescription =
     : `Page ${currentPage} of the complete notes archive.`;
 const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`);
 ---
-
 <SystemPageLayout
   title={pageTitle}
-  moduleCode="LOG-ARCHIVE"
+  moduleCode=""
   description={pageDescription}
-  counter={`${totalPosts} RECORDS`}
+  showDescription={false}
 >
   <PostSearch posts={searchPosts} />
-
   {
     currentPage === 1 && pinned.length > 0 && (
       <section class="archive-section priority" aria-labelledby="pinned-title">
         <header class="archive-section-header">
-          <div>
-            <p class="system-section-code">PINNED</p>
-            <h2 id="pinned-title">Pinned notes</h2>
-          </div>
-          <span>{pinned.length} RECORDS</span>
+          <h2 id="pinned-title">PINNED</h2>
         </header>
 
-        <div class="log-table-head" aria-hidden="true">
-          <span>PIN</span>
-          <span>DATE</span>
-          <span>SUBJECT</span>
-          <span>TOPIC</span>
-        </div>
-
         <ol class="log-list">
-          {pinned.map((post, index) => {
+          {pinned.map((post) => {
             const postRoute = getPostRoute(post);
-
             return (
               <li class="log-entry">
-                <a
-                  class="log-number"
-                  href={postRoute}
-                  aria-label={`Open ${post.data.title}`}
-                >
-                  P{String(index + 1).padStart(2, "0")}
-                </a>
                 <time class="log-date" datetime={post.data.date.toISOString()}>
                   {formatCompactDate(post.data.date)}
                 </time>
@@ -119,8 +90,8 @@ const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`)
                 <p class="log-subline">
                   <a class="log-topic-link" href={getTopicRoute(post.data.topic)}>
                     {post.data.topic}
-                  </a><br />
-                  <span>{readingTime(post.body ?? "")} MIN READ</span>
+                  </a>
+                  <span> · {readingTime(post.body ?? "")} min</span>
                 </p>
               </li>
             );
@@ -129,62 +100,37 @@ const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`)
       </section>
     )
   }
-
   <section class="archive-section" aria-labelledby="complete-title">
     <header class="archive-section-header">
-      <div>
-        <p class="system-section-code">COMPLETE</p>
-        <h2 id="complete-title">Complete archive</h2>
-      </div>
-      <span>{totalNormalPosts} RECORDS</span>
+      <h2 id="complete-title">ALL NOTES</h2>
     </header>
-
     {
       posts.length > 0 ? (
-        <>
-          <div class="log-table-head" aria-hidden="true">
-            <span>ID</span>
-            <span>DATE</span>
-            <span>SUBJECT</span>
-            <span>TOPIC</span>
-          </div>
-
-          <ol class="log-list" start={firstRecordNumber}>
-            {posts.map((post, index) => {
-              const recordNumber = firstRecordNumber + index;
-              const postRoute = getPostRoute(post);
-
-              return (
-                <li class="log-entry">
-                  <a
-                    class="log-number"
-                    href={postRoute}
-                    aria-label={`Open ${post.data.title}`}
-                  >
-                    {String(recordNumber).padStart(3, "0")}
+        <ol class="log-list">
+          {posts.map((post) => {
+            const postRoute = getPostRoute(post);
+            return (
+              <li class="log-entry">
+                <time class="log-date" datetime={post.data.date.toISOString()}>
+                  {formatCompactDate(post.data.date)}
+                </time>
+                <div class="log-main">
+                  <h3><a href={postRoute}>{post.data.title}</a></h3>
+                </div>
+                <p class="log-subline">
+                  <a class="log-topic-link" href={getTopicRoute(post.data.topic)}>
+                    {post.data.topic}
                   </a>
-                  <time class="log-date" datetime={post.data.date.toISOString()}>
-                    {formatCompactDate(post.data.date)}
-                  </time>
-                  <div class="log-main">
-                    <h3><a href={postRoute}>{post.data.title}</a></h3>
-                  </div>
-                  <p class="log-subline">
-                    <a class="log-topic-link" href={getTopicRoute(post.data.topic)}>
-                      {post.data.topic}
-                    </a><br />
-                    <span>{readingTime(post.body ?? "")} MIN READ</span>
-                  </p>
-                </li>
-              );
-            })}
-          </ol>
-        </>
+                  <span> · {readingTime(post.body ?? "")} min</span>
+                </p>
+              </li>
+            );
+          })}
+        </ol>
       ) : (
-        <p class="system-empty-state">NO RECORDS FOUND.</p>
+        <p class="system-empty-state">NO NOTES FOUND.</p>
       )
     }
-
     {
       totalPages > 1 && (
         <nav class="archive-pagination" aria-label="Posts pagination">
@@ -197,11 +143,9 @@ const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`)
               <span aria-hidden="true">← PREVIOUS</span>
             )}
           </div>
-
           <ol class="pagination-pages">
             {Array.from({ length: totalPages }, (_, index) => {
               const pageNumber = index + 1;
-
               return (
                 <li>
                   {pageNumber === currentPage ? (
@@ -220,7 +164,6 @@ const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`)
               );
             })}
           </ol>
-
           <div class="pagination-edge pagination-edge-next">
             {currentPage < totalPages ? (
               <a href={pageRoute(currentPage + 1)} rel="next">

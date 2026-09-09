@@ -13,8 +13,8 @@ interface Props {
   counter?: string;
   active?: NavigationKey;
   structuredData?: StructuredData | StructuredData[];
+  showDescription?: boolean;
 }
-
 const {
   title,
   description,
@@ -22,6 +22,7 @@ const {
   counter,
   active,
   structuredData,
+  showDescription = true,
 } = Astro.props;
 ---
 
@@ -33,18 +34,16 @@ const {
 >
   <div class="system-page-shell">
     <SystemHeader active={active} />
-
     <section class="system-console" aria-labelledby="system-page-title">
       <header class="system-page-header">
-        <p class="system-module-code">{moduleCode}</p>
+        {moduleCode && <p class="system-module-code">{moduleCode}</p>}
         <h1 id="system-page-title">{title}</h1>
-        {description && <p class="system-description">{description}</p>}
+        {showDescription && description && <p class="system-description">{description}</p>}
       </header>
 
       <div class="system-document-body">
         <slot />
       </div>
-
       <footer class="system-module-footer">
         {counter && <span>{counter}</span>}
         <nav aria-label="Site resources">

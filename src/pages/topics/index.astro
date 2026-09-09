@@ -6,22 +6,22 @@ import { getTopicRoute, getTopicSummaries } from "../../utils/posts";
 const posts = await getCollection("blog", ({ data }) => !data.draft);
 const topics = getTopicSummaries(posts);
 ---
-
 <SystemPageLayout
   title="Topics"
-  moduleCode="TOPIC-DIRECTORY"
+  moduleCode=""
   description="Browse the archive by topic."
-  counter={`${topics.length} TOPICS`}
+  showDescription={false}
   active="topics"
 >
   <div class="taxonomy-grid">
     {topics.map((topic, index) => (
       <a class="taxonomy-card" href={getTopicRoute(topic.name)}>
-        <p>{String(index + 1).padStart(2, "0")} / TOPIC</p>
+        <span class="taxonomy-index" aria-hidden="true">
+          {String(index + 1).padStart(2, "0")}
+        </span>
         <h2>{topic.name}</h2>
         <span class="taxonomy-card-footer">
-          <span>{topic.count} POSTS</span>
-          <span>OPEN TOPIC →</span>
+          <span>{topic.count} posts →</span>
         </span>
       </a>
     ))}

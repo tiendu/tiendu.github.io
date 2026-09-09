@@ -5,7 +5,7 @@
   max-width: 1280px;
   min-height: calc(100svh - 73px);
   padding:
-    clamp(2.25rem, 6vw, 5rem)
+    clamp(2rem, 4.5vw, 3.6rem)
     max(clamp(1rem, 4vw, 3rem), env(safe-area-inset-right))
     max(1.5rem, env(safe-area-inset-bottom))
     max(clamp(1rem, 4vw, 3rem), env(safe-area-inset-left));
@@ -14,16 +14,16 @@
 
 .system-page-header {
   border-bottom: 1px solid var(--system-line);
-  margin-bottom: clamp(2.5rem, 6vw, 4.75rem);
-  padding-bottom: clamp(1.5rem, 3vw, 2.25rem);
+  margin-bottom: clamp(1.6rem, 4vw, 2.6rem);
+  padding-bottom: clamp(0.9rem, 2vw, 1.25rem);
 }
 
 .system-module-code,
 .system-section-code {
   color: var(--system-dim);
   font-family: var(--font-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
   margin: 0 0 0.7rem;
   max-width: none;
   text-transform: uppercase;
@@ -32,10 +32,10 @@
 body.system-interface .system-page-header h1 {
   color: var(--system-bright);
   font-family: var(--font-ui);
-  font-size: clamp(2.65rem, 7.5vw, 5.5rem);
+  font-size: clamp(2.25rem, 5vw, 3.35rem);
   font-weight: 700;
-  letter-spacing: -0.045em;
-  line-height: 0.98;
+  letter-spacing: -0.04em;
+  line-height: 1;
   margin: 0;
   max-width: 16ch;
   text-wrap: balance;
@@ -80,13 +80,18 @@ body.system-interface a[target="_blank"]::after {
   color: var(--system-dim);
   display: flex;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: 0.76rem;
   gap: 1rem;
   justify-content: space-between;
   letter-spacing: 0.07em;
-  margin-top: clamp(3.5rem, 8vw, 6.5rem);
+  margin-top: clamp(2.75rem, 5vw, 4.5rem);
   padding-top: 1rem;
   text-transform: uppercase;
+}
+
+.system-module-footer nav {
+  display: flex;
+  gap: 1rem;
 }
 
 .system-module-footer a,
@@ -107,4 +112,42 @@ body.system-interface a[target="_blank"]::after {
   letter-spacing: 0.08em;
   padding: 1.25rem 0;
   text-transform: uppercase;
+}
+
+@media (min-width: 761px) {
+  .system-module-code,
+  .system-section-code {
+    font-size: 0.74rem;
+  }
+
+  .system-description {
+    font-size: clamp(1.04rem, 1.7vw, 1.2rem);
+  }
+}
+
+@media (max-width: 560px) {
+  .system-console {
+    padding-top: 1.35rem;
+  }
+
+  .system-page-header {
+    margin-bottom: 1.45rem;
+    padding-bottom: 0.8rem;
+  }
+
+  body.system-interface .system-page-header h1 {
+    font-size: clamp(2.15rem, 11vw, 2.75rem);
+  }
+
+  .system-module-code,
+  .system-section-code {
+    font-size: 0.72rem;
+  }
+
+  .system-module-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    font-size: 0.76rem;
+    margin-top: 2.6rem;
+  }
 }

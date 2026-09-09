@@ -2,12 +2,11 @@
 import { PROJECTS } from "../../data/projects";
 import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
 ---
-
 <SystemPageLayout
   title="Projects"
-  moduleCode="PROGRAM-REGISTRY"
+  moduleCode=""
   description="Small tools built to solve real problems."
-  counter={`${PROJECTS.length} PROGRAMS`}
+  showDescription={false}
 >
   <ol class="project-list">
     {
@@ -18,8 +17,6 @@ import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
           </span>
 
           <article class="project-content">
-            <p class="project-category">{project.label}</p>
-
             <h2>
               <a
                 href={project.repo}
@@ -34,7 +31,6 @@ import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
 
             <p class="project-summary">{project.summary}</p>
             <p class="project-tech">{project.tech}</p>
-
             <details class="project-details-panel">
               <summary>DETAILS</summary>
               <p class="project-details">{project.details}</p>

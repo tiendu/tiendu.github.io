@@ -5,40 +5,17 @@ import SystemPageLayout from "../layouts/SystemPageLayout.astro";
 
 <SystemPageLayout
   title="About"
-  moduleCode="OPERATOR-RECORD"
+  moduleCode=""
   description="Background, interests, and the route that led me toward systems engineering."
-  counter="4 SECTIONS"
+  showDescription={false}
 >
   <div class="operator-record">
-    <aside class="operator-panel" aria-label="Operator summary">
-      <div class="operator-avatar" aria-hidden="true">
-        <span>TD</span>
-      </div>
-
+    <aside class="operator-panel" aria-label="Profile summary">
       <div class="operator-identity">
-        <p>OPERATOR RECORD</p>
         <h2>TIEN DU</h2>
+        <p>Vietnam · Platform / Systems Engineering</p>
       </div>
-
-      <dl>
-        <div>
-          <dt>BASE</dt>
-          <dd>Vietnam</dd>
-        </div>
-        <div>
-          <dt>DOMAIN</dt>
-          <dd>Platform operations</dd>
-        </div>
-        <div>
-          <dt>SYSTEMS</dt>
-          <dd>Linux / Cloud / Distributed workloads</dd>
-        </div>
-        <div>
-          <dt>FOCUS</dt>
-          <dd>Reliability / Automation / Tooling</dd>
-        </div>
-      </dl>
-
+      <p class="operator-focus">Linux · Cloud · Reliability · Automation</p>
       <nav class="operator-links" aria-label="Profile and contact links">
         {
           CONTACT_LINKS.map(({ href, label, external }) => (
@@ -55,102 +32,62 @@ import SystemPageLayout from "../layouts/SystemPageLayout.astro";
     </aside>
 
     <div class="about-copy">
-      <section aria-labelledby="profile-heading">
-        <p class="system-section-code">01 / PROFILE</p>
-        <h2 id="profile-heading">A little about me</h2>
-        <p class="about-lead">
-          I'm a platform operations engineer based in Vietnam. I'm interested in
-          dependable systems, useful tools, and understanding why things fail.
-        </p>
-      </section>
-
       <section aria-labelledby="route-heading">
-        <p class="system-section-code">02 / ROUTE</p>
-        <h2 id="route-heading">How I got here</h2>
-
-        <p>
-          My background is in biotechnology and bioinformatics rather than
-          traditional computer science. I completed a BSc in Biotechnology in
-          Singapore in 2017, followed by an MSc in Bioinformatics and
-          Computational Biology in Ireland in 2019.
-        </p>
-
-        <p>
-          I later entered a PhD programme, but left in 2023 after deciding it was
-          no longer the right path for me. It was a difficult and sad decision,
-          but also a deliberate one. It gave me space to reconsider the kind of
-          work I actually wanted to do.
-        </p>
+        <p class="system-section-code">01 / ROUTE</p>
+        <h2 id="route-heading">Biotechnology → Bioinformatics → Systems</h2>
 
         <div class="timeline" aria-label="Education and career timeline">
           <div class="timeline-row">
             <span>2017</span>
-            <p>BSc in Biotechnology, completed in Singapore.</p>
+            <p>BSc Biotechnology · Singapore</p>
           </div>
           <div class="timeline-row">
             <span>2019</span>
-            <p>MSc in Bioinformatics and Computational Biology in Ireland.</p>
+            <p>MSc Bioinformatics &amp; Computational Biology · Ireland</p>
           </div>
           <div class="timeline-row">
             <span>2023</span>
-            <p>Left academia and moved more deliberately toward engineering.</p>
+            <p>Left academia</p>
           </div>
           <div class="timeline-row">
             <span>NOW</span>
-            <p>Platform operations, reliability, automation, and technical writing.</p>
+            <p>Systems · reliability · tooling</p>
           </div>
         </div>
+
+        <p>
+          I started with biological data and computational workflows, but became
+          more interested in the systems underneath them: why things fail, how
+          they recover, and how to make them easier to operate.
+        </p>
       </section>
 
       <section aria-labelledby="work-heading">
-        <p class="system-section-code">03 / SYSTEMS</p>
-        <h2 id="work-heading">The work underneath the science</h2>
-
-        <p>
-          I started in scientific research, working with biological data and
-          computational workflows. Over time, I became increasingly interested in
-          the engineering underneath them:
-        </p>
+        <p class="system-section-code">02 / WORK</p>
+        <h2 id="work-heading">The questions underneath the system</h2>
 
         <ul class="question-list">
-          <li><span aria-hidden="true">&gt;</span> Why did this job fail after running for two days?</li>
-          <li><span aria-hidden="true">&gt;</span> Why can nobody reproduce this environment?</li>
-          <li><span aria-hidden="true">&gt;</span> Where did the storage disappear?</li>
-          <li><span aria-hidden="true">&gt;</span> Why is this process still retrying after a month?</li>
-          <li><span aria-hidden="true">&gt;</span> How do we make the system easier to operate next time?</li>
+          <li><span aria-hidden="true">&gt;</span> Why did this job fail after two days?</li>
+          <li><span aria-hidden="true">&gt;</span> Where did the storage go?</li>
+          <li><span aria-hidden="true">&gt;</span> Why is this still retrying?</li>
         </ul>
 
-        <p>
-          That gradually pulled me toward Linux systems, cloud infrastructure,
-          distributed workloads, automation, observability, and reliability
-          engineering.
+        <p class="about-stack">
+          Linux · Cloud · Distributed systems · Automation · Observability · Reliability
         </p>
-
-        <p>
-          Today, I investigate production failures, build operational tooling,
-          improve cloud usage, document failure modes, and help make complicated
-          systems less fragile. I do not think reliability means that nothing ever
-          fails. It means failures are visible, understandable, recoverable, and
-          less likely to surprise the next person.
+        <p class="about-principle">
+          Reliability doesn't mean nothing fails. Failures should be visible,
+          understandable, and recoverable.
         </p>
       </section>
 
       <section aria-labelledby="outside-heading">
-        <p class="system-section-code">04 / OUTSIDE WORK</p>
+        <p class="system-section-code">03 / OUTSIDE</p>
         <h2 id="outside-heading">Outside work</h2>
 
+        <p>Coffee. Photography. Cars. Watches. Mechanical things. Quiet places.</p>
         <p>
-          I like coffee, photography, and simple things that reward attention.
-          I especially like sunlight passing through leaves—the Japanese word{" "}
-          <em>komorebi</em>{" "}
-          describes it better than I can.
-        </p>
-
-        <p>
-          I also have a soft spot for mechanical things: watches, cars, tools, and
-          machines whose behaviour can be observed and understood. Perhaps that is
-          part of why systems engineering appeals to me. I like things that are
-          dependable, maintainable, and honest about how they work.
+          I particularly like <em>komorebi</em> — sunlight passing through leaves.
         </p>
       </section>
     </div>

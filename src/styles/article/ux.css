@@ -1,4 +1,4 @@
-/* Article UX: mobile contents, progress, copy controls, navigation -------- */
+/* Article UX: contents, progress, copy controls, navigation ------------ */
 
 .reading-progress {
   background: transparent;
@@ -39,7 +39,7 @@
   color: var(--system-dim);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   letter-spacing: 0.06em;
   padding: 0.38rem 0.55rem;
   position: absolute;
@@ -55,89 +55,51 @@
 }
 
 .post-navigation {
+  align-items: center;
   border-top: 1px solid var(--system-line-strong);
-  margin: clamp(3rem, 7vw, 5rem) auto 0;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 1.75rem auto 0;
   max-width: 860px;
-  padding-top: 1rem;
+  padding-top: 0.9rem;
 }
 
-.post-navigation-topic,
-.post-navigation-topic:visited {
+.post-navigation a,
+.post-navigation a:visited {
   color: var(--system-amber);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.055em;
+  font-size: 0.74rem;
+  letter-spacing: 0.045em;
   text-decoration: none;
+  text-transform: uppercase;
 }
 
-.post-navigation-topic:hover,
-.post-navigation-topic:focus-visible {
+.post-navigation a:hover,
+.post-navigation a:focus-visible {
+  color: var(--system-bright);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
 
-.post-navigation-chronology {
-  display: grid;
-  gap: 1px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 1rem;
-}
-
-.post-navigation-chronology > a,
-.post-navigation-chronology > a:visited {
-  border: 1px solid var(--system-line);
-  display: grid;
-  gap: 0.35rem;
-  min-height: 7rem;
-  padding: 1rem;
-  text-decoration: none;
-}
-
-.post-navigation-chronology > a:only-child {
-  grid-column: 1 / -1;
-}
-
-.post-navigation-chronology > a:hover,
-.post-navigation-chronology > a:focus-visible {
-  background: var(--system-faint);
-  border-color: var(--system-line-strong);
-}
-
-.post-navigation-chronology a > span {
-  color: var(--system-dim);
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.065em;
-}
-
-.post-navigation-chronology strong {
-  color: var(--system-bright);
-  font-family: var(--font-ui);
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
 @media (max-width: 960px) {
   .toc-mobile {
+    background: var(--system-bg);
     border-bottom: 1px solid var(--system-line-strong);
     border-top: 1px solid var(--system-line-strong);
     display: block;
     font-family: var(--font-mono);
-    margin: 0 auto 2rem;
+    margin: 0 auto 1.5rem;
     max-width: 860px;
   }
 
   .toc-mobile > summary {
-    align-items: center;
     color: var(--system-bright);
     cursor: pointer;
-    display: flex;
-    font-size: 0.72rem;
-    justify-content: space-between;
+    font-size: 0.78rem;
     letter-spacing: 0.08em;
     list-style: none;
-    padding: 0.85rem 0;
+    padding: 0.8rem 0;
   }
 
   .toc-mobile > summary::-webkit-details-marker {
@@ -147,24 +109,18 @@
   .toc-mobile > summary::after {
     color: var(--system-dim);
     content: "+";
-    margin-left: 0.75rem;
+    float: right;
   }
 
   .toc-mobile[open] > summary::after {
     content: "−";
   }
 
-  .toc-mobile > summary small {
-    color: var(--system-dim);
-    font-size: 0.66rem;
-    margin-left: auto;
-  }
-
   .toc-mobile nav {
     border-top: 1px solid var(--system-line);
     max-height: min(55dvh, 32rem);
     overflow-y: auto;
-    padding: 0.65rem 0 0.85rem;
+    padding: 0.55rem 0 0.75rem;
   }
 
   .toc-mobile ol {
@@ -174,7 +130,7 @@
   }
 
   .toc-mobile li + li {
-    margin-top: 0.2rem;
+    margin-top: 0.15rem;
   }
 
   .toc-mobile .toc-level-3 {
@@ -186,9 +142,9 @@
     border-left: 1px solid transparent;
     color: var(--system-dim);
     display: block;
-    font-size: 0.74rem;
+    font-size: 0.78rem;
     line-height: 1.45;
-    padding: 0.35rem 0.6rem;
+    padding: 0.32rem 0.6rem;
     text-decoration: none;
   }
 
@@ -201,16 +157,14 @@
 }
 
 @media (max-width: 600px) {
-  .post-navigation-chronology {
-    grid-template-columns: 1fr;
+  .post-navigation {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.55rem;
   }
 
-  .post-navigation-chronology > a {
-    min-height: 0;
-  }
-
-  .post-navigation-topic,
-  .post-navigation-topic:visited,
+  .post-navigation a,
+  .post-navigation a:visited,
   .code-copy-button {
     font-size: 0.72rem;
   }

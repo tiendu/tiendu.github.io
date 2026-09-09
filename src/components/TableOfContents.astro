@@ -9,7 +9,6 @@ const { headings } = Astro.props;
 const visibleHeadings = headings.filter(
   ({ depth }) => depth === 2 || depth === 3,
 );
-const count = String(visibleHeadings.length).padStart(2, "0");
 ---
 
 {
@@ -17,11 +16,7 @@ const count = String(visibleHeadings.length).padStart(2, "0");
     <>
       <nav class="toc-desktop" aria-label="Table of contents">
         <header class="toc-header">
-          <div>
-            <span>DOCUMENT INDEX</span>
-            <strong>CONTENTS</strong>
-          </div>
-          <small>{count}</small>
+          <strong>CONTENTS</strong>
         </header>
 
         <ol>
@@ -34,10 +29,7 @@ const count = String(visibleHeadings.length).padStart(2, "0");
       </nav>
 
       <details class="toc-mobile">
-        <summary>
-          <span>CONTENTS</span>
-          <small>{count}</small>
-        </summary>
+        <summary>CONTENTS</summary>
         <nav aria-label="Table of contents">
           <ol>
             {visibleHeadings.map((heading) => (

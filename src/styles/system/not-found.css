@@ -28,7 +28,7 @@
 .system-error-panel nav a:visited {
   color: var(--system-amber);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.76rem;
   letter-spacing: 0.06em;
   text-decoration: none;
 }

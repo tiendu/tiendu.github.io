@@ -89,8 +89,7 @@
   color: var(--system-dim);
 }
 
-/* Generic system-page link styling is intentionally brighter. Keep inactive
- * primary navigation at the same dim level used on the terminal home page. */
+/* Generic system-page links are brighter; inactive primary nav stays dim. */
 body.system-interface .system-nav a:not(:hover):not([aria-current="page"]),
 body.system-interface .system-nav a:not(:hover):not([aria-current="page"]):visited {
   color: var(--system-dim);
@@ -98,4 +97,72 @@ body.system-interface .system-nav a:not(:hover):not([aria-current="page"]):visit
 
 .system-nav a:is(:hover, [aria-current="page"]) span {
   color: var(--system-bright);
+}
+
+@media (min-width: 761px) {
+  .system-brand-name {
+    font-size: 1.02rem;
+  }
+
+  .system-brand-model {
+    font-size: 0.76rem;
+  }
+
+  .system-nav a,
+  .system-nav a:visited {
+    font-size: 0.82rem;
+  }
+
+  .system-nav a span {
+    font-size: 0.66rem;
+  }
+}
+
+@media (max-width: 860px) {
+  .system-topbar-inner {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .system-nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.1rem;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+
+  .system-nav::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .system-topbar-inner {
+    gap: 0.45rem;
+    min-height: 0;
+    padding-block: max(0.7rem, env(safe-area-inset-top)) 0.65rem;
+  }
+
+  .system-brand-name {
+    font-size: 1rem;
+  }
+
+  .system-brand-model {
+    display: none;
+  }
+
+  .system-nav {
+    gap: 0.95rem;
+  }
+
+  .system-nav a,
+  .system-nav a:visited {
+    font-size: 0.8rem;
+  }
+
+  .system-nav a span {
+    display: none;
+  }
 }
