@@ -2,17 +2,33 @@
 
 body.system-interface,
 body.terminal-home {
-  --system-bg: #030805;
-  --system-text: #bddf86;
-  --system-bright: #e2f8ad;
-  --system-dim: #789958;
-  --system-faint: rgb(199 240 139 / 7%);
-  --system-line: rgb(199 240 139 / 15%);
-  --system-line-strong: rgb(199 240 139 / 28%);
-  --system-amber: #d6aa72;
-  --system-red: #d47d69;
+  --system-bg: #050301;
+  --system-text: #e9a14a;
+  --system-bright: #ffd27a;
+  --system-dim: #8f5528;
+  --system-faint: rgb(233 161 74 / 6%);
+  --system-line: rgb(233 161 74 / 17%);
+  --system-line-strong: rgb(233 161 74 / 32%);
+  --system-amber: #e9a14a;
+  --system-red: #ff7866;
+  --system-glow-soft:
+    0 0 1px rgb(255 240 189 / 32%),
+    0 0 5px rgb(233 161 74 / 18%),
+    0 0 10px rgb(255 122 28 / 8%);
+  --system-glow:
+    0 0 1px rgb(255 240 189 / 68%),
+    0 0 4px rgb(255 210 122 / 48%),
+    0 0 10px rgb(255 138 36 / 28%),
+    0 0 18px rgb(255 90 10 / 10%);
+  --system-glow-hot:
+    0 0 1px rgb(255 240 189 / 94%),
+    0 0 4px rgb(255 210 122 / 76%),
+    0 0 10px rgb(255 138 36 / 46%),
+    0 0 22px rgb(255 90 10 / 20%);
 
-  background: var(--system-bg);
+  background:
+    radial-gradient(circle at 28% 10%, rgb(255 122 28 / 4%), transparent 36rem),
+    var(--system-bg);
   color: var(--system-text);
   font-family: var(--font-ui);
   min-height: 100svh;
@@ -42,6 +58,57 @@ body.terminal-home .skip-link {
 }
 
 .system-page-shell {
-  background: var(--system-bg);
+  background:
+    radial-gradient(circle at 28% 10%, rgb(255 122 28 / 4%), transparent 36rem),
+    var(--system-bg);
   min-height: 100svh;
+}
+
+/* Amber CRT atmosphere: low enough to keep long-form reading comfortable. */
+body.system-interface::after {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgb(0 0 0 / 18%) 4px
+  );
+  content: "";
+  inset: 0;
+  opacity: 0.22;
+  pointer-events: none;
+  position: fixed;
+  z-index: 999;
+}
+
+body.system-interface :is(
+  .system-brand,
+  .system-module-code,
+  .system-section-code,
+  .article-doc-strip,
+  .post-meta,
+  .toc-desktop,
+  .system-module-footer,
+  .article-system-footer
+) {
+  text-shadow: var(--system-glow-soft);
+}
+
+body.system-interface :is(
+  .system-page-header h1,
+  .article-title,
+  .toc-header strong
+) {
+  text-shadow: var(--system-glow-hot);
+}
+
+body.system-interface .system-nav a:not(:hover):not([aria-current="page"]) {
+  text-shadow: none;
+}
+
+body.system-interface :is(
+  .system-nav a:hover,
+  .system-nav a[aria-current="page"],
+  .system-brand:hover
+) {
+  text-shadow: var(--system-glow);
 }

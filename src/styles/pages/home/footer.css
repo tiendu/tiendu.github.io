@@ -2,7 +2,7 @@
 
 .terminal-footer {
   align-items: center;
-  border-top: 1px solid rgb(199 240 139 / 15%);
+  border-top: 1px solid rgb(233 161 74 / 15%);
   color: var(--terminal-green-dim);
   display: flex;
   font-size: 0.92rem;

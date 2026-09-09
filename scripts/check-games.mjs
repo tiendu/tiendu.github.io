@@ -82,6 +82,10 @@ for (const retired of [
   "lift-load.ts",
   "lift-load-rules.ts",
   "lift-load-renderer.ts",
+  "SudokuGame.astro",
+  "sudoku.ts",
+  "sudoku-generator.ts",
+  "sudoku-rules.ts",
 ]) {
   if (componentNames.includes(retired) || scriptNames.includes(retired))
     failures.push(`retired game file still exists: ${retired}`);

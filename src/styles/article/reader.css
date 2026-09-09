@@ -1,17 +1,19 @@
 /* Article reader inside the minimal system interface -------------------- */
 
 .article-page-shell {
-  --article-text: #d8dacf;
-  --article-text-soft: #aab19f;
+  --article-text: #ddd3c2;
+  --article-text-soft: #a99b87;
   --article-heading: var(--system-bright);
-  --article-link: #c7e994;
-  --article-link-hover: #e2f8ad;
-  --article-surface: #07100a;
-  --article-surface-soft: rgb(199 240 139 / 5%);
+  --article-link: #e9a14a;
+  --article-link-hover: #ffd27a;
+  --article-surface: #0a0603;
+  --article-surface-soft: rgb(233 161 74 / 4.5%);
   --article-border: var(--system-line);
   --article-border-strong: var(--system-line-strong);
 
-  background: var(--system-bg);
+  background:
+    radial-gradient(circle at 28% 8%, rgb(255 122 28 / 4%), transparent 36rem),
+    var(--system-bg);
 }
 
 .article-console {
@@ -239,7 +241,7 @@
 .post-content a:visited {
   color: var(--article-link);
   overflow-wrap: anywhere;
-  text-decoration-color: rgb(199 240 139 / 32%);
+  text-decoration-color: rgb(233 161 74 / 36%);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
 }
@@ -436,4 +438,21 @@
 .back-to-top:hover {
   background: var(--system-bright);
   color: var(--system-bg);
+}
+
+
+.article-title {
+  text-shadow: var(--system-glow-hot);
+}
+
+.article-description,
+.post-content :is(h2, h3, h4, h5, h6),
+.post-content a:hover {
+  text-shadow: var(--system-glow-soft);
+}
+
+.article-system-header,
+.article-system-footer,
+.toc-desktop {
+  filter: drop-shadow(0 0 7px rgb(255 122 28 / 7%));
 }

@@ -62,7 +62,7 @@ body.system-interface .system-page-header h1 {
 body.system-interface a,
 body.system-interface a:visited {
   color: var(--system-text);
-  text-decoration-color: rgb(199 240 139 / 30%);
+  text-decoration-color: rgb(233 161 74 / 34%);
 }
 
 body.system-interface a:hover {
@@ -96,7 +96,7 @@ body.system-interface a[target="_blank"]::after {
 }
 
 .system-module-footer a:hover {
-  color: #f0c994;
+  color: #ffd08a;
 }
 
 .system-empty-state {

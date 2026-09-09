@@ -8,9 +8,9 @@
   <title id="title">Pixel coffee invader</title>
   <desc id="desc">A retro pixel-art coffee cup with alien-like eyes and steam antennae.</desc>
 
-  <rect width="32" height="32" rx="4" fill="#07120b"/>
+  <rect width="32" height="32" rx="4" fill="#050301"/>
 
-  <g fill="#d9f277">
+  <g fill="#e9a14a">
     <rect x="9" y="4" width="3" height="2"/>
     <rect x="7" y="6" width="3" height="2"/>
     <rect x="9" y="8" width="3" height="2"/>
@@ -20,10 +20,10 @@
     <rect x="20" y="8" width="3" height="2"/>
   </g>
 
-  <rect x="7" y="11" width="17" height="3" fill="#d9805d"/>
-  <rect x="9" y="11" width="13" height="1" fill="#f2bf87"/>
+  <rect x="7" y="11" width="17" height="3" fill="#8f5528"/>
+  <rect x="9" y="11" width="13" height="1" fill="#ffd27a"/>
 
-  <g fill="#d9f277">
+  <g fill="#e9a14a">
     <rect x="6" y="13" width="19" height="3"/>
     <rect x="7" y="16" width="17" height="7"/>
     <rect x="9" y="23" width="13" height="2"/>
@@ -36,13 +36,13 @@
     <rect x="24" y="22" width="4" height="2"/>
   </g>
 
-  <g fill="#07120b">
+  <g fill="#050301">
     <rect x="10" y="16" width="3" height="3"/>
     <rect x="18" y="16" width="3" height="3"/>
     <rect x="13" y="21" width="5" height="2"/>
   </g>
 
-  <g fill="#e7ffb0">
+  <g fill="#fff0bd">
     <rect x="7" y="14" width="2" height="1"/>
     <rect x="22" y="14" width="2" height="1"/>
   </g>

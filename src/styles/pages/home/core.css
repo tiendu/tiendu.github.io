@@ -1,12 +1,26 @@
 /* Homepage terminal frame, intro, profile, and primary actions. */
 
 :root {
-  --terminal-screen: #030805;
-  --terminal-screen-deep: #030805;
-  --terminal-green: #bddf86;
-  --terminal-green-bright: #e2f8ad;
-  --terminal-green-dim: #789958;
-  --terminal-glow: rgb(199 240 139 / 12%);
+  --terminal-screen: #050301;
+  --terminal-screen-deep: #030201;
+  --terminal-green: #e9a14a;
+  --terminal-green-bright: #ffd27a;
+  --terminal-green-dim: #8f5528;
+  --terminal-glow: rgb(255 122 28 / 30%);
+  --terminal-glow-soft:
+    0 0 1px rgb(255 240 189 / 34%),
+    0 0 5px rgb(233 161 74 / 20%),
+    0 0 10px rgb(255 122 28 / 10%);
+  --terminal-glow-medium:
+    0 0 1px rgb(255 240 189 / 68%),
+    0 0 4px rgb(255 210 122 / 50%),
+    0 0 10px rgb(255 138 36 / 30%),
+    0 0 18px rgb(255 90 10 / 12%);
+  --terminal-glow-hot:
+    0 0 1px rgb(255 240 189 / 96%),
+    0 0 4px rgb(255 210 122 / 80%),
+    0 0 10px rgb(255 138 36 / 52%),
+    0 0 22px rgb(255 90 10 / 24%);
 }
 
 html {
@@ -44,7 +58,9 @@ body.terminal-home .terminal-page-content {
 }
 
 .terminal-screen {
-  background: transparent;
+  background:
+    radial-gradient(circle at 28% 18%, rgb(255 122 28 / 4.5%), transparent 34rem),
+    linear-gradient(180deg, #050301 0%, #030201 100%);
   display: flex;
   min-height: 0;
   overflow: auto;
@@ -72,7 +88,7 @@ body.terminal-home .terminal-page-content {
     max(clamp(1rem, 3vw, 2rem), env(safe-area-inset-bottom))
     max(clamp(1rem, 4vw, 3.25rem), env(safe-area-inset-left));
   position: relative;
-  text-shadow: 0 0 4px rgb(199 240 139 / 12%);
+  text-shadow: var(--terminal-glow-soft);
   width: min(100%, 1280px);
   z-index: 1;
 }
@@ -112,7 +128,10 @@ body.terminal-home .terminal-page-content {
 .block-cursor {
   animation: cursor-blink 0.85s steps(1, end) infinite;
   background: var(--terminal-green-bright);
-  box-shadow: 0 0 6px var(--terminal-green);
+  box-shadow:
+    0 0 4px var(--terminal-green-bright),
+    0 0 11px rgb(255 138 36 / 66%),
+    0 0 22px rgb(255 90 10 / 30%);
   display: inline-block;
   flex: 0 0 auto;
   height: 0.9em;
@@ -159,7 +178,7 @@ body.terminal-home .terminal-page-content {
   letter-spacing: 0.075em;
   line-height: 0.95;
   margin: 0 0 1.35rem;
-  text-shadow: 0 0 6px rgb(199 240 139 / 18%);
+  text-shadow: var(--terminal-glow-hot);
 }
 
 .output p,
@@ -182,7 +201,10 @@ body.terminal-home .terminal-page-content {
 .output .is-typing::after {
   animation: cursor-blink 0.85s steps(1, end) infinite;
   background: var(--terminal-green-bright);
-  box-shadow: 0 0 5px var(--terminal-green);
+  box-shadow:
+    0 0 4px var(--terminal-green-bright),
+    0 0 10px rgb(255 138 36 / 64%),
+    0 0 20px rgb(255 90 10 / 28%);
   content: "";
   display: inline-block;
   height: 0.76em;
@@ -199,7 +221,7 @@ body.terminal-home .terminal-page-content {
 
 .terminal-skip {
   background: transparent;
-  border: 1px solid rgb(199 240 139 / 24%);
+  border: 1px solid rgb(233 161 74 / 28%);
   color: var(--terminal-green-dim);
   cursor: pointer;
   display: none;
@@ -226,7 +248,7 @@ body.terminal-home .terminal-page-content {
 
 
 .terminal-response {
-  border-left: 2px solid rgb(199 240 139 / 28%);
+  border-left: 2px solid rgb(233 161 74 / 34%);
   color: var(--terminal-green-dim);
   font-size: clamp(1rem, 1.55vw, 1.18rem);
   line-height: 1.4;
@@ -234,4 +256,32 @@ body.terminal-home .terminal-page-content {
   max-width: 72ch;
   padding-left: 0.75rem;
   white-space: pre-wrap;
+}
+
+
+.prompt,
+.terminal-title {
+  text-shadow: var(--terminal-glow-hot);
+}
+
+.path,
+.command-line,
+.output p,
+.terminal-response {
+  text-shadow: var(--terminal-glow-soft);
+}
+
+.terminal-screen::after {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgb(0 0 0 / 20%) 4px
+  );
+  content: "";
+  inset: 0;
+  opacity: 0.28;
+  pointer-events: none;
+  position: absolute;
+  z-index: 3;
 }

@@ -3,6 +3,7 @@
 .system-topbar {
   background: var(--system-bg);
   border-bottom: 1px solid var(--system-line);
+  box-shadow: 0 1px 10px rgb(255 94 8 / 9%);
   position: sticky;
   top: 0;
   z-index: 30;
@@ -73,7 +74,7 @@
 }
 
 .system-nav a span {
-  color: rgb(199 240 139 / 38%);
+  color: rgb(233 161 74 / 42%);
   font-size: 0.55rem;
 }
 
@@ -85,5 +86,16 @@
 }
 
 .system-nav .system-home-link {
-  color: var(--system-amber);
+  color: var(--system-dim);
+}
+
+/* Generic system-page link styling is intentionally brighter. Keep inactive
+ * primary navigation at the same dim level used on the terminal home page. */
+body.system-interface .system-nav a:not(:hover):not([aria-current="page"]),
+body.system-interface .system-nav a:not(:hover):not([aria-current="page"]):visited {
+  color: var(--system-dim);
+}
+
+.system-nav a:is(:hover, [aria-current="page"]) span {
+  color: var(--system-bright);
 }
