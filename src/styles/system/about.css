@@ -69,7 +69,9 @@
 
 .operator-link-mark {
   color: var(--system-text);
-  font-size: 0.85em;
+  font-family: var(--font-panel);
+  font-size: 0.9em;
+  letter-spacing: 0.02em;
   text-shadow: var(--system-glow-soft);
 }
 

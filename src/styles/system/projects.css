@@ -55,9 +55,10 @@
 .external-mark {
   color: var(--system-text);
   font-family: var(--font-panel);
-  font-size: 0.48em;
-  margin-left: 0.22em;
-  vertical-align: 0.48em;
+  font-size: 0.62em;
+  letter-spacing: 0.02em;
+  margin-left: 0.24em;
+  vertical-align: 0.16em;
 }
 
 .project-summary {
