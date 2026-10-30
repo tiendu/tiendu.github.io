@@ -1,0 +1,63 @@
+name: Number multiplayer backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['multiplayer/**', '.github/workflows/number-worker.yml']
+  pull_request:
+    paths: ['multiplayer/**', '.github/workflows/number-worker.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: number-worker-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: multiplayer/package-lock.json
+      - run: npm ci
+        working-directory: multiplayer
+      - run: npm run check
+        working-directory: multiplayer
+      - run: npm run test:node
+        working-directory: multiplayer
+      - run: docker build -t number-backend-test ./multiplayer
+      - run: npm run test:integration
+        working-directory: multiplayer
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.NUMBER_BACKEND != 'node'
+    runs-on: ubuntu-latest
+    environment: cloudflare-number
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: multiplayer/package-lock.json
+      - name: Check deployment credentials
+        shell: bash
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo 'Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in GitHub Actions secrets. See multiplayer/README.md.'
+            exit 1
+          fi
+      - run: npm ci
+        working-directory: multiplayer
+      - run: npm run deploy
+        working-directory: multiplayer

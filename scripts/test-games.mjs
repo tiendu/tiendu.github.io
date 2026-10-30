@@ -811,3 +811,45 @@ assert.ok(
 console.log(
   "Game rules OK: Neon Snake solid walls, wall exits, absolute steering, flow scoring, deterministic sectors; Stack Trace landings, wind, balance, tools, and difficulty; and Chicken Run movement, weather, terrain, background scenes, pacing, and sprite contrast.",
 );
+
+const number = await importTypeScript("../src/scripts/games/number-rules.ts");
+for (let target = 1; target <= 99; target += 1) {
+  const initial = number.createNumberRound(target);
+  for (const invalid of [-1, 0, 100, 101, 1.5, NaN, Infinity]) {
+    assert.equal(number.guessNumber(initial, invalid), initial);
+  }
+  for (const ascending of [true, false]) {
+    let round = initial;
+    for (let guess = ascending ? 1 : 99; ascending ? guess <= target : guess >= target; guess += ascending ? 1 : -1) {
+      round = number.guessNumber(round, guess);
+      assert.ok(round.low < target && target < round.high);
+      assert.equal(round.target, target);
+      assert.equal(round.over, guess === target);
+      assert.equal(number.guessNumber(round, guess), round);
+    }
+    assert.equal(number.guessNumber(round, 50), round);
+  }
+}
+let narrowing = number.createNumberRound(42);
+for (const [guess, low, high] of [[70, 0, 70], [25, 25, 70], [50, 25, 50], [41, 41, 50], [43, 41, 43]]) {
+  narrowing = number.guessNumber(narrowing, guess);
+  assert.equal(narrowing.low, low);
+  assert.equal(narrowing.high, high);
+  assert.equal(narrowing.over, false);
+}
+assert.equal(narrowing.high - narrowing.low - 1, 1);
+const ended = number.guessNumber(narrowing, 42);
+assert.equal(ended.over, true);
+for (const invalid of [-1, 0, 100, 101, 1.5, NaN]) assert.throws(() => number.createNumberRound(invalid), RangeError);
+for (const round of [number.createNumberRound(1), narrowing, ended]) {
+  const saved = { version: 2, round, input: "4" };
+  assert.deepEqual(number.restoreNumberSession(JSON.parse(JSON.stringify(saved))), { round, input: "4" });
+}
+for (const corrupt of [null, {}, {version:1,round:narrowing,input:""},
+  {version:2,round:{...narrowing,target:41},input:""},
+  {version:2,round:{...narrowing,high:101},input:""},
+  {version:2,round:{...narrowing,guesses:-1},input:""},
+  {version:2,round:narrowing,input:"oops"}]) {
+  assert.equal(number.restoreNumberSession(corrupt), null);
+}
+console.log("Number rules OK: exclusive boundaries, all 99 targets in both directions, fixed target, one-number ranges, invalid guesses, and validated session restoration.");

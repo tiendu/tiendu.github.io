@@ -1,0 +1,16 @@
+services:
+  number:
+    build: .
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      ALLOWED_ORIGINS: "https://tiendu.github.io"
+      MAX_ROOMS: "50"
+      # Enable only behind a trusted proxy that sets X-Forwarded-For.
+      TRUST_PROXY: "1"
+    volumes:
+      - number-data:/data
+volumes:
+  number-data:

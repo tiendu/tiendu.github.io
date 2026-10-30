@@ -8,6 +8,22 @@ The site uses three related interfaces:
 - `/posts/`, `/projects/`, `/topics/`, `/about/` — a shared minimal dark interface
 - individual posts — the same minimal chrome with a paper reading surface
 
+## Number
+
+`/games/number/` is a standalone pass-and-play game, also opened with the
+`NUMBER` homepage terminal command. Players enter an integer in the exclusive
+0–100 boundaries (playable numbers are 1–99); safe guesses dim the eliminated part of a fixed scale. The hidden
+number is selected once per round. Hitting it triggers a short pixel explosion
+and reveals a Play Again button. Reduced-motion mode reveals the result directly.
+The round and unfinished input survive reloads when browser storage is available.
+New Round asks before discarding an active round. Sound is optional and off by
+default. Everything runs locally in the browser; there are no accounts or servers.
+
+For 2–20 player internet games with either Cloudflare or standalone Node.js/SQLite,
+and deployment instructions, see
+[`multiplayer/README.md`](multiplayer/README.md). The frontend stays on GitHub
+Pages; account credentials are GitHub secrets, never browser configuration.
+
 ## Development
 
 ```bash

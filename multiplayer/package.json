@@ -1,0 +1,23 @@
+{
+  "name": "number-multiplayer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "node --test test/rules.test.mjs test/room.test.mjs",
+    "deploy": "wrangler deploy",
+    "check": "node --check src/index.mjs && npm test && wrangler deploy --dry-run",
+    "test:integration": "node --test test/integration.test.mjs",
+    "start": "node src/node-server.mjs",
+    "test:node": "NUMBER_TEST_BACKEND=node node --test test/integration.test.mjs test/node.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.156.0"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

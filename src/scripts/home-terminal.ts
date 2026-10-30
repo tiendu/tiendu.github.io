@@ -340,7 +340,7 @@ function mountTerminal(wrapper: HTMLElement): void {
 
     if (command === "help") {
       showResponse(
-        "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TOPICS · ABOUT · SNAKE · CRANE · CHICKEN · CLEAR",
+        "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TOPICS · ABOUT · SNAKE · CRANE · CHICKEN · NUMBER · CLEAR",
       );
       return;
     }
@@ -371,6 +371,7 @@ function mountTerminal(wrapper: HTMLElement): void {
     }
 
     const routes: Record<string, string> = {
+      number: "/games/number/",
       posts: "/posts/",
       projects: "/projects/",
       topics: "/topics/",
