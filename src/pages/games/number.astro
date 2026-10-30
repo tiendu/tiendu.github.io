@@ -9,17 +9,26 @@ import "../../styles/components/number-game.css";
       <span class="number-caption" data-number-mode>PASS & PLAY</span>
     </header>
     <div class="number-online">
-      <div data-number-join-form>
-        <label class="number-caption" for="number-name">YOUR NAME</label>
-        <input id="number-name" class="number-invite" data-number-name maxlength="32" autocomplete="nickname" placeholder="1–16 characters" />
-        <div class="number-options">
-          <button class="number-option" type="button" data-number-create disabled>CREATE ROOM</button>
-          <label class="number-code-label" for="number-code">ROOM CODE
-            <input id="number-code" class="number-invite" data-number-code inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" />
-          </label>
-          <button class="number-option" type="button" data-number-join disabled>JOIN</button>
-        </div>
+      <div class="number-online-actions" data-number-join-form>
+        <button class="number-key" type="button" data-number-create disabled>CREATE</button>
+        <button class="number-key" type="button" data-number-join disabled>JOIN</button>
       </div>
+      <dialog class="number-dialog number-online-dialog" data-number-online-dialog aria-labelledby="number-online-title">
+        <h2 id="number-online-title" data-number-online-title>Create room</h2>
+        <form data-number-online-form novalidate>
+          <label for="number-name">YOUR NAME
+            <input id="number-name" class="number-invite" data-number-name maxlength="32" autocomplete="nickname" placeholder="1–16 characters" required />
+          </label>
+          <label for="number-code" data-number-code-field hidden>ROOM CODE
+            <input id="number-code" class="number-invite" data-number-code inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" autocomplete="off" />
+          </label>
+          <p class="number-online-status" data-number-dialog-status role="status" aria-live="polite"></p>
+          <div class="number-online-actions">
+            <button class="number-key" type="button" data-number-online-cancel>CANCEL</button>
+            <button class="number-key number-key-enter" type="submit" data-number-online-submit>CREATE ROOM</button>
+          </div>
+        </form>
+      </dialog>
       <div data-number-room hidden>
         <p class="number-room-code" data-number-room-code></p>
         <label class="number-caption" for="number-invite">INVITE LINK</label>

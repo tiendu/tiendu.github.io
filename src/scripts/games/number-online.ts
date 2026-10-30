@@ -25,10 +25,33 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
   const start = get<HTMLButtonElement>("[data-number-start]");
   const roster = get("[data-number-roster]");
   const mode = get("[data-number-mode]");
+  const dialog = get<HTMLDialogElement>("[data-number-online-dialog]");
+  const onlineForm = get<HTMLFormElement>("[data-number-online-form]");
+  const submit = get<HTMLButtonElement>("[data-number-online-submit]");
+  const dialogStatus = get("[data-number-dialog-status]");
+  const codeField = get("[data-number-code-field]");
+  let intent: "create" | "join" = "create";
+  let creating: AbortController | undefined;
+  let attempt = 0;
+  const openDialog = (action: "create" | "join") => {
+    if (!endpoint) return;
+    intent = action; dialogStatus.textContent = ""; submit.disabled = false;
+    get("[data-number-online-title]").textContent = action === "create" ? "Create room" : "Join room";
+    submit.textContent = action === "create" ? "CREATE ROOM" : "JOIN ROOM";
+    codeField.hidden = action !== "join";
+    code.disabled = action !== "join";
+    dialog.showModal();
+    (name.value.trim() && action === "join" && !code.value ? code : name).focus();
+  };
+  get("[data-number-online-cancel]").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("close", () => { attempt++; creating?.abort(); creating = undefined; submit.disabled = false; });
+  // Keep modal Enter/digit keys away from the pass-and-play keypad handler.
+  dialog.addEventListener("keydown", event => event.stopPropagation());
   try { name.value = localStorage.getItem("number-display-name") || ""; } catch { /* Optional. */ }
   const validName = () => {
-    const value = name.value.trim();
-    if (!value || [...value].length > 16) { info.textContent = "Enter your name (1–16 characters)."; name.focus(); return false; }
+    const value = name.value.normalize("NFC").replace(/[\p{Cc}\p{Cf}]/gu, "").trim().replace(/\s+/g, " ");
+    name.value = value;
+    if (!value || [...value].length > 16) { dialogStatus.textContent = "Enter your name (1–16 characters)."; name.focus(); return false; }
     try { localStorage.setItem("number-display-name", value); } catch { /* Optional. */ }
     return true;
   };
@@ -149,24 +172,36 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     connect();
   };
   create.disabled = !endpoint; joinButton.disabled = !endpoint;
-  info.textContent = endpoint ? "Play here together, or create a room for two players online." : "Pass-and-play is ready. Online play will appear after the backend is configured.";
-  create.addEventListener("click", async () => {
-    if (!endpoint || !validName()) return;
-    create.disabled = true; info.textContent = "Creating room…";
+  info.textContent = endpoint ? "Play locally or online with 2–20 players." : "Pass-and-play is ready. Online play will appear after the backend is configured.";
+  for (const button of [create, joinButton]) button.addEventListener("keydown", event => event.stopPropagation());
+  create.addEventListener("click", () => openDialog("create"));
+  joinButton.addEventListener("click", () => openDialog("join"));
+  onlineForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!endpoint || submit.disabled || !validName()) return;
+    if (intent === "join") {
+      if (!/^\d{6}$/.test(code.value.trim())) { dialogStatus.textContent = "Enter the six-digit room code."; code.focus(); return; }
+      dialog.close(); join(code.value.trim()); return;
+    }
+    const current = ++attempt;
+    const controller = new AbortController(); creating = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 10000);
+    submit.disabled = true; dialogStatus.textContent = "Creating room…";
     try {
-      const response = await fetch(new URL("/rooms", endpoint), { method: "POST", signal: AbortSignal.timeout(10000) });
-      if (response.status === 503) { info.textContent = "All rooms are busy or temporarily unavailable. Try again later, or play locally."; return; }
-      if (response.status === 429) { info.textContent = "Too many attempts. Wait a minute before creating another room."; return; }
+      const response = await fetch(new URL("/rooms", endpoint), { method: "POST", signal: controller.signal });
+      if (!dialog.open || current !== attempt) return;
+      if (response.status === 503) { dialogStatus.textContent = "All rooms are busy or temporarily unavailable. Try again later."; return; }
+      if (response.status === 429) { dialogStatus.textContent = "Too many attempts. Wait a minute and try again."; return; }
       if (!response.ok) throw new Error("create");
       const data = await response.json();
-      join(data.room, data.token);
-    } catch { info.textContent = "Could not create a room. Check your connection and try again."; }
-    finally { create.disabled = false; }
-  });
-  joinButton.addEventListener("click", () => {
-    if (!validName()) return;
-    if (!/^\d{6}$/.test(code.value.trim())) { info.textContent = "Enter the six-digit room code."; code.focus(); return; }
-    join(code.value.trim());
+      if (!dialog.open || current !== attempt) return;
+      dialog.close(); join(data.room, data.token);
+    } catch {
+      if (dialog.open && current === attempt) dialogStatus.textContent = "Could not create a room. Check your connection and try again.";
+    } finally {
+      clearTimeout(timeout);
+      if (current === attempt) { creating = undefined; submit.disabled = false; }
+    }
   });
   start.addEventListener("click", () => send("start"));
   leave.addEventListener("click", () => {
@@ -179,7 +214,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     info.textContent = "Back to pass-and-play. Your local round is preserved.";
   });
   copy.addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(link.value); info.textContent = "Invite copied. Send it to your opponent."; }
+    try { await navigator.clipboard.writeText(link.value); info.textContent = "Invite copied. Share it with your group."; }
     catch { link.focus(); link.select(); info.textContent = "Copy the selected invite link."; }
   });
   const send = (type: "guess" | "start", value?: number) => {
@@ -202,7 +237,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     let saved = "";
     try { saved = localStorage.getItem(`number-player:${invited}`) || ""; } catch { /* Optional. */ }
     if (saved) queueMicrotask(() => join(invited));
-    else info.textContent = `Invited to room ${invited}. Enter your name, then press JOIN.`;
+    else queueMicrotask(() => openDialog("join"));
   }
   return { isActive: () => active, canPlay: eligible, state: () => latest,
     guess: (value: number) => send("guess", value), rematch: () => send("start"), canStart: () => ready && !pending && latest?.host === latest?.player && (latest?.players.filter(p => p.connected).length ?? 0) >= 2 };

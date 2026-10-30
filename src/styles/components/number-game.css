@@ -114,3 +114,12 @@ body:has(.number-game) { background: #090b0b; color: #e9e9da; }
 .number-roster li { padding: 4px; overflow-wrap: anywhere; }
 .number-current-player { color: var(--number-yellow); background: #242a24; }
 [data-number-outcome] { overflow-wrap: anywhere; }
+
+.number-online-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 8px 3px 14px; }
+.number-online-actions .number-key { font-size: 24px; }
+.number-online-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.number-online-dialog form { margin-top: 20px; }
+.number-online-dialog label { font-size: 18px; }
+.number-online-dialog .number-invite { box-sizing: border-box; font-family: inherit; font-size: 24px; }
+.number-online-dialog .number-online-actions { margin-bottom: 4px; }
+.number-online-dialog [hidden] { display: none; }
