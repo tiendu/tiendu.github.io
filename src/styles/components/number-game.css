@@ -160,3 +160,44 @@ body:has(.number-game) { background: #090b0b; color: #e9e9da; }
 @media (prefers-reduced-motion: reduce) {
   .number-counter-roll { animation: none; }
 }
+
+/* Mobile play: settings above the board, a centered guess, stable message space. */
+.number-game { box-sizing: border-box; }
+.number-header { margin-bottom: 4px; }
+.number-header .number-option { padding: 8px 10px; min-width: 100px; }
+.number-back { display: inline-flex; align-items: center; min-height: 44px; }
+.number-heading { margin-bottom: 16px; }
+.number-heading h1 { font-size: 44px; margin: 0 0 4px; }
+.number-heading .number-caption { font-size: 14px; }
+.number-online { margin-bottom: 12px; }
+.number-online-actions { margin-bottom: 10px; }
+.number-online-actions .number-key { min-height: 44px; font-size: 22px; }
+.number-range-heading { gap: 8px; }
+.number-range-heading .number-caption { font-size: 14px; }
+.number-range { font-size: 48px; margin: 6px 0 12px; }
+.number-scale { font-size: 14px; gap: 8px; }
+.number-scale [data-number-bounds] { text-align: center; font-size: 12px; }
+.number-turn { font-size: 22px; line-height: 1.1; height: 1.1em; margin: 12px 0 0; color: var(--number-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.number-your-turn { color: var(--number-yellow); }
+.number-status { box-sizing: border-box; height: 2.2em; min-height: 0; overflow-y: auto; overflow-wrap: anywhere; margin: 6px 0; font-size: 18px; line-height: 1.1; }
+.number-entry-row { flex-direction: column; justify-content: center; gap: 2px; padding-bottom: 8px; margin-bottom: 14px; }
+.number-entry-row .number-caption { font-size: 14px; }
+.number-entry { display: block; text-align: center; font-size: 64px; line-height: 1; min-height: 64px; min-width: 2ch; }
+.number-keypad { gap: 12px; }
+.number-keypad .number-key { min-height: 48px; }
+.number-keypad .number-key-enter:not(:disabled) { outline: 2px solid var(--number-yellow); outline-offset: -2px; background: #333822; }
+.number-keypad .number-key-enter:focus-visible { outline-offset: 6px; }
+.number-game > .number-options { margin-top: 28px; }
+.number-room-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--number-muted); font-size: 18px; }
+.number-room-details summary::before { content: "+ "; white-space: pre; }
+.number-room-details[open] summary::before { content: "− "; }
+.number-roster ol { padding-left: 0; }
+.number-unlucky-player { color: var(--number-yellow); background: #30291b; }
+.number-unlucky-player .number-player-name { animation: number-player-flash 600ms ease-out; }
+@keyframes number-player-flash { from { background: #615027; } to { background: transparent; } }
+.number-footer .number-build { font-size: 11px; letter-spacing: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .number-unlucky-player .number-player-name { animation: none; }
+}
+
+.number-online > .number-online-status { height: 3.6em; overflow-y: auto; overflow-wrap: anywhere; }

@@ -90,10 +90,16 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     if (!current?.connected) return `Waiting for ${current?.name || "a player"} to reconnect (up to 30 seconds), then skipping their turn.`;
     return s.turn === s.player ? "Your turn!" : `Waiting for ${current.name}…`;
   };
+  let shownPhase = "";
+  const roomDetails = get<HTMLDetailsElement>("[data-number-room-details]");
   const playerRows = new Map<string, HTMLLIElement>();
   const renderRoom = () => {
     if (!latest) return;
     const s = latest;
+    if (s.phase !== shownPhase) {
+      if (s.phase === "playing") roomDetails.open = false;
+      shownPhase = s.phase;
+    }
     get("[data-number-roster-title]").textContent = `PLAYERS ${s.players.length}/20 · ${s.players.filter(p => p.connected).length} ONLINE`;
     for (const [id, row] of playerRows) {
       if (!s.players.some(p => p.id === id)) { row.remove(); playerRows.delete(id); }
@@ -114,6 +120,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
         s.phase === "playing" && !s.order.includes(p.id) ? "next round" : "", s.phase === "playing" && p.id === s.turn ? "current turn" : ""].filter(Boolean);
       li.firstElementChild!.textContent = p.name + (tags.length ? ` · ${tags.join(" · ")}` : "");
       updateNumberCounter(li.lastElementChild as HTMLElement, p.explosions ?? 0);
+      li.classList.toggle("number-unlucky-player", s.over && p.id === s.loser);
       li.classList.toggle("number-current-player", s.phase === "playing" && p.id === s.turn);
       if (roster.children[index] !== li) roster.insertBefore(li, roster.children[index] ?? null);
     });
@@ -181,6 +188,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     room = id; token = hostToken || "";
     if (!token) { try { token = localStorage.getItem(identityKey()) || ""; } catch { /* optional */ } }
     if (hostToken) { try { localStorage.setItem(identityKey(), hostToken); } catch { /* optional */ } }
+    shownPhase = ""; roomDetails.open = true;
     playerRows.clear(); roster.replaceChildren();
     latest = undefined; active = true; retry = 0; announceJoin = true;
     hooks.mode(true);
@@ -284,6 +292,6 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     if (saved) queueMicrotask(() => join(invited));
     else queueMicrotask(() => openDialog("join"));
   }
-  return { isActive: () => active, canPlay: eligible, state: () => latest,
+  return { isActive: () => active, isConnected: () => ready, canPlay: eligible, state: () => latest,
     guess: (value: number) => send("guess", value), rematch: () => send("start"), canStart: () => ready && !pending && latest?.host === latest?.player && (latest?.players.filter(p => p.connected).length ?? 0) >= 2 };
 }

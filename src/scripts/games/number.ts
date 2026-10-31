@@ -7,6 +7,8 @@ export function mountNumberGames(): void {
   mountAllGames("[data-number-game]", "numberInitialized", (root) => {
     const get = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
     const range = get("[data-number-range]");
+    const turn = get("[data-number-turn]");
+    const bounds = get("[data-number-bounds]");
     const count = get("[data-number-count]");
     const status = get("[data-number-status]");
     const entry = get("[data-number-entry]");
@@ -56,6 +58,7 @@ export function mountNumberGames(): void {
     let localRound = round;
     let localInput = input;
     let onlineRound = 0;
+    let lastTurnName = "";
     const save = () => {
       if (online?.isActive()) return;
       try { localStorage.setItem(storageKey, JSON.stringify({ version: 2, round, input })); } catch { /* Private mode / full storage: keep playing. */ }
@@ -65,12 +68,24 @@ export function mountNumberGames(): void {
 
     const render = () => {
       root.setAttribute("aria-busy", String(busy));
-      range.textContent = `${round.low} — ${round.high}`;
+      range.textContent = `${round.low + 1} — ${round.high - 1}`;
+      bounds.textContent = `BOUNDS ${round.low} / ${round.high} EXCLUDED`;
       const remaining = round.high - round.low - 1;
       count.textContent = round.over ? "ROUND OVER" : `${remaining} ${remaining === 1 ? "NUMBER" : "NUMBERS"} LEFT`;
       resetButton.hidden = !!online?.isActive();
       resetButton.disabled = busy;
       const state = online?.state();
+      const current = state?.players.find(p => p.id === state.turn);
+      turn.classList.toggle("number-your-turn", !!online?.canPlay());
+      turn.textContent = online?.isActive()
+        ? !online.isConnected() ? "CONNECTING…"
+          : state?.over ? "ROUND OVER"
+          : state?.phase === "lobby" ? "WAITING TO START"
+          : !state?.order.includes(state.player) ? "JOINING NEXT ROUND"
+          : online.canPlay() ? "YOUR TURN"
+          : current?.id === state?.player ? "PLEASE WAIT…"
+          : `${current?.name || "PLAYER"}’S TURN`
+        : round.over ? "ROUND OVER" : "TAKE TURNS";
       again.disabled = !!online?.isActive() && !online.canStart();
       again.textContent = online?.isActive() ? (state?.host === state?.player ? "NEXT ROUND ↵" : "WAITING FOR HOST") : "PLAY AGAIN ↵";
       entry.textContent = input || "_";
@@ -279,6 +294,8 @@ export function mountNumberGames(): void {
       },
       connection() { render(); },
       state(state) {
+        const actorName = lastTurnName;
+        lastTurnName = state.players.find(p => p.id === state.turn)?.name || "";
         const fresh = onlineRound !== state.round;
         const wasOver = round.over;
         const changed = fresh || state.guesses !== round.guesses;
@@ -292,7 +309,7 @@ export function mountNumberGames(): void {
         if (changed) input = "";
         if (!round.over) {
           result.hidden = true; controls.hidden = false;
-          status.textContent = state.lastGuess === null ? `Pick a number from ${round.low + 1} to ${round.high - 1}.` : `${state.lastGuess} is safe. Range: ${round.low + 1} to ${round.high - 1}.`;
+          if (changed || state.lastGuess === null) status.textContent = state.lastGuess === null ? `Pick a number from ${round.low + 1} to ${round.high - 1}.` : `${!fresh && actorName ? actorName + " picked " : ""}${state.lastGuess} — safe. Pick ${round.low + 1}–${round.high - 1}.`;
         }
         if (changed && state.lastGuess !== null) {
           cells.forEach(cell => cell.classList.remove("number-cell-last"));
