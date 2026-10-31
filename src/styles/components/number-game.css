@@ -123,3 +123,25 @@ body:has(.number-game) { background: #090b0b; color: #e9e9da; }
 .number-online-dialog .number-invite { box-sizing: border-box; font-family: inherit; font-size: 24px; }
 .number-online-dialog .number-online-actions { margin-bottom: 4px; }
 .number-online-dialog [hidden] { display: none; }
+
+/* A short held highlight makes fast touch and keyboard presses visible. */
+.number-game .number-key.number-pressed {
+  opacity: 1;
+  background: #48503a;
+  color: #fff3a3;
+  transform: translateY(3px);
+  box-shadow: -3px 0 #a49b51, 3px 0 #a49b51;
+}
+.number-option { -webkit-tap-highlight-color: transparent; }
+.number-option:active:not(:disabled), .number-option.number-pressed {
+  background: #333c2e;
+  color: var(--number-yellow);
+  border-bottom-color: var(--number-yellow);
+  transform: translateY(2px);
+}
+.number-option.number-copied, .number-action-confirmed { color: var(--number-yellow); }
+[data-number-copy] { min-width: 122px; }
+@media (prefers-reduced-motion: reduce) {
+  .number-game .number-key.number-pressed,
+  .number-option:active:not(:disabled), .number-option.number-pressed { transform: none; }
+}

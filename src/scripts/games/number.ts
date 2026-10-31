@@ -23,6 +23,21 @@ export function mountNumberGames(): void {
     const resetButton = get<HTMLButtonElement>("[data-number-new]");
     const soundButton = get<HTMLButtonElement>("[data-number-sound]");
     const dialog = get<HTMLDialogElement>("[data-number-dialog]");
+    // Keep quick taps visible after release, including physical keyboard input.
+    const pressTimers = new WeakMap<HTMLButtonElement, number>();
+    const flashButton = (button?: HTMLButtonElement) => {
+      if (!button || button.disabled) return;
+      clearTimeout(pressTimers.get(button));
+      button.classList.add("number-pressed");
+      pressTimers.set(button, window.setTimeout(() => {
+        button.classList.remove("number-pressed");
+        pressTimers.delete(button);
+      }, 160));
+    };
+    root.addEventListener("click", (event) => {
+      const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("button") : null;
+      if (button && !button.hasAttribute("data-number-key")) flashButton(button);
+    }, true);
     const storageKey = "tiendu-number-session";
     let restored: ReturnType<typeof restoreNumberSession> = null;
     try { restored = restoreNumberSession(JSON.parse(localStorage.getItem(storageKey) || "null")); } catch { /* Storage is optional. */ }
@@ -137,6 +152,7 @@ export function mountNumberGames(): void {
 
     const press = (key: string) => {
       if (round.over || busy || dialog.open || (online?.isActive() && !online.canPlay())) return;
+      flashButton(keys.find((button) => button.dataset.numberKey === key));
       if (key === "delete") input = input.slice(0, -1);
       else if (key === "enter") {
         if (!input) return;

@@ -204,18 +204,39 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     }
   });
   start.addEventListener("click", () => send("start"));
+  let copyTimer = 0;
+  let leaveTimer = 0;
   leave.addEventListener("click", () => {
+    clearTimeout(copyTimer);
+    copy.textContent = "COPY INVITE";
+    copy.classList.remove("number-copied");
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({type:"leave"}));
     try { localStorage.removeItem(identityKey()); } catch { /* Optional. */ }
     active = false; stop(); latest = undefined; token = "";
     panel.hidden = true; form.hidden = false; mode.textContent = "PASS & PLAY";
     history.replaceState(null, "", location.pathname);
     hooks.mode(false);
-    info.textContent = "Back to pass-and-play. Your local round is preserved.";
+    info.textContent = "Left room. Your local round is preserved.";
+    info.classList.add("number-action-confirmed");
+    clearTimeout(leaveTimer);
+    leaveTimer = window.setTimeout(() => info.classList.remove("number-action-confirmed"), 1200);
+    create.focus({ preventScroll: true });
   });
   copy.addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(link.value); info.textContent = "Invite copied. Share it with your group."; }
-    catch { link.focus(); link.select(); info.textContent = "Copy the selected invite link."; }
+    const copiedLink = link.value;
+    try {
+      await navigator.clipboard.writeText(copiedLink);
+      if (!active || link.value !== copiedLink) return;
+      info.textContent = "Invite copied. Share it with your group.";
+      copy.textContent = "COPIED!";
+      copy.classList.add("number-copied");
+      clearTimeout(copyTimer);
+      copyTimer = window.setTimeout(() => {
+        copy.textContent = "COPY INVITE";
+        copy.classList.remove("number-copied");
+      }, 1600);
+    }
+    catch { if (active && link.value === copiedLink) { link.focus(); link.select(); info.textContent = "Copy the selected invite link."; } }
   });
   const send = (type: "guess" | "start", value?: number) => {
     if (!ready || pending || !latest || socket?.readyState !== WebSocket.OPEN) return;
