@@ -147,3 +147,17 @@ body:has(.number-game) { background: #090b0b; color: #e9e9da; }
 }
 
 .number-entry.number-entry-invalid { color: #f4a08c; background: #38241f; }
+
+.number-roster li { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.number-player-name { min-width: 0; }
+.number-counter { display: inline-flex; flex: none; align-items: center; gap: 2px; color: #e9e9da; font-size: 24px; line-height: 1; }
+.number-counter-icon { font-size: 16px; margin-right: 4px; }
+.number-counter-slot { display: block; width: 0.7em; height: 1em; overflow: hidden; text-align: center; background: #151a15; box-shadow: 0 -2px #454c40, 0 2px #050705; }
+.number-counter-roll { display: block; transform: translateY(-50%); animation: number-counter-roll 300ms ease-out; }
+.number-counter-roll > span { display: block; height: 1em; }
+.number-counter-hit .number-counter-slot { animation: number-counter-flash 600ms ease-out; }
+@keyframes number-counter-roll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+@keyframes number-counter-flash { from { color: #ffda55; background: #494127; } to { color: #e9e9da; background: #151a15; } }
+@media (prefers-reduced-motion: reduce) {
+  .number-counter-roll { animation: none; }
+}

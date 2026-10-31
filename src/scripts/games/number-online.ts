@@ -1,6 +1,8 @@
+import { updateNumberCounter } from "./number-counter";
+
 export interface OnlineState {
   type: "state"; player: string; host: string; phase: "lobby" | "playing" | "over";
-  players: {id: string; name: string; connected: boolean; away: number | null}[];
+  players: {id: string; name: string; explosions?: number; connected: boolean; away: number | null}[];
   order: string[]; turn: string | null; low: number; high: number;
   revision: number; round: number; guesses: number; over: boolean; loser: string | null;
   loserName: string; lastGuess: number | null; expires: number; target?: number;
@@ -81,25 +83,40 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
   const stop = () => { clear(); const old = socket; socket = undefined; old?.close(1000, "Leaving"); notify(false); };
   const statusText = (s: OnlineState) => {
     if (s.phase === "lobby") return s.host === s.player ? "You host this room. Start when everyone is here (at least 2 players)." : "Waiting for the host to start.";
-    if (s.over) return `${s.loserName} hit ${s.target}! ` + (s.host === s.player ? "Start the next round when everyone is ready." : "Waiting for the host to start the next round.");
+    if (s.over) return `${s.loserName} hit ${s.target}! Explosion #${s.players.find(p => p.id === s.loser)?.explosions ?? 0}. ` + (s.host === s.player ? "Start the next round when everyone is ready." : "Waiting for the host to start the next round.");
     if (!s.order.includes(s.player)) return "You’ll join the next round. Watch this one!";
     if (s.order.filter(id => s.players.find(p => p.id === id)?.connected).length < 2) return "Paused: waiting for another player to reconnect.";
     const current = s.players.find(p => p.id === s.turn);
     if (!current?.connected) return `Waiting for ${current?.name || "a player"} to reconnect (up to 30 seconds), then skipping their turn.`;
     return s.turn === s.player ? "Your turn!" : `Waiting for ${current.name}…`;
   };
+  const playerRows = new Map<string, HTMLLIElement>();
   const renderRoom = () => {
     if (!latest) return;
     const s = latest;
     get("[data-number-roster-title]").textContent = `PLAYERS ${s.players.length}/20 · ${s.players.filter(p => p.connected).length} ONLINE`;
-    roster.replaceChildren(...s.players.map(p => {
-      const li = document.createElement("li");
+    for (const [id, row] of playerRows) {
+      if (!s.players.some(p => p.id === id)) { row.remove(); playerRows.delete(id); }
+    }
+    s.players.forEach((p, index) => {
+      let li = playerRows.get(p.id);
+      if (!li) {
+        li = document.createElement("li");
+        const name = document.createElement("span");
+        name.className = "number-player-name";
+        const counter = document.createElement("span");
+        counter.className = "number-counter";
+        counter.setAttribute("role", "img");
+        li.append(name, counter);
+        playerRows.set(p.id, li);
+      }
       const tags = [p.id === s.player ? "you" : "", p.id === s.host ? "host" : "", !p.connected ? "offline" : "",
         s.phase === "playing" && !s.order.includes(p.id) ? "next round" : "", s.phase === "playing" && p.id === s.turn ? "current turn" : ""].filter(Boolean);
-      li.textContent = p.name + (tags.length ? ` · ${tags.join(" · ")}` : "");
+      li.firstElementChild!.textContent = p.name + (tags.length ? ` · ${tags.join(" · ")}` : "");
+      updateNumberCounter(li.lastElementChild as HTMLElement, p.explosions ?? 0);
       li.classList.toggle("number-current-player", s.phase === "playing" && p.id === s.turn);
-      return li;
-    }));
+      if (roster.children[index] !== li) roster.insertBefore(li, roster.children[index] ?? null);
+    });
     start.hidden = s.phase !== "lobby" || s.host !== s.player;
     start.disabled = !ready || pending || s.players.filter(p => p.connected).length < 2;
   };
@@ -164,6 +181,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     room = id; token = hostToken || "";
     if (!token) { try { token = localStorage.getItem(identityKey()) || ""; } catch { /* optional */ } }
     if (hostToken) { try { localStorage.setItem(identityKey(), hostToken); } catch { /* optional */ } }
+    playerRows.clear(); roster.replaceChildren();
     latest = undefined; active = true; retry = 0; announceJoin = true;
     hooks.mode(true);
     panel.hidden = false; form.hidden = true; mode.textContent = "ONLINE · 2–20 PLAYERS";

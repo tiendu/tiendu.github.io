@@ -13,7 +13,7 @@ export function cleanName(value) {
 }
 export function newRoom(token, now = Date.now()) {
   const id = crypto.randomUUID();
-  return {players:[{id,token,name:'Host',connected:false,away:now}], host:id,
+  return {players:[{id,token,name:'Host',explosions:0,connected:false,away:now}], host:id,
     order:[], turn:null, phase:'lobby', target:secretNumber(), low:0, high:100,
     revision:0, round:0, guesses:0, loser:null, loserName:'', lastGuess:null,
     expires:now+TTL, created:now};
@@ -25,7 +25,7 @@ export function joinPlayer(s, token, name, now = Date.now()) {
     if (s.players.length >= MAX_PLAYERS) return {error:'Room full',code:4003};
     name=cleanName(name);
     if (!name) return {error:'Enter a name of 1–16 characters',code:4001};
-    p={id:crypto.randomUUID(),token:crypto.randomUUID(),name,connected:false,away:now};
+    p={id:crypto.randomUUID(),token:crypto.randomUUID(),name,explosions:0,connected:false,away:now};
     s.players.push(p);
   } else if (s.round===0 && cleanName(name)) p.name=cleanName(name);
   p.connected=true; p.away=null;
@@ -75,14 +75,14 @@ export function move(s, player, message, now=Date.now()) {
     if(s.order.filter(id=>s.players.find(p=>p.id===id)?.connected).length<2) return 'Waiting for another player to reconnect.';
     if(!Number.isInteger(message.value)||message.value<=s.low||message.value>=s.high) return 'Choose a number strictly inside the range.';
     const n=message.value;s.guesses++;s.lastGuess=n;
-    if(n===s.target) {s.phase='over';s.loser=player;s.loserName=p.name;}
+    if(n===s.target) {s.phase='over';s.loser=player;s.loserName=p.name;p.explosions=(p.explosions??0)+1;}
     else {if(n<s.target)s.low=n;else s.high=n;s.turn=nextTurn(s,player,now);}
   } else return 'Unknown action.';
   s.revision++;
   return null;
 }
 export function publicState(s,player) {
-  return {type:'state',player,host:s.host,players:s.players.map(({id,name,connected,away})=>({id,name,connected,away})),
+  return {type:'state',player,host:s.host,players:s.players.map(({id,name,connected,away,explosions=0})=>({id,name,connected,away,explosions})),
     order:s.order,phase:s.phase,turn:s.turn,low:s.low,high:s.high,revision:s.revision,
     round:s.round,guesses:s.guesses,over:s.phase==='over',loser:s.loser,loserName:s.loserName,
     lastGuess:s.lastGuess,expires:s.expires,...(s.phase==='over'?{target:s.target}:{})};

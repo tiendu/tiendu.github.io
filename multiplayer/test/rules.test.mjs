@@ -65,3 +65,31 @@ test('all 99 targets reachable and fixed room expiry survives rematches',()=>{
   assert.equal(s.phase,'over');assert.equal(s.expires,s.created+TTL);
  }
 });
+
+test('explosion totals increment once, persist across rounds and reconnects, and stay public',()=>{
+ const s=group();const loser=s.players[0];
+ assert.deepEqual(s.players.map(p=>p.explosions),[0,0,0]);
+ const winning=command(s,'guess',42);
+ assert.equal(move(s,loser.id,winning),null);
+ assert.equal(loser.explosions,1);
+ assert.ok(move(s,loser.id,winning));
+ assert.ok(move(s,loser.id,command(s,'guess',42)));
+ assert.equal(loser.explosions,1);
+ for(const p of s.players) assert.equal(publicState(s,p.id).players[0].explosions,1);
+ const restored=JSON.parse(JSON.stringify(s));
+ const rejoined=joinPlayer(restored,loser.token,'Tien').player;
+ assert.equal(rejoined.explosions,1);
+ assert.equal(move(restored,restored.host,command(restored,'start')),null);
+ assert.equal(rejoined.explosions,1);restored.target=42;
+ assert.equal(move(restored,rejoined.id,command(restored,'guess',42)),null);
+ assert.equal(rejoined.explosions,2);
+ assert.deepEqual(restored.players.slice(1).map(p=>p.explosions),[0,0]);
+ assert.equal(joinPlayer(restored,null,'Late').player.explosions,0);
+ assert.equal(newRoom('new').players[0].explosions,0);
+});
+test('rooms saved before counters start at zero and increment safely',()=>{
+ const s=group();for(const p of s.players) delete p.explosions;
+ assert.deepEqual(publicState(s,s.host).players.map(p=>p.explosions),[0,0,0]);
+ assert.equal(move(s,s.turn,command(s,'guess',42)),null);
+ assert.equal(s.players[0].explosions,1);
+});

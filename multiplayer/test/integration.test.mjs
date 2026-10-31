@@ -87,12 +87,16 @@ test(`${process.env.NUMBER_TEST_BACKEND==='node'?'Node':'Cloudflare'} backend: 2
       state=await a.next('state',s=>s.revision>old);
     }
     assert.ok(state.over);const loser=state.loser;
+    assert.equal(state.players.find(p=>p.id===loser).explosions,1);
+    assert.equal(state.players.reduce((sum,p)=>sum+p.explosions,0),1);
     for(const g of [rejoined,c,...late]) {
       const v=await g.next('state',s=>s.over);assert.equal(v.target,state.target);assert.equal(v.loserName,state.loserName);
+      assert.equal(v.players.find(p=>p.id===loser).explosions,1);
     }
     await delay(120);a.ws.send(JSON.stringify({type:'start',revision:state.revision}));
     state=await a.next('state',s=>s.round===2);assert.equal(state.order.length,20);assert.equal(state.turn,loser);
     assert.equal('target' in state,false);
+    assert.equal(state.players.find(p=>p.id===loser).explosions,1);
     a.ws.send('ping');await a.next('pong');
     await delay(120);a.ws.send(JSON.stringify({type:'leave'}));
     const transferred=await rejoined.next('state',s=>s.players.length===19);
