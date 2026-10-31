@@ -8,10 +8,6 @@ export function updateNumberCounter(counter: HTMLElement, count: number): void {
   const animate = previous !== undefined && value > Number(previous);
   counter.dataset.count = String(value);
   counter.setAttribute("aria-label", `${value} ${value === 1 ? "explosion" : "explosions"}`);
-  const icon = document.createElement("span");
-  icon.textContent = "💥";
-  icon.className = "number-counter-icon";
-  icon.setAttribute("aria-hidden", "true");
   const digits = [...current].map((digit, index) => {
     const slot = document.createElement("span");
     slot.className = "number-counter-slot";
@@ -28,6 +24,6 @@ export function updateNumberCounter(counter: HTMLElement, count: number): void {
     } else slot.textContent = digit;
     return slot;
   });
-  counter.replaceChildren(icon, ...digits);
+  counter.replaceChildren(...digits);
   counter.classList.toggle("number-counter-hit", animate);
 }
