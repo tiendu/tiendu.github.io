@@ -9,25 +9,39 @@ export function createNumberAudio() {
   let master: GainNode | undefined;
   let noise: AudioBuffer | undefined;
   let resuming: Promise<void> | undefined;
+  let generation = 0;
   const unlock = () => {
     if (!enabled || document.hidden) return;
     try {
+      if (context?.state === "closed") {
+        context = undefined; master = undefined; noise = undefined; resuming = undefined;
+        generation++;
+      }
       context ??= new AudioContext();
       if (!master) {
         master = context.createGain();
         master.gain.value = 0.35;
         master.connect(context.destination);
       }
-      if (context.state !== "running" && !resuming) {
-        resuming = context.resume().catch(() => {}).finally(() => { resuming = undefined; });
+      if (context.state !== "running") {
+        // Retry on each gesture: an earlier resume may still be waiting for permission.
+        const attempt = context.resume().catch(() => {}).finally(() => {
+          if (resuming === attempt) resuming = undefined;
+        });
+        resuming = attempt;
       }
     } catch { /* Unsupported or blocked audio: continue silently. */ }
   };
   const play = (kind: NumberSound) => {
-    if (!enabled || document.hidden || !context || !master) return;
+    if (!enabled || document.hidden) return;
+    unlock();
+    if (!context || !master) return;
     const requested = performance.now();
+    const requestedGeneration = generation;
+    const requestedContext = context;
+    const maxDelay = kind === "explode" || kind === "confirm" ? 1500 : 500;
     const emit = () => {
-      if (!enabled || document.hidden || context?.state !== "running" || !master || performance.now() - requested > 200) return;
+      if (!enabled || document.hidden || context?.state !== "running" || !master || requestedGeneration !== generation || context !== requestedContext || performance.now() - requested > maxDelay) return;
       const audio = context;
       const at = audio.currentTime;
       const tone = (frequency: number, end: number, duration: number, offset = 0, volume = 0.12) => {
@@ -71,14 +85,20 @@ export function createNumberAudio() {
         source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
       }
     };
-    if (resuming) void resuming.then(emit).catch(() => {});
+    if (context.state !== "running" && resuming) void resuming.then(emit).catch(() => {});
     else { try { emit(); } catch { /* Audio failures must not interrupt a turn. */ } }
   };
   const toggle = () => {
     enabled = !enabled;
+    generation++;
     if (master && context) master.gain.setValueAtTime(enabled ? 0.35 : 0, context.currentTime);
     try { localStorage.setItem(storageKey, enabled ? "on" : "off"); } catch { /* Optional storage. */ }
     if (enabled) { unlock(); play("confirm"); }
   };
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) generation++;
+    else unlock();
+  });
+  window.addEventListener("pageshow", unlock);
   return { isEnabled: () => enabled, unlock, play, toggle };
 }
