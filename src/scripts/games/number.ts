@@ -50,6 +50,7 @@ export function mountNumberGames(): void {
     try { restored = restoreNumberSession(JSON.parse(localStorage.getItem(storageKey) || "null")); } catch { /* Storage is optional. */ }
     let round = restored?.round ?? createNumberRound();
     let input = restored?.input ?? "";
+    if (!/^\d{0,2}$/.test(input)) input = "";
     let timer = 0;
     let online: ReturnType<typeof mountNumberOnline> | undefined;
     let localRound = round;
@@ -141,6 +142,16 @@ export function mountNumberGames(): void {
       frame = requestAnimationFrame(draw);
     };
 
+    let invalidTimer = 0;
+    const rejectInput = () => {
+      input = "";
+      save();
+      render();
+      status.textContent = `Pick ${round.low + 1}–${round.high - 1}. Try again.`;
+      entry.classList.add("number-entry-invalid");
+      clearTimeout(invalidTimer);
+      invalidTimer = window.setTimeout(() => entry.classList.remove("number-entry-invalid"), 500);
+    };
     const press = (key: string) => {
       if (round.over || busy || dialog.open || (online?.isActive() && !online.canPlay())) return;
       const button = keys.find((button) => button.dataset.numberKey === key);
@@ -152,17 +163,17 @@ export function mountNumberGames(): void {
       else if (key === "enter") {
         if (!input) return;
         const guess = Number(input);
+        if (!Number.isInteger(guess) || guess <= round.low || guess >= round.high) {
+          rejectInput();
+          return;
+        }
         if (online?.isActive()) {
-          if (guess <= round.low || guess >= round.high) {
-            status.textContent = `Choose a number from ${round.low + 1} to ${round.high - 1}.`;
-            return;
-          }
           online.guess(guess);
           return;
         }
         const next = guessNumber(round, guess);
         if (next === round) {
-          status.textContent = `Choose a whole number from ${round.low + 1} to ${round.high - 1}.`;
+          rejectInput();
           return;
         }
         round = next;
@@ -189,7 +200,7 @@ export function mountNumberGames(): void {
         return;
       } else if (/^\d$/.test(key)) {
         if (input === "0") input = key;
-        else if (input.length < 3) input += key;
+        else if (input.length < 2) input += key;
       }
       save();
       render();

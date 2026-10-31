@@ -145,3 +145,5 @@ body:has(.number-game) { background: #090b0b; color: #e9e9da; }
   .number-game .number-key.number-pressed,
   .number-option:active:not(:disabled), .number-option.number-pressed { transform: none; }
 }
+
+.number-entry.number-entry-invalid { color: #f4a08c; background: #38241f; }
