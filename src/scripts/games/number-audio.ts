@@ -10,8 +10,16 @@ export function createNumberAudio() {
   let noise: AudioBuffer | undefined;
   let resuming: Promise<void> | undefined;
   let generation = 0;
+  const setSessionType = (type: "playback" | "auto") => {
+    try {
+      const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+      if (session && session.type !== type) session.type = type;
+    } catch { /* Older browsers can continue using ordinary Web Audio. */ }
+  };
   const unlock = () => {
     if (!enabled || document.hidden) return;
+    // Treat explicitly enabled game sound as media playback on iPhone.
+    setSessionType("playback");
     try {
       if (context?.state === "closed") {
         context = undefined; master = undefined; noise = undefined; resuming = undefined;
@@ -94,11 +102,13 @@ export function createNumberAudio() {
     if (master && context) master.gain.setValueAtTime(enabled ? 0.35 : 0, context.currentTime);
     try { localStorage.setItem(storageKey, enabled ? "on" : "off"); } catch { /* Optional storage. */ }
     if (enabled) { unlock(); play("confirm"); }
+    else setSessionType("auto");
   };
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) generation++;
     else unlock();
   });
   window.addEventListener("pageshow", unlock);
+  window.addEventListener("pagehide", () => setSessionType("auto"));
   return { isEnabled: () => enabled, unlock, play, toggle };
 }
