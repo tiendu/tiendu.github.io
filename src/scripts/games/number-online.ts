@@ -6,6 +6,7 @@ export interface OnlineState {
   loserName: string; lastGuess: number | null; expires: number; target?: number;
 }
 interface Hooks {
+  sound: (kind: "confirm" | "leave") => void;
   mode: (active: boolean) => void;
   state: (state: OnlineState) => void;
   connection: (ready: boolean) => void;
@@ -72,6 +73,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
   let suspended = false;
   let pending = false;
   let ready = false;
+  let announceJoin = false;
   const identityKey = () => `number-player:${room}`;
   const eligible = () => active && ready && !pending && latest?.phase === "playing" && latest.order.filter(id => latest?.players.find(p => p.id === id)?.connected).length >= 2 && latest.turn === latest.player;
   const notify = (value: boolean) => { ready = value; hooks.connection(value); renderRoom(); };
@@ -127,6 +129,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
       try { data = JSON.parse(event.data); } catch { return; }
       if (data.type === "joined") {
         token = data.token;
+        if (announceJoin) { announceJoin = false; hooks.sound("confirm"); }
         try { localStorage.setItem(identityKey(), token); } catch { /* In-memory token still allows reconnect. */ }
       } else if (data.type === "state") {
         latest = data as OnlineState;
@@ -161,7 +164,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     room = id; token = hostToken || "";
     if (!token) { try { token = localStorage.getItem(identityKey()) || ""; } catch { /* optional */ } }
     if (hostToken) { try { localStorage.setItem(identityKey(), hostToken); } catch { /* optional */ } }
-    latest = undefined; active = true; retry = 0;
+    latest = undefined; active = true; retry = 0; announceJoin = true;
     hooks.mode(true);
     panel.hidden = false; form.hidden = true; mode.textContent = "ONLINE · 2–20 PLAYERS";
     get("[data-number-room-code]").textContent = `ROOM ${room}`;
@@ -207,6 +210,8 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
   let copyTimer = 0;
   let leaveTimer = 0;
   leave.addEventListener("click", () => {
+    hooks.sound("leave");
+    announceJoin = false;
     clearTimeout(copyTimer);
     copy.textContent = "COPY INVITE";
     copy.classList.remove("number-copied");
@@ -227,6 +232,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     try {
       await navigator.clipboard.writeText(copiedLink);
       if (!active || link.value !== copiedLink) return;
+      hooks.sound("confirm");
       info.textContent = "Invite copied. Share it with your group.";
       copy.textContent = "COPIED!";
       copy.classList.add("number-copied");

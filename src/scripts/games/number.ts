@@ -1,4 +1,5 @@
 import { createNumberRound, guessNumber, restoreNumberSession } from "./number-rules";
+import { createNumberAudio } from "./number-audio";
 import { mountNumberOnline } from "./number-online";
 import { mountAllGames } from "./shared/mount";
 
@@ -23,6 +24,9 @@ export function mountNumberGames(): void {
     const resetButton = get<HTMLButtonElement>("[data-number-new]");
     const soundButton = get<HTMLButtonElement>("[data-number-sound]");
     const dialog = get<HTMLDialogElement>("[data-number-dialog]");
+    const sounds = createNumberAudio();
+    root.addEventListener("pointerdown", sounds.unlock, true);
+    root.addEventListener("keydown", sounds.unlock, true);
     // Keep quick taps visible after release, including physical keyboard input.
     const pressTimers = new WeakMap<HTMLButtonElement, number>();
     const flashButton = (button?: HTMLButtonElement) => {
@@ -36,7 +40,10 @@ export function mountNumberGames(): void {
     };
     root.addEventListener("click", (event) => {
       const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("button") : null;
-      if (button && !button.hasAttribute("data-number-key")) flashButton(button);
+      if (button && !button.disabled && !button.hasAttribute("data-number-key")) {
+        flashButton(button);
+        if (!button.matches("[data-number-sound], [data-number-copy], [data-number-leave]")) sounds.play("tap");
+      }
     }, true);
     const storageKey = "tiendu-number-session";
     let restored: ReturnType<typeof restoreNumberSession> = null;
@@ -44,8 +51,6 @@ export function mountNumberGames(): void {
     let round = restored?.round ?? createNumberRound();
     let input = restored?.input ?? "";
     let timer = 0;
-    let sound = false;
-    let audio: AudioContext | undefined;
     let online: ReturnType<typeof mountNumberOnline> | undefined;
     let localRound = round;
     let localInput = input;
@@ -53,20 +58,6 @@ export function mountNumberGames(): void {
     const save = () => {
       if (online?.isActive()) return;
       try { localStorage.setItem(storageKey, JSON.stringify({ version: 2, round, input })); } catch { /* Private mode / full storage: keep playing. */ }
-    };
-    const boom = () => {
-      if (!sound || !audio || audio.state !== "running") return;
-      const oscillator = audio.createOscillator();
-      const gain = audio.createGain();
-      oscillator.type = "sawtooth";
-      oscillator.frequency.setValueAtTime(110, audio.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(25, audio.currentTime + 0.3);
-      gain.gain.setValueAtTime(0.08, audio.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.35);
-      oscillator.connect(gain).connect(audio.destination);
-      oscillator.start();
-      oscillator.stop(audio.currentTime + 0.36);
-      oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
     };
     let busy = false;
     let frame = 0;
@@ -106,7 +97,7 @@ export function mountNumberGames(): void {
     };
 
     const explode = () => {
-      boom();
+      sounds.play("explode");
       const context = canvas.getContext("2d");
       if (reducedMotion.matches || !context) { reveal(); return; }
       busy = true;
@@ -152,7 +143,11 @@ export function mountNumberGames(): void {
 
     const press = (key: string) => {
       if (round.over || busy || dialog.open || (online?.isActive() && !online.canPlay())) return;
-      flashButton(keys.find((button) => button.dataset.numberKey === key));
+      const button = keys.find((button) => button.dataset.numberKey === key);
+      if (!button || button.disabled) return;
+      flashButton(button);
+      sounds.unlock();
+      sounds.play(key === "enter" ? "enter" : key === "delete" ? "delete" : "tap");
       if (key === "delete") input = input.slice(0, -1);
       else if (key === "enter") {
         if (!input) return;
@@ -223,14 +218,12 @@ export function mountNumberGames(): void {
     });
     dialog.addEventListener("close", () => { if (dialog.returnValue === "reset") newRound(); });
     soundButton.disabled = false;
-    soundButton.addEventListener("click", async () => {
-      sound = !sound;
-      try {
-        if (sound) { audio ??= new AudioContext(); await audio.resume(); }
-      } catch { sound = false; }
-      soundButton.textContent = sound ? "SOUND ON" : "SOUND OFF";
-      soundButton.setAttribute("aria-pressed", String(sound));
-    });
+    const renderSound = () => {
+      soundButton.textContent = sounds.isEnabled() ? "SOUND ON" : "SOUND OFF";
+      soundButton.setAttribute("aria-pressed", String(sounds.isEnabled()));
+    };
+    renderSound();
+    soundButton.addEventListener("click", () => { sounds.toggle(); renderSound(); });
     document.addEventListener("keydown", (event) => {
       if (event.ctrlKey || event.metaKey || event.altKey || event.repeat || event.isComposing) return;
       if (event.target instanceof HTMLElement && (event.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName))) return;
@@ -261,6 +254,7 @@ export function mountNumberGames(): void {
     if (round.over) reveal(false);
     save();
     online = mountNumberOnline(root, {
+      sound: (kind) => sounds.play(kind),
       mode(active) {
         clearTimeout(timer); cancelAnimationFrame(frame); busy = false;
         canvas.hidden = true; result.hidden = true; controls.hidden = false;
