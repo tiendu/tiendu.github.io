@@ -171,3 +171,8 @@
     min-height: 48px;
   }
 }
+
+.arcade-audio-controls { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.arcade-audio-controls button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--border-color, #454c40); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.arcade-audio-controls button[aria-pressed="true"] { color: #ffd34e; border-color: #ffd34e; }
+.arcade-audio-controls button:focus-visible { outline: 2px solid #ffd34e; outline-offset: 3px; }

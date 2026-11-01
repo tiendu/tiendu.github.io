@@ -1,3 +1,4 @@
+import { mountArcadeAudio } from "./shared/arcade-audio";
 import {
   cycleStateForElapsed,
   foxApproachPerSecond,
@@ -256,6 +257,7 @@ function clamp01(value: number): number {
 }
 
 function mountChickenRunGame(root: HTMLElement): void {
+  const sounds = mountArcadeAudio(root, "chicken-run");
   const canvas = root.querySelector<HTMLCanvasElement>("[data-chicken-canvas]");
   const scoreOutput = root.querySelector<HTMLOutputElement>(
     "[data-chicken-score]",
@@ -663,6 +665,7 @@ function mountChickenRunGame(root: HTMLElement): void {
     });
 
     if (action === "jump") {
+      sounds.play("hop");
       chickenVelocityY = JUMP_VELOCITY;
       grounded = false;
       lastGroundedAt = Number.NEGATIVE_INFINITY;
@@ -675,6 +678,7 @@ function mountChickenRunGame(root: HTMLElement): void {
     }
 
     if (action === "flap") {
+      sounds.play("hop");
       chickenVelocityY = Math.min(chickenVelocityY, FLAP_VELOCITY);
       flapAvailable = false;
       flapPulse = 0.18;
@@ -719,6 +723,7 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   const beginCrash = (kind: CrashKind): void => {
     if (crash || gameOver) return;
+    sounds.stop(); sounds.play("clunk");
     clearSession();
     setResumePicker(false);
     started = false;
@@ -850,6 +855,7 @@ function mountChickenRunGame(root: HTMLElement): void {
         flapAvailable = true;
         lastGroundedAt = now;
         if (landed) {
+          sounds.play("land");
           landingPulse = Math.min(0.14, 0.07 + impactVelocity / 4_000);
           emitFeathers("land", { x: CHICKEN_X + 12, y: ground - 5 });
         }
@@ -863,6 +869,7 @@ function mountChickenRunGame(root: HTMLElement): void {
   };
 
   const collectCorn = (kernel: CornKernel): void => {
+    sounds.play("pickup");
     kernel.collected = true;
     bonusScore += 5;
     if (cycle.phase === "night") foxPressure = Math.max(0.08, foxPressure - 0.004);
@@ -992,6 +999,7 @@ function mountChickenRunGame(root: HTMLElement): void {
         foxPressure,
         foxStartingPressure(next.cycleIndex),
       );
+      sounds.play("alarm");
       setNotice("RUN! FOX BEHIND", 1.25);
       return;
     }
@@ -1000,6 +1008,7 @@ function mountChickenRunGame(root: HTMLElement): void {
       return;
     }
     if (next.phase === "day" && next.cycleIndex > 0) {
+      sounds.stop(); sounds.play("escape");
       foxPressure = 0;
       setNotice("DAYLIGHT · SAFE FOR NOW", 1.15);
     }
@@ -1248,6 +1257,7 @@ function mountChickenRunGame(root: HTMLElement): void {
       sceneElapsed += delta;
     }
 
+    sounds.ambience(started && !paused && !gameOver && !crash && (cycle.phase === "night" || cycle.phase === "dawn") ? "chase" : null, foxPressure);
     draw();
     animationFrame = window.requestAnimationFrame(gameLoop);
   };
@@ -1255,6 +1265,7 @@ function mountChickenRunGame(root: HTMLElement): void {
   const togglePause = (): void => {
     if (!active || !started || gameOver || crash) return;
     paused = !paused;
+    if (paused) sounds.stop();
     if (paused) persistSession();
     if (paused) setOverlay("PAUSED", "P / TAP TO RESUME · R RESTART · ESC EXIT");
     else {
@@ -1266,6 +1277,7 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   const pauseGame = (): void => {
     if (!active || !started || paused || gameOver || crash) return;
+    sounds.stop();
     paused = true;
     persistSession();
     setOverlay("PAUSED", "P / TAP TO RESUME · R RESTART · ESC EXIT");
@@ -1330,6 +1342,7 @@ function mountChickenRunGame(root: HTMLElement): void {
     lastSpeedLevel = state.lastSpeedLevel;
     gameOver = false;
     started = false;
+    sounds.stop();
     paused = true;
     checkpointElapsed = 0;
     lastStableSession = {
@@ -1381,6 +1394,7 @@ function mountChickenRunGame(root: HTMLElement): void {
   const exitGame = (): void => {
     if (!active) return;
     persistSession();
+    sounds.stop();
     active = false;
     started = false;
     paused = false;

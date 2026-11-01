@@ -9,6 +9,9 @@ import "../../styles/components/chicken-run-game.css";
   aria-label="Free Range chicken runner game"
   hidden
 >
+  <div class="arcade-audio-controls">
+    <button type="button" data-game-sound aria-pressed="false">SOUND OFF</button>
+  </div>
   <div class="arcade-scoreboard chicken-scoreboard" aria-live="polite">
     <span>SCORE <output data-chicken-score>0000</output></span>
     <span>HIGH <output data-chicken-high-score>0000</output></span>

@@ -1,3 +1,4 @@
+import { mountArcadeAudio } from "./shared/arcade-audio";
 import {
   PROTOCOLS,
   advanceSnake,
@@ -195,6 +196,7 @@ export function mountSnakeGames(): void {
 }
 
 function mountSnakeGame(root: HTMLElement): void {
+  const sounds = mountArcadeAudio(root, "snake");
   const canvas = root.querySelector<HTMLCanvasElement>("[data-snake-canvas]");
   const sectorOutput =
     root.querySelector<HTMLOutputElement>("[data-snake-mode]");
@@ -1016,6 +1018,7 @@ function mountSnakeGame(root: HTMLElement): void {
       });
 
       if (result.kind === "collision") {
+      sounds.play("clunk");
         const contactPoint = {
           x: Math.min(GRID_SIZE - 1, Math.max(0, result.head.x)),
           y: Math.min(GRID_SIZE - 1, Math.max(0, result.head.y)),
@@ -1063,6 +1066,7 @@ function mountSnakeGame(root: HTMLElement): void {
     });
 
     if (result.kind === "collision") {
+      sounds.play("clunk");
       const contactPoint = {
         x: Math.min(GRID_SIZE - 1, Math.max(0, result.head.x)),
         y: Math.min(GRID_SIZE - 1, Math.max(0, result.head.y)),
@@ -1088,6 +1092,7 @@ function mountSnakeGame(root: HTMLElement): void {
     snake = result.snake;
 
     if (result.kind === "sector-gate") {
+      sounds.play("escape");
       eatEffect = {
         kind: "sector-gate",
         point: result.head,
@@ -1105,6 +1110,7 @@ function mountSnakeGame(root: HTMLElement): void {
     }
 
     if (result.kind === "regular-food") {
+      sounds.play("pickup");
       if (foodBeforeStep) {
         eatEffect = {
           kind: "regular-food",
@@ -1149,6 +1155,7 @@ function mountSnakeGame(root: HTMLElement): void {
       }
       persistSession();
     } else if (result.kind === "bonus-food") {
+      sounds.play("perfect");
       if (bonusBeforeStep) {
         eatEffect = {
           kind: "bonus-food",
@@ -1235,6 +1242,7 @@ function mountSnakeGame(root: HTMLElement): void {
       dying
     )
       return;
+    sounds.stop();
     paused = true;
     persistSession();
     setOverlay("PAUSED", message, true);
@@ -1244,6 +1252,7 @@ function mountSnakeGame(root: HTMLElement): void {
   const togglePause = (): void => {
     if (!active || !started || gameOver || choosingProtocol || exitingSector || enteringSector || dying) return;
     paused = !paused;
+    if (paused) sounds.stop();
 
     if (paused) {
       persistSession();
@@ -1293,6 +1302,7 @@ function mountSnakeGame(root: HTMLElement): void {
     currentProtocolChoices = [...state.protocolChoices];
     prepared = true;
     started = false;
+    sounds.stop();
     paused = true;
     gameOver = false;
     choosingProtocol = state.choosingProtocol;
@@ -1371,6 +1381,7 @@ function mountSnakeGame(root: HTMLElement): void {
   const exitGame = (): void => {
     if (!active) return;
     persistSession();
+    sounds.stop();
     active = false;
     started = false;
     paused = false;

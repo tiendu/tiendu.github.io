@@ -1,3 +1,4 @@
+import { mountArcadeAudio } from "./shared/arcade-audio";
 import {
   calculateRestLean,
   cableSwingForHeight,
@@ -178,6 +179,7 @@ export function mountCraneGames(): void {
 }
 
 function mountCraneGame(root: HTMLElement): void {
+  const sounds = mountArcadeAudio(root, "crane");
   const canvas = root.querySelector<HTMLCanvasElement>("[data-crane-canvas]");
   const heightOutput = root.querySelector<HTMLOutputElement>("[data-crane-height]");
   const highOutput = root.querySelector<HTMLOutputElement>("[data-crane-high]");
@@ -540,7 +542,7 @@ function mountCraneGame(root: HTMLElement): void {
     toolAwardIndex += 1;
     perfectStreak = 0;
     announce("Bonus earned. Choose one.");
-    stopAnimation();
+    stopAnimation(false);
     refreshSessionCheckpoint();
     updateScoreboard();
     renderer.draw(buildRenderState(performance.now()));
@@ -593,6 +595,7 @@ function mountCraneGame(root: HTMLElement): void {
 
   const beginCollapse = (direction: number, reason: string): void => {
     if (collapse || gameOver) return;
+    sounds.stop(); sounds.play("fall");
     const resolvedDirection: -1 | 1 = direction < 0 ? -1 : 1;
     collapse = { elapsed: 0, direction: resolvedDirection };
     hanging = null;
@@ -658,6 +661,7 @@ function mountCraneGame(root: HTMLElement): void {
       mass: falling.mass,
       tonnage: falling.tonnage,
     };
+    sounds.play(usedMagLock || landing.perfect ? "perfect" : "clunk");
     crates.push(placedCrate);
     score += 1;
     persistHighScore();
@@ -729,6 +733,7 @@ function mountCraneGame(root: HTMLElement): void {
       return;
     }
     if (paused || collapse || !hanging) return;
+    sounds.stop(); sounds.play("drop");
 
     const currentWind = effectiveWind();
     const motion = crateMotionProfile(hanging.kind);
@@ -757,6 +762,7 @@ function mountCraneGame(root: HTMLElement): void {
   const togglePause = (): void => {
     if (!active || !started || gameOver || collapse || pendingToolChoices || pendingConfirmation) return;
     paused = !paused;
+    if (paused) sounds.stop();
     if (paused) persistSession();
     setOverlay(
       paused ? "PAUSED" : "RUNNING",
@@ -836,6 +842,7 @@ function mountCraneGame(root: HTMLElement): void {
     if (confirmPanel) confirmPanel.hidden = true;
     persistHighScore();
     persistSession();
+    sounds.stop();
     active = false;
     started = false;
     paused = false;
@@ -957,7 +964,8 @@ function mountCraneGame(root: HTMLElement): void {
   const shouldAnimate = (): boolean =>
     active && started && !paused && !gameOver && !pendingToolChoices && !pendingConfirmation;
 
-  const stopAnimation = (): void => {
+  const stopAnimation = (stopSound = true): void => {
+    if (stopSound) sounds.stop();
     if (animationFrame === null) return;
     window.cancelAnimationFrame(animationFrame);
     animationFrame = null;
@@ -977,6 +985,7 @@ function mountCraneGame(root: HTMLElement): void {
     const elapsed = previousTime > 0 ? (time - previousTime) / 1000 : 0;
     previousTime = time;
     update(Math.min(MAX_FRAME_STEP, Math.max(0, elapsed)));
+    sounds.ambience(shouldAnimate() && !collapse && hanging ? "crane" : null, hanging ? (hanging.tonnage - 11) / 24 : 0);
 
     if (time - lastRenderTime >= RENDER_INTERVAL_MS || gameOver || pendingToolChoices) {
       renderer.draw(buildRenderState(time));
@@ -1016,6 +1025,7 @@ function mountCraneGame(root: HTMLElement): void {
     cameraOffset = state.cameraOffset;
     collapse = null;
     gameOver = false;
+    sounds.stop();
     paused = true;
     started = false;
     previousTime = performance.now();
@@ -1211,6 +1221,7 @@ function mountCraneGame(root: HTMLElement): void {
   window.addEventListener("pagehide", persistSession);
   window.addEventListener("blur", () => {
     if (!active || !started || paused || gameOver || collapse || pendingToolChoices || pendingConfirmation) return;
+    sounds.stop();
     paused = true;
     persistSession();
     setOverlay("PAUSED", "TAP PAUSE OR PRESS P TO RESUME", true);
