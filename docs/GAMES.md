@@ -4,6 +4,8 @@ Open a game at /games/chicken/, /games/number/, or /games/mines/. Its name also 
 
 ## Mines
 
+Dig and flag along a shared side of your explored area. Patches connect across shared sides. Clues count all eight surrounding tiles, including diagonals.
+
 Solo runs locally on a 12×12 field with 32 mines. Dig from your pennant to the opposite edge. A marked copper fuse lies off to one side. Dig it up to absorb one explosion. You start without protection.
 
 In co-op, 2–5 players take turns in join order. Dig once or pass. Between turns, flag tiles along your own frontier or ping an open clue. The crew shares the collectible fuse. Connect every pennant to the exit to secure the win, then finish or pursue a perfect clear. Late arrivals watch until the next round. A disconnected active player gets 15 seconds to reconnect. Play pauses below two connected participants. If explicit departures leave fewer than two seats in the round, the room returns to the lobby.

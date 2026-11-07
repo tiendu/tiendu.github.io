@@ -22,6 +22,28 @@ function neighbors(size) {
   return grids.get(size);
 }
 
+const edges = new Map();
+function sideNeighbors(size) {
+  if (!edges.has(size)) {
+    edges.set(
+      size,
+      neighbors(size).map((ring, cell) =>
+        ring.filter(
+          (next) =>
+            Math.floor(next / size) === Math.floor(cell / size) ||
+            next % size === cell % size,
+        ),
+      ),
+    );
+  }
+  return edges.get(size);
+}
+
+// Stored rooms finish under the movement rules used to generate their board.
+function movement(board) {
+  return board.sideOnly ? sideNeighbors(board.size) : neighbors(board.size);
+}
+
 // Only clues on revealed tiles participate in the proof. Every inferred dig
 // borders an already open component containing at least one player's pennant.
 export function provable(board, numberedWaves = Infinity) {
@@ -30,33 +52,42 @@ export function provable(board, numberedWaves = Infinity) {
   const near = neighbors(size);
   const open = new Set(starts),
     marked = new Set();
+  const adjacent = movement(board);
+  const safe = new Set(starts);
   let changed;
   do {
     changed = false;
     const inferred = new Set();
     for (const tile of open) {
-      const unknown = near[tile].filter((n) => !open.has(n) && !marked.has(n));
+      const unknown = near[tile].filter((n) => !safe.has(n) && !marked.has(n));
       if (!unknown.length) continue;
       const remaining =
         clues[tile] - near[tile].filter((n) => marked.has(n)).length;
-      const result =
-        remaining === 0 ? open : remaining === unknown.length ? marked : null;
-      if (result) {
-        if (result === open && clues[tile] > 0) {
-          for (const n of unknown) inferred.add(n);
-        } else {
-          for (const n of unknown) result.add(n);
+      if (remaining === unknown.length) {
+        for (const n of unknown) marked.add(n);
+        changed = true;
+      } else if (remaining === 0) {
+        for (const n of unknown) (clues[tile] === 0 ? safe : inferred).add(n);
+        if (clues[tile] === 0) changed = true;
+      }
+    }
+    // A diagonal deduction can be remembered, but its clue is unreadable
+    // until a dig from a side-connected patch actually opens the square.
+    for (const tile of open) {
+      for (const n of adjacent[tile]) {
+        if (safe.has(n) && !open.has(n)) {
+          open.add(n);
           changed = true;
         }
       }
     }
     if (!changed && inferred.size && numberedWaves > 0) {
-      for (const n of inferred) open.add(n);
+      for (const n of inferred) safe.add(n);
       numberedWaves--;
       changed = true;
     }
   } while (changed);
-  const connected = component(near, starts[0], (n) => open.has(n));
+  const connected = component(adjacent, starts[0], (n) => open.has(n));
   return (
     connected.has(exit) &&
     starts.every((n) => connected.has(n)) &&
@@ -86,7 +117,14 @@ function generateBoard(players, preset, random) {
     mines = players.length === 1 ? 32 : counts[preset];
   const near = neighbors(size),
     mid = (size - 1) / 2;
-  for (let attempt = 0; attempt < 240; attempt++) {
+  for (let attempt = 0; attempt <= 240; attempt++) {
+    // A prevalidated seed per seat count bounds retries on hard fields.
+    // The fallback goes through all the same reachability and difficulty checks.
+    if (attempt === 240) {
+      let seed = [25, 1, 2, 2, 1][players.length - 1];
+      random = () =>
+        (seed = (Math.imul(1664525, seed) + 1013904223) >>> 0) / 2 ** 32;
+    }
     const angle = random() * Math.PI * 2;
     const starts = players.map((_, i) => {
       const a =
@@ -135,6 +173,7 @@ function generateBoard(players, preset, random) {
     });
     const board = {
       size,
+      sideOnly: true,
       mines,
       starts,
       exit,
@@ -149,13 +188,17 @@ function generateBoard(players, preset, random) {
     for (const i of starts) board.cells[i] = 0;
     // A solo crossing must leave the initial zero clearing and its numbered rim.
     if (solo) {
-      const clearing = component(near, starts[0], (n) => clues[n] === 0);
+      const clearing = component(
+        sideNeighbors(size),
+        starts[0],
+        (n) => clues[n] === 0,
+      );
       if ([...clearing].some((n) => distance(n, exit) <= 3)) continue;
     }
     if (
       (!solo || !provable(board, 1)) &&
       provable(board) &&
-      component(near, starts[0], (n) => clues[n] >= 0).size ===
+      component(sideNeighbors(size), starts[0], (n) => clues[n] >= 0).size ===
         clues.length - mines
     )
       return board;
@@ -174,7 +217,7 @@ export function play(board, player, type, cell) {
     cell >= board.cells.length
   )
     throw Error("Invalid tile.");
-  const near = neighbors(board.size);
+  const near = movement(board);
   const open = (i) => board.cells[i] !== null && board.cells[i] >= 0;
   const patch = component(near, board.starts[seat], open);
   if (board.cells[cell] !== null || !near[cell].some((n) => patch.has(n)))
@@ -213,7 +256,7 @@ export function frontier(board, id) {
   const start = board.starts[board.players.indexOf(id)];
   const cells = new Set();
   if (start === undefined) return cells;
-  const near = neighbors(board.size);
+  const near = movement(board);
   for (const n of component(
     near,
     start,

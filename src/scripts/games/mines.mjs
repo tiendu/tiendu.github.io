@@ -272,6 +272,9 @@ export function mountMines() {
         : board.fuses
           ? "FUSE READY"
           : "NO FUSE";
+    el("step-help").textContent = board.sideOnly
+      ? "Dig up, down, left, or right from your patch."
+      : "Dig the lit edge of your patch.";
     const tiles = el("tiles"),
       edge = frontier(board, me);
     if (centered !== round) {

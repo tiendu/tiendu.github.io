@@ -18,6 +18,22 @@ for (const [i, mines] of [20, 28, 36, 46].entries()) {
       const b = createBoard(players, random);
       assert.equal(b.size, 12 + 2 * i);
       assert.equal(b.clues.filter((x) => x === -1).length, mines);
+      for (let cell = 0; cell < b.cells.length; cell++) {
+        if (b.clues[cell] < 0) continue;
+        let mines = 0;
+        for (
+          let y = Math.max(0, Math.floor(cell / b.size) - 1);
+          y <= Math.min(b.size - 1, Math.floor(cell / b.size) + 1);
+          y++
+        )
+          for (
+            let x = Math.max(0, (cell % b.size) - 1);
+            x <= Math.min(b.size - 1, (cell % b.size) + 1);
+            x++
+          )
+            if (b.clues[y * b.size + x] === -1) mines++;
+        assert.equal(b.clues[cell], mines);
+      }
       assert.ok(provable(b));
       assert.ok(b.starts.every((x) => b.cells[x] === 0));
       assert.equal(new Set(b.starts).size, players.length);
@@ -93,4 +109,39 @@ test("solo shares dig and flag rules with a 12×12 board and a reachable exit", 
     assert.ok(board.cells[board.exit] >= 0 && board.cells[board.exit] !== null);
     assert.ok(["connected", "perfect"].includes(board.status));
   }
+});
+
+test("corner contact does not merge patches or permit diagonal digs", () => {
+  const board = {
+    sideOnly: true,
+    size: 3,
+    starts: [0, 4],
+    players: ["a", "b"],
+    cells: [0, null, null, null, 0, null, null, null, null],
+    flags: {},
+    status: "digging",
+    clues: Array(9).fill(0),
+    exit: 4,
+  };
+  assert.deepEqual(frontier(board, "a"), new Set([1, 3]));
+  assert.throws(() => play(board, "a", "dig", 5));
+  assert.throws(() => play(board, "a", "flag", 5));
+  assert.ok(!frontier(board, "b").has(2));
+  play(board, "a", "dig", 1);
+  assert.equal(board.status, "connected");
+  assert.deepEqual(frontier(board, "a"), frontier(board, "b"));
+});
+test("solver rejects a diagonal-only route to a proven safe exit", () => {
+  const board = {
+    size: 4,
+    starts: [0],
+    clues: [0, 2, -1, 2, 2, 4, -1, 2, -1, -1, 2, 1, 2, 2, 1, 0],
+    fuseCell: 1,
+    exit: 15,
+  };
+  assert.equal(provable(board), true); // Legacy eight-way path crosses a corner.
+  assert.equal(provable({ ...board, sideOnly: true }), false);
+});
+test("bounded solo generation recovers from repeatedly unsuitable layouts", () => {
+  assert.ok(provable(createSoloBoard(() => 0)));
 });
