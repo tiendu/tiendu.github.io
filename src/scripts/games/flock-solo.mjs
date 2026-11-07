@@ -4,9 +4,9 @@ import { readStoredSession, writeStoredSession, removeStoredSession } from "./sh
 
 const key = "tiendu-chicken-solo-race";
 export const tickMs = 50;
-export function createSolo(bird, seed = crypto.getRandomValues(new Uint32Array(1))[0]) {
+export function createSolo(bird, seed = crypto.getRandomValues(new Uint32Array(1))[0], version = 2) {
   const players = [{ id: "solo", bird, name: birds[bird].name, online: true }];
-  return { players, race: newRace(players, seed), track: course(seed), ticks: 0, inputs: [] };
+  return { players, race: newRace(players, seed, version), track: course(seed, version), ticks: 0, inputs: [] };
 }
 export function advanceSolo(local) {
   step(local.race, local.track, tickMs / 1000);
@@ -15,14 +15,14 @@ export function advanceSolo(local) {
 export function soloInput(local, action) {
   const bird = local.race.runners[0];
   if (action === "jump" && bird.jumps >= 2) return;
-  if (action === "down" && (bird.burstLeft || bird.stamina < 1)) return;
+  if (action === "down" && bird.burstLeft) return;
   local.inputs.push([local.ticks, action]);
   input(bird, action);
 }
 export function saveSolo(local) {
   if (local.race.over) return removeStoredSession(key);
   const { ticks, inputs } = local;
-  writeStoredSession(key, 1, { bird: local.players[0].bird, seed: local.race.seed, ticks, inputs });
+  writeStoredSession(key, 1, { bird: local.players[0].bird, seed: local.race.seed, version: local.race.courseVersion, ticks, inputs });
 }
 export function readSolo() {
   return readStoredSession(key, 1, s => s && Number.isInteger(s.bird) && birds[s.bird] &&
@@ -32,7 +32,7 @@ export function readSolo() {
       entry[0] <= s.ticks && ["jump", "down"].includes(entry[1])))?.state;
 }
 export function restoreSolo(saved) {
-  const local = createSolo(saved.bird, saved.seed);
+  const local = createSolo(saved.bird, saved.seed, saved.version ?? 1);
   let i = 0;
   while (true) {
     while (saved.inputs[i]?.[0] === local.ticks) soloInput(local, saved.inputs[i++][1]);

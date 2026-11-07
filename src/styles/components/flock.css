@@ -64,9 +64,9 @@
   user-select: none;
   -webkit-user-select: none;
 }
-.flock meter {
-  width: 4rem;
-}
+.coop-distance { margin-bottom: .6rem; }
+.coop-distance label { display: flex; justify-content: space-between; }
+.coop-distance progress { display: block; width: 100%; height: .65rem; accent-color: var(--flock-gold); }
 .flock-rotate {
   display: none;
 }

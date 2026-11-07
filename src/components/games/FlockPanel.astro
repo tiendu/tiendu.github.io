@@ -23,8 +23,12 @@ import "../../styles/components/flock.css";
 <button data-invite>Copy invite</button> <button data-start>Start race</button>
 </section>
 <section data-board hidden>
+<div class="coop-distance">
+  <label for="coop-progress">Your run <span data-distance></span></label>
+  <progress id="coop-progress" data-progress value="0" max="1"></progress>
+</div>
 <canvas tabindex="-1" aria-label="Chicken race course" width="720" height="256"></canvas>
-<div class="flock-hud"><button data-sprint>Sprint</button><span>Stamina <meter data-energy min="0" max="3" value="3"></meter></span><button data-jump>Jump / Flap</button></div>
+<div class="flock-hud"><button data-sprint>Sprint</button><button data-jump>Jump / Flap</button></div>
 <div class="flock-actions" data-practice hidden><button data-pause>Pause</button><button data-retry>Restart</button><button data-menu>Menu</button></div>
 </section>
 <p role="status" data-status>Reach the coop. Press → or swipe right to sprint. Space or tap to jump.</p>

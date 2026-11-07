@@ -1,5 +1,5 @@
 // World units are pixels. The server advances the race in 50 ms steps.
-export const finish = 4250;
+const classicFinish = 4250;
 export const birds = [
   { name: "Sunrise", color: "#dc6540", shape: "rooster", speed: 1.06, jumpHeight: 0.95, trait: "Fast runner" },
   { name: "Pepper", color: "#393744", shape: "hen", speed: 1, jumpHeight: 1, trait: "All-rounder" },
@@ -8,7 +8,7 @@ export const birds = [
   { name: "Indigo", color: "#687ad5", shape: "bantam", speed: 1.03, jumpHeight: 0.98, trait: "Quick runner" },
 ];
 
-export function course(seed) {
+function classicCourse(seed) {
   const roofs = [],
     corn = [];
   for (let i = 0; i < 7; i++) {
@@ -20,7 +20,38 @@ export function course(seed) {
     );
     corn.push({ x: x + 135, h: 60 }, { x: x + 320, h: 0 });
   }
-  return { roofs, corn };
+  return { roofs, corn, hills: [], finish: classicFinish, weatherOffset: 0, weatherRate: 1, skyOffset: 0 };
+}
+
+// A seed is enough for the host, guests and saved runs to rebuild this track.
+export function course(seed, version = 2) {
+  if (version === 1) return classicCourse(seed);
+  let state = seed >>> 0;
+  const roll = (low, high) => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return low + Math.floor((state / 4294967296) * (high - low + 1));
+  };
+  const finish = roll(32, 48) * 100;
+  const hills = [], roofs = [], corn = [];
+  for (let x = roll(205, 330); x < finish - 550;) {
+    const low = { x, width: roll(65, 90), h: roll(20, 30) };
+    const high = { x: x + low.width + roll(4, 15), width: roll(95, 165), h: low.h + roll(20, 32) };
+    roofs.push(low, high);
+    const hill = { x: high.x + high.width + 25, width: roll(140, 220), h: roll(12, 42) };
+    hills.push(hill);
+    corn.push({ x: high.x + high.width / 2, h: high.h },
+      { x: hill.x + hill.width / 2, h: hill.h });
+    x = hill.x + hill.width + roll(55, 185);
+  }
+  return { finish, hills, roofs, corn, weatherOffset: roll(0, 150),
+    weatherRate: roll(80, 125) / 100, skyOffset: roll(0, 48) };
+}
+
+export function groundHeight(hills, x) {
+  const hill = hills?.find(h => x > h.x && x < h.x + h.width);
+  if (!hill) return 0;
+  const phase = (x - hill.x) / hill.width;
+  return hill.h * (1 - Math.cos(2 * Math.PI * phase)) / 2;
 }
 
 export function runner(id, bird = 1) {
@@ -32,7 +63,6 @@ export function runner(id, bird = 1) {
     vx: 72 * birds[bird].speed,
     jumps: 0,
     burstLeft: 0,
-    stamina: 3,
     corn: 0,
     status: "running",
   };
@@ -43,13 +73,14 @@ export function input(p, key) {
     p.vy = (p.jumps === 0 ? 220 : 175) * Math.sqrt(birds[p.bird ?? 1].jumpHeight);
     p.jumps++;
   }
-  if (key === "down" && !p.burstLeft && p.stamina >= 1) p.burstLeft = 1;
+  if (key === "down" && !p.burstLeft) p.burstLeft = 1;
 }
-export function move(p, dt, roofs) {
+export function move(p, dt, roofs, hills) {
   const surface = roofs.find(
     (r) => p.x >= r.x && p.x <= r.x + r.width && p.y === r.h,
   );
-  const grounded = p.jumps === 0 && (p.y === 0 || surface);
+  const onGround = !p.jumps && p.y === groundHeight(hills, p.x);
+  const grounded = onGround || (!p.jumps && surface);
   const fast = p.burstLeft > 0;
   p.burstLeft = Math.max(0, (p.burstLeft ?? 0) - dt);
   const targetSpeed = (fast ? 128 : 72) * birds[p.bird ?? 1].speed;
@@ -57,24 +88,23 @@ export function move(p, dt, roofs) {
     p.vx +=
       Math.sign(targetSpeed - p.vx) *
       Math.min(Math.abs(targetSpeed - p.vx), 160 * dt);
-  p.stamina = Math.max(0, Math.min(3, p.stamina + (fast ? -dt : dt / 2)));
   p.x += p.vx * dt;
   const oldY = p.y;
   p.vy -= 400 * dt;
   p.y += p.vy * dt;
-  let floor = 0;
+  let floor = groundHeight(hills, p.x);
   for (const r of roofs)
     if (p.x >= r.x && p.x <= r.x + r.width && oldY >= r.h && p.y <= r.h)
       floor = Math.max(floor, r.h);
-  if (p.y <= floor && p.vy <= 0) {
+  if ((onGround || p.y <= floor) && p.vy <= 0) {
     p.y = floor;
     p.vy = 0;
     p.jumps = 0;
   } else if (!p.jumps) p.jumps = 1;
 }
-export function newRace(players, seed) {
+export function newRace(players, seed, courseVersion = 2) {
   return {
-    seed,
+    seed, courseVersion,
     time: -3,
     runners: players.map((player) => typeof player === "string" ? runner(player) : runner(player.id, player.bird)),
     picked: [],
@@ -97,7 +127,7 @@ export function step(r, track, dt = 0.05) {
     } else p.status = "caught";
   }
   for (const p of active) {
-    move(p, dt, track.roofs);
+    move(p, dt, track.roofs, track.hills);
     track.corn.forEach((c, i) => {
       if (
         Math.abs(p.x - c.x) < 13 &&
@@ -108,13 +138,16 @@ export function step(r, track, dt = 0.05) {
         p.corn++;
       }
     });
-    if (p.x >= finish) p.status = "home";
+    if (p.x >= track.finish) {
+      p.x = track.finish;
+      p.status = "home";
+    }
   }
   const cycle = (r.time + 6) % 15;
   if (r.time > 8 && cycle < 5) {
     const ground = active
       .filter(
-        (p) => p.status === "running" && p.y < 25 && !(p.safeUntil > r.time),
+        (p) => p.status === "running" && p.y - groundHeight(track.hills, p.x) < 25 && !(p.safeUntil > r.time),
       )
       .sort((a, b) => a.x - b.x);
     if (r.fox === null && ground.length) r.fox = ground[0].x - 65;
@@ -131,7 +164,7 @@ export function step(r, track, dt = 0.05) {
       if (
         p.status === "running" &&
         !(p.safeUntil > r.time) &&
-        p.y >= 35 &&
+        p.y - groundHeight(track.hills, p.x) >= 35 &&
         Math.abs(p.x - r.hawk.x) < 24
       )
         catchBird(p);
@@ -143,7 +176,7 @@ export function step(r, track, dt = 0.05) {
     cycle >= 6 && cycle <= 13 &&
     Math.floor(r.time / 3) !== Math.floor((r.time - dt) / 3)
   ) {
-    const target = active.find((p) => p.status === "running" && p.y >= 35);
+    const target = active.find((p) => p.status === "running" && p.y - groundHeight(track.hills, p.x) >= 35);
     if (target) r.hawk = { x: target.x + 83, at: r.time + 1 };
   }
   r.over = r.runners.every((p) => p.status !== "running");

@@ -9,6 +9,7 @@ import { startServer } from "../src/node-server.mjs";
 import {
   birds,
   course,
+  groundHeight,
   runner,
   input,
   move,
@@ -26,12 +27,12 @@ test("five Chicken leases share the global room limit with Number", () => {
   assert.ok(reserveRoom(leases, 6, 900001, "chicken"));
 });
 
-test("sprint drains stamina, jumps preserve momentum, roof catches a descending chicken", () => {
+test("sprint accelerates, jumps preserve momentum, roof catches a descending chicken", () => {
   const p = runner("a");
   input(p, "down");
   for (let i = 0; i < 20; i++) move(p, 0.05, []);
   assert.equal(p.vx, 128);
-  assert.ok(p.stamina < 2.1);
+  assert.equal(p.burstLeft, 0);
   input(p, "jump");
   input(p, "up");
   move(p, 0.05, []);
@@ -58,7 +59,7 @@ test("each chosen bird can reach the high roof and escape the first fox", () => 
     const launch = p.vy;
     assert.equal(launch, 220 * Math.sqrt(traits.jumpHeight));
     for (let i = 0; i < 22; i++) move(p, 0.05, track.roofs);
-    assert.equal(p.y, 60, traits.name);
+    assert.equal(p.y, track.roofs[1].h, traits.name);
 
     const chase = newRace([{ id: "a", bird }], 0);
     chase.time = 9;
@@ -225,3 +226,29 @@ for (const playerCount of [2, 5]) test(
     }
   },
 );
+
+test("seeded coop courses finish on the displayed step for every bird", () => {
+  for (const seed of [0, 17, 0xffffffff, 916402]) {
+    const track = course(seed);
+    assert.deepEqual(course(seed), track);
+    assert.ok(track.finish >= 3200 && track.finish <= 4800);
+    assert.ok(track.hills.every(h => h.x + h.width < track.finish));
+    for (const bird of birds.keys()) {
+      const race = newRace([{ id: "a", bird }], seed);
+      const p = race.runners[0];
+      race.time = 0;
+      p.safeUntil = 1000;
+      for (let i = 0; i < 2000 && !race.over; i++) {
+        input(p, "down");
+        step(race, track);
+        assert.equal(p.jumps, 0);
+        assert.equal(p.y, groundHeight(track.hills, p.x));
+      }
+      assert.equal(p.status, "home");
+      assert.equal(p.x, track.finish);
+      assert.equal(race.over, true);
+    }
+  }
+  assert.notDeepEqual(course(17).hills, course(18).hills);
+  assert.notEqual(course(17).weatherOffset, course(18).weatherOffset);
+});

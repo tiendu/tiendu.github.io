@@ -73,9 +73,8 @@
 .chicken-pad {
   max-width: 100%;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: .5rem;
 }
-.chicken-pad meter { width: 3rem; }
 .chicken-pad [data-solo-sprint] { touch-action: none; user-select: none; }

@@ -39,9 +39,11 @@ phones.
 ## Chicken Run
 
 Solo and multiplayer use the same seeded race, movement rules, hazards and coop
-finish in `multiplayer/src/chicken/race.mjs`. Solo advances it locally in 50 ms
+finish (3,200–4,800 steps per new race) in `multiplayer/src/chicken/race.mjs`. Solo advances it locally in 50 ms
 steps. Online rooms advance it on the server. Both use the same course canvas
-with the countryside, weather and day/night cycle from the original runner.
+with hills, platforms, weather and daylight generated from the shared seed.
+The progress bar tracks your distance to the coop. Sprint gives a one-second burst
+and can be used again immediately after the burst ends.
 
 ## Saved sessions
 

@@ -134,7 +134,7 @@ function refreshLobby() {
         birds[p.bird].name +
         (p.id === id ? " · YOU" : "") +
         (p.id === host ? " · HOST" : "") +
-        (runner ? " · " + runner.status + " · " + runner.corn + " corn" : "");
+        (runner ? " · " + runner.status + " · " + Math.floor(runner.x).toLocaleString() + " steps · " + runner.corn + " corn" : "");
       return li;
     }),
   );
@@ -173,7 +173,18 @@ function feedback(previous, r) {
   if (!previous.rescued && r.rescued) audio.play("bonus");
   if (previous.status === "running" && mine()?.status === "caught") audio.play("impact");
 }
+const progress = el("progress");
+const distanceText = el("distance");
+function updateDistance() {
+  if (!track || !mine()) return;
+  const distance = Math.min(track.finish, Math.floor(mine().x));
+  if (progress.max === track.finish && progress.value === distance) return;
+  progress.max = track.finish;
+  progress.value = distance;
+  distanceText.textContent = (track.finish - distance).toLocaleString() + " steps to coop";
+}
 function end() {
+  updateDistance();
   audio.stop();
   audio.play(local && mine()?.status === "caught" ? "impact" : "clear");
   const r = view.race;
@@ -221,18 +232,18 @@ function paint(time) {
     runners: r.runners.map((p) => {
       const copy = { ...p };
       if (!paused && r.time >= 0 && p.status === "running")
-        move(copy, age, track.roofs);
+        move(copy, age, track.roofs, track.hills);
       return copy;
     }),
   };
   drawRace(canvas, display, track, view.players, id, 0);
-  el("energy").value = mine()?.stamina ?? 0;
+  updateDistance();
   frame = requestAnimationFrame(paint);
 }
 function begin() {
   cancelAnimationFrame(frame);
   received = performance.now();
-  track = course(view.race.seed);
+  track = course(view.race.seed, view.race.courseVersion ?? 1);
   el("board").hidden = false;
   status("Tap or Space to jump. Swipe right or press → to sprint. Three corn earn one rescue.");
   if (local) {

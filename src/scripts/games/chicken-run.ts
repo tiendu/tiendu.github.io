@@ -76,7 +76,6 @@ interface CrashState extends CrashVisual {
 }
 
 interface ChickenSessionState {
-  stamina?: number;
   score: number;
   runHighScore: number;
   distance: number;
@@ -201,7 +200,6 @@ function isChickenSessionState(value: unknown): value is ChickenSessionState {
   if (!value || typeof value !== "object") return false;
   const state = value as Partial<ChickenSessionState>;
   return (
-    (state.stamina === undefined || (isFiniteNumber(state.stamina) && state.stamina >= 0 && state.stamina <= 3)) &&
     Number.isInteger(state.score) &&
     (state.score ?? -1) >= 0 &&
     Number.isInteger(state.runHighScore) &&
@@ -305,8 +303,6 @@ function mountChickenRunGame(root: HTMLElement): void {
   let burstLeft = 0;
   let birdSpeed = 1;
   let jumpScale = 1;
-  let stamina = 3;
-  const staminaMeter = root.querySelector<HTMLMeterElement>("[data-solo-energy]")!;
   const sprintButton = root.querySelector<HTMLButtonElement>("[data-solo-sprint]")!;
   let active = false;
   let started = false;
@@ -374,7 +370,6 @@ function mountChickenRunGame(root: HTMLElement): void {
     return {
       score,
       runHighScore,
-      stamina,
       distance,
       bonusScore,
       sceneElapsed,
@@ -602,7 +597,6 @@ function mountChickenRunGame(root: HTMLElement): void {
   };
 
   const resetGame = (): void => {
-    staminaMeter.value = stamina = 3;
     burstLeft = 0;
     clearSession();
     setResumePicker(false);
@@ -1165,8 +1159,6 @@ function mountChickenRunGame(root: HTMLElement): void {
     updateWeather();
     const sprinting = burstLeft > 0;
     burstLeft = Math.max(0, burstLeft - delta);
-    stamina = Math.max(0, Math.min(3, stamina + (sprinting ? -delta : delta / 2)));
-    staminaMeter.value = stamina;
     if (sprinting && cycle.phase === "night") foxPressure = Math.max(0, foxPressure - delta * .12);
     updateCycle(delta);
     currentTerrainSlope = terrainSlopeAt(distance + CHICKEN_X, GROUND_Y);
@@ -1313,7 +1305,6 @@ function mountChickenRunGame(root: HTMLElement): void {
   };
 
   const restoreSession = (state: ChickenSessionState): void => {
-    staminaMeter.value = stamina = state.stamina ?? 3;
     score = state.score;
     runHighScore = state.runHighScore;
     isNewHighScore = false;
@@ -1561,13 +1552,12 @@ function mountChickenRunGame(root: HTMLElement): void {
     birdShape = bird.shape;
     birdSpeed = bird.speed;
     jumpScale = Math.sqrt(bird.jumpHeight);
-    staminaMeter.value = stamina = 3;
     burstLeft = 0;
     startGame();
     if (!resumePrompt) startPlaying();
   });
   const engageSprint = () => {
-    if (active && started && !paused && !resumePrompt && !gameOver && !crash && !burstLeft && stamina >= 1)
+    if (active && started && !paused && !resumePrompt && !gameOver && !crash && !burstLeft)
       burstLeft = 1;
   };
   bindCourseGestures(canvas, activateFromPointer, engageSprint);
