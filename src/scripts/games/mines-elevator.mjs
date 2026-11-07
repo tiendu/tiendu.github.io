@@ -79,23 +79,29 @@ export function escapeRoutePaths(board) {
   return { paths, owners, distance };
 }
 
+// Pure helper for testing and for loading a finished room without replay.
+export function mineEndingPhase(board) {
+  if (board.status === "lost") return "lost";
+  if (["perfect", "won"].includes(board.status))
+    return isFlawlessEscape(board) ? "perfect" : "won";
+  return board.status === "connected" ? "connected" : "digging";
+}
+
 export function renderMineVictory(tiles, board, colors, banner, solo) {
-  // A normal connected win can qualify as flawless with most bricks untouched.
-  const phase = ["perfect", "won"].includes(board.status) ?
-    (isFlawlessEscape(board) ? "perfect" : "won") :
-    board.status === "connected" ? "connected" : "digging";
+  const phase = mineEndingPhase(board);
   const prior = tiles.dataset.mineEndingPhase;
   const changed = prior !== phase;
   if (changed) {
     tiles.classList.remove("mine-ending-digging", "mine-ending-connected",
-      "mine-ending-won", "mine-ending-perfect", "mine-ending-animate");
+      "mine-ending-won", "mine-ending-perfect", "mine-ending-lost",
+      "mine-ending-animate");
     tiles.classList.add("mine-ending-" + phase);
     // Initial render of a finished room shows final state without replaying a win.
     if (prior && prior !== "fresh" && phase !== "digging")
       tiles.classList.add("mine-ending-animate");
     tiles.dataset.mineEndingPhase = phase;
   }
-  const hasRoute = phase !== "digging";
+  const hasRoute = phase === "connected" || phase === "won" || phase === "perfect";
   const { owners, distance } = hasRoute ? escapeRoutePaths(board) :
     { owners: new Map(), distance: new Map() };
   const maxDistance = Math.max(1, ...distance.values());
@@ -118,15 +124,33 @@ export function renderMineVictory(tiles, board, colors, banner, solo) {
       board.cells[n] === null;
     if (isSafeBomb) tile.dataset.intactMine = "";
     else delete tile.dataset.intactMine;
+    if (phase === "lost" && n === board.fatalCell) tile.dataset.fatal = "";
+    else delete tile.dataset.fatal;
   }
-  const finished = phase === "won" || phase === "perfect";
+  // A miner can still be walking to the fatal brick. Wait until the blast
+  // finishes before announcing defeat. The variable is local to this render.
+  const fatalHat = tiles.querySelector('.miner-hat.miner-fatal');
+  const travelDelay = phase === "lost" ? Math.min(1500,
+    Math.max(0, parseFloat(fatalHat?.style.getPropertyValue('--blast-delay')) || 0)) : 0;
+  if (phase === "lost") {
+    tiles.style.setProperty('--mine-blast-delay', `${travelDelay}ms`);
+    banner.style.setProperty('--mine-loss-delay', `${travelDelay + 570}ms`);
+  } else {
+    tiles.style.removeProperty('--mine-blast-delay');
+    banner.style.removeProperty('--mine-loss-delay');
+  }
+  const finished = phase === "won" || phase === "perfect" || phase === "lost";
   banner.hidden = !finished;
   if (finished) {
-    const message = phase === "perfect" ? "FLAWLESS ESCAPE!" :
+    const message = phase === "lost" ? (solo ? "YOU DIED" : "CREW LOST") :
+      phase === "perfect" ? "FLAWLESS ESCAPE!" :
       solo ? "YOU ESCAPED!" : "EVERYONE ESCAPED!";
     if (banner.textContent !== message) banner.textContent = message;
     banner.classList.toggle("mine-perfect-banner", phase === "perfect");
+    banner.classList.toggle("mine-loss-banner", phase === "lost");
+    banner.classList.toggle("mine-loss-animate", phase === "lost" &&
+      tiles.classList.contains("mine-ending-animate"));
   } else {
-    banner.classList.remove("mine-perfect-banner");
+    banner.classList.remove("mine-perfect-banner", "mine-loss-banner", "mine-loss-animate");
   }
 }

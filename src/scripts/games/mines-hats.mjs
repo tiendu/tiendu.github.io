@@ -89,17 +89,23 @@ export function renderMinerHats(tiles, board, colors) {
     badge.textContent = clue > 0 ? String(clue) : "";
     badge.hidden = !(clue > 0);
 
+    // Mark the fatal miner even when reconnecting to an already-lost room.
+    // Legacy rooms lack fatalSeat; fall back to the first miner on a crater.
+    const detonated = board.cells[target] === -1;
+    const legacyFatal = board.players.findIndex((_, i) =>
+      board.cells[board.positions?.[i] ?? board.starts[i]] === -1);
+    const fatal = board.status === "lost" && detonated &&
+      (Number.isInteger(board.fatalSeat)
+        ? board.fatalSeat === seat
+        : legacyFatal === seat);
+    hat.classList.toggle("miner-bombed", detonated);
+    hat.classList.toggle("miner-fatal", fatal);
     const from = Number(hat.dataset.cell);
     if (from === target) return;
 
     const path = cardinalRoute(board, from, target);
     hat.getAnimations?.().forEach((animation) => animation.cancel());
-    // Render from the authoritative shared position. The crater (-1) only
-    // triggers a blast on a NEW move; repeat snapshots never restart it.
-    const detonated = board.cells[target] === -1;
-    hat.classList.toggle("miner-bombed", detonated);
-    hat.classList.toggle("miner-fatal", detonated &&
-      (board.status === "lost" || board.status === "won"));
+    // Only newly updated hat positions schedule an explosion animation.
     if (detonated) {
       // Match the duration used by the existing four-direction walk.
       const blastDelay = !reducedMotion && path && path.length > 1

@@ -253,14 +253,20 @@ export function play(board, player, type, cell) {
         board.fuses--;
         board.fusesUsed = (board.fusesUsed ?? 0) + 1;
       } else {
-        board.status = board.status === "connected" ? "won" : "lost";
+        // An unprotected explosion is fatal even if the exit was connected.
+        board.status = "lost";
+        board.fatalSeat = seat;
+        board.fatalCell = cell;
       }
     } else {
       // Preserve the fuse semantics of active rooms created by old Workers.
       const protectedHit = board.fuses > (board.fuseCell === undefined ? 1 : 0);
       board.fuses = Math.max(0, board.fuses - 1);
-      if (!protectedHit)
-        board.status = board.status === "connected" ? "won" : "lost";
+      if (!protectedHit) {
+        board.status = "lost";
+        board.fatalSeat = seat;
+        board.fatalCell = cell;
+      }
     }
     return;
   }

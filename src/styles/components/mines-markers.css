@@ -408,3 +408,93 @@
     transition: none !important;
   }
 }
+
+/* Defeat: local blast, elevator power failure, and one visible fatal miner. */
+.mines #tiles.mine-ending-lost .tile:not(.crater):not(.mine-exit) {
+  opacity: .57;
+  filter: saturate(.55);
+  transition: opacity 450ms ease, filter 450ms ease;
+}
+.mines #tiles.mine-ending-lost .tile[data-fatal] {
+  opacity: 1;
+  border-color: #ff9c70;
+  box-shadow: inset 0 0 0 2px #f47751, 0 0 12px #d54a32;
+}
+.mines #tiles.mine-ending-lost .mine-shaft-signal { fill: #fb5f4e; }
+.mines #tiles.mine-ending-lost .mine-shaft-light {
+  fill: #ca4939;
+  opacity: .15;
+}
+.mines #tiles.mine-ending-lost .mine-exit-caption {
+  color: #ff9481;
+  box-shadow: 0 -1px #f2745b;
+}
+.mines #tiles.mine-ending-lost .tile.mine-exit {
+  border-color: #ad594a #4d2a26 #4d2a26 #ad594a;
+  box-shadow: inset 0 0 0 1px #a04438;
+}
+/* Survivors dim but retain their color. Only the actual casualty wears a skull. */
+.mines #tiles.mine-ending-lost .miner-hat:not(.miner-fatal) {
+  opacity: .67;
+  filter: saturate(.45) brightness(.6);
+}
+/* A reconnect or reload of a lost room shows the result immediately. */
+.mines #tiles.mine-ending-lost:not(.mine-ending-animate) .miner-hat.miner-fatal .miner-hat-skull {
+  animation: none;
+  opacity: 1;
+  transform: scale(1);
+}
+.mines #victory.mine-loss-banner {
+  color: #ffe1d0;
+  border-left-color: #fa8062;
+  border-right: 5px solid #fa8062;
+  background: linear-gradient(90deg, #542b27, #211a19, #542b27);
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: .16em;
+  box-shadow: inset 0 -2px #a24636;
+}
+.mines #tiles.mine-ending-lost.mine-ending-animate .tile:not(.crater):not(.mine-exit) {
+  transition-delay: var(--mine-blast-delay, 0ms);
+}
+.mines #tiles.mine-ending-lost .miner-hat.miner-bombed:not(.miner-fatal) .miner-hat-skull {
+  animation: none !important;
+  opacity: 0;
+}
+/* A loaded, already-lost room must show its result without replaying. */
+.mines #victory.mine-loss-banner:not(.mine-loss-animate) { animation: none !important; }
+@media (prefers-reduced-motion: no-preference) {
+  .mines #tiles.mine-ending-lost.mine-ending-animate .tile[data-fatal] {
+    animation: mines-fatal-tile 700ms steps(7,end)
+      calc(var(--mine-blast-delay, 0ms) + 160ms) both;
+  }
+  .mines #tiles.mine-ending-lost.mine-ending-animate .mine-shaft-signal {
+    animation: mines-elevator-dead 900ms steps(5,end) var(--mine-blast-delay, 0ms) both;
+  }
+  .mines #tiles.mine-ending-lost.mine-ending-animate .mine-exit-caption {
+    animation: mines-elevator-dead 900ms steps(5,end) var(--mine-blast-delay, 0ms) both;
+  }
+  .mines #victory.mine-loss-banner.mine-loss-animate:not([hidden]) {
+    animation: mines-crew-lost 420ms steps(5,end) var(--mine-loss-delay, 570ms) both;
+  }
+}
+@keyframes mines-fatal-tile {
+  0%, 35% { filter: brightness(1.75); }
+  60% { filter: brightness(.7); }
+  100% { filter: brightness(1); }
+}
+@keyframes mines-elevator-dead {
+  0%, 20%, 45% { opacity: 1; }
+  12%, 34%, 70% { opacity: .12; }
+  100% { opacity: .8; }
+}
+@keyframes mines-crew-lost {
+  0% { opacity: 0; transform: translateY(8px) scale(.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mines #tiles.mine-ending-lost .tile,
+  .mines #tiles.mine-ending-lost .mine-shaft-signal,
+  .mines #tiles.mine-ending-lost .mine-exit-caption,
+  .mines #victory.mine-loss-banner { animation: none !important; transition: none !important; }
+}

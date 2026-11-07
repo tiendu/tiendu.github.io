@@ -383,20 +383,25 @@ export function mountMines() {
       centered = round;
       center(board.starts[board.players.indexOf(me)]);
     }
+    const previousEnding = tiles.dataset.mineEndingPhase;
     renderMineVictory(tiles, board, colors, el("victory"), solo);
+    // Center the fatal crater once on the live loss transition, never on replay.
+    if (board.status === "lost" && previousEnding && previousEnding !== "lost" &&
+        Number.isInteger(board.fatalCell)) center(board.fatalCell);
     const labels = {
-      digging: solo
-        ? "Dig a path to the exit."
-        : "Connect every starting point to the elevator.",
+      digging: board.fusesUsed > 0 && board.fuses === 0
+        ? "Last fuse used — proceed with caution."
+        : solo ? "Dig a path to the exit."
+          : "Connect every starting point to the elevator.",
       connected:
         "Elevator connected! Finish to escape. No fuse used means a flawless win.",
       won: isFlawlessEscape(board) ? "Flawless escape!"
         : solo ? "You escaped!" : "Crew escaped!",
-      lost: "Out of fuses.",
+      lost: solo ? "No fuse left. You died." : "No fuses left. Crew lost.",
       perfect: isFlawlessEscape(board) ? "Flawless escape!" : "Crew escaped!",
     };
     status(
-      ping
+      board.status !== "lost" && ping
         ? (players.find((p) => p.id === ping.id)?.name || "Crew") +
             " pinged row " +
             (1 + Math.floor(ping.cell / board.size)) +
