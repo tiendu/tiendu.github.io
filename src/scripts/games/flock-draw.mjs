@@ -1,3 +1,4 @@
+import { pouncePose } from "../../../multiplayer/src/chicken/pounce.mjs";
 import { drawCaughtFeathers, featherDuration } from "./chicken-plumage";
 import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
 import { raceClimate } from "../../../multiplayer/src/chicken/encounters.mjs";
@@ -152,6 +153,7 @@ export function drawRace(canvas, r, track, players, id, effects) {
     rect("#ffe4a3", coop + 26, ground - 28, 27, 14);
     text("COOP", coop + 26, ground - 17, "#502c24");
   }
+  const leap = r.pounce && pouncePose(r.pounce, r.time);
   const hawk = r.hawk ?? effects.eagle;
   if (hawk) {
     const lift = hawk.lift == null ? 0 : Math.max(0, r.time - hawk.lift);
@@ -173,18 +175,28 @@ export function drawRace(canvas, r, track, players, id, effects) {
     const y = floor - clearance - arc * (158 - clearance) - rise * rise * 52;
     const horizontal = hawk.surface == null ? approach : Math.max(0, (approach - 0.65) / 0.35);
     const flyX = x - 38 * horizontal + bank * horizontal * 6 + lift * 103;
-    if (hawk.perched && r.time < hawk.lift) paintPerchedEagle(c, x, floor);
+    if (r.pounce?.kind === "eagle") {
+      const surface = r.pounce.rail?.h ?? groundHeight(track.hills, leap.x);
+      const feet = ground - surface - leap.hop + leap.crouch;
+      if (leap.moving) paintEagle(c, X(leap.x), feet - 8, 0.24, 0, r.time);
+      else paintPerchedEagle(c, X(leap.x), feet);
+    } else if (hawk.perched && r.time < hawk.lift) paintPerchedEagle(c, x, floor);
     else paintEagle(c, flyX, y, 1 - arc, lift, r.time);
   }
   if (r.coyote) {
     const coyote = r.coyote;
     const age = coyote.retreat == null ? 0 : r.time - coyote.retreat;
     const turn = Math.min(1, Math.max(0, (age - 0.56) / 0.28));
-    paintCoyote(c, X(coyote.x), floorAt(coyote.x), turn);
+    const pose = r.pounce?.kind === "coyote" ? leap : null;
+    const worldX = pose?.x ?? coyote.x;
+    paintCoyote(c, X(worldX), floorAt(worldX) - (pose?.hop ?? 0) + (pose?.crouch ?? 0),
+      turn, worldX, pose?.hop ?? 0);
   }
   if (r.fox !== null) {
     const skid = r.foxRetreat == null ? -1 : r.time - r.foxRetreat;
-    const x = X(r.fox), floor = ground - groundHeight(track.hills, r.fox);
+    const pose = r.pounce?.kind === "fox" ? leap : null;
+    const worldX = pose?.x ?? r.fox;
+    const x = X(worldX), floor = floorAt(worldX) - (pose?.hop ?? 0) + (pose?.crouch ?? 0);
     if (climate.icy && skid < 0) {
       const first = Math.ceil((r.fox - 30) / 9) * 9;
       for (let print = first; print < r.fox - 8; print += 9) {

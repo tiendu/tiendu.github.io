@@ -27,7 +27,7 @@ function classicCourse(seed) {
 }
 
 // A seed is enough for the host, guests and saved runs to rebuild this track.
-export function course(seed, version = 5) {
+export function course(seed, version = 6) {
   if (version === 1) return classicCourse(seed);
   let state = seed >>> 0;
   const roll = (low, high) => {
@@ -101,7 +101,7 @@ export function move(p, dt, roofs, hills, wetPatches, icy = false) {
     p.jumps = 0;
   } else if (!p.jumps) p.jumps = 1;
 }
-export function newRace(players, seed, courseVersion = 5) {
+export function newRace(players, seed, courseVersion = 6) {
   return {
     seed, courseVersion,
     time: -3,
@@ -126,9 +126,12 @@ export function step(r, track, dt = 0.05) {
     } else p.status = "caught";
   }
   const climate = r.courseVersion >= 3 ? raceClimate(track, r.time) : null;
+  const landings = [];
   for (const p of active) {
+    const airborne = p.jumps > 0;
     move(p, dt, track.roofs, track.hills, climate?.muddy || climate?.icy ? track.mud : null, climate?.icy);
     if (climate) {
+      if (airborne && !p.jumps) landings.push(p);
       p.altitude = p.y - groundHeight(track.hills, p.x);
       p.onTrail = !p.jumps && p.altitude < 1;
     }
@@ -147,7 +150,7 @@ export function step(r, track, dt = 0.05) {
       p.status = "home";
     }
   }
-  if (climate) updatePredators(r, track, climate, dt, catchBird);
+  if (climate) updatePredators(r, track, climate, dt, catchBird, landings);
   else classicPredators(r, track, active, dt, catchBird);
   r.over = r.runners.every(p => p.status !== "running");
 }

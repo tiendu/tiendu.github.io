@@ -101,49 +101,75 @@ export function paintPerchedEagle(ctx: CanvasRenderingContext2D, x: number, rail
     "dbbbbd", "dd dbd", "   g g"], x - 8, rail - 16);
 }
 
-export function paintCoyote(ctx: CanvasRenderingContext2D, x: number, floor: number, turn: number) {
-  const stride = x / 5;
+// Side profile in two-pixel stitches. The dark saddle, buff cheek and tapered
+// black-tipped brush stay legible against snow as well as the night palette.
+const coyoteCoat = [
+  "                      d   d",
+  "                      sd  sd",
+  "                      shd thd",
+  "                     dtthtthd",
+  "                    dtttggghd",
+  "                  dstttgghhed",
+  "         dddssssssttttggghhhhd",
+  "      dssttttttsssttgggghhhwwhd",
+  "     stttggggttttttgggghwwwwwwdd",
+  "    stggggggggtttgggghhhwwwddd",
+  "   dstggggghhhgggggghhhwwd",
+  "  dstttgghhhttgggghhhhwwd",
+  " dstttgghhdd  dhhhhtthhd",
+  "dstssgghhd     dddd dhd",
+  "ddssggddd",
+  "ddddd",
+];
+const coatInk: Record<string, string> = {
+  d: "#302d34", s: "#57505a", t: "#786c68", g: "#ac9072",
+  h: "#d0b58e", w: "#f2dcb2", e: "#211d22",
+};
+let coyoteSprite: HTMLCanvasElement | undefined;
+function coatSprite() {
+  if (coyoteSprite) return coyoteSprite;
+  const sprite = document.createElement("canvas");
+  sprite.width = 66;
+  sprite.height = 32;
+  const brush = sprite.getContext("2d")!;
+  coyoteCoat.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      if (row[x] === " ") continue;
+      brush.fillStyle = coatInk[row[x]];
+      brush.fillRect(x * 2, y * 2, 2, 2);
+    }
+  });
+  coyoteSprite = sprite;
+  return sprite;
+}
+
+export function paintCoyote(ctx: CanvasRenderingContext2D, x: number, floor: number,
+  turn: number, distance: number, hop: number) {
+  const stride = distance / 5;
+  const shoulder = -19 - Math.sin(stride) * 1.4;
   ctx.save();
   ctx.translate(x, floor);
   const facing = Math.cos(turn * Math.PI);
-  if (Math.abs(facing) < 0.4) {
-    ctx.fillStyle = "#706460";
-    ctx.fillRect(-6, -25, 12, 22);
-    ctx.fillRect(-5, -30, 3, 6);
-    ctx.fillRect(2, -30, 3, 6);
-    ctx.fillStyle = "#c3aa86";
-    ctx.fillRect(-3, -21, 6, 6);
+  if (Math.abs(facing) < 0.45) {
+    pixels(ctx, ["d     d", "dbd dbd", " bbbbb ", " bwebw ", "  www  ", "   d   "], -7, shoulder - 9);
   }
   ctx.scale(facing, 1);
-  const shoulder = -17 - Math.sin(stride) * 1.2;
+  ctx.lineWidth = 3;
   for (let i = 0; i < 4; i++) {
-    const hip = i < 2 ? -9 : 9;
-    const phase = stride + i * 1.8;
-    const paw = hip + 7 * Math.cos(phase);
-    const y = -2 - 4 * Math.max(0, Math.sin(phase));
-    ctx.strokeStyle = i % 2 ? "#bb9b77" : "#685952";
-    ctx.lineWidth = 3;
+    const hip = i < 2 ? -10 : 10;
+    const phase = stride + (i % 2) * 0.65 + (i < 2 ? 0 : Math.PI);
+    const paw = hip + 8 * Math.cos(phase) + (i < 2 ? -hop : hop);
+    const y = -2 - 5 * Math.max(0, Math.sin(phase));
+    ctx.strokeStyle = i % 2 ? coatInk.g : coatInk.s;
     ctx.beginPath();
-    ctx.moveTo(hip, shoulder + 4);
-    ctx.lineTo((hip + paw) / 2 - 2, shoulder + 10);
+    ctx.moveTo(hip, shoulder + 3);
+    ctx.lineTo((hip + paw) / 2 + (i < 2 ? 3 : -2), shoulder + 10);
     ctx.lineTo(paw, y);
     ctx.stroke();
-    ctx.fillStyle = "#443c3c";
+    ctx.fillStyle = coatInk.d;
     ctx.fillRect(paw - 1, y, 5, 2);
   }
-  ctx.translate(0, shoulder);
-  ctx.fillStyle = "#706460";
-  ctx.fillRect(-23, 6, 11, 5);
-  ctx.fillRect(-29, 10, 9, 4);
-  ctx.fillRect(-15, -3, 28, 10);
-  ctx.fillRect(8, -11, 12, 12);
-  ctx.fillRect(9, -18, 3, 8);
-  ctx.fillRect(16, -19, 3, 9);
-  ctx.fillStyle = "#c3aa86";
-  ctx.fillRect(-12, 2, 22, 5);
-  ctx.fillRect(14, -4, 15, 4);
-  ctx.fillStyle = "#342f30";
-  ctx.fillRect(26, -5, 4, 3);
-  ctx.fillRect(17, -8, 2, 2);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(coatSprite(), -32, shoulder - 20);
   ctx.restore();
 }

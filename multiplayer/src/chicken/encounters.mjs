@@ -1,3 +1,4 @@
+import { tryPounce, stepPounce } from "./pounce.mjs";
 import { strikeSurface } from "./terrain.mjs";
 import { cycleStateForElapsed } from "./cycle.ts";
 import { weatherStateForElapsed } from "./weather.ts";
@@ -58,10 +59,20 @@ function chaseWithCoyote(r, dt, catchBird) {
   }
 }
 
-export function updatePredators(r, track, climate, dt, catchBird) {
+export function updatePredators(r, track, climate, dt, catchBird, landings = []) {
   const { phase, cycleIndex } = climate.cycle;
   const night = phase === "night";
   const flying = phase === "day" && !climate.rain && climate.weather.rainIntensity < 0.65;
+  if (track.version >= 6 && !r.pounce && landings.length) {
+    const hunting = (!r.hawk || flying) && (r.fox == null || (night && r.time < r.chaseEnd));
+    if (hunting) tryPounce(r, track, landings);
+  }
+  if (r.pounce?.kind === "eagle" && !flying) {
+    r.hawk.perched = false;
+    r.hawk.lift = r.time;
+    delete r.pounce;
+  }
+  if (r.pounce) return stepPounce(r, track, catchBird);
   if (r.coyote) return chaseWithCoyote(r, dt, catchBird);
   if (r.fox !== null) {
     if (r.foxRetreat != null) {
@@ -117,7 +128,7 @@ export function updatePredators(r, track, climate, dt, catchBird) {
               exposed && Math.abs(p.x - hawk.x) < 19) catchBird(p);
         }
       }
-      if (flying && hawk.raised) hawk.perched = true;
+      if (flying && (hawk.raised || track.version >= 6)) hawk.perched = true;
       hawk.lift = r.time + (hawk.perched ? 0.7 : 0);
     }
     return;

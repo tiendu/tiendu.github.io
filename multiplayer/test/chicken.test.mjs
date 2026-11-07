@@ -430,3 +430,35 @@ test("gaining a momentary lead does not immediately shake the fox", () => {
   }
   assert.ok(race.foxRetreat >= 11.5);
 });
+
+test("short landings invite a committed pounce; a quick jump or clear landing escapes", () => {
+  for (const kind of ["fox", "coyote", "eagle"]) {
+    const h = kind === "eagle" ? 26 : 0;
+    const track = { ...course(1), skyOffset: kind === "fox" ? 24 : 0, weatherOffset: 0, roofs: h ? [{ x: 50, width: 180, h }] : [],
+      hills: [], corn: [], mud: [] };
+    for (const response of ["stay", "jump", "wide", "protected"]) {
+      const r = newRace(["me"], 1);
+      r.time = 3;
+      const p = r.runners[0];
+      p.x = response === "wide" ? 140 : 110;
+      p.y = h + 1;
+      p.jumps = 1;
+      p.vy = -60;
+      if (response === "protected") p.safeUntil = 10;
+      if (kind === "fox") Object.assign(r, { fox: 100, foxTarget: "me", chaseEnd: 10, foxStarted: 2 });
+      if (kind === "coyote") r.coyote = { x: 100, target: "me", started: 2, height: 22, baleX: 205 };
+      if (kind === "eagle") r.hawk = { x: 100, surface: h, raised: true, perched: true, at: 2.9, lift: 3.6 };
+      step(r, track);
+      if (response === "wide" || response === "protected") {
+        assert.equal(r.pounce, undefined);
+        continue;
+      }
+      assert.equal(r.pounce?.kind, kind);
+      assert.equal(p.status, "running");
+      if (response === "jump") input(p, "jump");
+      for (let i = 0; i < 10 && !r.over; i++) step(r, track);
+      assert.equal(p.status, response === "jump" ? "running" : "caught");
+      if (response === "jump") assert.equal(r.pounce, undefined);
+    }
+  }
+});
