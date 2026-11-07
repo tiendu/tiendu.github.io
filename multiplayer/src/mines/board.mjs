@@ -179,6 +179,7 @@ function generateBoard(players, preset, random) {
       exit,
       clues,
       players: [...players],
+      positions: [...starts],
       fuseCell,
       fuses: 0,
       cells: near.map(() => null),
@@ -234,6 +235,7 @@ export function play(board, player, type, cell) {
   if (type !== "dig" || board.flags[cell] !== undefined)
     throw Error("Remove the flag before digging.");
   board.cells[cell] = board.clues[cell];
+  (board.positions ??= [...board.starts])[seat] = cell;
   if (board.cells[cell] === -1) {
     // Older stored rounds counted the fatal hit as their last fuse.
     const protectedHit = board.fuses > (board.fuseCell === undefined ? 1 : 0);

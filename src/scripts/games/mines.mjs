@@ -1,3 +1,4 @@
+import { renderMinerHats } from "./mines-hats.mjs";
 import {
   createSoloBoard,
   escapeRoutes,
@@ -212,6 +213,11 @@ export function mountMines() {
         (vp.clientHeight - b.clientHeight) / 2;
     }
   }
+  el("locate-fuse").onclick = () => {
+    const board = snapshot?.board;
+    if (Number.isInteger(board?.fuseCell) && board.cells[board.fuseCell] === null)
+      center(board.fuseCell);
+  };
   function render() {
     const { players, board, host, round, ping } = snapshot;
     const active = board && ["digging", "connected"].includes(board.status);
@@ -273,6 +279,9 @@ export function mountMines() {
         : board.fuses
           ? "FUSE READY"
           : "NO FUSE";
+    el("locate-fuse").hidden =
+      !Number.isInteger(board.fuseCell) ||
+      board.cells[board.fuseCell] !== null;
     el("step-help").textContent = board.sideOnly
       ? "Dig up, down, left, or right from your patch."
       : "Dig the lit edge of your patch.";
@@ -352,6 +361,7 @@ export function mountMines() {
                 : ""),
       );
     });
+    renderMinerHats(tiles, board, colors);
     if (centered !== round) {
       centered = round;
       center(board.starts[board.players.indexOf(me)]);

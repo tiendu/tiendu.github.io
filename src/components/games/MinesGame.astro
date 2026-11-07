@@ -1,5 +1,6 @@
 ---
 import "../../styles/components/mines.css";
+import "../../styles/components/mines-markers.css";
 ---
 <main class="mines" data-backend={import.meta.env.PUBLIC_MINES_BACKEND_URL || ""}>
   <header><a href="/">← HOME</a><span>SOLO · CO-OP 2–5</span></header>
@@ -17,7 +18,7 @@ import "../../styles/components/mines.css";
   </section>
   <section id="field" hidden>
     <p id="turn" role="status" hidden></p>
-    <div class="actions"><button id="pass" hidden>Pass turn</button><button id="dig" aria-pressed="true">Dig</button><button id="flag" aria-pressed="false">Flag</button><strong id="fuses"></strong></div>
+    <div class="actions"><button id="pass" hidden>Pass turn</button><button id="dig" aria-pressed="true">Dig</button><button id="flag" aria-pressed="false">Flag</button><strong id="fuses"></strong><button id="locate-fuse" type="button" hidden>Show fuse</button></div>
     <div id="victory" hidden></div>
     <div id="viewport" tabindex="0" aria-label="Scrollable minefield"><div id="tiles"></div></div>
     <p><span id="step-help">Dig up, down, left, or right from your patch.</span> Numbers count mines in the eight surrounding tiles. <span id="ping-help">Tap an open clue to ping it.</span></p>
