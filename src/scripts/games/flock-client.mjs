@@ -85,7 +85,7 @@ function refreshLobby() {
   el("room").textContent = local ? "Solo practice" : "Room " + room;
   el("invite").hidden = local;
   el("start").hidden = id !== host;
-  el("start").disabled = !local && players.filter((p) => p.online).length < 3;
+  el("start").disabled = !local && players.filter((p) => p.online).length < 2;
   el("start").textContent = race?.over ? "Race again" : "Start race";
   el("roster").replaceChildren(
     ...players.map((p) => {
@@ -267,7 +267,7 @@ async function connect(create) {
         else refreshLobby();
       } else {
         refreshLobby();
-        status("Choose your chicken. The host starts with 3–5 players.");
+        status("Choose your chicken. The host starts with 2–5 players.");
       }
     };
     socket.onclose = () => {

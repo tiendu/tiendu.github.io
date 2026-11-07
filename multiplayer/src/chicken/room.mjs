@@ -68,10 +68,10 @@ export class Flock {
     } else if (msg.type === "start") {
       if (
         p.id !== s.host ||
-        this.members.size < 3 ||
+        this.members.size < 2 ||
         (this.race && !this.race.over)
       )
-        return error("Host needs 3–5 connected players.");
+        return error("Host needs 2–5 connected players.");
       this.race = newRace(
         [...this.members.keys()],
         crypto.getRandomValues(new Uint32Array(1))[0],

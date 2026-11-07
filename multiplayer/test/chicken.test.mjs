@@ -66,8 +66,8 @@ test("a marked aerial strike catches exposed birds while a ground runner survive
   assert.equal(r.runners[0].status, "caught");
   assert.equal(r.runners[1].status, "running");
 });
-test(
-  "five real sockets select unique chickens, start, sprint and transfer host",
+for (const playerCount of [2, 5]) test(
+  `race with ${playerCount} connected players`,
   { timeout: 30000 },
   async () => {
     const origin = "http://localhost:4321";
@@ -149,16 +149,19 @@ test(
       host.send({ type: "start" });
       await host.take((m) => m.error);
       const guests = [];
-      for (let i = 1; i <= 4; i++) guests.push(await connect(i));
-      const state = await host.take((m) => m.players?.length === 5);
-      assert.equal(new Set(state.players.map((p) => p.bird)).size, 5);
-      const sixth = await connect(5);
-      await sixth.take((m) => m.error);
-      sixth.ws.close();
+      for (let i = 1; i < playerCount; i++) guests.push(await connect(i));
+      const state = await host.take((m) => m.players?.length === playerCount);
+      assert.equal(new Set(state.players.map((p) => p.bird)).size, playerCount);
+      if (playerCount === 5) {
+        const sixth = await connect(5);
+        await sixth.take((m) => m.error);
+        sixth.ws.close();
+      }
       guests[0].send({ type: "bird", bird: 0 });
       await guests[0].take((m) => m.error);
       host.send({ type: "start" });
-      await host.take((m) => m.race?.time >= 0);
+      const started = await host.take((m) => m.race?.time >= 0);
+      assert.equal(started.race.runners.length, playerCount);
       host.send({ type: "input", key: "down" });
       await host.take((m) =>
         m.race?.runners.some((p) => p.id === id && p.vx > 72),
