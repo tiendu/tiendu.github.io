@@ -1,3 +1,4 @@
+import { coyoteFooting } from "./coyote-route.mjs";
 import { groundHeight, strikeSurface } from "./terrain.mjs";
 
 const windup = 0.12;
@@ -27,6 +28,9 @@ export function tryPounce(r, track, landings) {
   if (r.coyote && !r.coyote.evaded && r.coyote.retreat == null) {
     kind = "coyote";
     from = r.coyote.x;
+    const footing = coyoteFooting(track, r.coyote, from);
+    if (footing.reach > 0) return;
+    rail = footing.rail;
   } else if (r.fox != null && r.foxRetreat == null) {
     kind = "fox";
     from = r.fox;
@@ -44,6 +48,10 @@ export function tryPounce(r, track, landings) {
     .sort((a, b) => Math.abs(a.x - from) - Math.abs(b.x - from))[0];
   if (!prey) return;
   const to = Math.min(from + 44, prey.x + 22, rail ? rail.x + rail.width : track.finish);
+  if (kind === "coyote") {
+    const landing = coyoteFooting(track, r.coyote, to);
+    if (landing.reach > 0 || landing.rail !== rail) return;
+  }
   r.pounce = { kind, target: prey.id, start: r.time, from, to, rail };
 }
 

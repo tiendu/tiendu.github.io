@@ -1,3 +1,4 @@
+import { coyoteFooting } from "./coyote-route.mjs";
 import { groundHeight, strikeSurface } from "./terrain.mjs";
 import { pouncePose } from "./pounce.mjs";
 
@@ -27,7 +28,7 @@ export function predatorPose(r, track, time) {
   const x = leap?.x ?? r.coyote?.x ?? r.fox;
   if (x == null) return null;
   return { kind: r.coyote ? "coyote" : "fox", x,
-    y: groundHeight(track.hills, x) + (leap?.hop ?? 0) - (leap?.crouch ?? 0) };
+    y: (r.coyote ? coyoteFooting(track, r.coyote, x).y : groundHeight(track.hills, x)) + (leap?.hop ?? 0) - (leap?.crouch ?? 0) };
 }
 
 export function jumpedInto(p, before, start, end, track) {

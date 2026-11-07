@@ -1,3 +1,4 @@
+import { coyoteFooting } from "../src/chicken/coyote-route.mjs";
 import { raceClimate, updatePredators } from "../src/chicken/encounters.mjs";
 import test from "node:test";
 import { spawn } from "node:child_process";
@@ -265,6 +266,7 @@ test("daylight, rain and safe retreats on seeded courses", () => {
       for (let tick = 0; tick < 1800 && !race.over; tick++) {
         if (tick === reactAt) input(p, "down");
         const coyote = race.coyote;
+        if (coyote && coyote.retreat == null) input(p, "down");
         if (coyote && !p.jumps && !coyote.evaded &&
             coyote.baleX - p.x <= 36 && p.x < coyote.baleX) input(p, "jump");
         const previousHawk = race.hawk;
@@ -282,7 +284,7 @@ test("daylight, rain and safe retreats on seeded courses", () => {
           }
         }
         if (race.hawk && !previousHawk) reactAt = tick + 10;
-        if (race.coyote?.evaded && race.coyote.retreat == null) escapes++;
+        if (race.coyote?.retreat != null && p.status === "running") escapes++;
         if (race.foxRetreat != null) retreats++;
         if (race.hawk && race.hawk.lift == null) {
           strikes++;
@@ -385,7 +387,7 @@ test("the coyote hunts once in any weather and every bird can clear the bale", (
   for (const phase of ["day", "night"]) {
     for (const bird of birds.keys()) {
       for (const jump of [false, true]) {
-        const track = { ...course(1), hills: [], finish: 2000, roofs: [{ x: 1100, h: 30, width: 65 }] };
+        const track = { ...course(1, 7), hills: [], finish: 2000, roofs: [{ x: 1100, h: 30, width: 65 }] };
         const race = newRace([{ id: "me", bird }], 1);
         const p = race.runners[0];
         p.x = 1000;
@@ -502,4 +504,31 @@ test("a grounded flock shares one rescue on an eagle strike; cover and fresh imm
   step(r, track);
   assert.deepEqual(r.runners.map(p => p.status), ["running", "caught", "caught", "running", "running"]);
   assert.ok(r.rescued);
+});
+
+test("the coyote clears the bale and fence edges and catches only birds on its level", () => {
+  const bale = { x: 100, width: 70, h: 28 };
+  const fence = { x: 181, width: 100, h: 58 };
+  const track = { ...course(1), roofs: [bale, fence], hills: [] };
+  const climate = raceClimate(track, 4);
+  const r = newRace(["above", "below"], 1);
+  r.time = 4;
+  r.coyote = { x: 50, baleX: bale.x, target: "above", started: 4 };
+  const y = x => coyoteFooting(track, r.coyote, x).y;
+  assert.equal(y(50), 0);
+  assert.ok(y(100) > bale.h);
+  assert.equal(y(130), bale.h);
+  assert.ok(y(181) > fence.h);
+  assert.equal(y(220), fence.h);
+  assert.ok(y(281) > fence.h);
+  assert.equal(y(335), 0);
+  for (const [i, bird] of r.runners.entries()) {
+    bird.x = 220;
+    bird.y = i ? 0 : fence.h;
+    bird.onTrail = i === 1;
+  }
+  r.coyote.x = 215;
+  const caught = [];
+  updatePredators(r, track, climate, 0.05, bird => caught.push(bird.id));
+  assert.deepEqual(caught, ["above"]);
 });

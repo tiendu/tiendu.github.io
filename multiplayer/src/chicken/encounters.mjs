@@ -1,3 +1,4 @@
+import { coyoteFooting } from "./coyote-route.mjs";
 import { tryPounce, stepPounce } from "./pounce.mjs";
 import { strikeSurface } from "./terrain.mjs";
 import { cycleStateForElapsed } from "./cycle.ts";
@@ -34,7 +35,7 @@ function startCoyote(r, track, eligible) {
   return false;
 }
 
-function chaseWithCoyote(r, dt, catchBird) {
+function chaseWithCoyote(r, track, dt, catchBird) {
   const c = r.coyote;
   if (c.retreat != null) {
     const age = r.time - c.retreat;
@@ -48,6 +49,17 @@ function chaseWithCoyote(r, dt, catchBird) {
     return;
   }
   c.x += (c.evaded ? 156 : 96) * dt;
+  if (track.version >= 8) {
+    const footing = coyoteFooting(track, c, c.x);
+    for (const bird of r.runners) {
+      if (bird.status === "running" && !bird.jumps && !(bird.safeUntil > r.time) &&
+          Math.abs(bird.x - c.x) < 12 && Math.abs(bird.y - footing.y) < 6) {
+        catchBird(bird);
+        c.retreat = r.time;
+      }
+    }
+    return;
+  }
   if (!p.jumps && p.x >= c.baleX && !p.onTrail && p.y >= c.height) {
     c.evaded = true;
   }
@@ -78,7 +90,7 @@ export function updatePredators(r, track, climate, dt, catchBird, landings = [])
     delete r.pounce;
   }
   if (r.pounce) return stepPounce(r, track, catchBird);
-  if (r.coyote) return chaseWithCoyote(r, dt, catchBird);
+  if (r.coyote) return chaseWithCoyote(r, track, dt, catchBird);
   if (r.fox !== null) {
     if (r.foxRetreat != null) {
       const age = r.time - r.foxRetreat;

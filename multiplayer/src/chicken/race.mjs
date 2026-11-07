@@ -28,7 +28,7 @@ function classicCourse(seed) {
 }
 
 // A seed is enough for the host, guests and saved runs to rebuild this track.
-export function course(seed, version = 7) {
+export function course(seed, version = 8) {
   if (version === 1) return classicCourse(seed);
   let state = seed >>> 0;
   const roll = (low, high) => {
@@ -102,7 +102,7 @@ export function move(p, dt, roofs, hills, wetPatches, icy = false) {
     p.jumps = 0;
   } else if (!p.jumps) p.jumps = 1;
 }
-export function newRace(players, seed, courseVersion = 7) {
+export function newRace(players, seed, courseVersion = 8) {
   return {
     seed, courseVersion,
     time: -3,

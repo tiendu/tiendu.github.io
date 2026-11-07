@@ -1,3 +1,4 @@
+import { coyoteFooting } from "../../../multiplayer/src/chicken/coyote-route.mjs";
 import { eaglePose } from "../../../multiplayer/src/chicken/contact.mjs";
 import { pouncePose } from "../../../multiplayer/src/chicken/pounce.mjs";
 import { drawCaughtFeathers, featherDuration } from "./chicken-plumage";
@@ -183,8 +184,9 @@ export function drawRace(canvas, r, track, players, id, effects) {
     const turn = Math.min(1, Math.max(0, (age - 0.56) / 0.28));
     const pose = r.pounce?.kind === "coyote" ? leap : null;
     const worldX = pose?.x ?? coyote.x;
-    paintCoyote(c, X(worldX), floorAt(worldX) - (pose?.hop ?? 0) + (pose?.crouch ?? 0),
-      turn, worldX, pose?.hop ?? 0);
+    const footing = coyoteFooting(track, coyote, worldX);
+    paintCoyote(c, X(worldX), ground - footing.y - (pose?.hop ?? 0) + (pose?.crouch ?? 0),
+      turn, worldX, pose?.hop ?? footing.reach);
   }
   if (r.fox !== null && !r.capture) {
     const skid = r.foxRetreat == null ? -1 : r.time - r.foxRetreat;
