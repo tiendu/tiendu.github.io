@@ -10,6 +10,17 @@ const HAT = `<svg viewBox="0 0 36 36" aria-hidden="true" focusable="false">
   <rect x="16" y="25" width="4" height="4" fill="#ffe5a0"/>
 </svg>`;
 
+// Static pixel-skull overlay; no image files and no player-supplied HTML.
+const MINER_SKULL = `<span class="miner-hat-skull" aria-hidden="true">
+  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+    <path d="M7 3h10v2h2v2h2v7h-2v2h-2v4h-3v-3h-4v3H7v-4H5v-2H3V7h2V5h2z"
+      fill="#fff1cf" stroke="#142018" stroke-width="1.5" stroke-linejoin="miter"/>
+    <path d="M6 9h5v5H6zm7 0h5v5h-5z" fill="#17231d"/>
+    <path d="M11 14h2v2h-2z" fill="#17231d"/>
+    <path d="M8 18h2v2H8zm6 0h2v2h-2z" fill="#17231d"/>
+  </svg>
+</span>`;
+
 function offset(cell, size) {
   return `translate(${INSET + (cell % size) * STEP}px, ${INSET + Math.floor(cell / size) * STEP}px)`;
 }
@@ -64,7 +75,7 @@ export function renderMinerHats(tiles, board, colors) {
       hat.className = "miner-hat";
       hat.dataset.seat = String(seat);
       hat.style.color = colors[seat % colors.length];
-      hat.innerHTML = HAT; // Constant SVG; never player-supplied markup.
+      hat.innerHTML = HAT + MINER_SKULL; // Constant SVG; never player-supplied markup.
       const badge = document.createElement("span");
       badge.className = "miner-hat-clue";
       hat.append(badge);
@@ -83,6 +94,21 @@ export function renderMinerHats(tiles, board, colors) {
 
     const path = cardinalRoute(board, from, target);
     hat.getAnimations?.().forEach((animation) => animation.cancel());
+    // Render from the authoritative shared position. The crater (-1) only
+    // triggers a blast on a NEW move; repeat snapshots never restart it.
+    const detonated = board.cells[target] === -1;
+    hat.classList.toggle("miner-bombed", detonated);
+    hat.classList.toggle("miner-fatal", detonated &&
+      (board.status === "lost" || board.status === "won"));
+    if (detonated) {
+      // Match the duration used by the existing four-direction walk.
+      const blastDelay = !reducedMotion && path && path.length > 1
+        ? Math.min(1500, (path.length - 1) * 110)
+        : 0;
+      hat.style.setProperty("--blast-delay", `${blastDelay}ms`);
+    } else {
+      hat.style.removeProperty("--blast-delay");
+    }
     hat.classList.remove("miner-in-flight");
     hat.dataset.cell = String(target);
     hat.style.transform = offset(target, board.size);

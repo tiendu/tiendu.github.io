@@ -155,3 +155,105 @@
   0% { opacity: 0; transform: translateY(7px) scale(0.8); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Bomb hit: compact, tile-local blast. No full-screen shake or image assets. */
+.mines .tile.crater {
+  background: radial-gradient(circle at 50% 52%, #592c1e 0 5px, #26231b 12px, #111914 85%);
+  border-color: #9b4930 #402519 #402519 #9b4930;
+  color: #ff9d6f;
+  box-shadow: inset 0 0 0 2px #281f19, inset 0 0 10px #070b08;
+}
+.mines .miner-hat .miner-hat-skull {
+  position: absolute;
+  z-index: 6;
+  inset: 8px;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(.7);
+  filter: drop-shadow(0 1px 1px #0a110c);
+}
+.mines .miner-hat .miner-hat-skull svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+.mines .miner-hat.miner-bombed::before,
+.mines .miner-hat.miner-bombed::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+}
+.mines .miner-hat.miner-bombed::before {
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 3px solid #ffb759;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.mines .miner-hat.miner-bombed::after {
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: #ffe0a0;
+  box-shadow:
+    -15px -15px #ff9e51, 15px -14px #ffcd74,
+    -21px 2px #f77d55, 20px 4px #ffc86c,
+    -12px 18px #ff8850, 13px 18px #f5b24c;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mines .miner-hat.miner-bombed > svg {
+    animation: mines-hat-jolt 420ms steps(5, end) var(--blast-delay, 0ms) both;
+  }
+  .mines .miner-hat.miner-bombed::before {
+    animation: mines-hit-ring 580ms steps(6, end) var(--blast-delay, 0ms) both;
+  }
+  .mines .miner-hat.miner-bombed::after {
+    animation: mines-hit-sparks 530ms steps(5, end) var(--blast-delay, 0ms) both;
+  }
+  .mines .miner-hat.miner-bombed .miner-hat-skull {
+    animation: mines-skull-flash 1450ms steps(4, end) var(--blast-delay, 0ms) both;
+  }
+  /* A final bomb leaves the skull as the round's death marker. */
+  .mines .miner-hat.miner-bombed.miner-fatal .miner-hat-skull {
+    animation: mines-skull-stay 320ms steps(4, end) var(--blast-delay, 0ms) both;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mines .miner-hat.miner-bombed .miner-hat-skull {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes mines-hat-jolt {
+  0% { transform: translate(0, 0) rotate(0); filter: brightness(1); }
+  20% { transform: translate(-3px, -2px) rotate(-14deg); filter: brightness(2); }
+  40% { transform: translate(3px, 2px) rotate(11deg); }
+  65% { transform: translate(-1px, 1px) rotate(-7deg); }
+  100% { transform: translate(0, 0) rotate(0); filter: brightness(.72); }
+}
+@keyframes mines-hit-ring {
+  0% { opacity: 0; transform: scale(.1); }
+  18% { opacity: 1; transform: scale(.55); }
+  100% { opacity: 0; transform: scale(1.65); }
+}
+@keyframes mines-hit-sparks {
+  0% { opacity: 0; transform: scale(.4); }
+  15% { opacity: 1; transform: scale(.8); }
+  100% { opacity: 0; transform: scale(1.6) rotate(13deg); }
+}
+@keyframes mines-skull-flash {
+  0%, 12% { opacity: 0; transform: scale(.55); }
+  24%, 75% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.9); }
+}
+@keyframes mines-skull-stay {
+  0%, 40% { opacity: 0; transform: scale(.6); }
+  100% { opacity: 1; transform: scale(1); }
+}
