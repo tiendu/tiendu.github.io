@@ -1,3 +1,4 @@
+import { raceClimate } from "../src/chicken/encounters.mjs";
 import test from "node:test";
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -86,7 +87,7 @@ test("a sprint continues after release and repeated taps cannot extend it", () =
 });
 
 test("fox spends one earned rescue and unassisted jogging can end the round", () => {
-  const r = newRace(["a"], 1);
+  const r = newRace(["a"], 1, 2);
   r.time = 10;
   r.fox = -4;
   r.picked = [0, 1, 2];
@@ -98,7 +99,7 @@ test("fox spends one earned rescue and unassisted jogging can end the round", ()
   assert.equal(r.runners[0].status, "caught");
 });
 test("a marked aerial strike catches exposed birds while a ground runner survives", () => {
-  const r = newRace(["a", "b"], 1);
+  const r = newRace(["a", "b"], 1, 2);
   r.time = 7;
   r.hawk = { x: 4, at: 7.04 };
   r.runners[0].y = 60;
@@ -251,4 +252,64 @@ test("seeded coop courses finish on the displayed step for every bird", () => {
   }
   assert.notDeepEqual(course(17).hills, course(18).hills);
   assert.notEqual(course(17).weatherOffset, course(18).weatherOffset);
+});
+
+test("daylight, rain and safe retreats on seeded courses", () => {
+  let chases = 0, strikes = 0, retreats = 0;
+  for (let seed = 0; seed < 32; seed++) {
+    const track = course(Math.imul(seed, 2654435761) >>> 0);
+    for (const bird of birds.keys()) {
+      const race = newRace([{ id: "me", bird }], seed);
+      const p = race.runners[0], phases = new Set();
+      let reactAt = Infinity;
+      for (let tick = 0; tick < 1800 && !race.over; tick++) {
+        if (tick === reactAt) input(p, "down");
+        const previousFox = race.fox;
+        step(race, track);
+        if (race.time < 0) continue;
+        const { cycle, weather } = raceClimate(track, race.time);
+        phases.add(cycle.phase);
+        if (race.fox !== null && race.foxRetreat == null) {
+          assert.equal(cycle.phase, "night");
+          if (previousFox === null) {
+            assert.ok(p.x - race.fox <= 225 * 0.3); // visible on narrowest course canvas
+            reactAt = tick + 10; // allow half a second to react
+            chases++;
+          }
+        }
+        if (race.foxRetreat != null) retreats++;
+        if (race.hawk && race.hawk.lift == null) {
+          strikes++;
+          assert.equal(cycle.phase, "day");
+          assert.ok(weather.rainIntensity < 0.65);
+        }
+        assert.ok(!(race.hawk && race.fox !== null));
+      }
+      assert.equal(p.status, "home", "single sprint must suffice for " + birds[bird].name);
+      assert.ok(phases.has("day") && phases.has("night"));
+    }
+  }
+  assert.ok(chases && strikes && retreats);
+});
+
+test("a marked rooftop strike gives every bird time for one sprint", () => {
+  const track = { ...course(1), skyOffset: 0, weatherOffset: 0, weatherRate: 1,
+    roofs: [{ x: -5, width: 500, h: 48 }], hills: [], mud: [], corn: [] };
+  for (const bird of birds.keys()) {
+    for (const sprint of [true, false]) {
+      const race = newRace([{ id: "me", bird }], 1);
+      race.time = 3;
+      const p = race.runners[0];
+      p.y = 48;
+      step(race, track);
+      const mark = race.hawk.x;
+      for (let tick = 0; tick < 29 && !race.over; tick++) {
+        if (sprint && tick === 10) input(p, "down");
+        step(race, track);
+        assert.equal(race.hawk.x, mark);
+      }
+      assert.equal(p.status, sprint ? "running" : "caught");
+      assert.ok(race.hawk.lift > 0);
+    }
+  }
 });

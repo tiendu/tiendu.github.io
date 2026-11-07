@@ -1,5 +1,5 @@
 import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
-import { weatherStateForElapsed } from "./chicken-run-weather";
+import { raceClimate } from "../../../multiplayer/src/chicken/encounters.mjs";
 import { paintEagle, paintFox } from "./chicken-predators";
 import { birds, groundHeight } from "../../../multiplayer/src/chicken/race.mjs";
 import { drawChickenBody } from "./chicken-run-renderer";
@@ -22,11 +22,13 @@ export function drawBird(c, bird, x, y, frame = 0, airborne = false) {
 }
 // Draw in world pixels so the lobby art and course share the same horizon.
 function pasture(c, width, groundY, distance, elapsed, track) {
+  const climate = raceClimate(track, elapsed);
   drawChickenEnvironment(c, {
     width, height: c.canvas.height, groundY, distance, elapsed, cameraOffsetY: 0, groundHeight: x => groundHeight(track?.hills, x),
-    cycle: cycleStateForElapsed(elapsed + (track?.skyOffset ?? 0)),
-    weather: weatherStateForElapsed(elapsed * (track?.weatherRate ?? 1) + (track?.weatherOffset ?? 0)),
+    cycle: climate.cycle,
+    weather: climate.weather,
   });
+  return climate;
 }
 
 export function drawPoster(canvas) {
@@ -56,7 +58,19 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
     c.fillText(s, x, y);
   };
   c.font = "bold 12px monospace";
-  pasture(c, w, ground, camera, Math.max(0, r.time), track);
+  const climate = pasture(c, w, ground, camera, Math.max(0, r.time), track);
+  if (climate.muddy) {
+    for (const patch of track.mud ?? []) {
+      const x = X(patch.x);
+      rect("#523c35", x, ground - 2, patch.width, 5);
+      rect("#987159", x + 2, ground - 2, patch.width - 4, 2);
+      rect("#e4cbad", x + 4, ground - 2, 5, 1);
+      if (focus.onTrail && focus.x >= patch.x && focus.x < patch.x + patch.width) {
+        const splash = Math.floor(r.time * 18) % 4;
+        rect("#b28b68", X(focus.x) - 8 - splash, ground - 3 - splash, 3, 2);
+      }
+    }
+  }
   for (const p of track.roofs) {
     const x = X(p.x),
       y = ground - p.h;
@@ -88,13 +102,33 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
     text("COOP", coop + 26, ground - 17, "#502c24");
   }
   if (r.hawk) {
-    const x = X(r.hawk.x),
-      t = Math.max(0, r.hawk.at - r.time);
-    rect("#332e3b", x - 24, ground - 62, 48, 3);
-    const y = ground - 65 - Math.min(1, t) * 100;
-    paintEagle(c, x - 35 * t, y, t < 0.42);
+    const hawk = r.hawk;
+    const lift = hawk.lift == null ? 0 : Math.max(0, r.time - hawk.lift);
+    const remaining = Math.max(0, hawk.at - (hawk.lift ?? r.time));
+    const x = X(hawk.x);
+    const floor = ground - groundHeight(track.hills, hawk.x);
+    const drift = Math.max(0, remaining - 0.9) * 45;
+    if (hawk.lift == null) {
+      rect("#382c3e", x - 18 - drift, floor - 2, 36, 3);
+      rect("#efc379", x - 9 - drift, floor - 3, 18, 1);
+    }
+    const y = floor - 52 - Math.min(1, remaining) * 104 - lift * 130;
+    paintEagle(c, x - 32 * remaining + lift * 76, y, hawk.lift == null && remaining < 0.55);
   }
-  if (r.fox !== null) paintFox(c, X(r.fox), ground - groundHeight(track.hills, r.fox), r.time * 12);
+  if (r.fox !== null) {
+    const skid = r.foxRetreat == null ? -1 : r.time - r.foxRetreat;
+    const x = X(r.fox), floor = ground - groundHeight(track.hills, r.fox);
+    c.save();
+    c.translate(x, floor);
+    if (skid >= 0.25) c.scale(-1, 1);
+    paintFox(c, 0, 0, r.time * (skid >= 0 ? 6 : 12));
+    c.restore();
+    if (skid < 0.25) {
+      const dust = Math.floor(r.time * 16) % 5;
+      rect("#d9b78e", x - 18 - dust, floor - 2 - dust, 4, 2);
+      rect("#917361", x - 25 - dust, floor - 4, 3, 2);
+    }
+  }
   if (r.time < 0) {
     r.runners.forEach((p, i) => {
       const info = players.find((v) => v.id === p.id);

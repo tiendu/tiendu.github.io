@@ -1,3 +1,4 @@
+import { raceClimate, updatePredators } from "./encounters.mjs";
 // World units are pixels. The server advances the race in 50 ms steps.
 const classicFinish = 4250;
 export const birds = [
@@ -24,7 +25,7 @@ function classicCourse(seed) {
 }
 
 // A seed is enough for the host, guests and saved runs to rebuild this track.
-export function course(seed, version = 2) {
+export function course(seed, version = 3) {
   if (version === 1) return classicCourse(seed);
   let state = seed >>> 0;
   const roll = (low, high) => {
@@ -43,7 +44,8 @@ export function course(seed, version = 2) {
       { x: hill.x + hill.width / 2, h: hill.h });
     x = hill.x + hill.width + roll(55, 185);
   }
-  return { finish, hills, roofs, corn, weatherOffset: roll(0, 150),
+  const mud = version >= 3 ? hills.filter((_, i) => i % 2 === seed % 2).map(h => ({ x: h.x - 22, width: 20 })) : [];
+  return { finish, hills, roofs, corn, mud, version, weatherOffset: roll(0, 150),
     weatherRate: roll(80, 125) / 100, skyOffset: roll(0, 48) };
 }
 
@@ -75,7 +77,7 @@ export function input(p, key) {
   }
   if (key === "down" && !p.burstLeft) p.burstLeft = 1;
 }
-export function move(p, dt, roofs, hills) {
+export function move(p, dt, roofs, hills, wetPatches) {
   const surface = roofs.find(
     (r) => p.x >= r.x && p.x <= r.x + r.width && p.y === r.h,
   );
@@ -83,7 +85,9 @@ export function move(p, dt, roofs, hills) {
   const grounded = onGround || (!p.jumps && surface);
   const fast = p.burstLeft > 0;
   p.burstLeft = Math.max(0, (p.burstLeft ?? 0) - dt);
-  const targetSpeed = (fast ? 128 : 72) * birds[p.bird ?? 1].speed;
+  const inMud = onGround && wetPatches?.some(patch => p.x >= patch.x && p.x < patch.x + patch.width);
+  const traction = inMud ? 0.72 : 1;
+  const targetSpeed = traction * (fast ? 128 : 72) * birds[p.bird ?? 1].speed;
   if (grounded)
     p.vx +=
       Math.sign(targetSpeed - p.vx) *
@@ -102,7 +106,7 @@ export function move(p, dt, roofs, hills) {
     p.jumps = 0;
   } else if (!p.jumps) p.jumps = 1;
 }
-export function newRace(players, seed, courseVersion = 2) {
+export function newRace(players, seed, courseVersion = 3) {
   return {
     seed, courseVersion,
     time: -3,
@@ -126,8 +130,13 @@ export function step(r, track, dt = 0.05) {
       p.jumps = 1;
     } else p.status = "caught";
   }
+  const climate = r.courseVersion >= 3 ? raceClimate(track, r.time) : null;
   for (const p of active) {
-    move(p, dt, track.roofs, track.hills);
+    move(p, dt, track.roofs, track.hills, climate?.muddy ? track.mud : null);
+    if (climate) {
+      p.altitude = p.y - groundHeight(track.hills, p.x);
+      p.onTrail = !p.jumps && p.altitude < 1;
+    }
     track.corn.forEach((c, i) => {
       if (
         Math.abs(p.x - c.x) < 13 &&
@@ -143,6 +152,12 @@ export function step(r, track, dt = 0.05) {
       p.status = "home";
     }
   }
+  if (climate) updatePredators(r, track, climate, dt, catchBird);
+  else classicPredators(r, track, active, dt, catchBird);
+  r.over = r.runners.every(p => p.status !== "running");
+}
+
+function classicPredators(r, track, active, dt, catchBird) {
   const cycle = (r.time + 6) % 15;
   if (r.time > 8 && cycle < 5) {
     const ground = active
@@ -179,5 +194,4 @@ export function step(r, track, dt = 0.05) {
     const target = active.find((p) => p.status === "running" && p.y - groundHeight(track.hills, p.x) >= 35);
     if (target) r.hawk = { x: target.x + 83, at: r.time + 1 };
   }
-  r.over = r.runners.every((p) => p.status !== "running");
 }

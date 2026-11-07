@@ -43,7 +43,10 @@ finish (3,200–4,800 steps per new race) in `multiplayer/src/chicken/race.mjs`.
 steps. Online rooms advance it on the server. Both use the same course canvas
 with hills, platforms, weather and daylight generated from the shared seed.
 The progress bar tracks your distance to the coop. Sprint gives a one-second burst
-and can be used again immediately after the burst ends.
+and can be used again immediately after the burst ends. Eagles mark a daytime
+strike with a shadow and climb away after one pass. Heavy rain cancels the dive
+and turns some ground patches muddy. Foxes chase at night and turn back after
+a short pursuit. Sunrise and sunset give the flock time between attacks.
 
 ## Saved sessions
 

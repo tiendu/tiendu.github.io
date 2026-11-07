@@ -1,3 +1,4 @@
+import { raceClimate } from "../../../multiplayer/src/chicken/encounters.mjs";
 import { createSolo, restoreSolo, readSolo, saveSolo, advanceSolo, soloInput, tickMs } from "./flock-solo.mjs";
 import { hasClassicRun } from "./chicken-run";
 import { bindCourseGestures } from "./chicken-gestures";
@@ -165,11 +166,13 @@ birds.forEach((b, i) => {
 });
 function soundState(r) {
   return { corn: r.picked.length, fox: r.fox, rescued: r.rescued,
+    phase: raceClimate(track, r.time).cycle.phase,
     status: r.runners.find(p => p.id === id)?.status };
 }
 function feedback(previous, r) {
   if (previous.corn < r.picked.length) audio.play("pickup");
   if (previous.fox === null && r.fox !== null) audio.play("alarm");
+  if (r.courseVersion >= 3 && previous.phase !== "sunset" && raceClimate(track, r.time).cycle.phase === "sunset") audio.play("bark");
   if (!previous.rescued && r.rescued) audio.play("bonus");
   if (previous.status === "running" && mine()?.status === "caught") audio.play("impact");
 }
@@ -218,7 +221,7 @@ function paint(time) {
     }
     if (r.over) return end();
   }
-  if (!paused && r.fox !== null && mine()?.status === "running" && time >= nextPulse) {
+  if (!paused && r.fox !== null && r.foxRetreat == null && mine()?.status === "running" && time >= nextPulse) {
     const pressure = Math.max(0, 1 - Math.abs(mine().x - r.fox) / 160);
     audio.play("pulse", pressure);
     nextPulse = time + 700 - 400 * pressure;
@@ -227,12 +230,13 @@ function paint(time) {
   const width = Math.max(225, Math.round(256 * ratio));
   if (canvas.width !== width) canvas.width = width;
   const age = Math.min(0.1, (time - received) / 1000);
+  const wetPatches = raceClimate(track, r.time).muddy ? track.mud : null;
   const display = {
     ...r,
     runners: r.runners.map((p) => {
       const copy = { ...p };
       if (!paused && r.time >= 0 && p.status === "running")
-        move(copy, age, track.roofs, track.hills);
+        move(copy, age, track.roofs, track.hills, wetPatches);
       return copy;
     }),
   };

@@ -35,14 +35,14 @@ const rules = await importTypeScript(
   "../src/scripts/games/chicken-run-rules.ts",
 );
 const cycle = await importTypeScript(
-  "../src/scripts/games/chicken-run-cycle.ts",
+  "../multiplayer/src/chicken/cycle.ts",
 );
 const sky = await importTypeScript("../src/scripts/games/chicken-run-sky.ts");
 const terrain = await importTypeScript(
   "../src/scripts/games/chicken-run-terrain.ts",
 );
 const weather = await importTypeScript(
-  "../src/scripts/games/chicken-run-weather.ts",
+  "../multiplayer/src/chicken/weather.ts",
 );
 const background = await importTypeScript(
   "../src/scripts/games/chicken-run-background.ts",
