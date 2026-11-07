@@ -193,7 +193,7 @@ function updateDistance() {
   distanceText.textContent = (track.finish - distance).toLocaleString() + " steps to coop";
 }
 // Presentation state stays on each client. A finished race stops receiving server ticks.
-const effects = { catches: new Map(), eagle: null };
+const effects = { steps: new Map(), catches: new Map(), eagle: null };
 function drawFrame(r) {
   for (const bird of r.runners) {
     if (bird.status === "caught" && !effects.catches.has(bird.id))
@@ -294,6 +294,7 @@ function begin() {
   previousFox = null;
   effects.lead = 0;
   effects.lastTime = null;
+  effects.steps.clear();
   effects.catches.clear();
   effects.eagle = null;
   cancelAnimationFrame(frame);

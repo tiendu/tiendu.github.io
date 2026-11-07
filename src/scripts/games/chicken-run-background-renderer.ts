@@ -71,11 +71,13 @@ function drawLandscapeLayer(
   context.fillStyle = rgbaCss(color, Math.max(0.12, alpha));
   context.beginPath();
   context.moveTo(0, bottomY);
-  for (let x = 0; x <= scene.width + 8; x += layer === "far" ? 8 : 6) {
-    const worldX = scene.distance + x / parallax;
-    const y = baseY + profileAt(worldX);
-    if (x === 0) context.lineTo(x, y);
-    else context.lineTo(x, y);
+  // Anchor samples to the landscape. A screen-aligned grid resamples every
+  // ridge on every frame, making its silhouette ripple during a slow pan.
+  const spacing = layer === "far" ? 8 : 6;
+  const origin = scene.distance * parallax;
+  const first = Math.floor(origin / spacing) * spacing;
+  for (let sample = first; sample <= origin + scene.width + spacing; sample += spacing) {
+    context.lineTo(sample - origin, baseY + profileAt(sample / parallax));
   }
   context.lineTo(scene.width, bottomY);
   context.closePath();

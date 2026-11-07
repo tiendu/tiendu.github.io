@@ -16,68 +16,82 @@ function pixels(ctx: CanvasRenderingContext2D, rows: string[], x: number, y: num
   });
 }
 
-export function paintFox(ctx: CanvasRenderingContext2D, x: number, floor: number, frame: number) {
+const foxBody = [
+  "            d  d",
+  "           drddrd",
+  "          drrrrrd",
+  "  dfffffffrrrrred",
+  " drrrrrrrrrrrrwwwdd",
+  " fffffrrrrrrwwwwwd",
+  " dffffrrrffwwww",
+  "   dffffffdd",
+];
+const tail = ["ww", "wwwrr", " wrrrrff", "   rfffff", "     dffff"];
+const eagleBody = ["    dwww", "  dbbwwwgg", " dbbbwwd g", "dbbbbbd", "dbbbbd", "dd  gg"];
+
+export function paintFox(ctx: CanvasRenderingContext2D, x: number, floor: number,
+  frame: number, turn = 0) {
+  const angle = frame * Math.PI * 0.5;
+  const gather = Math.cos(angle);
+  const brace = Math.sin(turn * Math.PI);
   ctx.save();
-  ctx.translate(Math.round(x), Math.round(floor));
-  const stretched = Math.floor(frame) % 2 === 0;
-  pixels(ctx, stretched ? ["  bb     dd", " bb       dd", "ddd        dd"] :
-    ["    bb  dd", "     bbdd", "    ddd dd"], -11, -6);
-  pixels(ctx, [
-    "                 d  d",
-    "                drddrd",
-    " ww            drrrrrd",
-    " wwwr   dfffffrrrrred",
-    "  wrrrffrrrrrrrrrrrwwdd",
-    "   rffffrrrrrrrrrwwwwd",
-    "     dffffrrrrffwww",
-    "        dffffffdd",
-  ], -24, -20);
+  ctx.translate(x, floor);
+  // Foreshorten through the pivot so all four paws stay visible during the turn.
+  const facing = Math.cos(turn * Math.PI);
+  if (Math.abs(facing) < 0.35) {
+    // Front view bridges the profile silhouettes while the fox plants its paws.
+    pixels(ctx, ["d   d", "rdddr", "rrerr", " wrw ", "  d  "], -5, -16);
+  }
+  ctx.scale(facing, 1);
+  const back = -14 - 1.5 * Math.sin(angle) + brace * 2;
+  for (let leg = 0; leg < 4; leg++) {
+    const rear = leg < 2;
+    const hip = rear ? -7 : 7;
+    const phase = angle + (leg % 2) * 0.7 + (rear ? 0 : Math.PI);
+    const reach = Math.cos(phase) * (7 - 4 * brace);
+    const toe = hip + reach;
+    const pawY = -2 - Math.max(0, Math.sin(phase)) * 4;
+    ctx.fillStyle = leg % 2 ? fur.f : fur.b;
+    ctx.fillRect(hip + reach * 0.25, back + 8, 4, 5);
+    ctx.fillRect(Math.min(toe, hip + reach * 0.25), pawY - 3, 3 + Math.abs(reach * 0.75), 3);
+    ctx.fillStyle = fur.d;
+    ctx.fillRect(toe, pawY, 5, 2);
+  }
+  ctx.save();
+  ctx.translate(-7, back + 6);
+  ctx.rotate(0.14 * Math.sin(angle - 0.7) + brace * 0.35);
+  pixels(ctx, tail, -20, -9);
+  ctx.restore();
+  ctx.translate(0, back);
+  ctx.scale(1 + gather * 0.045, 1 - gather * 0.05);
+  pixels(ctx, foxBody, -13, -7);
   ctx.restore();
 }
 
-export function paintEagle(ctx: CanvasRenderingContext2D, x: number, y: number, diving: boolean, climb = 0) {
+export function paintEagle(ctx: CanvasRenderingContext2D, x: number, y: number,
+  fold: number, climb: number, time: number) {
+  const flare = Math.min(1, climb / 0.18);
+  const tucked = fold * (1 - flare);
+  const cruising = 0.34 * Math.sin(time * 5);
+  const stroke = climb > 0 ? cruising * (1 - flare) + flare * Math.cos(climb * 8.5) : cruising;
   ctx.save();
-  ctx.translate(Math.round(x), Math.round(y));
-  if (climb > 0) {
-    ctx.rotate(-0.32);
-    // Invert the wing tips around the shoulders on each downstroke.
-    const stroke = Math.cos(climb * 13);
-    for (const side of [-1, 1]) {
-      ctx.save();
-      ctx.scale(side, 1);
-      for (let i = 0; i < 5; i++) {
-        const y = Math.round(-4 - stroke * (i + 1) * 2);
-        ctx.fillStyle = "#392c31";
-        ctx.fillRect(4 + i * 4, y, 7, 6);
-        ctx.fillStyle = "#94694e";
-        ctx.fillRect(4 + i * 4, y, 6, 2);
-      }
-      ctx.restore();
+  ctx.translate(x, y);
+  ctx.rotate(tucked * 0.72 - flare * 0.30);
+  for (const side of [-1, 1]) {
+    ctx.save();
+    ctx.scale(side, 1);
+    for (let feather = 0; feather < 5; feather++) {
+      const span = 4 + feather * (4 - tucked * 2.7);
+      const tip = -4 - (feather + 1) * (stroke * 2 + tucked * 1.8);
+      ctx.fillStyle = fur.d;
+      ctx.fillRect(span, tip, 7, 9 - feather);
+      ctx.fillStyle = fur.b;
+      ctx.fillRect(span, tip, 6, 4 - feather * 0.4);
+      ctx.fillStyle = "#ad8260";
+      ctx.fillRect(span + 2, tip, 4, 1.5);
     }
-    pixels(ctx, ["ddbbwwd", " dbbwwgg", " dbbd  g", "dd gg"], -7, -5);
     ctx.restore();
-    return;
   }
-  pixels(ctx, diving ? [
-    "dd",
-    " dbbd    d",
-    "  dbbbd dbd",
-    "   dbbbbdbd",
-    "    ddbbbwwd",
-    "      dbbwwgg",
-    "      dbbdd g",
-    "        gg",
-    "        g g",
-  ] : [
-    "dd                     dd",
-    "dbbdd               ddbbd",
-    "  dbbbdd         ddbbbd",
-    "  ddbbbbbdd   ddbbbbbdd",
-    "     ddbbbbdbbbbdd",
-    "        dbbbwwd",
-    "         dbbwwgg",
-    "         dbbd  g",
-    "        dd gg",
-  ], diving ? -12 : -24, -10);
+  pixels(ctx, eagleBody, -7, -5);
   ctx.restore();
 }

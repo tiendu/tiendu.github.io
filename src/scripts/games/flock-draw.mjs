@@ -9,15 +9,15 @@ import { cycleStateForElapsed } from "./chicken-run-cycle";
 
 const daylight = paletteForCycle(cycleStateForElapsed(0));
 
-export function drawBird(c, bird, x, y, frame = 0, airborne = false, sprint = false) {
+export function drawBird(c, bird, x, y, frame = 0, airborne = false, sprint = false, vy = 0, landing = 0) {
   c.save();
   c.translate(x, y);
   if (sprint && !airborne) c.transform(1, 0, -0.065, 1, 0, 0);
   c.scale(.72, .72);
   drawChickenBody(c, {
     x: -21, y: -42, color: bird.color, shape: bird.shape,
-    velocityY: 0, grounded: !airborne, flapAvailable: airborne, runFrame: frame,
-    takeoffPulse: 0, flapPulse: 0, landingPulse: 0, rescuePulse: 0,
+    velocityY: -vy, grounded: !airborne, flapAvailable: airborne && Math.abs(vy) < 110, runFrame: frame,
+    takeoffPulse: 0, flapPulse: 0, landingPulse: landing, rescuePulse: 0,
     invulnerable: false, eggCarried: false, slope: 0, crash: null,
   }, 0, 0, daylight);
   c.restore();
@@ -26,7 +26,7 @@ export function drawBird(c, bird, x, y, frame = 0, airborne = false, sprint = fa
 function pasture(c, width, groundY, distance, elapsed, track) {
   const climate = raceClimate(track, elapsed);
   drawChickenEnvironment(c, {
-    width, height: c.canvas.height, groundY, distance, elapsed, cameraOffsetY: 0, groundHeight: x => groundHeight(track?.hills, x),
+    width, finish: track?.finish, height: c.canvas.height, groundY, distance, elapsed, cameraOffsetY: 0, groundHeight: x => groundHeight(track?.hills, x),
     cycle: climate.cycle,
     weather: climate.weather,
   });
@@ -165,9 +165,13 @@ export function drawRace(canvas, r, track, players, id, effects) {
       rect("#524454", x + 4 - drift, floor - 4, 12, 2);
       rect("#efc379", x - 9 - drift, floor - 3, 18, 1);
     }
-    const rise = Math.max(0, lift - 0.15);
-    const y = floor - 52 - Math.min(1, remaining) * 104 - rise * (36 + rise * 53);
-    paintEagle(c, x - 32 * remaining + lift * 109, y, hawk.lift == null && remaining < 0.55, lift);
+    const approach = Math.min(1, remaining / 1.35);
+    const arc = approach * approach * (3 - 2 * approach);
+    const bank = Math.sin(approach * Math.PI * 2);
+    const rise = Math.max(0, lift - 0.18);
+    const y = floor - 52 - arc * 106 - rise * rise * 52;
+    const flyX = x - 38 * approach + bank * 6 + lift * 103;
+    paintEagle(c, flyX, y, 1 - arc, lift, r.time);
   }
   if (r.fox !== null) {
     const skid = r.foxRetreat == null ? -1 : r.time - r.foxRetreat;
@@ -179,11 +183,9 @@ export function drawRace(canvas, r, track, players, id, effects) {
         rect("#839ba8", X(print) + 2, floorAt(print) + 1, 2, 1);
       }
     }
-    c.save();
-    c.translate(x, floor);
-    if (skid >= (r.foxSkid ? 0.6 : 0.25)) c.scale(-1, 1);
-    paintFox(c, 0, 0, r.time * (skid >= 0 ? 6 : 12));
-    c.restore();
+    const pivot = r.foxSkid ? 0.6 : 0.25;
+    const turn = Math.min(1, Math.max(0, (skid - pivot + 0.14) / 0.28));
+    paintFox(c, x, floor, r.fox / 6, turn);
     if (skid < 0.25) {
       const dust = Math.floor(r.time * 16) % 5;
       rect("#d9b78e", x - 18 - dust, floor - 2 - dust, 4, 2);
@@ -241,7 +243,13 @@ export function drawRace(canvas, r, track, players, id, effects) {
       rect(tint, x - 8 - stride * 9, y - 2 - Math.sin(stride * Math.PI) * 5, 3, 2);
       rect(tint, x - 11 - stride * 5, y - 2 - stride * 3, 2, 1);
     }
-    drawBird(c, b, x, y, p.x / 8, p.jumps > 0, p.burstLeft > 0);
+    const airborne = p.jumps > 0;
+    const last = effects.steps.get(p.id);
+    const landed = !airborne && last?.airborne ? r.time : last?.landed ?? -Infinity;
+    effects.steps.set(p.id, { airborne, landed });
+    const stride = b.shape === "chick" ? 6.5 : 8;
+    drawBird(c, b, x, y, p.x / stride + info.bird * 0.37, airborne,
+      p.burstLeft > 0, p.vy, Math.max(0, 0.14 - (r.time - landed)));
     if (p.id === id) {
       rect("#302d32", x - 13, Math.round(y) - 42, 27, 14);
       text("YOU", x - 10, y - 31, "#ffe15a");

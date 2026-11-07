@@ -1,3 +1,4 @@
+import { drawFarmDetails } from "./chicken-farm-details";
 import type { RunCycleState } from "./chicken-run-cycle";
 import { drawChickenCountryside } from "./chicken-run-background-renderer";
 import {
@@ -13,6 +14,7 @@ import { terrainHeightAt, terrainSlopeAt } from "./chicken-run-terrain";
 import type { RunWeatherState } from "./chicken-run-weather";
 
 export interface ChickenEnvironmentScene {
+  finish?: number;
   groundHeight?: (x: number) => number;
   width: number;
   height: number;
@@ -327,6 +329,8 @@ export function drawChickenEnvironment(
 ): ChickenWorldPalette {
   const palette = paletteForEnvironment(scene.cycle, scene.weather);
   drawBackground(context, scene, palette);
+  if (scene.finish) drawFarmDetails(context, scene.width, scene.groundY, scene.distance,
+    scene.finish, scene.elapsed, scene.cycle.nightFactor);
   drawGround(context, scene, palette);
   drawRain(context, scene, palette);
   return palette;

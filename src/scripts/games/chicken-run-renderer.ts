@@ -262,7 +262,7 @@ interface ChickenPose {
   mudCrash: boolean;
   flapFrame: number;
   franticFrame: number;
-  legPhase: number;
+
 }
 
 const CHICKEN_OUTLINE_OFFSETS = [
@@ -307,13 +307,24 @@ function fillChickenLegs(
   pose: ChickenPose,
 ): void {
   if (chicken.grounded && !chicken.crash) {
-    context.fillRect(pose.legPhase ? 14 : 18, 35, 3, 7);
-    context.fillRect(pose.legPhase ? 27 : 23, 35, 3, 7);
-    context.fillRect(pose.legPhase ? 11 : 17, 40, 8, 2);
-    context.fillRect(pose.legPhase ? 25 : 21, 40, 8, 2);
+    for (const leg of [0, 1]) {
+      const phase = ((chicken.runFrame + leg) / 2) % 1;
+      const swing = Math.max(0, (phase - 0.5) * 2);
+      // The planted foot travels backwards at ground speed. The return lifts the toes.
+      const reach = phase < 0.5 ? 5.5 - 22 * phase : -5.5 * Math.cos(Math.PI * swing);
+      const hip = 17 + leg * 7;
+      const toe = hip + reach;
+      const y = 40 - 5 * Math.sin(Math.PI * swing);
+      context.fillRect(hip + reach * 0.25, 34, 3, 4);
+      context.fillRect(Math.min(toe, hip + reach * 0.25), y - 3, 3 + Math.abs(reach * 0.75), 3);
+      context.fillRect(toe, y, 6, 2);
+    }
   } else if (!pose.mudCrash) {
-    context.fillRect(13, 34, 7, 3);
-    context.fillRect(24, 35, 7, 3);
+    const extension = Math.min(1, Math.max(0, chicken.velocityY / 130));
+    for (const hip of [15, 25]) {
+      context.fillRect(hip, 33, 3, 3 + extension * 4);
+      context.fillRect(hip - 2 + extension * 3, 35 + extension * 4, 7, 2);
+    }
   }
 }
 
@@ -345,8 +356,8 @@ export function drawChickenBody(
   const y = crash?.y ?? chicken.y;
   const shocked = crash !== null;
   const mudCrash = crash?.kind === "mud";
-  const legPhase = Math.floor(chicken.runFrame) % 2;
-  const headBob = chicken.grounded && !crash ? (legPhase ? 1 : 0) : 0;
+  const headBob = chicken.grounded && !crash
+    ? 0.7 * Math.cos(chicken.runFrame * Math.PI * 2) : 0;
 
   let scaleX = 1;
   let scaleY = 1;
@@ -373,7 +384,7 @@ export function drawChickenBody(
       ? Math.floor(chicken.flapPulse * 42) % 3
       : -1,
     franticFrame: mudCrash ? Math.floor(crash.elapsed * 18) % 2 : 0,
-    legPhase,
+
   };
 
   context.save();
@@ -401,7 +412,14 @@ export function drawChickenBody(
   context.shadowBlur = 0;
   if (mudCrash || chicken.flapPulse > 0 || !chicken.grounded) {
     context.fillStyle = chicken.color;
+    context.save();
+    if (!chicken.grounded && !crash) {
+      context.translate(14, 19);
+      context.rotate(Math.tanh(chicken.velocityY / 110) * 0.38);
+      context.translate(-14, -19);
+    }
     fillChickenWing(context, chicken, pose);
+    context.restore();
   }
 
   if (chicken.eggCarried && !crash) {

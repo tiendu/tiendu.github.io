@@ -93,12 +93,30 @@ const plumage = {
   },
 } as const;
 
+// One transparent sprite per outfit/expression, reused by every runner and portrait.
+const sprites = new Map<string, HTMLCanvasElement>();
 export function drawPlumage(ctx: CanvasRenderingContext2D, shape: string, bob: number, shocked: boolean) {
+  const spriteKey = shape + (shocked ? "-caught" : "");
+  let sprite = sprites.get(spriteKey);
+  if (!sprite) {
+    sprite = document.createElement("canvas");
+    sprite.width = 48;
+    sprite.height = 40;
+    const brush = sprite.getContext("2d");
+    if (!brush) return;
+    paintPlumage(brush, shape, shocked);
+    sprites.set(spriteKey, sprite);
+  }
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(sprite, 0, bob);
+}
+
+function paintPlumage(ctx: CanvasRenderingContext2D, shape: string, shocked: boolean) {
   const key = shape as keyof typeof plumage;
   const { colors, rows } = plumage[key] ?? plumage.round;
   const [a, c, t, u, r] = colors;
   const ink: Record<string, string> = { a, c, t, u, r, i: "#211d26", w: "#fffae5", b: "#f4ac44" };
-  const top = 36 - rows.length * 2 + bob;
+  const top = 36 - rows.length * 2;
   for (const [row, pixels] of rows.entries()) {
     for (let x = 0; x < pixels.length;) {
       const pixel = pixels[x];
