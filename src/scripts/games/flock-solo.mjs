@@ -4,7 +4,7 @@ import { readStoredSession, writeStoredSession, removeStoredSession } from "./sh
 
 const key = "tiendu-chicken-solo-race";
 export const tickMs = 50;
-export function createSolo(bird, seed = crypto.getRandomValues(new Uint32Array(1))[0], version = 4) {
+export function createSolo(bird, seed = crypto.getRandomValues(new Uint32Array(1))[0], version = 5) {
   const players = [{ id: "solo", bird, name: birds[bird].name, online: true }];
   return { players, race: newRace(players, seed, version), track: course(seed, version), ticks: 0, inputs: [] };
 }

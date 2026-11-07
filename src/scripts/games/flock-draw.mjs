@@ -1,7 +1,7 @@
 import { drawCaughtFeathers, featherDuration } from "./chicken-plumage";
 import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
 import { raceClimate } from "../../../multiplayer/src/chicken/encounters.mjs";
-import { paintEagle, paintFox } from "./chicken-predators";
+import { paintCoyote, paintEagle, paintFox, paintPerchedEagle } from "./chicken-predators";
 import { birds, groundHeight } from "../../../multiplayer/src/chicken/race.mjs";
 import { drawChickenBody } from "./chicken-run-renderer";
 import { paletteForCycle } from "./chicken-run-sky";
@@ -157,7 +157,7 @@ export function drawRace(canvas, r, track, players, id, effects) {
     const lift = hawk.lift == null ? 0 : Math.max(0, r.time - hawk.lift);
     const remaining = Math.max(0, hawk.at - (hawk.lift ?? r.time));
     const x = X(hawk.x);
-    const floor = ground - groundHeight(track.hills, hawk.x);
+    const floor = ground - (hawk.surface ?? groundHeight(track.hills, hawk.x));
     const drift = Math.max(0, remaining - 0.9) * 45;
     if (hawk.lift == null) {
       rect("#382c3e", x - 5 - drift, floor - 2, 10, 3);
@@ -169,9 +169,18 @@ export function drawRace(canvas, r, track, players, id, effects) {
     const arc = approach * approach * (3 - 2 * approach);
     const bank = Math.sin(approach * Math.PI * 2);
     const rise = Math.max(0, lift - 0.18);
-    const y = floor - 52 - arc * 106 - rise * rise * 52;
-    const flyX = x - 38 * approach + bank * 6 + lift * 103;
-    paintEagle(c, flyX, y, 1 - arc, lift, r.time);
+    const clearance = hawk.surface == null ? 52 : 8;
+    const y = floor - clearance - arc * (158 - clearance) - rise * rise * 52;
+    const horizontal = hawk.surface == null ? approach : Math.max(0, (approach - 0.65) / 0.35);
+    const flyX = x - 38 * horizontal + bank * horizontal * 6 + lift * 103;
+    if (hawk.perched && r.time < hawk.lift) paintPerchedEagle(c, x, floor);
+    else paintEagle(c, flyX, y, 1 - arc, lift, r.time);
+  }
+  if (r.coyote) {
+    const coyote = r.coyote;
+    const age = coyote.retreat == null ? 0 : r.time - coyote.retreat;
+    const turn = Math.min(1, Math.max(0, (age - 0.56) / 0.28));
+    paintCoyote(c, X(coyote.x), floorAt(coyote.x), turn);
   }
   if (r.fox !== null) {
     const skid = r.foxRetreat == null ? -1 : r.time - r.foxRetreat;

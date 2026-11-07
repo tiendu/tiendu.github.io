@@ -171,11 +171,12 @@ birds.forEach((b, i) => {
   el("picks").append(button);
 });
 function soundState(r) {
-  return { corn: r.picked.length, fox: r.fox, rescued: r.rescued,
+  return { corn: r.picked.length, fox: r.fox, coyote: !!r.coyote, rescued: r.rescued,
     phase: raceClimate(track, r.time).cycle.phase,
     status: r.runners.find(p => p.id === id)?.status };
 }
 function feedback(previous, r) {
+  if (r.coyote && !previous.coyote) audio.play("yip");
   if (previous.corn < r.picked.length) audio.play("pickup");
   if (previous.fox === null && r.fox !== null) audio.play("alarm");
   if (r.courseVersion >= 3 && previous.phase !== "sunset" && raceClimate(track, r.time).cycle.phase === "sunset") audio.play("bark");
@@ -199,6 +200,7 @@ function drawFrame(r) {
     if (bird.status === "caught" && !effects.catches.has(bird.id))
       effects.catches.set(bird.id, r.time);
   }
+  if (r.coyote || r.fox !== null) effects.eagle = null;
   if (r.hawk) effects.eagle = r.hawk;
   else if (effects.eagle && effects.eagle.lift == null) {
     // A delayed room snapshot can skip the server's first pull-up frame.
@@ -244,6 +246,7 @@ function end() {
 }
 let previousRoomRace;
 let previousFox;
+let previousCoyoteX;
 function paint(time) {
   const r = view?.race;
   if (!r || r.over) return;
@@ -252,6 +255,7 @@ function paint(time) {
     while (time - received >= tickMs && !r.over) {
       const previous = soundState(r);
       previousFox = r.fox;
+      previousCoyoteX = r.coyote?.x;
       advanceSolo(local);
       feedback(previous, r);
       received += tickMs;
@@ -269,9 +273,12 @@ function paint(time) {
   const interval = local ? tickMs / 1000 : r.time - (previousRoomRace?.time ?? r.time);
   const blend = interval > 0 ? Math.min(1, age / interval) : 1;
   const lastFox = local ? previousFox : previousRoomRace?.fox;
+  const lastCoyote = local ? previousCoyoteX : previousRoomRace?.coyote?.x;
   const display = {
     ...r,
     time: r.time + (paused ? 0 : Math.max(0, age)),
+    coyote: r.coyote && Number.isFinite(lastCoyote)
+      ? { ...r.coyote, x: lastCoyote + (r.coyote.x - lastCoyote) * blend } : r.coyote,
     fox: Number.isFinite(lastFox) && Number.isFinite(r.fox)
       ? lastFox + (r.fox - lastFox) * blend : r.fox,
     runners: r.runners.map((p) => {
@@ -292,6 +299,7 @@ function paint(time) {
 function begin() {
   previousRoomRace = null;
   previousFox = null;
+  previousCoyoteX = null;
   effects.lead = 0;
   effects.lastTime = null;
   effects.steps.clear();

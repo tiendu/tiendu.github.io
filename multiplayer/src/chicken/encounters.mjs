@@ -1,3 +1,4 @@
+import { strikeSurface } from "./terrain.mjs";
 import { cycleStateForElapsed } from "./cycle.ts";
 import { weatherStateForElapsed } from "./weather.ts";
 
@@ -17,10 +18,51 @@ export function raceClimate(track, elapsed) {
   return { cycle, weather, muddy: weather.rainIntensity >= 0.35 };
 }
 
+// A level approach gives the player time to see the bale and jump once.
+function startCoyote(r, track, eligible) {
+  if (r.coyoteUsed || track.version < 5) return false;
+  for (const p of eligible) {
+    if (!p.onTrail || p.x < track.finish / 2) continue;
+    const bale = track.roofs.find(b => b.h <= 30 && b.width >= 65 &&
+      b.x - p.x >= 82 && b.x - p.x <= 108);
+    if (!bale || track.hills.some(h => h.x < bale.x && h.x + h.width > p.x)) continue;
+    r.coyote = { target: p.id, x: p.x - 56, baleX: bale.x, height: bale.h, started: r.time };
+    r.coyoteUsed = true;
+    return true;
+  }
+  return false;
+}
+
+function chaseWithCoyote(r, dt, catchBird) {
+  const c = r.coyote;
+  if (c.retreat != null) {
+    const age = r.time - c.retreat;
+    c.x += (age < 0.7 ? 122 : -62) * dt;
+    if (age > 1.8) r.coyote = null;
+    return;
+  }
+  const p = r.runners.find(b => b.id === c.target);
+  if (p?.status !== "running" || r.time - c.started > 6) {
+    c.retreat = r.time;
+    return;
+  }
+  c.x += (c.evaded ? 156 : 96) * dt;
+  if (!p.jumps && p.x >= c.baleX && !p.onTrail && p.y >= c.height) {
+    c.evaded = true;
+  }
+  if (c.evaded && c.x >= p.x + 5) {
+    c.retreat = r.time;
+  } else if (!c.evaded && p.onTrail && Math.abs(p.x - c.x) < 12 && !(p.safeUntil > r.time)) {
+    catchBird(p);
+    c.retreat = r.time;
+  }
+}
+
 export function updatePredators(r, track, climate, dt, catchBird) {
   const { phase, cycleIndex } = climate.cycle;
   const night = phase === "night";
   const flying = phase === "day" && !climate.rain && climate.weather.rainIntensity < 0.65;
+  if (r.coyote) return chaseWithCoyote(r, dt, catchBird);
   if (r.fox !== null) {
     if (r.foxRetreat != null) {
       const age = r.time - r.foxRetreat;
@@ -35,7 +77,13 @@ export function updatePredators(r, track, climate, dt, catchBird) {
       return;
     }
     const target = r.runners.find(p => p.id === r.foxTarget);
-    if (!night || target?.status !== "running" || r.time >= r.chaseEnd || target.x - r.fox > 67) {
+    const gap = target ? target.x - r.fox : 0;
+    let escaped = gap > 67;
+    if (track.version >= 5) {
+      r.foxLeadTime = escaped ? (r.foxLeadTime ?? 0) + dt : 0;
+      escaped = r.time - r.foxStarted >= 1.5 && r.foxLeadTime >= 0.6;
+    }
+    if (!night || target?.status !== "running" || r.time >= r.chaseEnd || escaped) {
       r.foxRetreat = r.time;
       return;
     }
@@ -48,7 +96,8 @@ export function updatePredators(r, track, climate, dt, catchBird) {
     }
     r.fox += (patch && climate.muddy ? 55 : 90) * dt;
     // A roof is safe. Ground height comes from the shared movement simulation.
-    if (target.onTrail && target.x - r.fox < 10 && !(target.safeUntil > r.time)) {
+    const touching = track.version >= 5 ? Math.abs(target.x - r.fox) < 10 : target.x - r.fox < 10;
+    if (target.onTrail && touching && !(target.safeUntil > r.time)) {
       catchBird(target);
       r.foxRetreat = r.time;
     }
@@ -61,16 +110,21 @@ export function updatePredators(r, track, climate, dt, catchBird) {
     } else if (!flying || r.time >= hawk.at) {
       if (flying) {
         for (const p of r.runners) {
+          const exposed = hawk.surface == null ? p.altitude >= 35 :
+            p.y >= hawk.surface - 4 && p.y <= hawk.surface + 28 &&
+            p.y >= strikeSurface(track, p.x).height - 4;
           if (p.id === hawk.target && p.status === "running" && !(p.safeUntil > r.time) &&
-              p.altitude >= 35 && Math.abs(p.x - hawk.x) < 19) catchBird(p);
+              exposed && Math.abs(p.x - hawk.x) < 19) catchBird(p);
         }
       }
-      hawk.lift = r.time;
+      if (flying && hawk.raised) hawk.perched = true;
+      hawk.lift = r.time + (hawk.perched ? 0.7 : 0);
     }
     return;
   }
   if (r.time < 3) return;
   const eligible = r.runners.filter(p => p.status === "running" && !(p.safeUntil > r.time));
+  if (startCoyote(r, track, eligible)) return;
   if (night && r.foxCycle !== cycleIndex) {
     if (raceClimate(track, r.time + 3.45).cycle.phase !== "night") return;
     const target = eligible.filter(p => p.onTrail &&
@@ -81,6 +135,10 @@ export function updatePredators(r, track, climate, dt, catchBird) {
       // leaves half a second to react and a full sprint to escape.
       const progress = Math.min(1, target.x / track.finish);
       r.fox = target.x - (track.version >= 4 ? 65 - 10 * progress : 55);
+      if (track.version >= 5) {
+        r.foxStarted = r.time;
+        r.foxLeadTime = 0;
+      }
       r.foxTarget = target.id;
       r.foxCycle = cycleIndex;
       r.chaseEnd = r.time + 3.45;
@@ -89,9 +147,15 @@ export function updatePredators(r, track, climate, dt, catchBird) {
     const impact = raceClimate(track, r.time + 1.35);
     if (impact.cycle.phase !== "day" || impact.rain || impact.weather.rainIntensity >= 0.65) return;
     // Lock the mark on the jogging line. A single sprint clears the strike.
-    const target = eligible.find(p => p.jumps === 0 && p.altitude >= 35) ?? eligible.find(p => p.onTrail);
+    const target = eligible.find(p => !p.jumps && (track.version >= 5 ? !p.onTrail : p.altitude >= 35))
+      ?? eligible.find(p => p.onTrail);
     if (target) {
       r.hawk = { target: target.id, x: target.x + 1.35 * Math.min(target.vx, 76), at: r.time + 1.35 };
+      if (track.version >= 5) {
+        const { height, raised } = strikeSurface(track, r.hawk.x);
+        r.hawk.surface = height;
+        r.hawk.raised = raised;
+      }
       r.eagleCycle = cycleIndex;
     }
   }

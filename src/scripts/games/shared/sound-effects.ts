@@ -43,6 +43,10 @@ export const effects = {
   // Chicken movement and fox chase.
   hop(tone) { tone(350, 650, 0.065, 0, 0.07); },
   land(tone) { tone(130, 65, 0.05, 0, 0.055); },
+  yip(tone) {
+    tone(620, 1120, 0.09, 0, 0.07, "triangle");
+    tone(910, 490, 0.16, 0.12, 0.065, "triangle");
+  },
   bark(tone) {
     tone(380, 135, 0.09, 0, 0.055, "sawtooth");
     tone(290, 110, 0.07, 0.16, 0.035, "triangle");

@@ -255,7 +255,7 @@ test("seeded coop courses finish on the displayed step for every bird", () => {
 });
 
 test("daylight, rain and safe retreats on seeded courses", () => {
-  let chases = 0, strikes = 0, retreats = 0;
+  let chases = 0, strikes = 0, retreats = 0, escapes = 0;
   for (let seed = 0; seed < 32; seed++) {
     const track = course(Math.imul(seed, 2654435761) >>> 0);
     for (const bird of birds.keys()) {
@@ -264,6 +264,10 @@ test("daylight, rain and safe retreats on seeded courses", () => {
       let reactAt = Infinity;
       for (let tick = 0; tick < 1800 && !race.over; tick++) {
         if (tick === reactAt) input(p, "down");
+        const coyote = race.coyote;
+        if (coyote && !p.jumps && !coyote.evaded &&
+            coyote.baleX - p.x <= 36 && p.x < coyote.baleX) input(p, "jump");
+        const previousHawk = race.hawk;
         const previousFox = race.fox;
         step(race, track);
         if (race.time < 0) continue;
@@ -277,19 +281,21 @@ test("daylight, rain and safe retreats on seeded courses", () => {
             chases++;
           }
         }
+        if (race.hawk && !previousHawk) reactAt = tick + 10;
+        if (race.coyote?.evaded && race.coyote.retreat == null) escapes++;
         if (race.foxRetreat != null) retreats++;
         if (race.hawk && race.hawk.lift == null) {
           strikes++;
           assert.equal(cycle.phase, "day");
           assert.ok(weather.rainIntensity < 0.65);
         }
-        assert.ok(!(race.hawk && race.fox !== null));
+        assert.ok([!!race.hawk, race.fox !== null, !!race.coyote].filter(Boolean).length <= 1);
       }
-      assert.equal(p.status, "home", "single sprint must suffice for " + birds[bird].name);
+      assert.equal(p.status, "home", "escape route for " + birds[bird].name + " seed " + seed);
       assert.ok(phases.has("day") && phases.has("night"));
     }
   }
-  assert.ok(chases && strikes && retreats);
+  assert.ok(chases && strikes && retreats && escapes);
 });
 
 test("a marked rooftop strike gives every bird time for one sprint", () => {
@@ -310,6 +316,7 @@ test("a marked rooftop strike gives every bird time for one sprint", () => {
       }
       assert.equal(p.status, sprint ? "running" : "caught");
       assert.ok(race.hawk.lift > 0);
+      assert.equal(race.hawk.perched, true);
     }
   }
 });
@@ -352,4 +359,74 @@ test("rain breaks off a dive and an elevated chicken can escape a fox on ice", (
   updatePredators(race, track, { cycle: { phase: "night" }, icy: true, weather }, 0.05, assert.fail);
   assert.equal(race.foxRetreat, race.time);
   assert.equal(race.foxSkid, true);
+});
+
+test("an eagle hits the open trail and a rail shelters the chicken beneath", () => {
+  for (const cover of [false, true]) {
+    const track = { ...course(1), skyOffset: 0, weatherOffset: 0, weatherRate: 1,
+      roofs: cover ? [{ x: 64, width: 80, h: 26 }] : [], hills: [], mud: [], corn: [] };
+    const race = newRace(["me"], 1);
+    race.time = 3;
+    const p = race.runners[0];
+    step(race, track);
+    assert.equal(race.hawk.surface, cover ? 26 : 0);
+    while (!race.over && race.hawk.lift == null) step(race, track);
+    assert.equal(p.status, cover ? "running" : "caught");
+    if (cover) {
+      assert.ok(race.hawk.perched && race.hawk.lift > race.time);
+      while (race.hawk) step(race, track);
+      assert.equal(p.status, "running");
+    }
+  }
+});
+
+test("the coyote hunts once in any weather and every bird can clear the bale", () => {
+  const weather = { rainIntensity: 1 };
+  for (const phase of ["day", "night"]) {
+    for (const bird of birds.keys()) {
+      for (const jump of [false, true]) {
+        const track = { ...course(1), hills: [], finish: 2000, roofs: [{ x: 1100, h: 30, width: 65 }] };
+        const race = newRace([{ id: "me", bird }], 1);
+        const p = race.runners[0];
+        p.x = 1000;
+        p.onTrail = true;
+        race.time = 16;
+        const climate = { cycle: { phase, cycleIndex: 1 }, rain: true, weather };
+        updatePredators(race, track, climate, 0.05, assert.fail);
+        assert.equal(race.coyote.target, "me");
+        let jumped = false;
+        for (let tick = 0; tick < 180 && race.coyote; tick++) {
+          if (jump && !jumped && p.x >= 1064) {
+            input(p, "jump");
+            jumped = true;
+          }
+          move(p, 0.05, track.roofs, track.hills);
+          p.onTrail = p.y === 0 && !p.jumps;
+          race.time += 0.05;
+          updatePredators(race, track, climate, 0.05, caught => { caught.status = "caught"; });
+        }
+        assert.equal(race.coyote, null);
+        assert.equal(p.status, jump ? "running" : "caught");
+        p.status = "running";
+        p.x = 1000;
+        p.onTrail = true;
+        updatePredators(race, track, climate, 0.05, assert.fail);
+        assert.equal(race.coyote, null);
+      }
+    }
+  }
+});
+
+test("gaining a momentary lead does not immediately shake the fox", () => {
+  const track = course(1), race = newRace(["me"], 1);
+  const p = race.runners[0];
+  Object.assign(race, { fox: 0, foxTarget: "me", foxStarted: 10, time: 10, chaseEnd: 13.45 });
+  const climate = { cycle: { phase: "night" }, weather: { rainIntensity: 0 } };
+  for (let tick = 0; tick < 32; tick++) {
+    p.x = race.fox + 72;
+    updatePredators(race, track, climate, 0.05, assert.fail);
+    if (tick < 30) assert.equal(race.foxRetreat, undefined);
+    race.time += 0.05;
+  }
+  assert.ok(race.foxRetreat >= 11.5);
 });

@@ -95,3 +95,55 @@ export function paintEagle(ctx: CanvasRenderingContext2D, x: number, y: number,
   pixels(ctx, eagleBody, -7, -5);
   ctx.restore();
 }
+
+export function paintPerchedEagle(ctx: CanvasRenderingContext2D, x: number, rail: number) {
+  pixels(ctx, ["    wwwd", "   bwwwgg", "  dbbww", "  dbbbd", " dbbbbd",
+    "dbbbbd", "dd dbd", "   g g"], x - 8, rail - 16);
+}
+
+export function paintCoyote(ctx: CanvasRenderingContext2D, x: number, floor: number, turn: number) {
+  const stride = x / 5;
+  ctx.save();
+  ctx.translate(x, floor);
+  const facing = Math.cos(turn * Math.PI);
+  if (Math.abs(facing) < 0.4) {
+    ctx.fillStyle = "#706460";
+    ctx.fillRect(-6, -25, 12, 22);
+    ctx.fillRect(-5, -30, 3, 6);
+    ctx.fillRect(2, -30, 3, 6);
+    ctx.fillStyle = "#c3aa86";
+    ctx.fillRect(-3, -21, 6, 6);
+  }
+  ctx.scale(facing, 1);
+  const shoulder = -17 - Math.sin(stride) * 1.2;
+  for (let i = 0; i < 4; i++) {
+    const hip = i < 2 ? -9 : 9;
+    const phase = stride + i * 1.8;
+    const paw = hip + 7 * Math.cos(phase);
+    const y = -2 - 4 * Math.max(0, Math.sin(phase));
+    ctx.strokeStyle = i % 2 ? "#bb9b77" : "#685952";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(hip, shoulder + 4);
+    ctx.lineTo((hip + paw) / 2 - 2, shoulder + 10);
+    ctx.lineTo(paw, y);
+    ctx.stroke();
+    ctx.fillStyle = "#443c3c";
+    ctx.fillRect(paw - 1, y, 5, 2);
+  }
+  ctx.translate(0, shoulder);
+  ctx.fillStyle = "#706460";
+  ctx.fillRect(-23, 6, 11, 5);
+  ctx.fillRect(-29, 10, 9, 4);
+  ctx.fillRect(-15, -3, 28, 10);
+  ctx.fillRect(8, -11, 12, 12);
+  ctx.fillRect(9, -18, 3, 8);
+  ctx.fillRect(16, -19, 3, 9);
+  ctx.fillStyle = "#c3aa86";
+  ctx.fillRect(-12, 2, 22, 5);
+  ctx.fillRect(14, -4, 15, 4);
+  ctx.fillStyle = "#342f30";
+  ctx.fillRect(26, -5, 4, 3);
+  ctx.fillRect(17, -8, 2, 2);
+  ctx.restore();
+}

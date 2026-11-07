@@ -1,3 +1,5 @@
+import { groundHeight } from "./terrain.mjs";
+export { groundHeight };
 import { raceClimate, updatePredators } from "./encounters.mjs";
 // World units are pixels. The server advances the race in 50 ms steps.
 const classicFinish = 4250;
@@ -25,7 +27,7 @@ function classicCourse(seed) {
 }
 
 // A seed is enough for the host, guests and saved runs to rebuild this track.
-export function course(seed, version = 4) {
+export function course(seed, version = 5) {
   if (version === 1) return classicCourse(seed);
   let state = seed >>> 0;
   const roll = (low, high) => {
@@ -47,13 +49,6 @@ export function course(seed, version = 4) {
   const mud = version >= 3 ? hills.filter((_, i) => i % 2 === seed % 2).map(h => ({ x: h.x - (version >= 4 ? 50 : 22), width: version >= 4 ? 42 : 20 })) : [];
   return { finish, hills, roofs, corn, mud, version, snowCourse: version >= 4 && (seed >>> 8) % 3 === 1, weatherOffset: roll(0, 150),
     weatherRate: roll(80, 125) / 100, skyOffset: roll(0, 48) };
-}
-
-export function groundHeight(hills, x) {
-  const hill = hills?.find(h => x > h.x && x < h.x + h.width);
-  if (!hill) return 0;
-  const phase = (x - hill.x) / hill.width;
-  return hill.h * (1 - Math.cos(2 * Math.PI * phase)) / 2;
 }
 
 export function runner(id, bird = 1) {
@@ -106,7 +101,7 @@ export function move(p, dt, roofs, hills, wetPatches, icy = false) {
     p.jumps = 0;
   } else if (!p.jumps) p.jumps = 1;
 }
-export function newRace(players, seed, courseVersion = 4) {
+export function newRace(players, seed, courseVersion = 5) {
   return {
     seed, courseVersion,
     time: -3,
