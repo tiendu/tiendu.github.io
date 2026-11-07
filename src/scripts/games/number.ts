@@ -1,5 +1,5 @@
 import { createNumberRound, guessNumber, restoreNumberSession } from "./number-rules";
-import { createNumberAudio } from "./number-audio";
+import { mountGameSound } from "./shared/game-sound";
 import { mountNumberOnline } from "./number-online";
 import { mountAllGames } from "./shared/mount";
 
@@ -24,11 +24,8 @@ export function mountNumberGames(): void {
     const keys = [...root.querySelectorAll<HTMLButtonElement>("[data-number-key]")];
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const resetButton = get<HTMLButtonElement>("[data-number-new]");
-    const soundButton = get<HTMLButtonElement>("[data-number-sound]");
     const dialog = get<HTMLDialogElement>("[data-number-dialog]");
-    const sounds = createNumberAudio();
-    root.addEventListener("pointerdown", sounds.unlock, true);
-    root.addEventListener("keydown", sounds.unlock, true);
+    const sounds = mountGameSound(root, "number");
     // Keep quick taps visible after release, including physical keyboard input.
     const pressTimers = new WeakMap<HTMLButtonElement, number>();
     const flashButton = (button?: HTMLButtonElement) => {
@@ -44,7 +41,7 @@ export function mountNumberGames(): void {
       const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("button") : null;
       if (button && !button.disabled && !button.hasAttribute("data-number-key")) {
         flashButton(button);
-        if (!button.matches("[data-number-sound], [data-number-copy], [data-number-leave]")) sounds.play("tap");
+        if (!button.matches("[data-game-sound], [data-number-copy], [data-number-leave]")) sounds.play("tap");
       }
     }, true);
     const storageKey = "tiendu-number-session";
@@ -243,13 +240,6 @@ export function mountNumberGames(): void {
       else { dialog.returnValue = "cancel"; dialog.showModal(); }
     });
     dialog.addEventListener("close", () => { if (dialog.returnValue === "reset") newRound(); });
-    soundButton.disabled = false;
-    const renderSound = () => {
-      soundButton.textContent = sounds.isEnabled() ? "SOUND ON" : "SOUND OFF";
-      soundButton.setAttribute("aria-pressed", String(sounds.isEnabled()));
-    };
-    renderSound();
-    soundButton.addEventListener("click", () => { sounds.toggle(); renderSound(); });
     document.addEventListener("keydown", (event) => {
       if (event.ctrlKey || event.metaKey || event.altKey || event.repeat || event.isComposing) return;
       if (event.target instanceof HTMLElement && (event.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName))) return;

@@ -61,7 +61,7 @@ for (const [componentName, scriptName] of expectedGames) {
     failures.push(`${componentName} is too large for a markup-only component`);
   if (script.includes("@ts-nocheck"))
     failures.push(`${scriptName} disables TypeScript checking`);
-  if (!component.includes("resume-picker"))
+  if (!component.includes("<ResumePicker "))
     failures.push(
       `${componentName} does not expose an in-game Continue / New Run prompt`,
     );

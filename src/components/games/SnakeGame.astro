@@ -1,4 +1,6 @@
 ---
+import SoundToggle from "./shared/SoundToggle.astro";
+import ResumePicker from "./shared/ResumePicker.astro";
 import "../../styles/components/arcade.css";
 import "../../styles/components/snake-game.css";
 ---
@@ -10,7 +12,7 @@ import "../../styles/components/snake-game.css";
   hidden
 >
   <div class="arcade-audio-controls">
-    <button type="button" data-game-sound aria-pressed="false">SOUND OFF</button>
+    <SoundToggle />
   </div>
   <div class="arcade-scoreboard snake-scoreboard">
     <span>SCORE <output data-snake-score>00000</output></span>
@@ -51,22 +53,7 @@ import "../../styles/components/snake-game.css";
       <strong data-snake-state>NEON RUN</strong>
       <span data-snake-message>STEER · BUILD FLOW · REACH THE EXIT</span>
 
-      <div
-        class="arcade-resume-picker"
-        data-snake-resume-picker
-        role="group"
-        aria-label="Resume saved Neon Snake game"
-        hidden
-      >
-        <button type="button" data-snake-resume="continue">
-          CONTINUE
-          <small data-snake-resume-summary>SAVED RUN</small>
-        </button>
-        <button type="button" data-snake-resume="new">
-          NEW RUN
-          <small>DISCARD SAVE</small>
-        </button>
-      </div>
+      <ResumePicker game="Neon Snake" />
 
       <div class="snake-start-picker" data-snake-start-picker>
         <button type="button" data-snake-start>

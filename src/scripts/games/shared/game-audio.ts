@@ -1,7 +1,8 @@
-export type GameSound = "tap" | "delete" | "enter" | "confirm" | "leave" | "explode" | "hop" | "land" | "pickup" | "alarm" | "escape" | "drop" | "clunk" | "perfect" | "fall" | "pulse" | "strain";
+import { effects, type GameSound } from "./sound-effects";
+
 
 /** Small synthesized effects; audio remains optional and never blocks gameplay. */
-export function createGameAudio(storageKey = "tiendu-number-sound") {
+export function createGameAudio(storageKey: string) {
   let enabled = false;
   try { enabled = localStorage.getItem(storageKey) === "on"; } catch { /* Optional storage. */ }
   let context: AudioContext | undefined;
@@ -57,10 +58,10 @@ export function createGameAudio(storageKey = "tiendu-number-sound") {
       if (!enabled || document.hidden || context?.state !== "running" || !master || requestedGeneration !== generation || context !== requestedContext || performance.now() - requested > maxDelay) return;
       const audio = context;
       const at = audio.currentTime;
-      const tone = (frequency: number, end: number, duration: number, offset = 0, volume = 0.12) => {
+      const tone = (frequency: number, end: number, duration: number, offset = 0, volume = 0.12, wave: OscillatorType = "square") => {
         const oscillator = audio.createOscillator();
         const gain = audio.createGain();
-        oscillator.type = kind === "explode" || kind === "pulse" ? "triangle" : kind === "strain" ? "sawtooth" : "square";
+        oscillator.type = wave;
         oscillator.frequency.setValueAtTime(frequency, at + offset);
         oscillator.frequency.exponentialRampToValueAtTime(end, at + offset + duration);
         gain.gain.setValueAtTime(0, at + offset);
@@ -72,28 +73,7 @@ export function createGameAudio(storageKey = "tiendu-number-sound") {
         oscillator.stop(at + offset + duration + 0.01);
         oscillator.onended = () => { sources.delete(oscillator); oscillator.disconnect(); gain.disconnect(); };
       };
-      if (kind === "hop") tone(350, 650, 0.065, 0, 0.07);
-      else if (kind === "land") tone(130, 65, 0.05, 0, 0.055);
-      else if (kind === "pickup") tone(880, 1200, 0.055, 0, 0.09);
-      else if (kind === "alarm") { tone(660, 480, 0.12); tone(660, 480, 0.12, 0.15); }
-      else if (kind === "escape") { tone(440, 440, 0.07); tone(660, 660, 0.07, 0.08); tone(880, 990, 0.13, 0.16); }
-      else if (kind === "drop") tone(220, 110, 0.06);
-      else if (kind === "clunk") { tone(120, 45, 0.12, 0, 0.2); tone(380, 100, 0.035, 0, 0.06); }
-      else if (kind === "perfect") { tone(660, 880, 0.08); tone(1100, 1100, 0.12, 0.09); }
-      else if (kind === "fall") tone(300, 35, 0.4, 0, 0.18);
-      else if (kind === "pulse") { tone(90, 60, 0.12, 0, 0.13); tone(1600, 250, 0.018, 0.08, 0.025); }
-      else if (kind === "strain") {
-        const stress = Math.max(0, Math.min(1, intensity));
-        tone(95 - stress * 35, 65 - stress * 25, 0.2, 0, 0.045 + stress * 0.045);
-        if (stress > 0.45) { tone(280 + stress * 160, 180, 0.09, 0.08, 0.035); tone(200, 260, 0.05, 0.18, 0.025); }
-      }
-      else if (kind === "tap") tone(720, 480, 0.035);
-      else if (kind === "delete") tone(300, 160, 0.045);
-      else if (kind === "enter") tone(540, 760, 0.07);
-      else if (kind === "confirm") { tone(660, 660, 0.06); tone(990, 990, 0.09, 0.07); }
-      else if (kind === "leave") { tone(440, 440, 0.06); tone(220, 180, 0.1, 0.07); }
-      else {
-        tone(125, 28, 0.4, 0, 0.5);
+      const noiseBurst = () => {
         if (!noise) {
           noise = audio.createBuffer(1, Math.ceil(audio.sampleRate * 0.32), audio.sampleRate);
           const samples = noise.getChannelData(0);
@@ -109,11 +89,12 @@ export function createGameAudio(storageKey = "tiendu-number-sound") {
         gain.gain.setValueAtTime(0, at);
         gain.gain.linearRampToValueAtTime(0.35, at + 0.005);
         gain.gain.exponentialRampToValueAtTime(0.001, at + 0.32);
-        source.connect(filter).connect(gain).connect(master);
+        source.connect(filter).connect(gain).connect(master!);
         sources.add(source);
         source.start(at);
         source.onended = () => { sources.delete(source); source.disconnect(); filter.disconnect(); gain.disconnect(); };
-      }
+      };
+      effects[kind](tone, Math.max(0, Math.min(1, intensity)), noiseBurst);
     };
     if (context.state !== "running" && resuming) void resuming.then(emit).catch(() => {});
     else { try { emit(); } catch { /* Audio failures must not interrupt a turn. */ } }

@@ -1,4 +1,6 @@
 ---
+import SoundToggle from "./shared/SoundToggle.astro";
+import ResumePicker from "./shared/ResumePicker.astro";
 import "../../styles/components/arcade.css";
 import "../../styles/components/chicken-run-game.css";
 ---
@@ -10,7 +12,7 @@ import "../../styles/components/chicken-run-game.css";
   hidden
 >
   <div class="arcade-audio-controls">
-    <button type="button" data-game-sound aria-pressed="false">SOUND OFF</button>
+    <SoundToggle />
   </div>
   <div class="arcade-scoreboard chicken-scoreboard" aria-live="polite">
     <span>SCORE <output data-chicken-score>0000</output></span>
@@ -32,22 +34,7 @@ import "../../styles/components/chicken-run-game.css";
     <div class="arcade-overlay chicken-overlay" data-chicken-overlay>
       <strong data-chicken-state>SPACE / TAP TO JUMP</strong>
       <span data-chicken-message>PRESS AGAIN IN AIR TO FLAP</span>
-      <div
-        class="arcade-resume-picker chicken-resume-picker"
-        data-chicken-resume-picker
-        role="group"
-        aria-label="Resume saved Free Range game"
-        hidden
-      >
-        <button type="button" data-chicken-resume="continue">
-          CONTINUE
-          <small data-chicken-resume-summary>SAVED RUN</small>
-        </button>
-        <button type="button" data-chicken-resume="new">
-          NEW RUN
-          <small>DISCARD SAVE</small>
-        </button>
-      </div>
+      <ResumePicker game="Free Range" class="chicken-resume-picker" />
     </div>
   </div>
 

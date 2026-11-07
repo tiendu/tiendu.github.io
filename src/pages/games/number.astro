@@ -1,4 +1,5 @@
 ---
+import SoundToggle from "../../components/games/shared/SoundToggle.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import "../../styles/components/number-game.css";
 const buildLabel = (import.meta.env.GITHUB_SHA || "").slice(0, 7) || new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
@@ -7,7 +8,7 @@ const buildLabel = (import.meta.env.GITHUB_SHA || "").slice(0, 7) || new Date().
   <section class="number-game" data-number-game data-backend-url={import.meta.env.PUBLIC_NUMBER_BACKEND_URL || ""} aria-labelledby="number-title">
     <header class="number-header">
       <a class="number-back" href="/">← HOME</a>
-      <button type="button" class="number-option" data-number-sound aria-pressed="false" disabled>SOUND OFF</button>
+      <SoundToggle class="number-option" />
     </header>
     <div class="number-heading">
       <h1 id="number-title">NUMBER<span aria-hidden="true">.</span></h1>

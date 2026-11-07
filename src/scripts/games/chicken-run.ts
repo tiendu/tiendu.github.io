@@ -277,13 +277,13 @@ function mountChickenRunGame(root: HTMLElement): void {
     "[data-chicken-message]",
   );
   const resumePicker = root.querySelector<HTMLElement>(
-    "[data-chicken-resume-picker]",
+    "[data-resume-picker]",
   );
   const resumeSummary = root.querySelector<HTMLElement>(
-    "[data-chicken-resume-summary]",
+    "[data-resume-summary]",
   );
   const resumeButtons = Array.from(
-    root.querySelectorAll<HTMLButtonElement>("[data-chicken-resume]"),
+    root.querySelectorAll<HTMLButtonElement>("[data-resume]"),
   );
   const jumpButton = root.querySelector<HTMLButtonElement>(
     '[data-chicken-control="jump"]',
@@ -723,7 +723,7 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   const beginCrash = (kind: CrashKind): void => {
     if (crash || gameOver) return;
-    sounds.stop(); sounds.play("clunk");
+    sounds.stop(); sounds.play("impact");
     clearSession();
     setResumePicker(false);
     started = false;
@@ -1008,7 +1008,7 @@ function mountChickenRunGame(root: HTMLElement): void {
       return;
     }
     if (next.phase === "day" && next.cycleIndex > 0) {
-      sounds.stop(); sounds.play("escape");
+      sounds.stop(); sounds.play("clear");
       foxPressure = 0;
       setNotice("DAYLIGHT · SAFE FOR NOW", 1.15);
     }
@@ -1484,7 +1484,7 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   resumeButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.chickenResume === "continue") continueSession();
+      if (button.dataset.resume === "continue") continueSession();
       else discardSession();
     });
   });

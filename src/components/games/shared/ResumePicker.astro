@@ -1,0 +1,18 @@
+---
+interface Props {
+  game: string;
+  summary?: string;
+  class?: string;
+}
+const { game, summary = "SAVED RUN" } = Astro.props;
+---
+<div class:list={["arcade-resume-picker", Astro.props.class]} data-resume-picker role="group" aria-label={`Resume saved ${game} game`} hidden>
+  <button type="button" data-resume="continue">
+    CONTINUE
+    <small data-resume-summary>{summary}</small>
+  </button>
+  <button type="button" data-resume="new">
+    NEW RUN
+    <small>DISCARD SAVE</small>
+  </button>
+</div>

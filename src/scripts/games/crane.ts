@@ -188,10 +188,10 @@ function mountCraneGame(root: HTMLElement): void {
   const stateLabel = root.querySelector<HTMLElement>("[data-crane-state]");
   const messageLabel = root.querySelector<HTMLElement>("[data-crane-message]");
   const statusLabel = root.querySelector<HTMLElement>("[data-crane-status]");
-  const resumePicker = root.querySelector<HTMLElement>("[data-crane-resume-picker]");
-  const resumeSummary = root.querySelector<HTMLElement>("[data-crane-resume-summary]");
+  const resumePicker = root.querySelector<HTMLElement>("[data-resume-picker]");
+  const resumeSummary = root.querySelector<HTMLElement>("[data-resume-summary]");
   const resumeButtons = Array.from(
-    root.querySelectorAll<HTMLButtonElement>("[data-crane-resume]"),
+    root.querySelectorAll<HTMLButtonElement>("[data-resume]"),
   );
   const choicePanel = root.querySelector<HTMLElement>("[data-crane-tool-choices]");
   const choiceButtons = Array.from(
@@ -661,7 +661,7 @@ function mountCraneGame(root: HTMLElement): void {
       mass: falling.mass,
       tonnage: falling.tonnage,
     };
-    sounds.play(usedMagLock || landing.perfect ? "perfect" : "clunk");
+    sounds.play(usedMagLock || landing.perfect ? "bonus" : "impact");
     crates.push(placedCrate);
     score += 1;
     persistHighScore();
@@ -1201,7 +1201,7 @@ function mountCraneGame(root: HTMLElement): void {
   document.addEventListener("keydown", onKeyDown);
   resumeButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.craneResume === "continue") continueSession();
+      if (button.dataset.resume === "continue") continueSession();
       else requestNewRun();
     });
   });

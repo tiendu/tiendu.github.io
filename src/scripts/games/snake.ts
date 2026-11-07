@@ -228,16 +228,16 @@ function mountSnakeGame(root: HTMLElement): void {
   const startButton =
     root.querySelector<HTMLButtonElement>("[data-snake-start]");
   const resumePicker = root.querySelector<HTMLElement>(
-    "[data-snake-resume-picker]",
+    "[data-resume-picker]",
   );
   const resumeSummary = root.querySelector<HTMLElement>(
-    "[data-snake-resume-summary]",
+    "[data-resume-summary]",
   );
   const protocolPicker = root.querySelector<HTMLElement>(
     "[data-snake-protocol-picker]",
   );
   const resumeButtons = Array.from(
-    root.querySelectorAll<HTMLButtonElement>("[data-snake-resume]"),
+    root.querySelectorAll<HTMLButtonElement>("[data-resume]"),
   );
   const protocolButtons = Array.from(
     root.querySelectorAll<HTMLButtonElement>("[data-snake-protocol]"),
@@ -1018,7 +1018,7 @@ function mountSnakeGame(root: HTMLElement): void {
       });
 
       if (result.kind === "collision") {
-      sounds.play("clunk");
+      sounds.play("impact");
         const contactPoint = {
           x: Math.min(GRID_SIZE - 1, Math.max(0, result.head.x)),
           y: Math.min(GRID_SIZE - 1, Math.max(0, result.head.y)),
@@ -1066,7 +1066,7 @@ function mountSnakeGame(root: HTMLElement): void {
     });
 
     if (result.kind === "collision") {
-      sounds.play("clunk");
+      sounds.play("impact");
       const contactPoint = {
         x: Math.min(GRID_SIZE - 1, Math.max(0, result.head.x)),
         y: Math.min(GRID_SIZE - 1, Math.max(0, result.head.y)),
@@ -1092,7 +1092,7 @@ function mountSnakeGame(root: HTMLElement): void {
     snake = result.snake;
 
     if (result.kind === "sector-gate") {
-      sounds.play("escape");
+      sounds.play("clear");
       eatEffect = {
         kind: "sector-gate",
         point: result.head,
@@ -1155,7 +1155,7 @@ function mountSnakeGame(root: HTMLElement): void {
       }
       persistSession();
     } else if (result.kind === "bonus-food") {
-      sounds.play("perfect");
+      sounds.play("bonus");
       if (bonusBeforeStep) {
         eatEffect = {
           kind: "bonus-food",
@@ -1532,7 +1532,7 @@ function mountSnakeGame(root: HTMLElement): void {
 
   resumeButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.snakeResume === "continue") continueSession();
+      if (button.dataset.resume === "continue") continueSession();
       else discardSession();
     });
   });

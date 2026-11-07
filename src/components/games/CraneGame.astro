@@ -1,4 +1,6 @@
 ---
+import SoundToggle from "./shared/SoundToggle.astro";
+import ResumePicker from "./shared/ResumePicker.astro";
 import "../../styles/components/arcade.css";
 import "../../styles/components/crane-game.css";
 ---
@@ -11,7 +13,7 @@ import "../../styles/components/crane-game.css";
   hidden
 >
   <div class="arcade-audio-controls">
-    <button type="button" data-game-sound aria-pressed="false">SOUND OFF</button>
+    <SoundToggle />
   </div>
   <div class="crane-topbar">
     <div class="arcade-scoreboard crane-scoreboard" aria-live="polite">
@@ -42,22 +44,7 @@ import "../../styles/components/crane-game.css";
     <div class="arcade-overlay crane-overlay" data-crane-overlay>
       <strong data-crane-state>STACK TRACE</strong>
       <span data-crane-message>TAP TO START</span>
-      <div
-        class="arcade-resume-picker crane-resume-picker"
-        data-crane-resume-picker
-        role="group"
-        aria-label="Resume saved Stack Trace game"
-        hidden
-      >
-        <button type="button" data-crane-resume="continue">
-          CONTINUE
-          <small data-crane-resume-summary>SAVED TOWER</small>
-        </button>
-        <button type="button" data-crane-resume="new">
-          NEW RUN
-          <small>DISCARD SAVE</small>
-        </button>
-      </div>
+      <ResumePicker game="Stack Trace" class="crane-resume-picker" summary="SAVED TOWER" />
     </div>
 
     <div class="crane-tool-overlay" data-crane-tool-choices hidden>
