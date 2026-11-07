@@ -1,3 +1,4 @@
+import { featherDuration } from "./chicken-plumage";
 import { raceClimate } from "../../../multiplayer/src/chicken/encounters.mjs";
 import { createSolo, restoreSolo, readSolo, saveSolo, advanceSolo, soloInput, tickMs } from "./flock-solo.mjs";
 import { hasClassicRun } from "./chicken-run";
@@ -186,10 +187,25 @@ function updateDistance() {
   progress.value = distance;
   distanceText.textContent = (track.finish - distance).toLocaleString() + " steps to coop";
 }
+// Presentation state stays on each client. A finished race stops receiving server ticks.
+const effects = { catches: new Map(), eagle: null };
+function drawFrame(r) {
+  for (const bird of r.runners) {
+    if (bird.status === "caught" && !effects.catches.has(bird.id))
+      effects.catches.set(bird.id, r.time);
+  }
+  if (r.hawk) effects.eagle = r.hawk;
+  else if (effects.eagle && effects.eagle.lift == null) {
+    // A delayed room snapshot can skip the server's first pull-up frame.
+    effects.eagle = { ...effects.eagle, lift: Math.min(r.time, effects.eagle.at) };
+  }
+  if (effects.eagle?.lift != null && r.time - effects.eagle.lift > 2.4) effects.eagle = null;
+  drawRace(canvas, r, track, view.players, id, effects);
+}
 function end() {
   updateDistance();
   audio.stop();
-  audio.play(local && mine()?.status === "caught" ? "impact" : "clear");
+  audio.play(mine()?.status === "caught" ? "impact" : "clear");
   const r = view.race;
   status(
     r.runners.filter((p) => p.status === "home").length +
@@ -200,13 +216,26 @@ function end() {
   if (local) {
     const result = mine().status === "home" ? "Made it to the coop!" : "Caught!";
     saveSolo(local);
-    drawRace(canvas, r, track, view.players, id, 0);
     status(result + " Collected " + mine().corn + " corn.");
     el("pause").disabled = true;
-  } else {
-    refreshLobby();
-    el("board").hidden = true;
   }
+  if (!track || el("board").hidden) {
+    if (!local) refreshLobby();
+    return;
+  }
+  cancelAnimationFrame(frame);
+  const started = performance.now();
+  const finishFrame = now => {
+    const age = Math.max(0, (now - started) / 1000);
+    drawFrame({ ...r, time: r.time + age });
+    if (age < Math.max(featherDuration, r.hawk || effects.eagle ? 2.4 : 0)) {
+      frame = requestAnimationFrame(finishFrame);
+    } else if (!local) {
+      el("board").hidden = true;
+      refreshLobby();
+    }
+  };
+  finishFrame(started);
 }
 function paint(time) {
   const r = view?.race;
@@ -233,6 +262,7 @@ function paint(time) {
   const wetPatches = raceClimate(track, r.time).muddy ? track.mud : null;
   const display = {
     ...r,
+    time: r.time + (paused ? 0 : Math.max(0, age)),
     runners: r.runners.map((p) => {
       const copy = { ...p };
       if (!paused && r.time >= 0 && p.status === "running")
@@ -240,11 +270,13 @@ function paint(time) {
       return copy;
     }),
   };
-  drawRace(canvas, display, track, view.players, id, 0);
+  drawFrame(display);
   updateDistance();
   frame = requestAnimationFrame(paint);
 }
 function begin() {
+  effects.catches.clear();
+  effects.eagle = null;
   cancelAnimationFrame(frame);
   received = performance.now();
   track = course(view.race.seed, view.race.courseVersion ?? 1);
@@ -315,7 +347,7 @@ async function connect(create) {
         else feedback(soundState(old), msg.race);
       } else if (msg.race?.over) {
         if (!old?.over) end();
-        else refreshLobby();
+        else if (el("board").hidden) refreshLobby();
       } else {
         refreshLobby();
         status("Choose your chicken. The host starts with 2–5 players.");

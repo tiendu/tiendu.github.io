@@ -35,9 +35,29 @@ export function paintFox(ctx: CanvasRenderingContext2D, x: number, floor: number
   ctx.restore();
 }
 
-export function paintEagle(ctx: CanvasRenderingContext2D, x: number, y: number, diving: boolean) {
+export function paintEagle(ctx: CanvasRenderingContext2D, x: number, y: number, diving: boolean, climb = 0) {
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
+  if (climb > 0) {
+    ctx.rotate(-0.32);
+    // Invert the wing tips around the shoulders on each downstroke.
+    const stroke = Math.cos(climb * 13);
+    for (const side of [-1, 1]) {
+      ctx.save();
+      ctx.scale(side, 1);
+      for (let i = 0; i < 5; i++) {
+        const y = Math.round(-4 - stroke * (i + 1) * 2);
+        ctx.fillStyle = "#392c31";
+        ctx.fillRect(4 + i * 4, y, 7, 6);
+        ctx.fillStyle = "#94694e";
+        ctx.fillRect(4 + i * 4, y, 6, 2);
+      }
+      ctx.restore();
+    }
+    pixels(ctx, ["ddbbwwd", " dbbwwgg", " dbbd  g", "dd gg"], -7, -5);
+    ctx.restore();
+    return;
+  }
   pixels(ctx, diving ? [
     "dd",
     " dbbd    d",

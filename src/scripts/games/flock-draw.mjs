@@ -1,3 +1,4 @@
+import { drawCaughtFeathers, featherDuration } from "./chicken-plumage";
 import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
 import { raceClimate } from "../../../multiplayer/src/chicken/encounters.mjs";
 import { paintEagle, paintFox } from "./chicken-predators";
@@ -37,14 +38,15 @@ export function drawPoster(canvas) {
   birds.forEach((bird, index) => drawBird(c, bird, 61 + index * 45, 75, index));
 }
 
-export function drawRace(canvas, r, track, players, id, elapsed) {
+export function drawRace(canvas, r, track, players, id, effects) {
   const c = canvas.getContext("2d"),
     w = canvas.width,
     h = canvas.height,
     ground = h - 38;
   const own = r.runners.find((p) => p.id === id);
+  const bursting = p => r.time - (effects.catches.get(p?.id) ?? -Infinity) < featherDuration;
   const focus =
-    own?.status === "running"
+    own?.status === "running" || bursting(own)
       ? own
       : r.runners.find((p) => p.status === "running") || own || r.runners[0];
   const camera = focus.x - w * 0.3,
@@ -101,8 +103,8 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
     rect("#ffe4a3", coop + 26, ground - 28, 27, 14);
     text("COOP", coop + 26, ground - 17, "#502c24");
   }
-  if (r.hawk) {
-    const hawk = r.hawk;
+  const hawk = r.hawk ?? effects.eagle;
+  if (hawk) {
     const lift = hawk.lift == null ? 0 : Math.max(0, r.time - hawk.lift);
     const remaining = Math.max(0, hawk.at - (hawk.lift ?? r.time));
     const x = X(hawk.x);
@@ -112,8 +114,9 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
       rect("#382c3e", x - 18 - drift, floor - 2, 36, 3);
       rect("#efc379", x - 9 - drift, floor - 3, 18, 1);
     }
-    const y = floor - 52 - Math.min(1, remaining) * 104 - lift * 130;
-    paintEagle(c, x - 32 * remaining + lift * 76, y, hawk.lift == null && remaining < 0.55);
+    const rise = Math.max(0, lift - 0.15);
+    const y = floor - 52 - Math.min(1, remaining) * 104 - rise * (36 + rise * 53);
+    paintEagle(c, x - 32 * remaining + lift * 109, y, hawk.lift == null && remaining < 0.55, lift);
   }
   if (r.fox !== null) {
     const skid = r.foxRetreat == null ? -1 : r.time - r.foxRetreat;
@@ -151,8 +154,12 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
     const info = players.find((v) => v.id === p.id);
     if (!info || p.status === "away") continue;
     const b = birds[info.bird],
-      x = X(p.x + (p.status === "running" && r.time >= 0 ? p.vx * elapsed : 0)),
+      x = X(p.x),
       y = ground - p.y;
+    if (p.status === "caught") {
+      drawCaughtFeathers(c, b.shape, x, y - 14, r.time - effects.catches.get(p.id));
+      continue;
+    }
     if (x < 8 || x > w - 20) {
       text(
         x < 8 ? "◀" : "▶",
@@ -160,10 +167,6 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
         48 + info.bird * 15,
         b.color === "#393744" ? "white" : b.color,
       );
-      continue;
-    }
-    if (p.status === "caught") {
-      text("×", x, y);
       continue;
     }
     drawBird(c, b, x, y, Math.floor(r.time * 10), p.jumps > 0);
