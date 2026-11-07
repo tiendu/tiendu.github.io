@@ -1517,6 +1517,6 @@ function mountChickenRunGame(root: HTMLElement): void {
       draw();
     }
   });
-  window.addEventListener(GAME_EVENTS.chicken.start, startGame);
+  document.querySelector("[data-classic]")?.addEventListener("click", startGame);
   window.addEventListener(GAME_EVENTS.chicken.command, onCommand);
 }

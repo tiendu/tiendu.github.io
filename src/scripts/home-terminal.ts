@@ -521,6 +521,13 @@ function mountTerminal(wrapper: HTMLElement): void {
     }
   });
 
+  if (new URLSearchParams(location.search).get("game") === "chicken") {
+    wrapper.classList.remove("terminal-typing-enabled");
+    revealShell();
+    arcade.openCommand("chicken");
+    return;
+  }
+
   startTerminalOutput().catch(() => {
     wrapper.classList.remove("terminal-typing-enabled");
 

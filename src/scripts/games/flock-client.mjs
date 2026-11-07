@@ -9,6 +9,8 @@ import {
 import { drawBird, drawRace } from "./flock-draw.mjs";
 import { mountGameSound } from "./shared/game-sound";
 
+import { GAME_EVENTS, readGameCommand } from "./shared/events";
+
 const root = document.querySelector("[data-flock]");
 const el = (key) => root.querySelector("[data-" + key + "]");
 const audio = mountGameSound(root, "chicken");
@@ -39,7 +41,9 @@ try {
   endpoint = new URL(root.dataset.endpoint);
   if (!["http:", "https:"].includes(endpoint.protocol)) endpoint = null;
 } catch {}
+let generation = 0;
 function reset(message) {
+  generation++;
   const old = ws;
   ws = null;
   old?.close();
@@ -51,6 +55,7 @@ function reset(message) {
   held = false;
   pending = false;
   delete root.dataset.online;
+  el("code-form").hidden = true;
   el("setup").hidden = false;
   el("lobby").hidden = el("board").hidden = el("leave").hidden = true;
   el("join").disabled = el("create").disabled = !endpoint;
@@ -207,7 +212,9 @@ function begin() {
 async function connect(create) {
   if (pending || ws || !endpoint) return;
   if (!create && !el("code-form").reportValidity()) return;
+  const attempt = generation;
   pending = true;
+  root.dataset.online = "";
   el("practice").disabled = el("create").disabled = el("join").disabled = true;
   let token;
   try {
@@ -222,7 +229,9 @@ async function connect(create) {
             ? "All race rooms are busy."
             : "Could not create room.",
         );
-      ({ room, token } = await res.json());
+      const result = await res.json();
+      if (attempt !== generation) return;
+      ({ room, token } = result);
     }
     const url = new URL("/chicken/rooms/" + room, endpoint);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
@@ -230,7 +239,9 @@ async function connect(create) {
     ws = socket;
     root.dataset.online = "";
     status("Connecting…");
-    socket.onopen = () => send({ type: "join", name: name(), token });
+    socket.onopen = () => {
+      if (ws === socket) send({ type: "join", name: name(), token });
+    };
     socket.onmessage = (e) => {
       if (ws !== socket) return;
       const msg = JSON.parse(e.data);
@@ -263,10 +274,11 @@ async function connect(create) {
       if (ws === socket) reset("Disconnected. Join again for the next race.");
     };
   } catch (e) {
-    reset(e.message);
+    if (attempt === generation) reset(e.message);
   }
 }
 el("practice").onclick = () => {
+  delete root.dataset.online;
   local = true;
   id = "solo";
   view = {
@@ -279,6 +291,7 @@ el("practice").onclick = () => {
 };
 el("create").onclick = () => connect(true);
 el("join").onclick = () => {
+  root.dataset.online = "";
   el("code-form").hidden = false;
   el("code").focus();
 };
@@ -294,6 +307,7 @@ el("start").onclick = () => {
 };
 el("invite").onclick = async () => {
   const url = new URL(location.href);
+  url.searchParams.set("game", "chicken");
   url.hash = "room=" + room;
   try {
     await navigator.clipboard.writeText(url.href);
@@ -323,7 +337,7 @@ document.addEventListener("keydown", (e) => {
   if (el("board").hidden || e.repeat || e.target.closest("input")) return;
   if (
     e.code === "Space" &&
-    !e.target.closest("[data-game-sound],[data-leave]")
+    !e.target.closest("[data-game-sound],[data-leave],[data-flock-exit]")
   ) {
     e.preventDefault();
     submit("jump");
@@ -337,13 +351,40 @@ document.addEventListener("keyup", (e) => {
   if (e.key === "Shift") release();
 });
 window.addEventListener("pagehide", () => reset("Left the race."));
-reset(
-  endpoint
-    ? "Choose solo or join a flock."
-    : "Online rooms are unavailable. Solo is ready.",
-);
-const code = new URLSearchParams(location.hash.slice(1)).get("room");
-if (code && /^\d{6}$/.test(code)) {
-  el("code-form").hidden = false;
-  el("code").value = code;
+function closePanel() {
+  send({ type: "leave" });
+  reset("");
+  root.hidden = true;
 }
+function exitArcade() {
+  closePanel();
+  window.dispatchEvent(new CustomEvent(GAME_EVENTS.chicken.exit, { detail: { flock: true } }));
+}
+el("classic").onclick = closePanel;
+el("flock-exit").onclick = exitArcade;
+window.addEventListener(GAME_EVENTS.chicken.command, (event) => {
+  if (!root.hidden && readGameCommand(event) === "exit") exitArcade();
+});
+document.addEventListener("keydown", (event) => {
+  if (!root.hidden && event.key === "Escape") exitArcade();
+});
+window.addEventListener(GAME_EVENTS.chicken.start, () => {
+  reset(endpoint ? "Choose solo or join a flock." : "Online rooms are unavailable. Solo is ready.");
+  root.hidden = false;
+  const url = new URL(location.href);
+  if (url.searchParams.get("game") === "chicken") {
+    const code = new URLSearchParams(url.hash.slice(1)).get("room");
+    if (code && /^\d{6}$/.test(code)) {
+      el("code-form").hidden = false;
+      el("code").value = code;
+      root.dataset.online = "";
+      url.hash = "";
+    }
+    url.searchParams.delete("game");
+    history.replaceState(history.state, "", url);
+  }
+  el("flock-exit").focus({ preventScroll: true });
+  window.dispatchEvent(new CustomEvent(GAME_EVENTS.chicken.status, {
+    detail: { game: "chicken", text: "FLOCK RUN", pauseDisabled: true }
+  }));
+});

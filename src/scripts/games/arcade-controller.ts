@@ -103,6 +103,7 @@ const definitions: readonly GameDefinition[] = [
     id: "chicken",
     load: async () => {
       const { mountChickenRunGames } = await import("./chicken-run");
+      await import("./flock-client.mjs");
       mountChickenRunGames();
     },
     aliases: ["chicken", "freerange", "free-range"],
@@ -117,6 +118,7 @@ const definitions: readonly GameDefinition[] = [
     readyStatus: (speed, fine) =>
       `SPEED ${speed} · READY · ${fine ? "SPACE/UP" : "TAP TO JUMP"}`,
     exitMessage: (detail) => {
+      if ("flock" in detail) return "FLOCK RUN CLOSED";
       const chicken = detail as Partial<ChickenExitDetail>;
       const speedLevel = positive(chicken.speed, 1);
       return `FREE RANGE CLOSED · SCORE ${format(score(chicken.score), 4)} · HIGH ${format(score(chicken.highScore), 4)} · SPEED ${format(speedLevel, 2)}`;

@@ -1,10 +1,12 @@
 ---
+import FlockPanel from "./FlockPanel.astro";
 import SoundToggle from "./shared/SoundToggle.astro";
 import ResumePicker from "./shared/ResumePicker.astro";
 import "../../styles/components/arcade.css";
 import "../../styles/components/chicken-run-game.css";
 ---
 
+<FlockPanel />
 <section
   class="arcade-panel chicken-panel"
   data-chicken-game
@@ -12,7 +14,6 @@ import "../../styles/components/chicken-run-game.css";
   hidden
 >
   <div class="arcade-audio-controls">
-    <a href="/games/chicken/">FLOCK RACE · SOLO / 3–5</a>
     <SoundToggle />
   </div>
   <div class="arcade-scoreboard chicken-scoreboard" aria-live="polite">

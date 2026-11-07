@@ -1,4 +1,6 @@
 .flock {
+  width: 100%;
+  box-sizing: border-box;
   max-width: 56rem;
   margin: auto;
   padding: 0.75rem;
@@ -33,6 +35,8 @@
 .flock a {
   color: inherit;
 }
+.flock[hidden],
+.flock:not([hidden]) ~ .chicken-mobile-controls,
 .flock [hidden] {
   display: none !important;
 }
@@ -64,19 +68,13 @@
 .flock-rotate {
   display: none;
 }
-@media (orientation: portrait) {
+@media (orientation: portrait) and (pointer: coarse) {
   .flock[data-online] .flock-rotate {
     display: block;
   }
 }
 @media (orientation: landscape) and (max-height: 550px) {
-  .flock:has([data-board]:not([hidden])) {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    overflow: auto;
-  }
-  .flock:has([data-board]:not([hidden])) h1 {
-    display: none;
+  .flock [data-board] canvas {
+    height: clamp(120px, 43svh, 220px);
   }
 }
