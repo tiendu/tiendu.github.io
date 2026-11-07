@@ -91,7 +91,9 @@ export function provable(board, numberedWaves = Infinity) {
   return (
     connected.has(exit) &&
     starts.every((n) => connected.has(n)) &&
-    (!requireFuse || connected.has(board.fuseCell))
+    (!requireFuse || (Array.isArray(board.fuseCells)
+      ? board.fuseCells.every((cell) => connected.has(cell))
+      : connected.has(board.fuseCell)))
   );
 }
 
@@ -121,7 +123,7 @@ function generateBoard(players, preset, random) {
     // A prevalidated seed per seat count bounds retries on hard fields.
     // The fallback goes through all the same reachability and difficulty checks.
     if (attempt === 240) {
-      let seed = [25, 1, 2, 2, 1][players.length - 1];
+      let seed = [25, 1, 2, 3, 1][players.length - 1];
       random = () =>
         (seed = (Math.imul(1664525, seed) + 1013904223) >>> 0) / 2 ** 32;
     }
@@ -158,8 +160,15 @@ function generateBoard(players, preset, random) {
             distance(starts[0], i) + distance(i, exit) >=
               distance(starts[0], exit) + 3),
       );
-    const fuseCell = detours[Math.floor(random() * detours.length)];
-    safe.add(fuseCell);
+    // One neutral cache per miner, with one shared team inventory.
+    const fuseCells = [];
+    const remaining = [...detours];
+    for (let i = 0; i < players.length; i++) {
+      const choice = Math.floor(random() * remaining.length);
+      fuseCells.push(remaining.splice(choice, 1)[0]);
+    }
+    if (fuseCells.some((cell) => cell === undefined)) continue;
+    for (const cell of fuseCells) safe.add(cell);
     const pool = near.map((_, i) => i).filter((i) => !safe.has(i));
     const clues = Array(near.length).fill(0);
     for (let i = 0; i < mines; i++) {
@@ -180,8 +189,9 @@ function generateBoard(players, preset, random) {
       clues,
       players: [...players],
       positions: [...starts],
-      fuseCell,
+      fuseCells,
       fuses: 0,
+      fusesUsed: 0,
       cells: near.map(() => null),
       flags: {},
       status: "digging",
@@ -237,15 +247,28 @@ export function play(board, player, type, cell) {
   board.cells[cell] = board.clues[cell];
   (board.positions ??= [...board.starts])[seat] = cell;
   if (board.cells[cell] === -1) {
-    // Older stored rounds counted the fatal hit as their last fuse.
-    const protectedHit = board.fuses > (board.fuseCell === undefined ? 1 : 0);
-    board.fuses = Math.max(0, board.fuses - 1);
-    if (!protectedHit)
-      board.status = board.status === "connected" ? "won" : "lost";
+    if (Array.isArray(board.fuseCells)) {
+      // Every miner can use the team's collected fuses.
+      if (board.fuses > 0) {
+        board.fuses--;
+        board.fusesUsed = (board.fusesUsed ?? 0) + 1;
+      } else {
+        board.status = board.status === "connected" ? "won" : "lost";
+      }
+    } else {
+      // Preserve the fuse semantics of active rooms created by old Workers.
+      const protectedHit = board.fuses > (board.fuseCell === undefined ? 1 : 0);
+      board.fuses = Math.max(0, board.fuses - 1);
+      if (!protectedHit)
+        board.status = board.status === "connected" ? "won" : "lost";
+    }
     return;
   }
-  if (cell === board.fuseCell) board.fuses = 1;
-  if (board.cells.every((value, i) => value !== null || board.clues[i] === -1))
+  if (Array.isArray(board.fuseCells)) {
+    if (board.fuseCells.includes(cell)) board.fuses++;
+  } else if (cell === board.fuseCell) board.fuses = 1;
+  if (!Array.isArray(board.fuseCells) &&
+      board.cells.every((value, i) => value !== null || board.clues[i] === -1))
     board.status = "perfect";
   else if (board.status === "digging") {
     const joined = component(near, cell, open);

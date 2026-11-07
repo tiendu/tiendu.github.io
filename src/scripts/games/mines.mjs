@@ -1,7 +1,7 @@
+import { renderMineExit, renderMineVictory, isFlawlessEscape } from './mines-elevator.mjs';
 import { renderMinerHats } from "./mines-hats.mjs";
 import {
   createSoloBoard,
-  escapeRoutes,
   frontier,
   play,
 } from "../../../multiplayer/src/mines/board.mjs";
@@ -213,10 +213,15 @@ export function mountMines() {
         (vp.clientHeight - b.clientHeight) / 2;
     }
   }
+  let fuseLocateIndex = 0;
   el("locate-fuse").onclick = () => {
     const board = snapshot?.board;
-    if (Number.isInteger(board?.fuseCell) && board.cells[board.fuseCell] === null)
-      center(board.fuseCell);
+    if (!board) return;
+    const caches = Array.isArray(board.fuseCells)
+      ? board.fuseCells : [board.fuseCell];
+    const hidden = caches.filter((cell) => Number.isInteger(cell) &&
+      board.cells[cell] === null);
+    if (hidden.length) center(hidden[fuseLocateIndex++ % hidden.length]);
   };
   function render() {
     const { players, board, host, round, ping } = snapshot;
@@ -273,21 +278,22 @@ export function mountMines() {
     );
     el("field").hidden = !board;
     if (!board) return status("Gather 2–5 players. The host starts the round.");
-    el("fuses").textContent =
-      board.fuseCell === undefined
-        ? board.fuses + "/2 FUSES"
-        : board.fuses
-          ? "FUSE READY"
-          : "NO FUSE";
-    el("locate-fuse").hidden =
-      !Number.isInteger(board.fuseCell) ||
-      board.cells[board.fuseCell] !== null;
+    const sharedFuses = Array.isArray(board.fuseCells);
+    el("fuses").textContent = sharedFuses
+      ? `TEAM FUSES ${board.fuses}/${board.fuseCells.length} READY · ${board.fusesUsed ?? 0} USED`
+      : board.fuseCell === undefined ? board.fuses + "/2 FUSES"
+        : board.fuses ? "FUSE READY" : "NO FUSE";
+    const caches = sharedFuses ? board.fuseCells : [board.fuseCell];
+    el("locate-fuse").hidden = !caches.some((cell) =>
+      Number.isInteger(cell) && board.cells[cell] === null);
+    el("locate-fuse").textContent = sharedFuses ? "Show fuses" : "Show fuse";
     el("step-help").textContent = board.sideOnly
       ? "Dig up, down, left, or right from your patch."
       : "Dig the lit edge of your patch.";
     const tiles = el("tiles"),
       edge = frontier(board, me);
     if (centered !== round) {
+      fuseLocateIndex = 0;
       el("victory").hidden = true;
       tiles.style.setProperty("--size", board.size);
       tiles.replaceChildren(
@@ -339,15 +345,16 @@ export function mountMines() {
           ? flag >= 0 ? "⚑" : "" : "";
       }
       b.style.color = flag >= 0 ? colors[flag] : "";
-      const fuse = value === null && n === board.fuseCell;
+      const fuse = value === null && (Array.isArray(board.fuseCells)
+        ? board.fuseCells.includes(n) : n === board.fuseCell);
       b.classList.toggle("buried-fuse", fuse);
-      if (start >= 0 || n === board.exit || fuse) {
+      if (fuse) {
         const mark = document.createElement("small");
-        mark.textContent =
-          start >= 0 ? "⚑" + (start + 1) : fuse ? "FUSE" : "EXIT";
-        mark.style.color = fuse ? "#ffac72" : colors[start] || "#ffd45c";
+        mark.textContent = "FUSE";
+        mark.style.color = "#ffac72";
         b.append(mark);
       }
+      if (n === board.exit) renderMineExit(b, value);
       b.setAttribute(
         "aria-label",
         "Row " +
@@ -363,7 +370,7 @@ export function mountMines() {
               ? "crater"
               : "clue " + value) +
           (start >= 0
-            ? ", pennant " + (start + 1)
+            ? ", starting point " + (start + 1)
             : n === board.exit
               ? ", exit"
               : fuse
@@ -376,38 +383,17 @@ export function mountMines() {
       centered = round;
       center(board.starts[board.players.indexOf(me)]);
     }
-    if (["connected", "won", "perfect"].includes(board.status)) {
-      const banner = el("victory");
-      if (banner.hidden) {
-        const routes = escapeRoutes(board);
-        const farthest = Math.max(1, ...routes.values());
-        for (const [cell, distance] of routes) {
-          const tile = tiles.children[cell];
-          tile.style.setProperty(
-            "--win-delay",
-            Math.round(650 * (1 - distance / farthest)) + "ms",
-          );
-          tile.dataset.escape = "";
-        }
-        banner.hidden = false;
-      }
-      const message =
-        board.status === "perfect"
-          ? "Perfect clear!"
-          : solo
-            ? "You escaped!"
-            : "Everyone escaped!";
-      if (banner.textContent !== message) banner.textContent = message;
-    }
+    renderMineVictory(tiles, board, colors, el("victory"), solo);
     const labels = {
       digging: solo
         ? "Dig a path to the exit."
-        : "Connect every pennant to the exit.",
+        : "Connect every starting point to the elevator.",
       connected:
-        "Exit connected! Take the win or keep digging for a perfect clear.",
-      won: solo ? "You escaped!" : "Crew escaped!",
+        "Elevator connected! Finish to escape. No fuse used means a flawless win.",
+      won: isFlawlessEscape(board) ? "Flawless escape!"
+        : solo ? "You escaped!" : "Crew escaped!",
       lost: "Out of fuses.",
-      perfect: "Perfect clear!",
+      perfect: isFlawlessEscape(board) ? "Flawless escape!" : "Crew escaped!",
     };
     status(
       ping

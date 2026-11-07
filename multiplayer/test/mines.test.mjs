@@ -42,7 +42,7 @@ for (const [i, mines] of [20, 28, 36, 46].entries()) {
   });
 }
 
-test("frontiers merge, flags protect tiles, perfect clears finish", () => {
+test("frontiers merge, flags protect tiles, exit becomes connected", () => {
   const b = createBoard(["a", "b"]);
   const cell = [...frontier(b, "a")][0];
   assert.throws(() => play(b, "b", "dig", cell));
@@ -50,7 +50,7 @@ test("frontiers merge, flags protect tiles, perfect clears finish", () => {
   assert.throws(() => play(b, "a", "dig", cell));
   play(b, "a", "unflag", cell);
   let connected = false;
-  while (b.status !== "perfect") {
+  while (b.status !== "connected") {
     let progress = false;
     for (const p of b.players) {
       const safe = [...frontier(b, p)].find((x) => b.clues[x] >= 0);
@@ -65,13 +65,14 @@ test("frontiers merge, flags protect tiles, perfect clears finish", () => {
     }
     assert.ok(progress);
   }
-  assert.equal(b.status, "perfect");
-  assert.ok(connected || b.cells.filter((x) => x === null).length === b.mines);
+  assert.equal(b.status, "connected");
+  assert.equal(connected, true);
 });
 
 test("digging the fuse absorbs one mine and the next ends the round", () => {
   const b = createBoard(["a", "b"]);
   const [fuse, a, c] = frontier(b, "a");
+  delete b.fuseCells;
   b.fuseCell = fuse;
   assert.equal(b.fuses, 0);
   play(b, "a", "dig", fuse);
