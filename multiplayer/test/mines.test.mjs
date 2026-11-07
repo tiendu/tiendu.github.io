@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createBoard, frontier, play, provable } from "../src/mines/board.mjs";
+import {
+  createBoard,
+  createSoloBoard,
+  frontier,
+  play,
+  provable,
+} from "../src/mines/board.mjs";
 
 for (const [i, mines] of [20, 28, 36, 46].entries()) {
   test(`fair fields for ${i + 2} players`, () => {
@@ -55,4 +61,28 @@ test("spending the final fuse ends the round", () => {
   play(b, "a", "dig", c);
   assert.equal(b.status, "lost");
   assert.throws(() => play(b, "a", "dig", c));
+});
+
+test("solo shares dig and flag rules with a 12×12 board and a reachable exit", () => {
+  assert.throws(() => createBoard(["only online seat"]));
+  for (let n = 0; n < 100; n++) {
+    const board = createSoloBoard();
+    assert.equal(board.size, 12);
+    assert.equal(board.mines, 20);
+    assert.equal(board.fuses, 2);
+    assert.ok(provable(board));
+    const [me] = board.players;
+    const [first] = frontier(board, me);
+    play(board, me, "flag", first);
+    assert.throws(() => play(board, me, "dig", first));
+    play(board, me, "unflag", first);
+    while (board.status === "digging") {
+      const safe = [...frontier(board, me)].find(
+        (cell) => board.clues[cell] >= 0,
+      );
+      play(board, me, "dig", safe);
+    }
+    assert.ok(board.cells[board.exit] >= 0 && board.cells[board.exit] !== null);
+    assert.ok(["connected", "perfect"].includes(board.status));
+  }
 });

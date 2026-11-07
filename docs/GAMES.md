@@ -4,6 +4,8 @@ Open a game at /games/chicken/, /games/number/, or /games/mines/. Its name also 
 
 ## Mines
 
+Choose Play solo for a local 12×12 field with 20 mines and two fuses. Reach the exit to take the win, or uncover every safe tile for a perfect clear. Solo runs in the browser without a room.
+
 Two to five players dig simultaneously from separate pennants. A round uses a fresh square board with 12, 14, 16 or 18 tiles per side. Dig next to any safe tile connected to your pennant, including diagonals. Flag suspected mines or tap a clue to ping it. After the crew connects every pennant to the exit, the host can take the win or play on for a perfect clear. Two explosions exhaust the shared fuses.
 
 Set the GitHub Actions repository variables MINES_BACKEND to cloudflare and PUBLIC_MINES_BACKEND_URL to the dedicated worker URL. The mines-worker workflow uses CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from repository secrets or the cloudflare-mines environment. Run the backend workflow and rebuild Pages after setting the URL. The default limit is five rooms with a one-hour lifetime.

@@ -1,4 +1,8 @@
-import { frontier } from "../../../multiplayer/src/mines/board.mjs";
+import {
+  createSoloBoard,
+  frontier,
+  play,
+} from "../../../multiplayer/src/mines/board.mjs";
 
 export function mountMines() {
   const root = document.querySelector(".mines");
@@ -39,7 +43,7 @@ export function mountMines() {
       return status(
         "Online rooms are unavailable until the Mines backend is configured.",
       );
-    el("create").disabled = true;
+    el("solo").disabled = el("create").disabled = true;
     try {
       if (el("code-label").hidden) {
         const res = await fetch(base + "/mines/rooms", { method: "POST" });
@@ -53,7 +57,7 @@ export function mountMines() {
       connect();
     } catch (e) {
       status(e.message);
-      el("create").disabled = false;
+      el("solo").disabled = el("create").disabled = false;
     }
   };
   function connect() {
@@ -81,7 +85,7 @@ export function mountMines() {
           el("lobby").hidden = el("field").hidden = true;
           leaving = true;
           ws.close();
-          el("create").disabled = false;
+          el("solo").disabled = el("create").disabled = false;
         }
       } else if (msg.you) {
         me = msg.you;
@@ -104,7 +108,7 @@ export function mountMines() {
         me = null;
         el("entry").hidden = false;
         el("lobby").hidden = el("field").hidden = true;
-        el("create").disabled = false;
+        el("solo").disabled = el("create").disabled = false;
         el("code").value = room;
         joinForm(true);
         status(
@@ -114,7 +118,40 @@ export function mountMines() {
       }
     };
   }
+  function startSolo() {
+    try {
+      const board = createSoloBoard();
+      me = board.players[0];
+      snapshot = {
+        host: me,
+        players: [],
+        board,
+        round: (snapshot?.round ?? 0) + 1,
+      };
+      el("entry").hidden = true;
+      el("lobby").hidden = false;
+      el("dig").click();
+      render();
+    } catch (error) {
+      status(error.message);
+    }
+  }
+  el("solo").onclick = startSolo;
+
   function send(type, cell) {
+    if (me === "solo") {
+      if (type === "start") return startSolo();
+      const board = snapshot.board;
+      try {
+        if (type === "finish" && board.status === "connected")
+          board.status = "won";
+        else play(board, me, type, cell);
+        render();
+      } catch (error) {
+        status(error.message);
+      }
+      return;
+    }
     if (socket?.readyState === WebSocket.OPEN && snapshot)
       socket.send(JSON.stringify({ type, cell, round: snapshot.round }));
   }
@@ -127,6 +164,15 @@ export function mountMines() {
     }
   };
   el("leave").onclick = () => {
+    if (me === "solo") {
+      me = snapshot = undefined;
+      centered = -1;
+      el("lobby").hidden = el("field").hidden = true;
+      el("entry").hidden = false;
+      status("");
+      el("solo").focus();
+      return;
+    }
     leaving = true;
     clearTimeout(retry);
     send("leave");
@@ -159,9 +205,11 @@ export function mountMines() {
   function render() {
     const { players, board, host, round, ping } = snapshot;
     const active = board && ["digging", "connected"].includes(board.status);
-    el("room-label").textContent = "ROOM " + room;
+    const solo = me === "solo";
+    el("crew").hidden = el("invite").hidden = el("ping-help").hidden = solo;
+    el("room-label").textContent = solo ? "SOLO" : "ROOM " + room;
     el("start").hidden = !!active || me !== host;
-    el("start").disabled = players.filter((p) => p.online).length < 2;
+    el("start").disabled = !solo && players.filter((p) => p.online).length < 2;
     el("start").textContent = board ? "Next round" : "Start round";
     el("finish").hidden = board?.status !== "connected" || me !== host;
     el("crew").replaceChildren(
@@ -206,7 +254,11 @@ export function mountMines() {
       const b = tiles.children[n],
         flag = board.players.indexOf(board.flags[n]),
         start = board.starts.indexOf(n);
-      b.disabled = !active || value === -1 || (value === null && !edge.has(n));
+      b.disabled =
+        !active ||
+        (solo && value !== null) ||
+        value === -1 ||
+        (value === null && !edge.has(n));
       b.className =
         "tile " +
         (value !== null ? "open" : edge.has(n) ? "edge" : "") +
@@ -253,10 +305,12 @@ export function mountMines() {
       center(board.starts[board.players.indexOf(me)]);
     }
     const labels = {
-      digging: "Connect every pennant to the exit.",
+      digging: solo
+        ? "Dig a path to the exit."
+        : "Connect every pennant to the exit.",
       connected:
         "Exit connected! Take the win or keep digging for a perfect clear.",
-      won: "Crew escaped!",
+      won: solo ? "You escaped!" : "Crew escaped!",
       lost: "Out of fuses.",
       perfect: "Perfect clear!",
     };

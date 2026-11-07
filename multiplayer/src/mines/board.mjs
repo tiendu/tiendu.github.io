@@ -59,8 +59,16 @@ function component(near, start, allowed) {
 export function createBoard(players, random = Math.random) {
   if (players.length < 2 || players.length > 5)
     throw Error("Start with 2–5 players.");
-  const size = sizes[players.length - 2],
-    mines = counts[players.length - 2];
+  return generateBoard(players, players.length - 2, random);
+}
+
+export function createSoloBoard(random = Math.random) {
+  return generateBoard(["solo"], 0, random);
+}
+
+function generateBoard(players, preset, random) {
+  const size = sizes[preset],
+    mines = counts[preset];
   const near = neighbors(size),
     mid = (size - 1) / 2;
   for (let attempt = 0; attempt < 40; attempt++) {
