@@ -55,19 +55,21 @@ const buildLabel = (import.meta.env.GITHUB_SHA || "").slice(0, 7) || new Date().
       <p class="number-online-status" data-number-online-status role="status" aria-live="polite"></p>
     </div>
     <div class="number-board">
-      <div class="number-range-heading">
-        <span class="number-caption">PICK A NUMBER</span>
-        <span class="number-caption" data-number-count>99 NUMBERS LEFT</span>
-      </div>
-      <p class="number-range" data-number-range>1 — 99</p>
-      <div class="number-track" aria-hidden="true">
-        <div class="number-bar" data-number-bar>
-          {Array.from({ length: 101 }, (_, i) => <span class="number-cell" data-number-cell={i}></span>)}
+      <div class="number-round-info">
+        <div class="number-range-heading">
+          <span class="number-caption">PICK A NUMBER</span>
+          <span class="number-caption" data-number-count>99 NUMBERS LEFT</span>
         </div>
-        <div class="number-scale"><span>0</span><span data-number-bounds>BOUNDS 0 / 100 EXCLUDED</span><span>100</span></div>
+        <p class="number-range" data-number-range>1 — 99</p>
+        <div class="number-track" aria-hidden="true">
+          <div class="number-bar" data-number-bar>
+            {Array.from({ length: 101 }, (_, i) => <span class="number-cell" data-number-cell={i}></span>)}
+          </div>
+          <div class="number-scale"><span>0</span><span data-number-bounds>BOUNDS 0 / 100 EXCLUDED</span><span>100</span></div>
+        </div>
+        <p class="number-turn" data-number-turn role="status" aria-live="polite">TAKE TURNS</p>
+        <p class="number-status" data-number-status role="status" aria-live="polite" aria-atomic="true">Pick a number from 1 to 99.</p>
       </div>
-      <p class="number-turn" data-number-turn role="status" aria-live="polite">TAKE TURNS</p>
-      <p class="number-status" data-number-status role="status" aria-live="polite" aria-atomic="true">Pick a number from 1 to 99.</p>
       <div class="number-play-area">
         <div data-number-controls>
           <div class="number-entry-row">

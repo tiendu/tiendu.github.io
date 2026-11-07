@@ -165,3 +165,15 @@
 .flock:has([data-board]:not([hidden])) .flock-marquee {
   display: none;
 }
+
+/* The arcade hosts Chicken in-place on both touch and desktop screens. */
+.chicken-mode .terminal-screen { background: #080a09; }
+.flock { background: #101310; border-color: #3c423a; }
+@media (min-width: 48rem) {
+  .flock { max-width: 56rem; padding: clamp(20px, 3vw, 32px); }
+  .flock [data-board] > canvas { height: clamp(180px, 44svh, 380px); }
+}
+@media (orientation: landscape) and (max-height: 550px) {
+  .flock { padding: 6px 10px; }
+  .flock [data-board] > canvas { height: clamp(120px, 43svh, 220px); }
+}

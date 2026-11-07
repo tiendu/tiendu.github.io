@@ -201,3 +201,41 @@ body:has(.number-game) { background: #090b0b; color: #e9e9da; }
 }
 
 .number-online > .number-online-status { height: 3.6em; overflow-y: auto; overflow-wrap: anywhere; }
+
+/* Let the room and range share the left side while the keypad stays in reach. */
+@media (min-width: 48rem) {
+  .page-content:has(.number-game) {
+    display: grid;
+    align-items: safe center;
+    padding: clamp(12px, 3vh, 36px) 24px;
+    box-sizing: border-box;
+  }
+  .number-game {
+    position: relative;
+    width: min(100%, 62rem);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, .8fr);
+    grid-template-areas:
+      "header header"
+      "heading keypad"
+      "round keypad"
+      "room keypad"
+      "options keypad"
+      "footer footer";
+    column-gap: clamp(32px, 5vw, 72px);
+    padding: clamp(20px, 3vw, 40px);
+    background: #101310;
+    border: 1px solid #363d34;
+  }
+  .number-header { grid-area: header; border-bottom: 1px solid #363d34; margin-bottom: 20px; }
+  .number-heading { grid-area: heading; }
+  .number-heading h1 { font-size: 60px; }
+  .number-board { display: contents; }
+  .number-round-info { grid-area: round; min-width: 0; }
+  .number-range { font-size: clamp(58px, 6vw, 80px); }
+  .number-play-area { grid-area: keypad; align-self: start; padding: 18px 20px 24px; background: #171c17; }
+  .number-online { grid-area: room; margin-bottom: 0; }
+  .number-online > .number-online-status { height: auto; }
+  .number-game > .number-options { grid-area: options; margin-top: 8px; }
+  .number-footer { grid-area: footer; border-top: 1px solid #363d34; padding-top: 8px; }
+}
