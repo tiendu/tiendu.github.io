@@ -1,3 +1,4 @@
+import { paintFox } from "./chicken-predators";
 import { drawPlumage } from "./chicken-plumage";
 import type { RunCycleState } from "./chicken-run-cycle";
 import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
@@ -246,36 +247,13 @@ function drawFox(
   context: CanvasRenderingContext2D,
   fox: FoxVisual,
   scene: ChickenRunScene,
-  palette: ChickenWorldPalette,
 ): void {
   if (!fox.visible) return;
   const x = Math.round(fox.x);
-  const y = terrainHeightAt(scene.distance + fox.x + 20, scene.groundY) - 35;
-  const legPhase = Math.floor(fox.runFrame) % 2;
-
+  const floor = terrainHeightAt(scene.distance + fox.x + 20, scene.groundY);
   context.save();
-  context.globalAlpha = 0.48 + Math.min(0.45, fox.pressure * 0.45);
-  context.fillStyle = rgbCss(palette.fox);
-  context.shadowColor = rgbaCss(palette.fox, 0.32);
-  context.shadowBlur = 5;
-  context.fillRect(x + 9, y + 12, 28, 17);
-  context.fillRect(x + 29, y + 6, 17, 15);
-  context.fillRect(x + 42, y + 12, 9, 6);
-  context.fillRect(x + 31, y + 1, 5, 8);
-  context.fillRect(x + 40, y + 2, 5, 7);
-  context.fillRect(x, y + 15, 15, 8);
-  context.fillRect(x - 5, y + 11, 10, 5);
-
-  context.fillStyle = rgbCss(palette.foxDetail);
-  context.fillRect(x + 39, y + 9, 3, 3);
-  context.fillStyle = rgbCss(palette.egg);
-  context.fillRect(x + 40, y + 9, 1, 1);
-
-  context.fillStyle = rgbCss(palette.foxDetail);
-  context.fillRect(x + (legPhase ? 15 : 11), y + 28, 4, 7);
-  context.fillRect(x + (legPhase ? 31 : 35), y + 28, 4, 7);
-  context.fillRect(x + (legPhase ? 11 : 15), y + 33, 9, 2);
-  context.fillRect(x + (legPhase ? 29 : 33), y + 33, 9, 2);
+  context.globalAlpha = 0.76 + Math.min(0.24, fox.pressure * 0.24);
+  paintFox(context, x + 21, floor, fox.runFrame);
   context.restore();
 }
 
@@ -529,7 +507,7 @@ export function drawChickenRunScene(
 
   context.save();
   context.translate(0, scene.cameraOffsetY);
-  drawFox(context, scene.fox, scene, palette);
+  drawFox(context, scene.fox, scene);
   scene.corn.forEach((kernel) =>
     drawCorn(
       context,

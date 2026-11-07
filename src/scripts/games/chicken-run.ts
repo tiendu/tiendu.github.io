@@ -1,3 +1,4 @@
+import { bindCourseGestures } from "./chicken-gestures";
 import { mountArcadeAudio } from "./shared/arcade-audio";
 import {
   cycleStateForElapsed,
@@ -297,8 +298,9 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   let birdColor = "#f7edcf";
   let birdShape = "round";
-  let sprintHeld = false;
-  let exhausted = false;
+  let burstLeft = 0;
+  let birdSpeed = 1;
+  let jumpScale = 1;
   let stamina = 3;
   const staminaMeter = root.querySelector<HTMLMeterElement>("[data-solo-energy]")!;
   const sprintButton = root.querySelector<HTMLButtonElement>("[data-solo-sprint]")!;
@@ -597,7 +599,7 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   const resetGame = (): void => {
     staminaMeter.value = stamina = 3;
-    sprintHeld = exhausted = false;
+    burstLeft = 0;
     clearSession();
     setResumePicker(false);
     checkpointElapsed = 0;
@@ -678,7 +680,7 @@ function mountChickenRunGame(root: HTMLElement): void {
 
     if (action === "jump") {
       sounds.play("hop");
-      chickenVelocityY = JUMP_VELOCITY;
+      chickenVelocityY = JUMP_VELOCITY * jumpScale;
       grounded = false;
       lastGroundedAt = Number.NEGATIVE_INFINITY;
       flapAvailable = true;
@@ -691,7 +693,7 @@ function mountChickenRunGame(root: HTMLElement): void {
 
     if (action === "flap") {
       sounds.play("hop");
-      chickenVelocityY = Math.min(chickenVelocityY, FLAP_VELOCITY);
+      chickenVelocityY = Math.min(chickenVelocityY, FLAP_VELOCITY * jumpScale);
       flapAvailable = false;
       flapPulse = 0.18;
       emitFeathers("flap", { x: CHICKEN_X + 9, y: chickenY + 22 });
@@ -1157,10 +1159,9 @@ function mountChickenRunGame(root: HTMLElement): void {
   const update = (delta: number, now: number): void => {
     runElapsed += delta;
     updateWeather();
-    const sprinting = sprintHeld && !exhausted && stamina > 0;
+    const sprinting = burstLeft > 0;
+    burstLeft = Math.max(0, burstLeft - delta);
     stamina = Math.max(0, Math.min(3, stamina + (sprinting ? -delta : delta / 2)));
-    if (!stamina) exhausted = true;
-    if (!sprintHeld && stamina > 0.1) exhausted = false;
     staminaMeter.value = stamina;
     if (sprinting && cycle.phase === "night") foxPressure = Math.max(0, foxPressure - delta * .12);
     updateCycle(delta);
@@ -1173,7 +1174,7 @@ function mountChickenRunGame(root: HTMLElement): void {
       MAX_RUN_SPEED,
       speedForScore(score) * cycle.speedMultiplier * secondarySpeedMultiplier,
     );
-    if (sprinting) currentSpeed *= 1.22;
+    currentSpeed *= birdSpeed * (sprinting ? 1.22 : 1);
     distance += currentSpeed * delta;
 
     const chickenGround = terrainHeightAt(distance + CHICKEN_X, GROUND_Y);
@@ -1285,7 +1286,7 @@ function mountChickenRunGame(root: HTMLElement): void {
 
   const togglePause = (): void => {
     if (!active || !started || gameOver || crash) return;
-    sprintHeld = false;
+    burstLeft = 0;
     paused = !paused;
     if (paused) sounds.stop();
     if (paused) persistSession();
@@ -1300,7 +1301,7 @@ function mountChickenRunGame(root: HTMLElement): void {
   const pauseGame = (): void => {
     if (!active || !started || paused || gameOver || crash) return;
     sounds.stop();
-    sprintHeld = false;
+    burstLeft = 0;
     paused = true;
     persistSession();
     setOverlay("PAUSED", "P / TAP TO RESUME · R RESTART · ESC EXIT");
@@ -1367,7 +1368,7 @@ function mountChickenRunGame(root: HTMLElement): void {
     gameOver = false;
     started = false;
     sounds.stop();
-    sprintHeld = false;
+    burstLeft = 0;
     paused = true;
     checkpointElapsed = 0;
     lastStableSession = {
@@ -1482,6 +1483,11 @@ function mountChickenRunGame(root: HTMLElement): void {
       return;
     }
 
+    if (event.key === "ArrowRight" || event.key === "Shift") {
+      event.preventDefault();
+      if (!event.repeat) engageSprint();
+      return;
+    }
     if (event.key === " " || event.key === "ArrowUp" || key === "w") {
       event.preventDefault();
       if (gameOver) retryAndJump();
@@ -1501,9 +1507,8 @@ function mountChickenRunGame(root: HTMLElement): void {
     }
   };
 
-  const activateFromPointer = (event: PointerEvent): void => {
+  const activateFromPointer = (): void => {
     if (!active) return;
-    event.preventDefault();
     if (resumePrompt) return;
     if (paused) return;
     if (gameOver) retryAndJump();
@@ -1530,7 +1535,6 @@ function mountChickenRunGame(root: HTMLElement): void {
     }
     canvas.focus({ preventScroll: true });
   });
-  canvas.addEventListener("pointerdown", activateFromPointer);
   document.addEventListener("keydown", onKeyDown);
   window.addEventListener("blur", pauseGame);
   window.addEventListener("pagehide", persistSession);
@@ -1548,31 +1552,21 @@ function mountChickenRunGame(root: HTMLElement): void {
   });
   root.querySelector("[data-solo-menu]")?.addEventListener("click", () => exitGame(true));
   window.addEventListener(GAME_EVENTS.chicken.solo, (event) => {
-    const bird = (event as CustomEvent<{ color: string; shape: string }>).detail;
+    const bird = (event as CustomEvent<{ color: string; shape: string; speed: number; jumpHeight: number }>).detail;
     birdColor = bird.color;
     birdShape = bird.shape;
+    birdSpeed = bird.speed;
+    jumpScale = Math.sqrt(bird.jumpHeight);
     staminaMeter.value = stamina = 3;
-    exhausted = sprintHeld = false;
+    burstLeft = 0;
     startGame();
     if (!resumePrompt) startPlaying();
   });
   const engageSprint = () => {
-    if (active && started && !paused && !resumePrompt && !gameOver && !crash) sprintHeld = true;
+    if (active && started && !paused && !resumePrompt && !gameOver && !crash && !burstLeft && stamina >= 1)
+      burstLeft = 1;
   };
-  const releaseSprint = () => { sprintHeld = false; };
-  sprintButton.addEventListener("pointerdown", (event) => {
-    event.preventDefault();
-    sprintButton.setPointerCapture(event.pointerId);
-    engageSprint();
-  });
-  sprintButton.addEventListener("pointerup", releaseSprint);
-  sprintButton.addEventListener("lostpointercapture", releaseSprint);
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Shift" && !event.repeat) engageSprint();
-  });
-  document.addEventListener("keyup", (event) => {
-    if (event.key === "Shift") releaseSprint();
-  });
-  window.addEventListener("blur", releaseSprint);
+  bindCourseGestures(canvas, activateFromPointer, engageSprint);
+  sprintButton.addEventListener("click", engageSprint);
   window.addEventListener(GAME_EVENTS.chicken.command, onCommand);
 }

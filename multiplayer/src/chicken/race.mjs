@@ -1,11 +1,11 @@
 // World units are pixels. The server advances the race in 50 ms steps.
 export const finish = 4250;
 export const birds = [
-  { name: "Sunrise", color: "#dc6540", shape: "rooster" },
-  { name: "Pepper", color: "#393744", shape: "hen" },
-  { name: "Pearl", color: "#f7edcf", shape: "round" },
-  { name: "Mango", color: "#ffcf48", shape: "chick" },
-  { name: "Indigo", color: "#687ad5", shape: "bantam" },
+  { name: "Sunrise", color: "#dc6540", shape: "rooster", speed: 1.06, jumpHeight: 0.95, trait: "Fast runner" },
+  { name: "Pepper", color: "#393744", shape: "hen", speed: 1, jumpHeight: 1, trait: "All-rounder" },
+  { name: "Pearl", color: "#f7edcf", shape: "round", speed: 0.95, jumpHeight: 1.08, trait: "Highest jump" },
+  { name: "Mango", color: "#ffcf48", shape: "chick", speed: 0.97, jumpHeight: 1.05, trait: "Light jumper" },
+  { name: "Indigo", color: "#687ad5", shape: "bantam", speed: 1.03, jumpHeight: 0.98, trait: "Quick runner" },
 ];
 
 export function course(seed) {
@@ -23,43 +23,41 @@ export function course(seed) {
   return { roofs, corn };
 }
 
-export function runner(id) {
+export function runner(id, bird = 1) {
   return {
-    id,
+    id, bird,
     x: 0,
     y: 0,
     vy: 0,
-    vx: 72,
+    vx: 72 * birds[bird].speed,
     jumps: 0,
-    sprint: false,
+    burstLeft: 0,
     stamina: 3,
     corn: 0,
-    spent: false,
     status: "running",
   };
 }
 export function input(p, key) {
   if (!p || p.status !== "running") return;
   if (key === "jump" && p.jumps < 2) {
-    p.vy = p.jumps === 0 ? 220 : 175;
+    p.vy = (p.jumps === 0 ? 220 : 175) * Math.sqrt(birds[p.bird ?? 1].jumpHeight);
     p.jumps++;
   }
-  if (key === "down") p.sprint = true;
-  if (key === "up") p.sprint = false;
+  if (key === "down" && !p.burstLeft && p.stamina >= 1) p.burstLeft = 1;
 }
 export function move(p, dt, roofs) {
   const surface = roofs.find(
     (r) => p.x >= r.x && p.x <= r.x + r.width && p.y === r.h,
   );
   const grounded = p.jumps === 0 && (p.y === 0 || surface);
-  const fast = p.sprint && !p.spent && p.stamina > 0;
+  const fast = p.burstLeft > 0;
+  p.burstLeft = Math.max(0, (p.burstLeft ?? 0) - dt);
+  const targetSpeed = (fast ? 128 : 72) * birds[p.bird ?? 1].speed;
   if (grounded)
     p.vx +=
-      Math.sign((fast ? 128 : 72) - p.vx) *
-      Math.min(Math.abs((fast ? 128 : 72) - p.vx), 160 * dt);
+      Math.sign(targetSpeed - p.vx) *
+      Math.min(Math.abs(targetSpeed - p.vx), 160 * dt);
   p.stamina = Math.max(0, Math.min(3, p.stamina + (fast ? -dt : dt / 2)));
-  if (!p.stamina) p.spent = true;
-  if (!p.sprint && p.stamina > 0.1) p.spent = false;
   p.x += p.vx * dt;
   const oldY = p.y;
   p.vy -= 400 * dt;
@@ -74,11 +72,11 @@ export function move(p, dt, roofs) {
     p.jumps = 0;
   } else if (!p.jumps) p.jumps = 1;
 }
-export function newRace(ids, seed) {
+export function newRace(players, seed) {
   return {
     seed,
     time: -3,
-    runners: ids.map(runner),
+    runners: players.map((player) => typeof player === "string" ? runner(player) : runner(player.id, player.bird)),
     picked: [],
     rescued: false,
     fox: null,
@@ -142,6 +140,7 @@ export function step(r, track, dt = 0.05) {
   if (
     !r.hawk &&
     r.time > 5 &&
+    cycle >= 6 && cycle <= 13 &&
     Math.floor(r.time / 3) !== Math.floor((r.time - dt) / 3)
   ) {
     const target = active.find((p) => p.status === "running" && p.y >= 35);

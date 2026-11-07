@@ -73,7 +73,7 @@ export class Flock {
       )
         return error("Host needs 2–5 connected players.");
       this.race = newRace(
-        [...this.members.keys()],
+        [...this.members.keys()].map((id) => s.players.find((player) => player.id === id)),
         crypto.getRandomValues(new Uint32Array(1))[0],
       );
       delete s.result;

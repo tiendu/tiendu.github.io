@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import WebSocket from "ws";
 import { startServer } from "../src/node-server.mjs";
 import {
+  birds,
   course,
   runner,
   input,
@@ -45,6 +46,44 @@ test("sprint drains stamina, jumps preserve momentum, roof catches a descending 
   assert.equal(p.y, 28);
   assert.equal(p.jumps, 0);
 });
+test("each chosen bird can reach the high roof and escape the first fox", () => {
+  const track = course(0);
+  for (const [bird, traits] of birds.entries()) {
+    const race = newRace([{ id: "a", bird }], 0);
+    const p = race.runners[0];
+    assert.equal(p.vx, 72 * traits.speed);
+    p.x = track.roofs[0].x + 30;
+    p.y = track.roofs[0].h;
+    input(p, "jump");
+    const launch = p.vy;
+    assert.equal(launch, 220 * Math.sqrt(traits.jumpHeight));
+    for (let i = 0; i < 22; i++) move(p, 0.05, track.roofs);
+    assert.equal(p.y, 60, traits.name);
+
+    const chase = newRace([{ id: "a", bird }], 0);
+    chase.time = 9;
+    const chicken = chase.runners[0];
+    for (let tick = 0; tick < 100; tick++) {
+      if (tick === 24 || tick === 60) input(chicken, "down");
+      step(chase, { roofs: [], corn: [] });
+    }
+    assert.equal(chicken.status, "running", traits.name);
+  }
+});
+
+test("a sprint continues after release and repeated taps cannot extend it", () => {
+  const p = runner("a");
+  input(p, "down");
+  input(p, "up");
+  for (let i = 0; i < 20; i++) {
+    input(p, "down");
+    move(p, 0.05, []);
+  }
+  assert.equal(p.burstLeft, 0);
+  move(p, 0.05, []);
+  assert.ok(p.vx < 128);
+});
+
 test("fox spends one earned rescue and unassisted jogging can end the round", () => {
   const r = newRace(["a"], 1);
   r.time = 10;

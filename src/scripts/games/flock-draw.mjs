@@ -1,3 +1,4 @@
+import { paintEagle, paintFox } from "./chicken-predators";
 import { birds, finish } from "../../../multiplayer/src/chicken/race.mjs";
 import { drawChickenBody } from "./chicken-run-renderer";
 import { paletteForCycle } from "./chicken-run-sky";
@@ -107,17 +108,9 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
       t = Math.max(0, r.hawk.at - r.time);
     rect("#332e3b", x - 24, ground - 62, 48, 3);
     const y = ground - 65 - Math.min(1, t) * 100;
-    rect("#392c31", x - 16, y - 5, 12, 4);
-    rect("#392c31", x - 5, y, 15, 5);
-    rect("#392c31", x + 9, y - 6, 10, 5);
+    paintEagle(c, x - 35 * t, y, t < 0.42);
   }
-  if (r.fox !== null) {
-    const x = X(r.fox);
-    rect("#d57037", x - 15, ground - 15, 26, 10);
-    rect("#e98a40", x + 7, ground - 23, 12, 14);
-    rect("#d57037", x + 8, ground - 28, 4, 6);
-    rect("#fff0cc", x - 21, ground - 20, 9, 5);
-  }
+  if (r.fox !== null) paintFox(c, X(r.fox), ground, r.time * 12);
   if (r.time < 0) {
     r.runners.forEach((p, i) => {
       const info = players.find((v) => v.id === p.id);

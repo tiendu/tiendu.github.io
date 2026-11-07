@@ -1,3 +1,4 @@
+import { bindCourseGestures } from "./chicken-gestures";
 import {
   birds,
   course,
@@ -22,7 +23,6 @@ let ws = null,
   track,
   frame = 0,
   received = 0,
-  held = false,
   pending = false;
 const status = (msg) => {
   el("status").textContent = msg;
@@ -49,7 +49,6 @@ function reset(message) {
   id = "";
   view = null;
   choosingSolo = false;
-  held = false;
   pending = false;
   delete root.dataset.online;
   el("code-form").hidden = true;
@@ -67,12 +66,6 @@ function submit(key) {
   if (key === "jump" && p.jumps < 2) audio.play("hop");
   send({ type: "input", key });
   input(p, key);
-}
-function release() {
-  if (held) {
-    held = false;
-    submit("up");
-  }
 }
 function refreshLobby() {
   const { players, host, race } = view;
@@ -116,7 +109,10 @@ birds.forEach((b, i) => {
   portrait.style.cssText =
     "width:48px;height:33px;display:block;background:transparent";
   drawBird(portrait.getContext("2d"), b, 24, 31);
-  button.append(portrait, b.name);
+  const label = document.createElement("small");
+  label.textContent = b.trait;
+  label.style.display = "block";
+  button.append(portrait, b.name, label);
   button.onclick = () => {
     if (choosingSolo) {
       closePanel();
@@ -137,7 +133,6 @@ function feedback(old, r) {
     audio.play("impact");
 }
 function end() {
-  held = false;
   audio.stop();
   audio.play("clear");
   const r = view.race;
@@ -177,11 +172,10 @@ function paint(time) {
 }
 function begin() {
   cancelAnimationFrame(frame);
-  held = false;
   received = performance.now();
   track = course(view.race.seed);
   el("board").hidden = false;
-  status("Reach the coop. Three corn earn one flock rescue.");
+  status("Tap or Space to jump. Swipe right or press → to sprint. Three corn earn one rescue.");
   refreshLobby();
   frame = requestAnimationFrame(paint);
 }
@@ -305,18 +299,8 @@ el("leave").onclick = () => {
   reset("Left the race.");
 };
 el("jump").onclick = () => submit("jump");
-el("sprint").onpointerdown = (e) => {
-  e.preventDefault();
-  e.target.setPointerCapture(e.pointerId);
-  held = true;
-  submit("down");
-};
-for (const event of ["pointerup", "pointercancel", "lostpointercapture"])
-  el("sprint").addEventListener(event, release);
-window.addEventListener("blur", release);
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) release();
-});
+el("sprint").onclick = () => submit("down");
+bindCourseGestures(canvas, () => submit("jump"), () => submit("down"));
 document.addEventListener("keydown", (e) => {
   if (el("board").hidden || e.repeat || e.target.closest("input")) return;
   if (
@@ -326,13 +310,10 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     submit("jump");
   }
-  if (e.key === "Shift") {
-    held = true;
+  if (e.key === "ArrowRight" || e.key === "Shift") {
+    e.preventDefault();
     submit("down");
   }
-});
-document.addEventListener("keyup", (e) => {
-  if (e.key === "Shift") release();
 });
 window.addEventListener("pagehide", () => reset("Left the race."));
 function closePanel() {
