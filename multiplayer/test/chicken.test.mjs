@@ -1,4 +1,4 @@
-import { raceClimate } from "../src/chicken/encounters.mjs";
+import { raceClimate, updatePredators } from "../src/chicken/encounters.mjs";
 import test from "node:test";
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -312,4 +312,44 @@ test("a marked rooftop strike gives every bird time for one sprint", () => {
       assert.ok(race.hawk.lift > 0);
     }
   }
+});
+
+test("winter keeps snowfall out of the rain rules and ice preserves jump control", () => {
+  const winter = course(256);
+  const summer = course(0);
+  const climates = Array.from({ length: 180 }, (_, t) => raceClimate(winter, t));
+  assert.ok(climates.some(c => c.snowfall > 0.8));
+  assert.ok(climates.every(c => c.icy && !c.muddy && !c.rain && !c.weather.rainIntensity));
+  assert.ok(Array.from({ length: 180 }, (_, t) => raceClimate(summer, t))
+    .some(c => !c.rain && c.muddy));
+  assert.equal(course(256, 3).snowCourse, false);
+  const ice = runner("on ice"), dirt = runner("on dirt");
+  ice.vx = dirt.vx = 120;
+  move(ice, 0.05, [], [], [{ x: 0, width: 42 }], true);
+  move(dirt, 0.05, [], [], null);
+  assert.ok(ice.vx > dirt.vx);
+  input(ice, "jump");
+  move(ice, 0.05, [], [], [{ x: 0, width: 42 }], true);
+  assert.ok(ice.y > 0);
+});
+
+test("rain breaks off a dive and an elevated chicken can escape a fox on ice", () => {
+  const track = course(256);
+  const race = newRace(["me"], 256);
+  race.time = 10;
+  const bird = race.runners[0];
+  race.hawk = { target: bird.id, x: bird.x, at: 11 };
+  const weather = { rainIntensity: 0.08 };
+  updatePredators(race, track, { cycle: { phase: "day" }, rain: true, weather }, 0.05, assert.fail);
+  assert.equal(race.hawk.lift, race.time);
+
+  race.hawk = null;
+  race.fox = track.mud[0].x;
+  race.foxTarget = bird.id;
+  race.chaseEnd = 12;
+  bird.x = race.fox + 30;
+  bird.altitude = 24;
+  updatePredators(race, track, { cycle: { phase: "night" }, icy: true, weather }, 0.05, assert.fail);
+  assert.equal(race.foxRetreat, race.time);
+  assert.equal(race.foxSkid, true);
 });

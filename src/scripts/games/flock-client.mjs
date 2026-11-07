@@ -18,6 +18,11 @@ const root = document.querySelector("[data-flock]");
 const el = (key) => root.querySelector("[data-" + key + "]");
 const audio = mountGameSound(root, "chicken-run");
 const canvas = el("board").querySelector("canvas");
+// CSS handles rotation and window sizing. Read layout only when the board changes.
+new ResizeObserver(([entry]) => {
+  const { width, height } = entry.contentRect;
+  if (width && height) canvas.width = Math.max(225, Math.round(256 * width / height));
+}).observe(canvas);
 drawPoster(el("poster"));
 let ws = null,
   id = "",
@@ -237,6 +242,8 @@ function end() {
   };
   finishFrame(started);
 }
+let previousRoomRace;
+let previousFox;
 function paint(time) {
   const r = view?.race;
   if (!r || r.over) return;
@@ -244,6 +251,7 @@ function paint(time) {
     received = Math.max(received, time - 250);
     while (time - received >= tickMs && !r.over) {
       const previous = soundState(r);
+      previousFox = r.fox;
       advanceSolo(local);
       feedback(previous, r);
       received += tickMs;
@@ -255,18 +263,25 @@ function paint(time) {
     audio.play("pulse", pressure);
     nextPulse = time + 700 - 400 * pressure;
   }
-  const ratio = canvas.clientWidth / Math.max(1, canvas.clientHeight);
-  const width = Math.max(225, Math.round(256 * ratio));
-  if (canvas.width !== width) canvas.width = width;
-  const age = Math.min(0.1, (time - received) / 1000);
-  const wetPatches = raceClimate(track, r.time).muddy ? track.mud : null;
+  const age = Math.max(0, Math.min(0.1, (time - received) / 1000));
+  const climate = raceClimate(track, r.time);
+  const wetPatches = climate.muddy || climate.icy ? track.mud : null;
+  const interval = local ? tickMs / 1000 : r.time - (previousRoomRace?.time ?? r.time);
+  const blend = interval > 0 ? Math.min(1, age / interval) : 1;
+  const lastFox = local ? previousFox : previousRoomRace?.fox;
   const display = {
     ...r,
     time: r.time + (paused ? 0 : Math.max(0, age)),
+    fox: Number.isFinite(lastFox) && Number.isFinite(r.fox)
+      ? lastFox + (r.fox - lastFox) * blend : r.fox,
     runners: r.runners.map((p) => {
+      const old = !local && p.id !== id && previousRoomRace?.runners.find(b => b.id === p.id);
+      if (old && old.status === p.status && p.status === "running") {
+        return { ...p, x: old.x + (p.x - old.x) * blend, y: old.y + (p.y - old.y) * blend };
+      }
       const copy = { ...p };
       if (!paused && r.time >= 0 && p.status === "running")
-        move(copy, age, track.roofs, track.hills, wetPatches);
+        move(copy, age, track.roofs, track.hills, wetPatches, climate.icy);
       return copy;
     }),
   };
@@ -275,6 +290,10 @@ function paint(time) {
   frame = requestAnimationFrame(paint);
 }
 function begin() {
+  previousRoomRace = null;
+  previousFox = null;
+  effects.lead = 0;
+  effects.lastTime = null;
   effects.catches.clear();
   effects.eagle = null;
   cancelAnimationFrame(frame);
@@ -340,6 +359,7 @@ async function connect(create) {
       }
       if (!msg.players) return;
       const old = view?.race;
+      previousRoomRace = old;
       view = msg;
       received = performance.now();
       if (msg.race && !msg.race.over) {

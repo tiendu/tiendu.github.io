@@ -140,6 +140,11 @@ function drawMiddleSceneDetails(
     }
 
     if (state.kind === "farmstead") {
+      if (cell % 2 === 0) {
+        context.fillStyle = rgbaCss(palette.groundMark, alpha + 0.18);
+        context.fillRect(x - 30, baseY - 10, 27, 10);
+        context.fillRect(x - 24, baseY - 17, 16, 7);
+      }
       context.fillStyle = rgbaCss(palette.middle, alpha);
       context.fillRect(x - 18, baseY - 18, 3, 18);
       context.fillRect(x + 34, baseY - 16, 3, 16);

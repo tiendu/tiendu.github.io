@@ -25,7 +25,7 @@ function classicCourse(seed) {
 }
 
 // A seed is enough for the host, guests and saved runs to rebuild this track.
-export function course(seed, version = 3) {
+export function course(seed, version = 4) {
   if (version === 1) return classicCourse(seed);
   let state = seed >>> 0;
   const roll = (low, high) => {
@@ -44,8 +44,8 @@ export function course(seed, version = 3) {
       { x: hill.x + hill.width / 2, h: hill.h });
     x = hill.x + hill.width + roll(55, 185);
   }
-  const mud = version >= 3 ? hills.filter((_, i) => i % 2 === seed % 2).map(h => ({ x: h.x - 22, width: 20 })) : [];
-  return { finish, hills, roofs, corn, mud, version, weatherOffset: roll(0, 150),
+  const mud = version >= 3 ? hills.filter((_, i) => i % 2 === seed % 2).map(h => ({ x: h.x - (version >= 4 ? 50 : 22), width: version >= 4 ? 42 : 20 })) : [];
+  return { finish, hills, roofs, corn, mud, version, snowCourse: version >= 4 && (seed >>> 8) % 3 === 1, weatherOffset: roll(0, 150),
     weatherRate: roll(80, 125) / 100, skyOffset: roll(0, 48) };
 }
 
@@ -77,7 +77,7 @@ export function input(p, key) {
   }
   if (key === "down" && !p.burstLeft) p.burstLeft = 1;
 }
-export function move(p, dt, roofs, hills, wetPatches) {
+export function move(p, dt, roofs, hills, wetPatches, icy = false) {
   const surface = roofs.find(
     (r) => p.x >= r.x && p.x <= r.x + r.width && p.y === r.h,
   );
@@ -86,12 +86,12 @@ export function move(p, dt, roofs, hills, wetPatches) {
   const fast = p.burstLeft > 0;
   p.burstLeft = Math.max(0, (p.burstLeft ?? 0) - dt);
   const inMud = onGround && wetPatches?.some(patch => p.x >= patch.x && p.x < patch.x + patch.width);
-  const traction = inMud ? 0.72 : 1;
+  const traction = inMud && !icy ? 0.72 : 1;
   const targetSpeed = traction * (fast ? 128 : 72) * birds[p.bird ?? 1].speed;
   if (grounded)
     p.vx +=
       Math.sign(targetSpeed - p.vx) *
-      Math.min(Math.abs(targetSpeed - p.vx), 160 * dt);
+      Math.min(Math.abs(targetSpeed - p.vx), (icy && inMud && p.vx > targetSpeed ? 24 : 160) * dt);
   p.x += p.vx * dt;
   const oldY = p.y;
   p.vy -= 400 * dt;
@@ -106,7 +106,7 @@ export function move(p, dt, roofs, hills, wetPatches) {
     p.jumps = 0;
   } else if (!p.jumps) p.jumps = 1;
 }
-export function newRace(players, seed, courseVersion = 3) {
+export function newRace(players, seed, courseVersion = 4) {
   return {
     seed, courseVersion,
     time: -3,
@@ -132,7 +132,7 @@ export function step(r, track, dt = 0.05) {
   }
   const climate = r.courseVersion >= 3 ? raceClimate(track, r.time) : null;
   for (const p of active) {
-    move(p, dt, track.roofs, track.hills, climate?.muddy ? track.mud : null);
+    move(p, dt, track.roofs, track.hills, climate?.muddy || climate?.icy ? track.mud : null, climate?.icy);
     if (climate) {
       p.altitude = p.y - groundHeight(track.hills, p.x);
       p.onTrail = !p.jumps && p.altitude < 1;
