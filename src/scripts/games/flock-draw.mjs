@@ -3,7 +3,7 @@ import { eaglePose } from "../../../multiplayer/src/chicken/contact.mjs";
 import { pouncePose } from "../../../multiplayer/src/chicken/pounce.mjs";
 import { drawCaughtFeathers, featherDuration } from "./chicken-plumage";
 import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
-import { raceClimate } from "../../../multiplayer/src/chicken/encounters.mjs";
+import { foxBurstPhase, raceClimate } from "../../../multiplayer/src/chicken/encounters.mjs";
 import { paintCoyote, paintEagle, paintFox, paintPerchedEagle } from "./chicken-predators";
 import { birds, groundHeight } from "../../../multiplayer/src/chicken/race.mjs";
 import { drawChickenBody } from "./chicken-run-renderer";
@@ -200,9 +200,14 @@ export function drawRace(canvas, r, track, players, id, effects) {
         rect("#839ba8", X(print) + 2, floorAt(print) + 1, 2, 1);
       }
     }
+    if (r.foxSkid && climate.muddy && skid >= 0 && skid < 0.6) {
+      const smear = Math.min(22, Math.round(skid * 60));
+      rect("#654937", x - 7 - smear, floor - 1, smear, 2);
+      rect("#937053", x - 9 - smear, floor - 3, 3, 2);
+    }
     const pivot = r.foxSkid ? 0.6 : 0.25;
     const turn = Math.min(1, Math.max(0, (skid - pivot + 0.14) / 0.28));
-    paintFox(c, x, floor, worldX / 6, turn, pose?.hop ?? 0);
+    paintFox(c, x, floor, worldX / 6, turn, pose?.hop ?? 0, Number(foxBurstPhase(r) === "warning"));
     if (skid < 0.25) {
       const dust = Math.floor(r.time * 16) % 5;
       rect("#d9b78e", x - 18 - dust, floor - 2 - dust, 4, 2);

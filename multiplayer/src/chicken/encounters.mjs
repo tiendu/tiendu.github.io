@@ -76,11 +76,21 @@ function chaseWithCoyote(r, track, dt, catchBird) {
   }
 }
 
+// Derived from the shared chase clock, including between multiplayer snapshots.
+export function foxBurstPhase(r) {
+  if (!(r.courseVersion >= 9) || r.fox == null || r.foxRetreat != null || r.pounce) return null;
+  const age = r.time - r.foxStarted;
+  if (age >= 0.35 && age < 0.70) return "warning";
+  if (age >= 0.70 && age < 1.45) return "burst";
+  return null;
+}
+
 export function updatePredators(r, track, climate, dt, catchBird, landings = []) {
   const { phase, cycleIndex } = climate.cycle;
   const night = phase === "night";
   const flying = phase === "day" && !climate.rain && climate.weather.rainIntensity < 0.65;
-  if (track.version >= 6 && !r.pounce && landings.length) {
+  const burst = foxBurstPhase(r);
+  if (track.version >= 6 && !burst && !r.pounce && landings.length) {
     const hunting = (!r.hawk || flying) && (r.fox == null || (night && r.time < r.chaseEnd));
     if (hunting) tryPounce(r, track, landings);
   }
@@ -111,18 +121,20 @@ export function updatePredators(r, track, climate, dt, catchBird, landings = [])
       r.foxLeadTime = escaped ? (r.foxLeadTime ?? 0) + dt : 0;
       escaped = r.time - r.foxStarted >= 1.5 && r.foxLeadTime >= 0.6;
     }
+    const patch = track.version >= 4 && (climate.muddy || climate.icy) &&
+      track.mud?.find(m => r.fox >= m.x && r.fox < m.x + m.width);
     if (!night || target?.status !== "running" || r.time >= r.chaseEnd || escaped) {
+      if (r.courseVersion >= 9 && patch && climate.muddy) r.foxSkid = true;
       r.foxRetreat = r.time;
       return;
     }
-    const patch = track.version >= 4 && (climate.muddy || climate.icy) &&
-      track.mud?.find(m => r.fox >= m.x && r.fox < m.x + m.width);
     if (patch && climate.icy && target.altitude > 12) {
       r.foxRetreat = r.time;
       r.foxSkid = true;
       return;
     }
-    r.fox += (patch && climate.muddy ? 55 : 90) * dt;
+    const speed = burst === "burst" ? 115 : 90;
+    r.fox += speed * (patch && climate.muddy ? 55 / 90 : 1) * dt;
     // A roof is safe. Ground height comes from the shared movement simulation.
     for (const bird of r.runners) {
       if (r.courseVersion < 7 && bird !== target) continue;
@@ -132,6 +144,10 @@ export function updatePredators(r, track, climate, dt, catchBird, landings = [])
         catchBird(bird);
         r.foxRetreat = r.time;
       }
+    }
+    if (r.courseVersion >= 9 && !target.jumps && target.altitude >= 12 && r.fox >= target.x) {
+      r.foxRetreat = r.time;
+      if (patch && climate.muddy) r.foxSkid = true;
     }
     return;
   }

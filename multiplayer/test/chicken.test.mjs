@@ -1,5 +1,5 @@
 import { coyoteFooting } from "../src/chicken/coyote-route.mjs";
-import { raceClimate, updatePredators } from "../src/chicken/encounters.mjs";
+import { foxBurstPhase, raceClimate, updatePredators } from "../src/chicken/encounters.mjs";
 import test from "node:test";
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -447,7 +447,7 @@ test("short landings invite a committed pounce; a quick jump or clear landing es
       p.jumps = 1;
       p.vy = -60;
       if (response === "protected") p.safeUntil = 10;
-      if (kind === "fox") Object.assign(r, { fox: 100, foxTarget: "me", chaseEnd: 10, foxStarted: 2 });
+      if (kind === "fox") Object.assign(r, { fox: 100, foxTarget: "me", chaseEnd: 10, foxStarted: 1 });
       if (kind === "coyote") r.coyote = { x: 100, target: "me", started: 2, height: 22, baleX: 205 };
       if (kind === "eagle") r.hawk = { x: 100, surface: h, raised: true, perched: true, at: 2.9, lift: 3.6 };
       step(r, track);
@@ -531,4 +531,56 @@ test("the coyote clears the bale and fence edges and catches only birds on its l
   const caught = [];
   updatePredators(r, track, climate, 0.05, bird => caught.push(bird.id));
   assert.deepEqual(caught, ["above"]);
+});
+
+test("one warned fox burst allows a single sprint or hay jump for every bird", () => {
+  const climate = { cycle: { phase: "night" }, weather: { rainIntensity: 0 } };
+  for (const bird of birds.keys()) {
+    for (const action of ["down", "jump", "jog"]) {
+      const track = { ...course(1), hills: [], roofs: [{ x: 153, h: 24, width: 87 }] };
+      const race = newRace([{ id: "me", bird }], 1);
+      Object.assign(race, { fox: action === "jump" ? 59 : 45, foxTarget: "me", foxStarted: 0, chaseEnd: 3.45 });
+      const p = race.runners[0];
+      p.x = 100;
+      let warned = false, burstTicks = 0, passedUnder = false;
+      for (let tick = 1; tick < 72 && race.foxRetreat == null; tick++) {
+        race.time = tick * 0.05;
+        const phase = foxBurstPhase(race);
+        if (!warned && phase === "warning") {
+          warned = true;
+          if (action !== "jog") input(p, action);
+        }
+        move(p, 0.05, track.roofs, track.hills);
+        p.altitude = p.y;
+        p.onTrail = !p.jumps && p.y === 0;
+        const from = race.fox;
+        updatePredators(race, track, climate, 0.05, bird => { bird.status = "caught"; });
+        if (phase === "burst") {
+          assert.ok(warned);
+          assert.ok(Math.abs(race.fox - from - 5.75) < 1e-8);
+          burstTicks++;
+        }
+        if (race.fox >= p.x && p.y === 24 && !p.jumps) passedUnder = true;
+      }
+      if (action === "down") assert.equal(burstTicks, 15);
+      else assert.ok(burstTicks > 0 && burstTicks <= 15);
+      assert.equal(p.status, action === "jog" ? "caught" : "running", birds[bird].name + " " + action);
+      if (action === "jump") assert.ok(passedUnder);
+    }
+  }
+});
+
+test("fox skids on wet mud after passing beneath a perched chicken", () => {
+  const track = { ...course(1), mud: [{ x: 65, width: 50 }], roofs: [{ x: 70, width: 70, h: 24 }] };
+  const race = newRace(["me"], 1);
+  Object.assign(race, { time: 1, foxStarted: 0, fox: 79, foxTarget: "me", chaseEnd: 3.45 });
+  Object.assign(race.runners[0], { x: 80, y: 24, altitude: 24, onTrail: false });
+  const climate = { cycle: { phase: "night" }, weather: { rainIntensity: 1 }, muddy: true };
+  updatePredators(race, track, climate, 0.05, assert.fail);
+  assert.equal(race.foxSkid, true);
+  assert.equal(race.foxRetreat, 1);
+  const atTurn = race.fox;
+  race.time += 0.05;
+  updatePredators(race, track, climate, 0.05, assert.fail);
+  assert.ok(race.fox > atTurn);
 });

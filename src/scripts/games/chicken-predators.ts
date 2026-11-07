@@ -30,7 +30,7 @@ function foxLeg(c: CanvasRenderingContext2D, hip: number, phase: number, far: bo
 }
 
 function fox(c: CanvasRenderingContext2D, x: number, floor: number,
-  frame: number, turn = 0, hop = 0) {
+  frame: number, turn = 0, hop = 0, warning = 0) {
   const facing = Math.cos(turn * Math.PI);
   const stride = frame * Math.PI / 2 * (facing < 0 ? -1 : 1);
   c.save();
@@ -58,10 +58,12 @@ function fox(c: CanvasRenderingContext2D, x: number, floor: number,
   shape(c, copper, [0,0,-7,-2,-16,-2,-20,-3,-17,1,-10,4,-5,4]);
   shape(c, cream, [-23,-6,-16,-3,-13,-2,-15,-1,-13,2,-19,1]);
   c.restore();
-  shape(c, ink, [-13,-8,-11,-14,-5,-16,4,-15,8,-17,8,-24,13,-20,
-    17,-23,16,-17,18,-15,23,-13,22,-10,16,-9,12,-6,6,-8,-4,-8,-10,-5]);
-  shape(c, copper, [-12,-9,-9,-14,-3,-15,5,-14,10,-18,10,-21,14,-18,
-    16,-20,15,-16,18,-14,21,-13,17,-11,10,-10,6,-9,-3,-10,-10,-7]);
+  // Flatten the ears and pitch the muzzle down before launch.
+  c.rotate(warning * 0.12);
+  shape(c, ink, [-13,-8,-11,-14,-5,-16,4,-15,8,-17,8-6*warning,-24+6*warning,13,-20+2*warning,
+    17-6*warning,-23+5*warning,16,-17,18,-15,23,-13,22,-10,16,-9,12,-6,6,-8,-4,-8,-10,-5]);
+  shape(c, copper, [-12,-9,-9,-14,-3,-15,5,-14,10,-18,10-5*warning,-21+4*warning,14,-18,
+    16-5*warning,-20+3*warning,15,-16,18,-14,21,-13,17,-11,10,-10,6,-9,-3,-10,-10,-7]);
   shape(c, cream, [7,-12,11,-14,14,-12,20,-12,17,-10,13,-9,10,-6,10,-9,6,-8]);
   c.fillStyle = ink;
   c.fillRect(14,-15,2,1); c.fillRect(20,-13,3,2);
