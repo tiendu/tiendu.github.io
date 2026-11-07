@@ -51,7 +51,7 @@ export function renderMinerHats(tiles, board, colors) {
     layer = document.createElement("div");
     layer.className = "miners";
     layer.setAttribute("aria-hidden", "true");
-    tiles.append(layer); // Tile buttons still occupy children[0 .. size² - 1].
+    tiles.append(layer); // Tile buttons remain children[0 ... size² - 1].
   }
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   board.players.forEach((_, seat) => {
@@ -64,26 +64,50 @@ export function renderMinerHats(tiles, board, colors) {
       hat.className = "miner-hat";
       hat.dataset.seat = String(seat);
       hat.style.color = colors[seat % colors.length];
-      hat.innerHTML = HAT; // Constant trusted markup; no player-supplied HTML.
+      hat.innerHTML = HAT; // Constant SVG; never player-supplied markup.
+      const badge = document.createElement("span");
+      badge.className = "miner-hat-clue";
+      hat.append(badge);
       hat.style.transform = offset(target, board.size);
       hat.dataset.cell = String(target);
       layer.append(hat);
-      return;
     }
+
+    const badge = hat.querySelector(".miner-hat-clue");
+    const clue = board.cells[target];
+    badge.textContent = clue > 0 ? String(clue) : "";
+    badge.hidden = !(clue > 0);
+
     const from = Number(hat.dataset.cell);
     if (from === target) return;
+
     const path = cardinalRoute(board, from, target);
     hat.getAnimations?.().forEach((animation) => animation.cancel());
+    hat.classList.remove("miner-in-flight");
     hat.dataset.cell = String(target);
     hat.style.transform = offset(target, board.size);
     if (!reducedMotion && path && path.length > 1) {
-      hat.animate?.(
+      const duration = Math.min(1500, (path.length - 1) * 110);
+      const tile = tiles.children[target];
+      // Let the miner arrive before the brick breaks and the clue is revealed.
+      if (tile?.classList.contains("mines-breaking"))
+        tile.style.setProperty("--impact-delay", `${duration}ms`);
+      hat.classList.add("miner-in-flight");
+      const animation = hat.animate?.(
         path.map((cell, i) => ({
           transform: offset(cell, board.size),
           offset: i / (path.length - 1),
         })),
-        { duration: Math.min(1500, (path.length - 1) * 110), easing: "linear" },
+        { duration, easing: "linear" },
       );
+      if (animation?.finished) {
+        animation.finished.then(() => {
+          if (hat.dataset.cell === String(target))
+            hat.classList.remove("miner-in-flight");
+        }).catch(() => {}); // Cancelled when a newer board position arrives.
+      } else {
+        hat.classList.remove("miner-in-flight");
+      }
     }
   });
 }

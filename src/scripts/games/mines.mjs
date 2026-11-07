@@ -303,10 +303,15 @@ export function mountMines() {
         }),
       );
     }
+    // Visual occupants do not alter rules or server state.
+    const occupiedTiles = new Set(board.players.map(
+      (_, seat) => board.positions?.[seat] ?? board.starts[seat],
+    ));
     board.cells.forEach((value, n) => {
       const b = tiles.children[n],
         flag = board.players.indexOf(board.flags[n]),
         start = board.starts.indexOf(n);
+      const wasCovered = b.dataset.mineCovered === "yes";
       b.disabled =
         !active ||
         spectator ||
@@ -319,15 +324,20 @@ export function mountMines() {
         "tile " +
         (value !== null ? "open" : edge.has(n) ? "edge" : "") +
         (value === -1 ? " crater" : "");
+      b.dataset.mineCovered = value === null ? "yes" : "no";
+      if (wasCovered && value !== null) b.classList.add("mines-breaking");
+      b.classList.toggle("has-miner", value > 0 && occupiedTiles.has(n));
       if (n === ping?.cell) b.classList.add("ping");
-      b.textContent =
-        value === -1
-          ? "✹"
-          : value === null
-            ? flag >= 0
-              ? "⚑"
-              : ""
-            : String(value);
+      if (value !== null && value > 0) {
+        const clue = document.createElement("span");
+        clue.className = "clue-banner";
+        clue.dataset.clue = String(value);
+        clue.textContent = String(value);
+        b.replaceChildren(clue);
+      } else {
+        b.textContent = value === -1 ? "✹" : value === null
+          ? flag >= 0 ? "⚑" : "" : "";
+      }
       b.style.color = flag >= 0 ? colors[flag] : "";
       const fuse = value === null && n === board.fuseCell;
       b.classList.toggle("buried-fuse", fuse);

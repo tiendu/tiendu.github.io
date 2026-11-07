@@ -32,3 +32,126 @@
   border-inline-width: 4px;
 }
 .mines .buried-fuse:disabled { opacity: 1; }
+
+/* Bricks, excavation and clue banners. Retain the 44px hitboxes and grid gap. */
+.mines .tile:not(.open):not(.buried-fuse) {
+  background-color: #36483c;
+  background-image:
+    linear-gradient(90deg, transparent 45%, #18281f 45% 53%, transparent 53%),
+    linear-gradient(90deg, #18281f 0 5%, transparent 5% 95%, #18281f 95%),
+    repeating-linear-gradient(0deg, #485e4d 0 17px, #1c2921 17px 21px);
+  background-size: 100% 21px, 100% 21px, 100% 100%;
+  background-position: 0 0, 0 21px, 0 0;
+  background-repeat: no-repeat, no-repeat, repeat;
+  border-color: #73816b #1b251e #1b251e #73816b;
+}
+.mines .tile.edge:not(.open) {
+  box-shadow: inset 0 0 0 2px #9ba967;
+  filter: brightness(1.13);
+}
+.mines .tile.open {
+  background: radial-gradient(ellipse at center, #202e26, #111a16 78%);
+  border-color: #283b30;
+  box-shadow: inset 0 1px 5px #080f0b;
+}
+.mines .tile.open:disabled { opacity: 1; }
+.mines .tile.open .clue-banner {
+  position: absolute;
+  z-index: 1;
+  left: 7px;
+  top: 9px;
+  width: 28px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  box-sizing: border-box;
+  color: var(--clue-ink, #b8e2ff);
+  background: #14241e;
+  border: 2px solid var(--clue-ink, #b8e2ff);
+  box-shadow: 2px 2px 0 #070e0a, inset 0 -3px #273b2e;
+  clip-path: polygon(0 0, 100% 0, 100% 79%, 50% 100%, 0 79%);
+  font: 700 19px/1 var(--font-terminal), monospace;
+  text-shadow: 1px 1px #080e0b;
+}
+.mines .clue-banner[data-clue="1"] { --clue-ink: #9bd4ff; }
+.mines .clue-banner[data-clue="2"] { --clue-ink: #a8e8a9; }
+.mines .clue-banner[data-clue="3"] { --clue-ink: #ffc380; }
+.mines .clue-banner[data-clue="4"] { --clue-ink: #d5b6ff; }
+.mines .clue-banner[data-clue="5"] { --clue-ink: #ff99a3; }
+.mines .clue-banner[data-clue="6"] { --clue-ink: #86e7da; }
+.mines .clue-banner[data-clue="7"] { --clue-ink: #ffe89a; }
+.mines .clue-banner[data-clue="8"] { --clue-ink: #f3ecdf; }
+/* The tile stays accessible; its number is repeated on an occupying miner. */
+.mines .tile.has-miner .clue-banner { visibility: hidden; }
+/* Hats stay above the masonry shards during a dig. */
+.mines .miners { z-index: 5; }
+/* Undo the old corner-hat fix. The clue now lives on the hat. */
+.mines .miner-hat { place-items: center; padding: 0; }
+.mines .miner-hat svg { width: 34px; height: 34px; }
+.mines .miner-hat-clue {
+  position: absolute;
+  z-index: 2;
+  top: 15px;
+  left: 10px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 19px;
+  color: #fff4c6;
+  background: #16251d;
+  border: 2px solid #e8c67b;
+  box-shadow: 0 2px #060c09;
+  font: 700 15px/1 var(--font-terminal), monospace;
+  text-shadow: 1px 1px #08120d;
+}
+.mines .miner-hat-clue[hidden] { display: none; }
+.mines .miner-in-flight .miner-hat-clue { visibility: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .mines .tile.mines-breaking::before,
+  .mines .tile.mines-breaking::after {
+    content: "";
+    position: absolute;
+    z-index: 4;
+    pointer-events: none;
+    top: 2px;
+    bottom: 2px;
+    width: 48%;
+    background:
+      repeating-linear-gradient(0deg, #516a55 0 15px, #202f24 15px 18px),
+      #455b4b;
+    box-shadow: inset 0 0 0 2px #22382b;
+    animation-duration: 340ms;
+    animation-delay: var(--impact-delay, 0ms);
+    animation-fill-mode: both;
+    animation-timing-function: steps(5, end);
+  }
+  .mines .tile.mines-breaking::before {
+    left: 2px;
+    transform-origin: bottom right;
+    animation-name: mines-brick-left;
+  }
+  .mines .tile.mines-breaking::after {
+    right: 2px;
+    transform-origin: bottom left;
+    animation-name: mines-brick-right;
+  }
+  .mines .tile.mines-breaking .clue-banner {
+    animation: mines-clue-rise 220ms steps(4, end) both;
+    animation-delay: calc(var(--impact-delay, 0ms) + 200ms);
+  }
+}
+@keyframes mines-brick-left {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate(-13px, 14px) rotate(-18deg); }
+}
+@keyframes mines-brick-right {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate(13px, 14px) rotate(18deg); }
+}
+@keyframes mines-clue-rise {
+  0% { opacity: 0; transform: translateY(7px) scale(0.8); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
