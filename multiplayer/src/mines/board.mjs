@@ -24,7 +24,8 @@ function neighbors(size) {
 
 // Only clues on revealed tiles participate in the proof. Every inferred dig
 // borders an already open component containing at least one player's pennant.
-export function provable(board) {
+export function provable(board, numberedWaves = Infinity) {
+  const requireFuse = numberedWaves === Infinity;
   const { size, clues, starts, exit } = board;
   const near = neighbors(size);
   const open = new Set(starts),
@@ -32,6 +33,7 @@ export function provable(board) {
   let changed;
   do {
     changed = false;
+    const inferred = new Set();
     for (const tile of open) {
       const unknown = near[tile].filter((n) => !open.has(n) && !marked.has(n));
       if (!unknown.length) continue;
@@ -40,13 +42,26 @@ export function provable(board) {
       const result =
         remaining === 0 ? open : remaining === unknown.length ? marked : null;
       if (result) {
-        for (const n of unknown) result.add(n);
-        changed = true;
+        if (result === open && clues[tile] > 0) {
+          for (const n of unknown) inferred.add(n);
+        } else {
+          for (const n of unknown) result.add(n);
+          changed = true;
+        }
       }
+    }
+    if (!changed && inferred.size && numberedWaves > 0) {
+      for (const n of inferred) open.add(n);
+      numberedWaves--;
+      changed = true;
     }
   } while (changed);
   const connected = component(near, starts[0], (n) => open.has(n));
-  return connected.has(exit) && starts.every((n) => connected.has(n));
+  return (
+    connected.has(exit) &&
+    starts.every((n) => connected.has(n)) &&
+    (!requireFuse || connected.has(board.fuseCell))
+  );
 }
 
 function component(near, start, allowed) {
@@ -68,10 +83,10 @@ export function createSoloBoard(random = Math.random) {
 
 function generateBoard(players, preset, random) {
   const size = sizes[preset],
-    mines = counts[preset];
+    mines = players.length === 1 ? 32 : counts[preset];
   const near = neighbors(size),
     mid = (size - 1) / 2;
-  for (let attempt = 0; attempt < 40; attempt++) {
+  for (let attempt = 0; attempt < 240; attempt++) {
     const angle = random() * Math.PI * 2;
     const starts = players.map((_, i) => {
       const a =
@@ -81,12 +96,32 @@ function generateBoard(players, preset, random) {
         Math.round(mid + (mid - 1) * Math.cos(a))
       );
     });
-    const exit =
-      (Math.floor(mid) - 1 + Math.floor(random() * 3)) * size +
-      Math.floor(mid) -
-      1 +
-      Math.floor(random() * 3);
+    const solo = players.length === 1;
+    const exit = solo
+      ? size * size - 1 - starts[0]
+      : (Math.floor(mid) - 1 + Math.floor(random() * 3)) * size +
+        Math.floor(mid) -
+        1 +
+        Math.floor(random() * 3);
     const safe = new Set([exit, ...starts, ...starts.flatMap((i) => near[i])]);
+    const distance = (a, b) =>
+      Math.max(
+        Math.abs((a % size) - (b % size)),
+        Math.abs(Math.floor(a / size) - Math.floor(b / size)),
+      );
+    const detours = near
+      .map((_, i) => i)
+      .filter(
+        (i) =>
+          !safe.has(i) &&
+          distance(i, exit) >= 3 &&
+          starts.every((start) => distance(start, i) >= 3) &&
+          (!solo ||
+            distance(starts[0], i) + distance(i, exit) >=
+              distance(starts[0], exit) + 3),
+      );
+    const fuseCell = detours[Math.floor(random() * detours.length)];
+    safe.add(fuseCell);
     const pool = near.map((_, i) => i).filter((i) => !safe.has(i));
     const clues = Array(near.length).fill(0);
     for (let i = 0; i < mines; i++) {
@@ -105,13 +140,20 @@ function generateBoard(players, preset, random) {
       exit,
       clues,
       players: [...players],
-      fuses: 2,
+      fuseCell,
+      fuses: 0,
       cells: near.map(() => null),
       flags: {},
       status: "digging",
     };
     for (const i of starts) board.cells[i] = 0;
+    // A solo crossing must leave the initial zero clearing and its numbered rim.
+    if (solo) {
+      const clearing = component(near, starts[0], (n) => clues[n] === 0);
+      if ([...clearing].some((n) => distance(n, exit) <= 3)) continue;
+    }
     if (
+      (!solo || !provable(board, 1)) &&
       provable(board) &&
       component(near, starts[0], (n) => clues[n] >= 0).size ===
         clues.length - mines
@@ -150,10 +192,14 @@ export function play(board, player, type, cell) {
     throw Error("Remove the flag before digging.");
   board.cells[cell] = board.clues[cell];
   if (board.cells[cell] === -1) {
-    if (--board.fuses === 0)
+    // Older stored rounds counted the fatal hit as their last fuse.
+    const protectedHit = board.fuses > (board.fuseCell === undefined ? 1 : 0);
+    board.fuses = Math.max(0, board.fuses - 1);
+    if (!protectedHit)
       board.status = board.status === "connected" ? "won" : "lost";
     return;
   }
+  if (cell === board.fuseCell) board.fuses = 1;
   if (board.cells.every((value, i) => value !== null || board.clues[i] === -1))
     board.status = "perfect";
   else if (board.status === "digging") {

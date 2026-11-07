@@ -9,7 +9,7 @@ import { frontier } from "../src/mines/board.mjs";
 
 test(
   "live players share one authoritative field and can resume a seat",
-  { timeout: 30000 },
+  { timeout: 60000 },
   async () => {
     const dir = await mkdtemp(join(tmpdir(), "mines-worker-"));
     const origin = "http://localhost:4321",
@@ -58,8 +58,8 @@ test(
           const messages = [];
           ws.on("message", (text) => messages.push(JSON.parse(text)));
           const send = (msg) => ws.send(JSON.stringify(msg));
-          const take = async (f) => {
-            const end = Date.now() + 5000;
+          const take = async (f, timeout = 5000) => {
+            const end = Date.now() + timeout;
             while (Date.now() < end) {
               const index = messages.findIndex(f);
               if (index >= 0) return messages.splice(index, 1)[0];
@@ -104,10 +104,35 @@ test(
         assert.equal((await resumed.take((m) => m.you)).you, identity.you);
         resumed.send({ type: "ping", cell, round: 1 });
         await host.take((m) => m.ping?.cell === cell);
-        host.send({ type: "leave", round: 1 });
-        await resumed.take(
-          (m) => m.host !== you && m.players?.length === count - 1,
-        );
+        if (count === 2) {
+          const watcher = await connect(2);
+          const late = await watcher.take((m) => m.you);
+          const state = await watcher.take((m) => m.players?.length === 3);
+          assert.equal(state.turn, identity.you);
+          assert.ok(!state.board.players.includes(late.you));
+          watcher.send({ type: "pass", round: 1 });
+          await watcher.take((m) => m.error);
+          resumed.ws.close();
+          await host.take((m) =>
+            m.players?.some((p) => p.id === identity.you && !p.online),
+          );
+          host.send({ type: "pass", round: 1 });
+          await host.take((m) => m.error?.includes("reconnect"));
+          await host.take((m) => m.turn === you && m.move >= 2, 20000);
+          const back = await connect(1, identity.key);
+          await back.take((m) => m.you === identity.you);
+          host.send({ type: "leave", round: 1 });
+          const lobby = await watcher.take(
+            (m) => m.players?.length === 2 && !m.board,
+          );
+          const newHost = lobby.host === late.you ? watcher : back;
+          newHost.send({ type: "start", round: 1 });
+          const next = await watcher.take((m) => m.round === 2);
+          assert.deepEqual(next.board.players, [identity.you, late.you]);
+        } else {
+          resumed.send({ type: "pass", round: 1 });
+          await host.take((m) => m.turn === started.board.players[2]);
+        }
       }
     } finally {
       for (const ws of sockets) ws.terminate();

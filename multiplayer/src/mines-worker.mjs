@@ -47,6 +47,36 @@ export class MinesRoom extends DurableObject {
       .filter((ws) => ws.readyState === 1 && ws.deserializeAttachment()?.id);
   }
 
+  advance(room, online) {
+    const seats = room.board.players;
+    const index = seats.indexOf(room.turn);
+    for (let step = 1; step <= seats.length; step++) {
+      const next = seats[(index + step) % seats.length];
+      if (online.includes(next)) {
+        room.turn = next;
+        room.move = (room.move ?? 0) + 1;
+        break;
+      }
+    }
+    room.skipAt = null;
+  }
+
+  async save(room) {
+    const online = this.online().map((ws) => ws.deserializeAttachment().id);
+    const board = room.board;
+    const active = board && ["digging", "connected"].includes(board.status);
+    if (active) room.turn ??= board.players[0];
+    if (!active || online.includes(room.turn)) room.skipAt = null;
+    else if (online.some((id) => board.players.includes(id))) {
+      room.skipAt ??= Date.now() + 15000;
+      if (room.skipAt <= Date.now()) this.advance(room, online);
+    } else room.skipAt = null;
+    await this.ctx.storage.put("room", room);
+    await this.ctx.storage.setAlarm(
+      Math.min(room.expires, room.skipAt ?? Infinity),
+    );
+  }
+
   broadcast(room, ping) {
     const sockets = this.online();
     const online = new Set(sockets.map((ws) => ws.deserializeAttachment().id));
@@ -61,6 +91,8 @@ export class MinesRoom extends DurableObject {
       board,
       host: room.host,
       round: room.round,
+      turn: room.turn ?? board?.players[0],
+      move: room.move ?? 0,
       ping,
     });
     for (const ws of sockets) ws.send(message);
@@ -87,12 +119,8 @@ export class MinesRoom extends DurableObject {
           if (msg.type !== "join") throw Error("Join first.");
           let p = room.players.find((p) => p.key === msg.key);
           if (!p) {
-            const playing =
-              room.board &&
-              ["digging", "connected"].includes(room.board.status);
             const capacity = room.host || msg.token === room.token ? 5 : 4;
-            if (playing || room.players.length >= capacity)
-              throw Error("Room full or round in progress.");
+            if (room.players.length >= capacity) throw Error("Room full.");
             const name = cleanName(msg.name);
             if (!name) throw Error("Enter a name (1–16 characters).");
             p = { name, key: crypto.randomUUID(), id: crypto.randomUUID() };
@@ -105,10 +133,11 @@ export class MinesRoom extends DurableObject {
           if (room.host && !online.includes(room.host)) room.host = p.id;
           peer.id = p.id;
           ws.serializeAttachment(peer);
-          await this.ctx.storage.put("room", room);
+          await this.save(room);
           ws.send(JSON.stringify({ you: p.id, key: p.key }));
         } else if (msg.type === "ping") {
           if (
+            !room.board?.players.includes(peer.id) ||
             msg.round !== room.round ||
             !Number.isInteger(msg.cell) ||
             !(room.board?.cells[msg.cell] >= 0) ||
@@ -131,12 +160,18 @@ export class MinesRoom extends DurableObject {
             const active = room.players.filter((p) => online.includes(p.id));
             room.board = createBoard(active.map((p) => p.id));
             room.players = active;
+            room.turn = active[0].id;
+            room.move = 0;
             room.round++;
           } else if (
             msg.type === "finish" &&
             room.host === peer.id &&
             room.board?.status === "connected"
           ) {
+            if (
+              room.board.players.filter((id) => online.includes(id)).length < 2
+            )
+              throw Error("Round paused.");
             room.board.status = "won";
           } else if (msg.type === "leave") {
             room.players = room.players.filter((p) => p.id !== peer.id);
@@ -145,7 +180,18 @@ export class MinesRoom extends DurableObject {
                 room.players.find((p) => online.includes(p.id))?.id ??
                 room.players[0]?.id ??
                 null;
-            if (!room.board || !room.players.length) room.board = null;
+            if (
+              room.board &&
+              room.board.players.filter((id) =>
+                room.players.some((p) => p.id === id),
+              ).length < 2
+            )
+              room.board = null;
+            if (room.board && room.turn === peer.id)
+              this.advance(
+                room,
+                online.filter((id) => id !== peer.id),
+              );
             ws.close(1000, "Left room");
             if (!room.players.length) {
               await this.env.LOBBY.getByName("global").fetch(
@@ -154,12 +200,28 @@ export class MinesRoom extends DurableObject {
                   body: room.id,
                 }),
               );
-              await this.alarm();
+              await this.expire();
               return;
             }
-          } else if (room.board) play(room.board, peer.id, msg.type, msg.cell);
-          else throw Error("Start the round first.");
-          await this.ctx.storage.put("room", room);
+          } else if (room.board) {
+            const b = room.board;
+            if (!b.players.includes(peer.id))
+              throw Error("You’re in next round.");
+            if (b.players.filter((id) => online.includes(id)).length < 2)
+              throw Error("Waiting for a teammate to reconnect.");
+            const takesTurn = msg.type === "dig" || msg.type === "pass";
+            if (
+              takesTurn &&
+              (peer.id !== (room.turn ?? b.players[0]) ||
+                (msg.move !== undefined && msg.move !== (room.move ?? 0)))
+            )
+              throw Error("Wait for your turn.");
+            if (msg.type !== "pass") play(b, peer.id, msg.type, msg.cell);
+            else if (!["digging", "connected"].includes(b.status))
+              throw Error("Round finished.");
+            if (takesTurn) this.advance(room, online);
+          } else throw Error("Start the round first.");
+          await this.save(room);
         }
         this.broadcast(room);
       } catch (error) {
@@ -177,12 +239,21 @@ export class MinesRoom extends DurableObject {
       const online = this.online().map((s) => s.deserializeAttachment().id);
       if (room.host && !online.includes(room.host) && online.length) {
         room.host = online[0];
-        await this.ctx.storage.put("room", room);
       }
+      await this.save(room);
       this.broadcast(room);
     });
   }
   async alarm() {
+    await this.ctx.blockConcurrencyWhile(async () => {
+      const room = await this.ctx.storage.get("room");
+      if (!room || room.expires <= Date.now()) return this.expire();
+      await this.save(room);
+      this.broadcast(room);
+    });
+  }
+
+  async expire() {
     for (const ws of this.ctx.getWebSockets()) ws.close(1001, "Room expired");
     await this.ctx.storage.deleteAll();
   }

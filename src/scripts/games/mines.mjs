@@ -153,7 +153,14 @@ export function mountMines() {
       return;
     }
     if (socket?.readyState === WebSocket.OPEN && snapshot)
-      socket.send(JSON.stringify({ type, cell, round: snapshot.round }));
+      socket.send(
+        JSON.stringify({
+          type,
+          cell,
+          move: snapshot.move,
+          round: snapshot.round,
+        }),
+      );
   }
   el("invite").onclick = async () => {
     try {
@@ -181,12 +188,14 @@ export function mountMines() {
     location.replace(location.pathname);
   };
   el("start").onclick = () => send("start");
+  el("pass").onclick = () => send("pass");
   el("finish").onclick = () => send("finish");
   for (const action of ["dig", "flag"])
     el(action).onclick = () => {
       mode = action;
       for (const id of ["dig", "flag"])
         el(id).setAttribute("aria-pressed", String(mode === id));
+      if (snapshot?.board) render();
     };
   function center(tile) {
     const vp = el("viewport"),
@@ -206,12 +215,31 @@ export function mountMines() {
     const { players, board, host, round, ping } = snapshot;
     const active = board && ["digging", "connected"].includes(board.status);
     const solo = me === "solo";
+    const spectator = board && !board.players.includes(me);
+    const paused =
+      !solo &&
+      board &&
+      players.filter((p) => p.online && board.players.includes(p.id)).length <
+        2;
+    const current = players.find((p) => p.id === snapshot.turn);
+    const myTurn = solo || me === snapshot.turn;
+    el("turn").hidden = solo || !active;
+    el("turn").textContent = spectator
+      ? "Watching · You’re in next round."
+      : paused
+        ? "Paused · Waiting for a teammate."
+        : myTurn
+          ? "Your turn · Dig one tile."
+          : (current?.name ?? "Teammate") +
+            (current?.online ? "’s turn" : " · Reconnecting…");
+    el("pass").hidden = solo || !active || paused || !myTurn;
     el("crew").hidden = el("invite").hidden = el("ping-help").hidden = solo;
     el("room-label").textContent = solo ? "SOLO" : "ROOM " + room;
     el("start").hidden = !!active || me !== host;
     el("start").disabled = !solo && players.filter((p) => p.online).length < 2;
     el("start").textContent = board ? "Next round" : "Start round";
-    el("finish").hidden = board?.status !== "connected" || me !== host;
+    el("finish").hidden =
+      board?.status !== "connected" || me !== host || paused;
     el("crew").replaceChildren(
       ...players.map((p, i) => {
         const b = document.createElement("button");
@@ -224,7 +252,13 @@ export function mountMines() {
           " · " +
           p.name +
           (p.id === me ? " (you)" : "") +
+          (active && !board.players.includes(p.id)
+            ? " · next round"
+            : active && p.id === snapshot.turn
+              ? " · current turn"
+              : "") +
           (p.online ? "" : " · offline");
+        b.disabled = !!board && !board.players.includes(p.id);
         b.style.color = colors[seat];
         b.onclick = () => board && center(board.starts[seat]);
         return b;
@@ -232,7 +266,12 @@ export function mountMines() {
     );
     el("field").hidden = !board;
     if (!board) return status("Gather 2–5 players. The host starts the round.");
-    el("fuses").textContent = board.fuses + "/2 FUSES";
+    el("fuses").textContent =
+      board.fuseCell === undefined
+        ? board.fuses + "/2 FUSES"
+        : board.fuses
+          ? "FUSE READY"
+          : "NO FUSE";
     const tiles = el("tiles"),
       edge = frontier(board, me);
     if (centered !== round) {
@@ -256,6 +295,9 @@ export function mountMines() {
         start = board.starts.indexOf(n);
       b.disabled =
         !active ||
+        spectator ||
+        paused ||
+        (mode === "dig" && value === null && !myTurn) ||
         (solo && value !== null) ||
         value === -1 ||
         (value === null && !edge.has(n));
@@ -273,10 +315,13 @@ export function mountMines() {
               : ""
             : String(value);
       b.style.color = flag >= 0 ? colors[flag] : "";
-      if (start >= 0 || n === board.exit) {
+      const fuse = value === null && n === board.fuseCell;
+      b.classList.toggle("buried-fuse", fuse);
+      if (start >= 0 || n === board.exit || fuse) {
         const mark = document.createElement("small");
-        mark.textContent = start >= 0 ? "⚑" + (start + 1) : "EXIT";
-        mark.style.color = colors[start] || "#ffd45c";
+        mark.textContent =
+          start >= 0 ? "⚑" + (start + 1) : fuse ? "FUSE" : "EXIT";
+        mark.style.color = fuse ? "#ffac72" : colors[start] || "#ffd45c";
         b.append(mark);
       }
       b.setAttribute(
@@ -297,7 +342,9 @@ export function mountMines() {
             ? ", pennant " + (start + 1)
             : n === board.exit
               ? ", exit"
-              : ""),
+              : fuse
+                ? ", buried fuse"
+                : ""),
       );
     });
     if (centered !== round) {

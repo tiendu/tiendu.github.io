@@ -139,3 +139,16 @@
   min-height: 1.3em;
   color: var(--gold);
 }
+
+/* Copper winding and silver end caps on the buried fuse. */
+.mines .buried-fuse::after {
+  content: "";
+  position: absolute;
+  inset: auto 10px 8px;
+  height: 7px;
+  border-inline: 3px solid #e2d7b9;
+  background: repeating-linear-gradient(90deg, #da8e52 0 3px, #6f422d 3px 5px);
+}
+.mines .buried-fuse:disabled {
+  opacity: 0.85;
+}

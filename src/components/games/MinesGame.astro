@@ -5,7 +5,7 @@ import "../../styles/components/mines.css";
   <header><a href="/">← HOME</a><span>SOLO · CO-OP 2–5</span></header>
   <h1>MINES<span>.</span></h1>
   <form id="entry">
-    <p>Dig from your pennant. Reach the exit with two fuses. In co-op, connect every pennant.</p>
+    <p>Dig from your pennant. Reach the exit. Dig up the copper fuse to survive one mine. In co-op, connect every pennant.</p>
     <label>Name for online play <input id="name" maxlength="16" autocomplete="nickname" required /></label>
     <label id="code-label" hidden>Room code <input id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" /></label>
     <div class="actions"><button type="button" id="solo">Play solo</button><button id="create">Create room</button><button id="join" type="button">Join room</button></div>
@@ -16,7 +16,8 @@ import "../../styles/components/mines.css";
     <div class="actions"><button id="start">Start round</button><button id="finish" hidden>Take the win</button></div>
   </section>
   <section id="field" hidden>
-    <div class="actions"><button id="dig" aria-pressed="true">Dig</button><button id="flag" aria-pressed="false">Flag</button><strong id="fuses"></strong></div>
+    <p id="turn" role="status" hidden></p>
+    <div class="actions"><button id="pass" hidden>Pass turn</button><button id="dig" aria-pressed="true">Dig</button><button id="flag" aria-pressed="false">Flag</button><strong id="fuses"></strong></div>
     <div id="viewport" tabindex="0" aria-label="Scrollable minefield"><div id="tiles"></div></div>
     <p>Dig the lit edge of your patch. Numbers count mines in the eight surrounding tiles. <span id="ping-help">Tap an open clue to ping it.</span></p>
   </section>

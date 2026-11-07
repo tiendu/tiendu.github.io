@@ -52,12 +52,17 @@ test("frontiers merge, flags protect tiles, perfect clears finish", () => {
   assert.ok(connected || b.cells.filter((x) => x === null).length === b.mines);
 });
 
-test("spending the final fuse ends the round", () => {
+test("digging the fuse absorbs one mine and the next ends the round", () => {
   const b = createBoard(["a", "b"]);
-  const [a, c] = frontier(b, "a");
+  const [fuse, a, c] = frontier(b, "a");
+  b.fuseCell = fuse;
+  assert.equal(b.fuses, 0);
+  play(b, "a", "dig", fuse);
+  assert.equal(b.fuses, 1);
   b.clues[a] = b.clues[c] = -1;
   play(b, "a", "dig", a);
-  assert.equal(b.fuses, 1);
+  assert.equal(b.fuses, 0);
+  assert.equal(b.status, "digging");
   play(b, "a", "dig", c);
   assert.equal(b.status, "lost");
   assert.throws(() => play(b, "a", "dig", c));
@@ -68,8 +73,11 @@ test("solo shares dig and flag rules with a 12×12 board and a reachable exit", 
   for (let n = 0; n < 100; n++) {
     const board = createSoloBoard();
     assert.equal(board.size, 12);
-    assert.equal(board.mines, 20);
-    assert.equal(board.fuses, 2);
+    assert.equal(board.mines, 32);
+    assert.equal(board.clues.filter((n) => n === -1).length, 32);
+    assert.equal(board.exit, 143 - board.starts[0]);
+    assert.equal(provable(board, 1), false);
+    assert.equal(board.fuses, 0);
     assert.ok(provable(board));
     const [me] = board.players;
     const [first] = frontier(board, me);
