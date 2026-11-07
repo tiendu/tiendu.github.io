@@ -1,0 +1,11 @@
+---
+import GameLayout from "../../layouts/GameLayout.astro";
+import MinesGame from "../../components/games/MinesGame.astro";
+---
+<GameLayout title="Mines" description="A cooperative pixel minefield for two to five players.">
+  <MinesGame />
+</GameLayout>
+<script>
+  import { mountMines } from "../../scripts/games/mines.mjs";
+  mountMines();
+</script>

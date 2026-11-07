@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "npm run dev:number --",
     "dev:number": "wrangler dev --config wrangler.number.jsonc",
+    "dev:mines": "wrangler dev --config wrangler.mines.jsonc",
+    "deploy:mines": "wrangler deploy --config wrangler.mines.jsonc",
+    "check:mines": "node --test test/mines*.test.mjs && wrangler deploy --config wrangler.mines.jsonc --dry-run",
     "dev:chicken": "wrangler dev --config wrangler.chicken.jsonc",
     "deploy": "npm run deploy:number --",
     "deploy:number": "wrangler deploy --config wrangler.number.jsonc",

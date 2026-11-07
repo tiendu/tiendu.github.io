@@ -1,0 +1,141 @@
+.mines {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  color: #e4ead8;
+  font:
+    1.4rem/1.18 var(--font-terminal),
+    monospace;
+  --gold: #ffd45c;
+}
+.mines [hidden] {
+  display: none !important;
+}
+.mines header,
+.mines .actions,
+.mines #crew {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mines header {
+  justify-content: space-between;
+  color: #a2b4a7;
+  font-size: 1.1rem;
+}
+.mines a {
+  color: inherit;
+}
+.mines h1 {
+  font: inherit;
+  font-size: clamp(3.5rem, 10vw, 6rem);
+  line-height: 0.9;
+  margin: 1.3rem 0;
+}
+.mines h1 span,
+.mines strong {
+  color: var(--gold);
+}
+.mines #entry {
+  max-width: 27rem;
+  padding: 1rem;
+  background: #19211f;
+  border-top: 3px solid #617365;
+}
+.mines label {
+  display: grid;
+  margin: 1rem 0;
+}
+.mines input,
+.mines button {
+  font: inherit;
+  border-radius: 0;
+}
+.mines input {
+  padding: 0.55rem;
+  background: #0c1211;
+  border: 1px solid #637567;
+  color: #fff;
+}
+.mines button {
+  cursor: pointer;
+  min-height: 44px;
+  border: 2px solid;
+  border-color: #718172 #25322b #25322b #718172;
+  color: inherit;
+  background: #36453b;
+  padding: 0.25rem 0.75rem;
+}
+.mines button:active {
+  transform: translateY(1px);
+}
+.mines button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.mines button[aria-pressed="true"] {
+  color: #161a15;
+  background: var(--gold);
+}
+.mines :focus-visible {
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+.mines #crew {
+  margin: 0.6rem 0;
+}
+.mines #viewport {
+  overflow: auto;
+  overscroll-behavior: contain;
+  max-height: 59svh;
+  margin-top: 0.5rem;
+  background: #0d1312;
+  border: 2px solid #415449;
+}
+.mines #tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--size), 44px);
+  width: max-content;
+  padding: 4px;
+  gap: 1px;
+}
+.mines .tile {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: #adb4a7;
+  background: #202a26;
+  border-color: #37443d #151d19 #151d19 #37443d;
+}
+.mines .edge {
+  background: #4b6250;
+  border-color: #87997c #303d32 #303d32 #87997c;
+}
+.mines .open {
+  background: #141b18;
+  border: 1px solid #2e3a32;
+  color: #bad5c2;
+}
+.mines .crater {
+  color: #ff8c70;
+}
+.mines .tile small {
+  position: absolute;
+  top: 0;
+  left: 3px;
+  font-size: 0.86rem;
+  line-height: 1;
+}
+.mines .ping {
+  outline: 3px dashed #fff;
+  outline-offset: -4px;
+}
+.mines #field p,
+.mines #entry p {
+  color: #c1ccbc;
+}
+.mines #status {
+  min-height: 1.3em;
+  color: var(--gold);
+}

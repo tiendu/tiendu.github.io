@@ -60,17 +60,6 @@ export const effects = {
     tone(150, 80, 0.08, 0.14 - pressure * 0.055, 0.06 + pressure * 0.05, "triangle");
   },
 
-  // Crane release, tower collapse and motor under load.
-  drop(tone) { tone(220, 110, 0.06); },
-  fall(tone) { tone(300, 35, 0.4, 0, 0.18); },
-  strain(tone, load) {
-    tone(95 - 35 * load, 65 - 25 * load, 0.2, 0, 0.045 + 0.045 * load, "sawtooth");
-    if (load > 0.45) {
-      tone(280 + 160 * load, 180, 0.09, 0.08, 0.035, "sawtooth");
-      tone(204, 268, 0.075, 0.17, 0.035, "triangle");
-      tone(211, 275, 0.075, 0.17, 0.03, "triangle");
-    }
-  },
 } satisfies Record<string, Effect>;
 
 export type GameSound = keyof typeof effects;

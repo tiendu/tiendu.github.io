@@ -1,11 +1,10 @@
-export type ArcadeGameId = "snake" | "crane" | "chicken";
+export type ArcadeGameId = "chicken";
 
 export type GameCommandAction =
   | "start"
   | "pause"
   | "restart"
   | "exit"
-  | "drop"
   | "jump";
 
 export type GameStatusPhase =
@@ -34,18 +33,6 @@ export interface GameStatusDetail {
 
 export const GAME_EVENTS = {
   number: { start: "tiendu:number-start", exit: "tiendu:number-exit" },
-  snake: {
-    start: "tiendu:snake-start",
-    command: "tiendu:snake-command",
-    status: "tiendu:snake-status",
-    exit: "tiendu:snake-exit",
-  },
-  crane: {
-    start: "tiendu:crane-start",
-    command: "tiendu:crane-command",
-    status: "tiendu:crane-status",
-    exit: "tiendu:crane-exit",
-  },
   chicken: {
     start: "tiendu:chicken-start",
     solo: "tiendu:chicken-solo",
@@ -80,7 +67,6 @@ export function readGameCommand(event: Event): GameCommandAction | null {
     action === "pause" ||
     action === "restart" ||
     action === "exit" ||
-    action === "drop" ||
     action === "jump"
     ? action
     : null;

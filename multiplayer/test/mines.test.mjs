@@ -1,0 +1,58 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createBoard, frontier, play, provable } from "../src/mines/board.mjs";
+
+for (const [i, mines] of [20, 28, 36, 46].entries()) {
+  test(`fair fields for ${i + 2} players`, () => {
+    const players = Array.from({ length: i + 2 }, (_, n) => String(n));
+    let seed = 721;
+    const random = () =>
+      (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 2 ** 32;
+    for (let n = 0; n < 100; n++) {
+      const b = createBoard(players, random);
+      assert.equal(b.size, 12 + 2 * i);
+      assert.equal(b.clues.filter((x) => x === -1).length, mines);
+      assert.ok(provable(b));
+      assert.ok(b.starts.every((x) => b.cells[x] === 0));
+      assert.equal(new Set(b.starts).size, players.length);
+    }
+  });
+}
+
+test("frontiers merge, flags protect tiles, perfect clears finish", () => {
+  const b = createBoard(["a", "b"]);
+  const cell = [...frontier(b, "a")][0];
+  assert.throws(() => play(b, "b", "dig", cell));
+  play(b, "a", "flag", cell);
+  assert.throws(() => play(b, "a", "dig", cell));
+  play(b, "a", "unflag", cell);
+  let connected = false;
+  while (b.status !== "perfect") {
+    let progress = false;
+    for (const p of b.players) {
+      const safe = [...frontier(b, p)].find((x) => b.clues[x] >= 0);
+      if (safe !== undefined) {
+        play(b, p, "dig", safe);
+        if (b.status === "connected") {
+          connected = true;
+          assert.deepEqual(frontier(b, "a"), frontier(b, "b"));
+        }
+        progress = true;
+      }
+    }
+    assert.ok(progress);
+  }
+  assert.equal(b.status, "perfect");
+  assert.ok(connected || b.cells.filter((x) => x === null).length === b.mines);
+});
+
+test("spending the final fuse ends the round", () => {
+  const b = createBoard(["a", "b"]);
+  const [a, c] = frontier(b, "a");
+  b.clues[a] = b.clues[c] = -1;
+  play(b, "a", "dig", a);
+  assert.equal(b.fuses, 1);
+  play(b, "a", "dig", c);
+  assert.equal(b.status, "lost");
+  assert.throws(() => play(b, "a", "dig", c));
+});

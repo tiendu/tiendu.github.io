@@ -25,6 +25,7 @@ jobs:
         uses: withastro/action@v6
         env:
           PUBLIC_CHICKEN_BACKEND_URL: ${{ vars.PUBLIC_CHICKEN_BACKEND_URL }}
+          PUBLIC_MINES_BACKEND_URL: ${{ vars.PUBLIC_MINES_BACKEND_URL }}
           PUBLIC_NUMBER_BACKEND_URL: ${{ vars.PUBLIC_NUMBER_BACKEND_URL }}
 
   deploy:

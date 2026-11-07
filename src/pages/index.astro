@@ -1,7 +1,5 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import SnakeGame from "../components/games/SnakeGame.astro";
-import CraneGame from "../components/games/CraneGame.astro";
 import SystemHeader from "../components/SystemHeader.astro";
 import "../styles/system.css";
 import "../styles/pages/home.css";
@@ -104,23 +102,6 @@ import "../styles/pages/home.css";
             ></p>
           </div>
 
-          <SnakeGame />
-
-          <div
-            class="snake-mobile-controls"
-            data-snake-mobile-controls
-            aria-label="Snake game controls"
-          >
-            <div class="snake-mobile-actions">
-              <button type="button" data-snake-action="pause">PAUSE</button>
-              <button type="button" data-snake-action="restart">RESTART</button>
-              <button type="button" data-snake-action="exit">EXIT</button>
-            </div>
-
-            <p class="snake-mobile-help">SWIPE OR USE PAD</p>
-          </div>
-
-          <CraneGame />
 
           <form class="terminal-shell" data-terminal-shell hidden>
             <span class="prompt">TIENDU@HOME</span>

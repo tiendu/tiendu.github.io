@@ -11,6 +11,6 @@ export function reserveRoom(leases,limit=50,now=Date.now(),game="number") {
   let room;
   do {const bytes=new Uint32Array(1);crypto.getRandomValues(bytes);room=String(bytes[0]%1_000_000).padStart(6,'0');} while(leases[room]);
   const id=crypto.randomUUID(),token=crypto.randomUUID();
-  leases[room]={id,expires:now+(game==="chicken"?15*60_000:TTL), ...(game==="chicken"?{game}:{})};
+  leases[room]={id,expires:now+(game==="chicken"?15*60_000:TTL), ...(game!=="number"?{game}:{})};
   return {room,id,token,created:now};
 }

@@ -1,40 +1,14 @@
-# Homepage arcade architecture
+# Arcade games
 
-The homepage arcade keeps game markup, typed game logic, rendering, and shared
-browser utilities separate. Each game mounts itself from a small Astro component,
-with Snake and Crane mounted inside the terminal. Chicken Run and Number open
-at `/games/chicken/` and `/games/number/` via a shared URL or terminal command.
-Room invites append `#room=123456` to the corresponding game URL.
+Open a game at /games/chicken/, /games/number/, or /games/mines/. Its name also works as a homepage terminal command.
 
-| Command   | Component              | Runtime                                     | Styles                 |
-| --------- | ---------------------- | ------------------------------------------- | ---------------------- |
-| `snake`   | `SnakeGame.astro`      | `snake.ts` + rules + renderer               | `snake-game.css`       |
-| `crane`   | `CraneGame.astro`      | `crane.ts` + rules + renderer               | `crane-game.css`       |
-| `chicken` | `ChickenRunGame.astro` | `chicken-run.ts` and focused helper modules | `chicken-run-game.css` |
+## Mines
 
-## Stack Trace
+Two to five players dig simultaneously from separate pennants. A round uses a fresh square board with 12, 14, 16 or 18 tiles per side. Dig next to any safe tile connected to your pennant, including diagonals. Flag suspected mines or tap a clue to ping it. After the crew connects every pennant to the exit, the host can take the win or play on for a perfect clear. Two explosions exhaust the shared fuses.
 
-Stack Trace is an endless crane-stacking game. One tap drops the hanging cargo.
-Off-centre loads permanently change the tower's centre of mass, impacts create
-sway, later loads can counterbalance earlier mistakes, and tall towers become
-more sensitive to predictable wind phases.
+Set the GitHub Actions repository variables MINES_BACKEND to cloudflare and PUBLIC_MINES_BACKEND_URL to the dedicated worker URL. The mines-worker workflow uses CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from repository secrets or the cloudflare-mines environment. Run the backend workflow and rebuild Pages after setting the URL. The default limit is five rooms with a one-hour lifetime.
 
-Three precise drops or a height milestone pauses the run and presents two bonus
-choices directly over the crane scene. The selected bonus is applied immediately:
-Stabilize calms sway, Mag-Lock protects the next marginal landing, Wide Load
-widens the next container, and Windbreak cancels wind for two drops. There is no
-inventory or second activation step, and no permanent stat upgrade invalidates
-high scores.
-
-## Snake
-
-Snake is one evolving Neon Run with a fixed top-down 2.5D arena, absolute
-four-direction steering, a transparent block-built snake, Flow scoring,
-deterministic sectors, solid arena walls, and recovery-or-risk protocol choices.
-After six cores, a physical wall gate opens; the next sector begins only after
-the snake reaches it. The arena and obstacles are cached, while the high-DPI
-render scale is capped to keep the game responsive on ordinary laptops and
-phones.
+For local play, run npm ci in multiplayer, then npm run dev:mines -- --port 8787 --var ALLOWED_ORIGINS:http://localhost:4321. From the site root run PUBLIC_MINES_BACKEND_URL=http://localhost:8787 npm run dev and open /games/mines/ in separate browser sessions.
 
 ## Chicken Run
 
@@ -47,55 +21,6 @@ and can be used again immediately after the burst ends. Eagles mark a daytime
 strike with a shadow and climb away after one pass. Heavy rain cancels the dive
 and turns some ground patches muddy. Foxes chase at night and turn back after
 a short pursuit. Sunrise and sunset give the flock time between attacks.
-
-## Saved sessions
-
-Each game stores one versioned resume checkpoint in `localStorage` and presents
-`Continue` / `New Run` inside the game when a saved session exists. High scores
-remain separate from active-run saves.
-
-- Snake checkpoints after each completed grid step.
-- Stack Trace checkpoints only after a stable landing or bonus choice, so a tab
-  closed during a falling load resumes from the previous stable tower.
-- Solo races checkpoint their seed, elapsed ticks and inputs on pause or exit.
-- Existing classic Free Range saves can be continued. The classic runner checkpoints while the chicken is safely grounded, so a tab closed
-  mid-jump resumes from the latest safe footing rather than inside a collision.
-
-A completed, collapsed, or explicitly restarted run clears its resume checkpoint.
-Save formats carry a schema version; invalid or incompatible data is discarded
-instead of being guessed at.
-
-## Runtime integration contract
-
-The terminal shell does not inspect overlay text or synthesize keyboard events.
-Each game publishes a typed status event and consumes typed command events from
-`shared/events.ts`.
-
-```text
-terminal button / command
-        |
-        v
-typed game command event
-        |
-        v
-game runtime
-        |
-        v
-typed status event
-        |
-        +--> footer status
-        +--> pause/resume label
-```
-
-This keeps keyboard bindings, touch controls, the terminal footer, and game
-internals independent. Visual copy can change without silently changing state
-recognition in the shared controller.
-
-## Session safety
-
-Saved sessions expire after 30 days. Validators check nested obstacle, pickup,
-crate, gate, direction, and coordinate data before restoring. Invalid, expired,
-future-dated, or incompatible sessions are removed instead of partially loaded.
 
 ## Release archives
 

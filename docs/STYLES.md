@@ -39,7 +39,7 @@ cascade order.
    unrelated files unless the value is truly component-specific.
 2. Put a rule in the narrowest file that owns the rendered markup.
 3. Keep selectors class-based and locally named. Component selectors should use
-   a clear prefix such as `.snake-`, `.post-`, or `.system-`.
+   a clear prefix such as `.mines-`, `.post-`, or `.system-`.
 4. Do not add `<style>` blocks or `style="..."` attributes to Astro files.
 5. Keep stylesheet manifests as imports and comments only.
 6. Do not use a late catch-all override stylesheet for page redesigns. Change the

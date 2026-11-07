@@ -1,0 +1,24 @@
+---
+import "../../styles/components/mines.css";
+---
+<main class="mines" data-backend={import.meta.env.PUBLIC_MINES_BACKEND_URL || ""}>
+  <header><a href="/">← HOME</a><span>CO-OP · 2–5 PLAYERS</span></header>
+  <h1>MINES<span>.</span></h1>
+  <form id="entry">
+    <p>Dig from your pennant. Connect the crew to the exit. You share two fuses.</p>
+    <label>Your name <input id="name" maxlength="16" autocomplete="nickname" required /></label>
+    <label id="code-label" hidden>Room code <input id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" /></label>
+    <div class="actions"><button id="create">Create room</button><button id="join" type="button">Join room</button></div>
+  </form>
+  <section id="lobby" hidden>
+    <div class="actions"><strong id="room-label"></strong><button id="invite">Copy invite</button><button id="leave">Leave</button></div>
+    <div id="crew" aria-label="Players"></div>
+    <div class="actions"><button id="start">Start round</button><button id="finish" hidden>Take the win</button></div>
+  </section>
+  <section id="field" hidden>
+    <div class="actions"><button id="dig" aria-pressed="true">Dig</button><button id="flag" aria-pressed="false">Flag</button><strong id="fuses"></strong></div>
+    <div id="viewport" tabindex="0" aria-label="Scrollable minefield"><div id="tiles"></div></div>
+    <p>Dig the lit edge of your patch. Numbers count mines in the eight surrounding tiles. Tap an open clue to ping it.</p>
+  </section>
+  <p id="status" role="status"></p>
+</main>

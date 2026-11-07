@@ -63,7 +63,7 @@ export function roomRouter(prefix) {
         if (!admitted.ok)
           return new Response("Room expired", { status: 410, headers });
         const lease = await admitted.json();
-        if ((lease.game === "chicken") !== (prefix === "/chicken"))
+        if ((lease.game ?? "number") !== (prefix.slice(1) || "number"))
           return new Response("Wrong game", { status: 404 });
         return env.ROOMS.getByName(lease.id).fetch(
           new Request("https://room/socket", request),

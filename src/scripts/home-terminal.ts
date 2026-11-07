@@ -1,5 +1,3 @@
-import { createArcadeController } from "./games/arcade-controller";
-
 export function mountHomeTerminal(): void {
   document
     .querySelectorAll<HTMLElement>(".landing-wrapper")
@@ -78,7 +76,6 @@ function mountTerminal(wrapper: HTMLElement): void {
   ];
 
   const output = wrapper.querySelector<HTMLElement>(".output");
-  const profileView = wrapper.querySelector<HTMLElement>("[data-profile-view]");
   const profileCopy = wrapper.querySelector<HTMLElement>("[data-profile-copy]");
   const commandCursor = wrapper.querySelector<HTMLElement>(".block-cursor");
   const footer = wrapper.querySelector<HTMLElement>("[data-terminal-footer]");
@@ -318,19 +315,6 @@ function mountTerminal(wrapper: HTMLElement): void {
     revealShell();
   };
 
-  const arcade = createArcadeController({
-    wrapper,
-    profileView,
-    profileCopy,
-    shell,
-    terminalInput,
-    footerState,
-    finePointer,
-    clearResponse,
-    showResponse,
-    resizeTerminalInput,
-  });
-
   const runCommand = (rawCommand: string): void => {
     const command = rawCommand.trim().toLowerCase();
 
@@ -340,7 +324,7 @@ function mountTerminal(wrapper: HTMLElement): void {
 
     if (command === "help") {
       showResponse(
-        "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TOPICS · ABOUT · SNAKE · CRANE · CHICKEN · NUMBER · CLEAR",
+        "COMMANDS: PROFILE · HELLO · POSTS · PROJECTS · TOPICS · ABOUT · CHICKEN · NUMBER · MINES · CLEAR",
       );
       return;
     }
@@ -366,14 +350,11 @@ function mountTerminal(wrapper: HTMLElement): void {
       return;
     }
 
-    if (arcade.openCommand(command)) {
-      return;
-    }
-
     const routes: Record<string, string> = {
       chicken: "/games/chicken/",
       freerange: "/games/chicken/",
       "free-range": "/games/chicken/",
+      mines: "/games/mines/",
       number: "/games/number/",
       posts: "/posts/",
       projects: "/projects/",
@@ -489,7 +470,6 @@ function mountTerminal(wrapper: HTMLElement): void {
 
   terminalScreen?.addEventListener("click", (event) => {
     if (
-      arcade.isActive() ||
       !shell ||
       shell.hidden ||
       !(terminalInput instanceof HTMLInputElement)
@@ -525,7 +505,7 @@ function mountTerminal(wrapper: HTMLElement): void {
   });
 
   const requestedGame = new URLSearchParams(location.search).get("game");
-  if (requestedGame === "chicken" || requestedGame === "number") {
+  if (requestedGame === "chicken" || requestedGame === "number" || requestedGame === "mines") {
     location.replace("/games/" + requestedGame + "/" + location.hash);
     return;
   }
