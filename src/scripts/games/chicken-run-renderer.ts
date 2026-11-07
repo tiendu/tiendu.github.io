@@ -1,3 +1,4 @@
+import { drawPlumage } from "./chicken-plumage";
 import type { RunCycleState } from "./chicken-run-cycle";
 import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
 import type { CrashKind, ObstacleKind } from "./chicken-run-rules";
@@ -338,36 +339,6 @@ function fillChickenLegs(
   }
 }
 
-function fillChickenSilhouette(
-  context: CanvasRenderingContext2D,
-  chicken: ChickenVisual,
-  pose: ChickenPose,
-): void {
-  context.fillRect(8, 12, 27, 23);
-  context.fillRect(22, 5 + pose.headBob, 17, 17);
-  context.fillRect(36, 12 + pose.headBob, 8, 5);
-  context.fillRect(4, 17, 7, 12);
-  context.fillRect(24, 1 + pose.headBob, 4, 6);
-  context.fillRect(30, 2 + pose.headBob, 4, 5);
-  context.fillRect(39, 14 + pose.headBob, 6, 4);
-  fillChickenWing(context, chicken, pose);
-  fillChickenLegs(context, chicken, pose);
-}
-
-function drawChickenOutline(
-  context: CanvasRenderingContext2D,
-  chicken: ChickenVisual,
-  pose: ChickenPose,
-): void {
-  context.fillStyle = rgbCss(CHICKEN_SPRITE_PALETTE.outline);
-  CHICKEN_OUTLINE_OFFSETS.forEach(([offsetX, offsetY]) => {
-    context.save();
-    context.translate(offsetX, offsetY);
-    fillChickenSilhouette(context, chicken, pose);
-    context.restore();
-  });
-}
-
 function drawCarriedEgg(
   context: CanvasRenderingContext2D,
   palette: ChickenWorldPalette,
@@ -446,39 +417,14 @@ export function drawChickenBody(
     context.shadowBlur = 8 + chicken.rescuePulse * 14;
   }
 
-  drawChickenOutline(context, chicken, pose);
-  context.shadowBlur = 0;
-
-  if (chicken.shape === "rooster" || chicken.shape === "bantam") {
-    context.fillStyle = "#457368";
-    context.fillRect(1, 9, 6, 16);
-    context.fillRect(-3, 6, 5, 11);
-  }
-  context.fillStyle = chicken.color;
-  context.fillRect(8, 12, 27, 23);
-  context.fillRect(22, 5 + headBob, 17, 17);
-  context.fillRect(36, 12 + headBob, 8, 5);
-  context.fillRect(4, 17, 7, 12);
-
-  context.fillStyle = rgbCss(CHICKEN_SPRITE_PALETTE.accent);
-  context.fillRect(24, 1 + headBob, 4, 6);
-  context.fillRect(30, 2 + headBob, 4, 5);
-  context.fillRect(39, 14 + headBob, 6, 4);
-
-  context.fillStyle = rgbCss(CHICKEN_SPRITE_PALETTE.wing);
-  fillChickenWing(context, chicken, pose);
-
-  context.fillStyle = rgbCss(CHICKEN_SPRITE_PALETTE.ink);
-  if (shocked) {
-    context.fillRect(31, 8 + headBob, 5, 6);
-    context.fillStyle = rgbCss(CHICKEN_SPRITE_PALETTE.body);
-    context.fillRect(33, 9 + headBob, 1, 2);
-  } else {
-    context.fillRect(33, 9 + headBob, 3, 3);
-  }
-
   context.fillStyle = rgbCss(CHICKEN_SPRITE_PALETTE.accent);
   fillChickenLegs(context, chicken, pose);
+  drawPlumage(context, chicken.shape, headBob, shocked);
+  context.shadowBlur = 0;
+  if (mudCrash || chicken.flapPulse > 0 || !chicken.grounded) {
+    context.fillStyle = chicken.color;
+    fillChickenWing(context, chicken, pose);
+  }
 
   if (chicken.eggCarried && !crash) {
     drawCarriedEgg(context, palette);
