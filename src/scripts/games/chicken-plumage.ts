@@ -133,12 +133,12 @@ function paintPlumage(ctx: CanvasRenderingContext2D, shape: string, shocked: boo
 
 // Scatter body, wing and tail colors. The fifth swatch belongs to the comb.
 export const featherDuration = 1.45;
-export function drawCaughtFeathers(ctx: CanvasRenderingContext2D, shape: string, x: number, y: number, age: number) {
+export function drawCaughtFeathers(ctx: CanvasRenderingContext2D, shape: string, x: number, y: number, age: number, count = 26) {
   if (age < 0 || age >= featherDuration) return;
   const colors = (plumage[shape as keyof typeof plumage] ?? plumage.round).colors;
   ctx.save();
   ctx.globalAlpha = Math.min(1, (featherDuration - age) * 3);
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < count; i++) {
     const angle = i * 2.4;
     const speed = 40 + (i * 37) % 90;
     const flutter = Math.sin(age * 9 + angle) * age * 5;

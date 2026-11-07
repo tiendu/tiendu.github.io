@@ -440,7 +440,7 @@ test("short landings invite a committed pounce; a quick jump or clear landing es
       const r = newRace(["me"], 1);
       r.time = 3;
       const p = r.runners[0];
-      p.x = response === "wide" ? 140 : 110;
+      p.x = response === "wide" ? 140 : 119;
       p.y = h + 1;
       p.jumps = 1;
       p.vy = -60;
@@ -461,4 +461,45 @@ test("short landings invite a committed pounce; a quick jump or clear landing es
       if (response === "jump") assert.equal(r.pounce, undefined);
     }
   }
+});
+
+test("two jumping birds can be caught on the same tick while a third keeps racing", () => {
+  for (const kind of ["fox", "coyote", "eagle"]) {
+    const track = { ...course(12), hills: [], roofs: [], corn: [], mud: [], skyOffset: kind === "fox" ? 24 : 0,
+      weatherOffset: 0, weatherRate: 1 };
+    const r = newRace(["first", "second", "clear"], 12);
+    r.time = 3;
+    r.picked = [0, 1, 2];
+    if (kind === "eagle") r.hawk = { x: 100, target: "first", at: 3.6, surface: 0 };
+    else if (kind === "fox") Object.assign(r, { fox: 100, foxTarget: "first", foxStarted: 2, chaseEnd: 6 });
+    else r.coyote = { x: 100, target: "first", started: 2, baleX: 190, height: 24 };
+    for (const [i, p] of r.runners.entries()) {
+      p.x = i === 2 ? 170 : 101 + i;
+      p.y = kind === "eagle" ? 57 : 3;
+      p.jumps = 1;
+      p.vy = 60;
+    }
+    step(r, track);
+    assert.deepEqual(r.runners.map(p => p.status), ["caught", "caught", "running"], kind);
+    assert.equal(r.capture.kind, kind);
+    assert.equal(r.runners[0].caughtAt, r.runners[1].caughtAt);
+    assert.equal(r.rescued, false);
+    assert.equal(r.over, false);
+    for (let i = 0; i < 21; i++) step(r, track);
+    assert.equal(r.capture, undefined);
+  }
+});
+
+test("a grounded flock shares one rescue on an eagle strike; cover and fresh immunity hold", () => {
+  const track = { ...course(12), hills: [], roofs: [{ x: 102, width: 35, h: 25 }], corn: [], mud: [],
+    skyOffset: 0, weatherOffset: 0, weatherRate: 1 };
+  const r = newRace(["one", "two", "three", "sheltered", "protected"], 12);
+  r.time = 3;
+  r.picked = [0, 1, 2];
+  r.hawk = { x: 99, target: "one", at: 3.04, surface: 0 };
+  for (const p of r.runners) p.x = p.id === "sheltered" ? 103 : 94;
+  Object.assign(r.runners[4], { y: 3, jumps: 1, safeUntil: 5 });
+  step(r, track);
+  assert.deepEqual(r.runners.map(p => p.status), ["running", "caught", "caught", "running", "running"]);
+  assert.ok(r.rescued);
 });

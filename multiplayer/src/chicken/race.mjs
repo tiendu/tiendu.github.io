@@ -1,3 +1,4 @@
+import { predatorPose, jumpedInto } from "./contact.mjs";
 import { groundHeight } from "./terrain.mjs";
 export { groundHeight };
 import { raceClimate, updatePredators } from "./encounters.mjs";
@@ -27,7 +28,7 @@ function classicCourse(seed) {
 }
 
 // A seed is enough for the host, guests and saved runs to rebuild this track.
-export function course(seed, version = 6) {
+export function course(seed, version = 7) {
   if (version === 1) return classicCourse(seed);
   let state = seed >>> 0;
   const roll = (low, high) => {
@@ -101,7 +102,7 @@ export function move(p, dt, roofs, hills, wetPatches, icy = false) {
     p.jumps = 0;
   } else if (!p.jumps) p.jumps = 1;
 }
-export function newRace(players, seed, courseVersion = 6) {
+export function newRace(players, seed, courseVersion = 7) {
   return {
     seed, courseVersion,
     time: -3,
@@ -117,18 +118,33 @@ export function step(r, track, dt = 0.05) {
   r.time += dt;
   if (r.time < 0 || r.over) return;
   const active = r.runners.filter((p) => p.status === "running");
-  function catchBird(p) {
-    if (r.picked.length >= 3 && !r.rescued) {
+  const contactRules = r.courseVersion >= 7;
+  const before = new Map();
+  const start = contactRules && !r.capture && r.foxRetreat == null && r.coyote?.retreat == null
+    ? predatorPose(r, track, r.time - dt) : null;
+  function catchBird(p, direct = false) {
+    if (p.status !== "running" || p.safeUntil > r.time) return;
+    if (!direct && r.picked.length >= 3 && !r.rescued) {
       r.rescued = true;
       p.safeUntil = r.time + 3;
       p.vy = 200;
       p.jumps = 1;
-    } else p.status = "caught";
+    } else {
+      p.status = "caught";
+      if (contactRules) {
+        const pose = predatorPose(r, track, r.time);
+        if (pose) {
+          r.capture ??= { kind: pose.kind, x: pose.x, y: pose.y, at: r.time };
+          p.caughtAt = r.time;
+        }
+      }
+    }
   }
   const climate = r.courseVersion >= 3 ? raceClimate(track, r.time) : null;
   const landings = [];
   for (const p of active) {
     const airborne = p.jumps > 0;
+    if (start) before.set(p.id, { x: p.x, y: p.y, airborne });
     move(p, dt, track.roofs, track.hills, climate?.muddy || climate?.icy ? track.mud : null, climate?.icy);
     if (climate) {
       if (airborne && !p.jumps) landings.push(p);
@@ -150,7 +166,25 @@ export function step(r, track, dt = 0.05) {
       p.status = "home";
     }
   }
-  if (climate) updatePredators(r, track, climate, dt, catchBird, landings);
+  if (r.capture) {
+    if (r.time - r.capture.at >= 0.95) {
+      r.fox = r.hawk = r.coyote = null;
+      delete r.foxRetreat;
+      delete r.foxSkid;
+      delete r.pounce;
+      delete r.capture;
+    }
+  } else if (contactRules) {
+    // Resolve everyone against the same tick before spending the shared rescue
+    // or moving the predator into its catch animation.
+    const threatened = new Set();
+    updatePredators(r, track, climate, dt, p => threatened.add(p), landings);
+    const end = predatorPose(r, track, r.time);
+    for (const p of active) {
+      const direct = start && jumpedInto(p, before.get(p.id), start, end, track);
+      if (direct || threatened.has(p)) catchBird(p, direct);
+    }
+  } else if (climate) updatePredators(r, track, climate, dt, catchBird, landings);
   else classicPredators(r, track, active, dt, catchBird);
   r.over = r.runners.every(p => p.status !== "running");
 }

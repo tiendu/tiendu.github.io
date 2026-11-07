@@ -53,11 +53,15 @@ export function stepPounce(r, track, catchBird) {
   if (attack.kind === "fox") r.fox = pose.x;
   else if (attack.kind === "coyote") r.coyote.x = pose.x;
   else r.hawk.x = pose.x;
-  const prey = r.runners.find(p => p.id === attack.target);
-  if (pose.moving && !attack.hit && prey?.status === "running" && !(prey.safeUntil > r.time) &&
-      Math.abs(prey.x - pose.x) <= 9 && onSurface(prey, track, attack.rail, attack.kind)) {
-    catchBird(prey);
-    attack.hit = true;
+  if (pose.moving && !attack.hit) {
+    for (const prey of r.runners) {
+      if (r.courseVersion < 7 && prey.id !== attack.target) continue;
+      if (prey.status === "running" && !(prey.safeUntil > r.time) && Math.abs(prey.x - pose.x) <= 9 &&
+          onSurface(prey, track, attack.rail, attack.kind)) {
+        catchBird(prey);
+        attack.hit = true;
+      }
+    }
   }
   if (!pose.done) return;
   if (attack.kind === "fox") {

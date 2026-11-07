@@ -1,3 +1,4 @@
+import { eaglePose } from "../../../multiplayer/src/chicken/contact.mjs";
 import { pouncePose } from "../../../multiplayer/src/chicken/pounce.mjs";
 import { drawCaughtFeathers, featherDuration } from "./chicken-plumage";
 import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
@@ -155,7 +156,7 @@ export function drawRace(canvas, r, track, players, id, effects) {
   }
   const leap = r.pounce && pouncePose(r.pounce, r.time);
   const hawk = r.hawk ?? effects.eagle;
-  if (hawk) {
+  if (hawk && !r.capture) {
     const lift = hawk.lift == null ? 0 : Math.max(0, r.time - hawk.lift);
     const remaining = Math.max(0, hawk.at - (hawk.lift ?? r.time));
     const x = X(hawk.x);
@@ -167,23 +168,16 @@ export function drawRace(canvas, r, track, players, id, effects) {
       rect("#524454", x + 4 - drift, floor - 4, 12, 2);
       rect("#efc379", x - 9 - drift, floor - 3, 18, 1);
     }
-    const approach = Math.min(1, remaining / 1.35);
-    const arc = approach * approach * (3 - 2 * approach);
-    const bank = Math.sin(approach * Math.PI * 2);
-    const rise = Math.max(0, lift - 0.18);
-    const clearance = hawk.surface == null ? 52 : 8;
-    const y = floor - clearance - arc * (158 - clearance) - rise * rise * 52;
-    const horizontal = hawk.surface == null ? approach : Math.max(0, (approach - 0.65) / 0.35);
-    const flyX = x - 38 * horizontal + bank * horizontal * 6 + lift * 103;
+    const flight = eaglePose(hawk, track, r.time);
     if (r.pounce?.kind === "eagle") {
       const surface = r.pounce.rail?.h ?? groundHeight(track.hills, leap.x);
       const feet = ground - surface - leap.hop + leap.crouch;
       if (leap.moving) paintEagle(c, X(leap.x), feet - 8, 0.24, 0, r.time);
       else paintPerchedEagle(c, X(leap.x), feet);
     } else if (hawk.perched && r.time < hawk.lift) paintPerchedEagle(c, x, floor);
-    else paintEagle(c, flyX, y, 1 - arc, lift, r.time);
+    else paintEagle(c, X(flight.x), ground - flight.y, flight.fold, lift, r.time);
   }
-  if (r.coyote) {
+  if (r.coyote && !r.capture) {
     const coyote = r.coyote;
     const age = coyote.retreat == null ? 0 : r.time - coyote.retreat;
     const turn = Math.min(1, Math.max(0, (age - 0.56) / 0.28));
@@ -192,7 +186,7 @@ export function drawRace(canvas, r, track, players, id, effects) {
     paintCoyote(c, X(worldX), floorAt(worldX) - (pose?.hop ?? 0) + (pose?.crouch ?? 0),
       turn, worldX, pose?.hop ?? 0);
   }
-  if (r.fox !== null) {
+  if (r.fox !== null && !r.capture) {
     const skid = r.foxRetreat == null ? -1 : r.time - r.foxRetreat;
     const pose = r.pounce?.kind === "fox" ? leap : null;
     const worldX = pose?.x ?? r.fox;
@@ -238,7 +232,7 @@ export function drawRace(canvas, r, track, players, id, effects) {
       x = X(p.x),
       y = ground - p.y;
     if (p.status === "caught") {
-      drawCaughtFeathers(c, b.shape, x, y - 14, r.time - effects.catches.get(p.id));
+      if (p.caughtAt == null) drawCaughtFeathers(c, b.shape, x, y - 14, r.time - effects.catches.get(p.id));
       continue;
     }
     if (x < 8 || x > w - 20) {
@@ -276,6 +270,7 @@ export function drawRace(canvas, r, track, players, id, effects) {
       text("YOU", x - 10, y - 31, "#ffe15a");
     }
   }
+  if (r.capture) drawCatch(c, r, X, ground, track);
   rect("#302d32", 4, 4, 144, 19);
   text(
     "CORN " +
@@ -290,4 +285,51 @@ export function drawRace(canvas, r, track, players, id, effects) {
     18,
   );
   if (r.time < 0) text(String(Math.ceil(-r.time)), w / 2, 55);
+}
+
+function drawCatch(c, race, X, ground, track) {
+  const event = race.capture;
+  const age = Math.max(0, race.time - event.at);
+  if (age >= 0.95) return;
+  const eagle = event.kind === "eagle";
+  const coyote = event.kind === "coyote";
+  const spring = Math.sin(Math.min(1, age / 0.2) * Math.PI);
+  const carry = Math.max(0, age - 0.16);
+  const turn = Math.min(1, Math.max(0, (age - 0.29) / 0.30));
+  const worldX = event.x + (eagle ? carry * 68 : spring * 4 - Math.max(0, age - 0.52) * 68);
+  const x = X(worldX);
+  const hill = groundHeight(track.hills, worldX) - groundHeight(track.hills, event.x);
+  const y = ground - event.y - (eagle ? carry * (26 + 88 * carry) : spring * 3 + hill);
+  const gripX = x + (eagle ? 1 : (coyote ? 26 : 18) * Math.cos(turn * Math.PI));
+  const gripY = y + (eagle ? 7 : coyote ? -19 : -11);
+  const victims = race.runners.filter(p => p.caughtAt === event.at);
+  c.save();
+  c.globalAlpha = Math.min(1, (0.95 - age) / 0.2);
+  // The puff stays at the point of impact as the predator carries the birds away.
+  for (const p of victims) {
+    drawCaughtFeathers(c, birds[p.bird].shape, X(p.x), ground - p.y - 10,
+      age - 0.16, Math.min(16, Math.ceil(26 / victims.length)));
+  }
+  if (eagle) paintEagle(c, x, y, 0, carry, race.time);
+  else if (coyote) paintCoyote(c, x, y, turn, worldX, spring * 4);
+  else paintFox(c, x, y, worldX / 6 + spring, turn);
+  victims.forEach((p, index) => {
+    const grab = Math.min(1, age / 0.14);
+    const spread = (index - (victims.length - 1) / 2) * 9;
+    const px = X(p.x) + (gripX + spread - X(p.x)) * grab;
+    const py = ground - p.y - 10 + (gripY - (ground - p.y - 10)) * grab;
+    const b = birds[p.bird];
+    c.save();
+    c.translate(px, py);
+    c.rotate(grab * (eagle ? 0.56 : -0.9));
+    c.scale(1 - grab * 0.23, 1 - grab * 0.23);
+    drawBird(c, b, 0, 10, 0, true);
+    c.restore();
+
+  });
+  // Draw the closed claws or lower jaw in front of the captured plumage.
+  c.fillStyle = eagle ? "#daa94a" : coyote ? "#dec19c" : "#ffdfa6";
+  c.fillRect(gripX - 4, gripY + 1, eagle ? 2 : 8, 2);
+  if (eagle) c.fillRect(gripX + 3, gripY + 1, 2, 3);
+  c.restore();
 }

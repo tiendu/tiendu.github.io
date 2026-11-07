@@ -53,9 +53,14 @@ function chaseWithCoyote(r, dt, catchBird) {
   }
   if (c.evaded && c.x >= p.x + 5) {
     c.retreat = r.time;
-  } else if (!c.evaded && p.onTrail && Math.abs(p.x - c.x) < 12 && !(p.safeUntil > r.time)) {
-    catchBird(p);
-    c.retreat = r.time;
+  } else if (!c.evaded) {
+    for (const bird of r.runners) {
+      if (r.courseVersion < 7 && bird !== p) continue;
+      if (bird.status === "running" && bird.onTrail && Math.abs(bird.x - c.x) < 12 && !(bird.safeUntil > r.time)) {
+        catchBird(bird);
+        c.retreat = r.time;
+      }
+    }
   }
 }
 
@@ -107,10 +112,14 @@ export function updatePredators(r, track, climate, dt, catchBird, landings = [])
     }
     r.fox += (patch && climate.muddy ? 55 : 90) * dt;
     // A roof is safe. Ground height comes from the shared movement simulation.
-    const touching = track.version >= 5 ? Math.abs(target.x - r.fox) < 10 : target.x - r.fox < 10;
-    if (target.onTrail && touching && !(target.safeUntil > r.time)) {
-      catchBird(target);
-      r.foxRetreat = r.time;
+    for (const bird of r.runners) {
+      if (r.courseVersion < 7 && bird !== target) continue;
+      const gap = bird.x - r.fox;
+      const touching = track.version >= 5 ? Math.abs(gap) < 10 : gap < 10;
+      if (bird.status === "running" && bird.onTrail && touching && !(bird.safeUntil > r.time)) {
+        catchBird(bird);
+        r.foxRetreat = r.time;
+      }
     }
     return;
   }
@@ -124,7 +133,7 @@ export function updatePredators(r, track, climate, dt, catchBird, landings = [])
           const exposed = hawk.surface == null ? p.altitude >= 35 :
             p.y >= hawk.surface - 4 && p.y <= hawk.surface + 28 &&
             p.y >= strikeSurface(track, p.x).height - 4;
-          if (p.id === hawk.target && p.status === "running" && !(p.safeUntil > r.time) &&
+          if ((r.courseVersion >= 7 || p.id === hawk.target) && p.status === "running" && !(p.safeUntil > r.time) &&
               exposed && Math.abs(p.x - hawk.x) < 19) catchBird(p);
         }
       }

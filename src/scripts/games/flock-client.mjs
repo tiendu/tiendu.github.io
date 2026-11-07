@@ -201,7 +201,8 @@ function drawFrame(r) {
       effects.catches.set(bird.id, r.time);
   }
   if (r.coyote || r.fox !== null) effects.eagle = null;
-  if (r.hawk) effects.eagle = r.hawk;
+  if (r.capture) effects.eagle = null;
+  else if (r.hawk) effects.eagle = r.hawk;
   else if (effects.eagle && effects.eagle.lift == null) {
     // A delayed room snapshot can skip the server's first pull-up frame.
     effects.eagle = { ...effects.eagle, lift: Math.min(r.time, effects.eagle.at) };
