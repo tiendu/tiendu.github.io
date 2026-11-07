@@ -1,106 +1,116 @@
-import { shape } from "./chicken-sprite-shape";
+// One sprite pixel is two course units. The origin is between the planted paws.
+const fur: Record<string, string> = {
+  k: "#342d34", s: "#64565a", r: "#b47e55", h: "#d5a477", c: "#f1d5a2", e: "#ffc34d",
+};
 
-// The legs are keyed by distance. During contact each paw sweeps backwards by
-// the distance the body advances, then folds under the belly on recovery.
-type LegPose = readonly [number, number, number, number, number, number];
-const hind: readonly LegPose[] = [
-  [5, -11, -7, -8, -15, -6], [6, -12, -3, -9, -6, -9],
-  [8, -11, 4, -7, 6, -5], [9, -10, 7, -5, 11, 0],
-  [6, -9, 0, -4, 5, 0], [3, -10, -7, -4, -1, 0],
-  [0, -12, -11, -5, -7, 0], [-3, -13, -13, -7, -13, -1],
+const profile = [
+  "               k    k",
+  "               rk  ks",
+  "               rhkksk",
+  "              krrrssk",
+  "            kksrrrrrrk",
+  "    kkkkkkkkssrrrrksrrk",
+  "  kkrrsssssssrrrrrekrrrkk",
+  " krrrrrssssrrrrrrhhhccrrrkk",
+  "krrhrrrrrrrrrrrhhhccccccckk",
+  "krrhhrrrrrrrhhrrcccskkkkk",
+  "krrrhsrrhhccckrrcck    ck",
+  " krrkkskkk    krck",
+  "  kk           kk",
 ];
-const fore: readonly LegPose[] = [
-  [-3, -12, 5, -5, 10, 0], [-4, -10, 1, -4, 4, 0],
-  [-5, -10, -4, -4, -2, 0], [-6, -12, -9, -5, -8, 0],
-  [-6, -12, -10, -9, -12, -5], [-5, -12, 2, -11, -2, -8],
-  [-2, -14, 9, -11, 7, -8], [2, -13, 11, -7, 14, -3],
+const brush = [
+  "           kkk",
+  "       kkkkrrk",
+  "    kkksrrrhhk",
+  " kkksrrrhhkk",
+  "kkssshhkkk",
+  " kkkkkk",
+];
+const front = [
+  "  k     k", "  rk   kr", "  rhkkkhr", " krrssrrrk", " kserrresk",
+  " krhrrrhrk", "  kcckcck", " krrckcrrk", " ksrcccrsk", "  kscccrk",
+  "  krrcrrk", "  ksrrsrk", "  ksk ksk", "  krk ksk", "  ksk  kk",
+  "  kkk  kkk",
 ];
 
-const ink = "#332c30", saddle = "#594f52", ochre = "#ac8561", buff = "#d4b18a";
+// Knee, hock and paw locations relative to the hip in each gallop drawing.
+type Limb = readonly [number, number, number, number, number, number];
+const hind: Limb[] = [
+  [2,3,-3,5,-8,6], [3,2,-2,4,-5,4], [4,2,1,4,0,5], [5,3,4,5,6,7],
+  [4,3,2,6,3,8], [2,4,-1,6,0,8], [1,3,-3,6,-3,8], [-1,3,-5,5,-6,8],
+];
+const fore: Limb[] = [
+  [0,3,4,5,6,8], [-1,3,2,5,3,8], [-2,4,0,6,0,8], [-3,3,-3,6,-3,8],
+  [-3,3,-5,5,-6,6], [-2,3,-1,4,-3,4], [-1,2,3,3,2,4], [1,2,5,4,7,6],
+];
 
-let coat: HTMLCanvasElement | undefined;
-function body() {
-  if (coat) return coat;
-  coat = document.createElement("canvas");
-  coat.width = 64;
-  coat.height = 40;
-  const c = coat.getContext("2d")!;
-  c.translate(25, 34);
-  // Sloping croup, raised hackles and forward-reaching muzzle.
-  shape(c, ink, [-20,-7,-18,-15,-14,-19,-5,-20,2,-22,7,-26,8,-23,
-    12,-25,10,-33,17,-27,20,-32,22,-24,24,-21,24,-19,32,-16,33,-13,
-    28,-12,24,-12,25,-10,18,-9,13,-6,9,-4,1,-8,-7,-8,-13,-4,-18,-4]);
-  shape(c, ochre, [-18,-10,-15,-17,-6,-18,3,-20,9,-24,14,-23,16,-25,
-    20,-27,21,-22,24,-19,30,-16,24,-14,17,-14,13,-9,8,-6,0,-10,-8,-9,-15,-5]);
-  shape(c, saddle, [-17,-12,-13,-17,-4,-18,5,-22,8,-23,6,-20,12,-22,
-    9,-18,13,-19,8,-15,4,-16,0,-14,-4,-15,-8,-14,-11,-15]);
-  shape(c, buff, [10,-14,15,-17,20,-17,23,-15,29,-15,23,-13,17,-13,
-    19,-12,14,-10,12,-8,13,-12,8,-9]);
-  shape(c, "#775751", [12,-30,16,-26,15,-24]);
-  shape(c, ink, [16,-21,23,-19,20,-17,16,-18]);
-  c.fillStyle = "#ffcd63"; c.fillRect(19,-19,2,1);
-  c.fillStyle = ink; c.fillRect(29,-16,4,2);
-  c.fillStyle = "#f6e6c6"; c.fillRect(24,-13,2,2);
-  return coat;
+function stamp(c: CanvasRenderingContext2D, rows: string[], x: number, y: number) {
+  rows.forEach((row, j) => {
+    for (let i = 0; i < row.length; i++) {
+      const color = fur[row[i]];
+      if (!color) continue;
+      c.fillStyle = color;
+      c.fillRect(x + i, y + j, 1, 1);
+    }
+  });
 }
 
-function leg(c: CanvasRenderingContext2D, poses: readonly LegPose[], phase: number,
-  hip: number, back: number, far: boolean, leap: number) {
-  const frame = Math.floor(phase);
-  const a = poses[frame % 8], b = poses[(frame + 1) % 8];
-  const mix = phase - frame;
-  const at = (i: number) => a[i] + (b[i] - a[i]) * mix;
-  const knee = hip + at(0), ky = at(1) + back * 0.45;
-  const wrist = hip + at(2), wy = at(3);
-  const extension = poses === fore ? leap : -leap;
-  const paw = hip + at(4) + extension;
-  const py = at(5) - leap * (poses === hind ? 0.95 : 0.45);
-  const thigh = poses === hind ? 5 : 3;
-  const top = -17 + back;
-  shape(c, far ? saddle : ochre, [hip-thigh,top-1,hip+thigh,top-2,knee+2,ky,
-    wrist+1.5,wy+1,wrist-1.5,wy,knee-2,ky+1,hip-thigh,top+4]);
-  shape(c, far ? "#716268" : buff, [knee-1,ky,knee+2,ky,wrist+1.5,wy,paw+1,py-2,
-    paw-1,py-1,wrist-1.5,wy+1]);
-  shape(c, ink, [paw-1.5,py-2,paw+1,py-3,paw+4,py-1,paw+4,py,paw-2,py]);
+// Rasterize the limb into square pixels, including the bent ankle and toes.
+function leg(c: CanvasRenderingContext2D, x: number, y: number, pose: Limb, far: boolean) {
+  function segment(ax: number, ay: number, bx: number, by: number, width: number, color: string) {
+    const steps = Math.max(1, Math.abs(bx - ax), Math.abs(by - ay));
+    c.fillStyle = color;
+    for (let i = 0; i <= steps; i++) {
+      c.fillRect(x + Math.round(ax + (bx - ax) * i / steps),
+        y + Math.round(ay + (by - ay) * i / steps), width, 1);
+    }
+  }
+  const [kx, ky, hx, hy, px, py] = pose;
+  segment(0, 0, kx, ky, 3, far ? fur.s : fur.r);
+  segment(kx, ky, hx, hy, 2, far ? fur.s : fur.h);
+  segment(hx, hy, px, py, 1, fur.k);
+  c.fillRect(x + px, y + py, 3, 1);
+}
+
+const frames = new Map<number, HTMLCanvasElement>();
+function sprite(index: number) {
+  const cached = frames.get(index);
+  if (cached) return cached;
+  const canvas = document.createElement("canvas");
+  canvas.width = 43;
+  canvas.height = 23;
+  const c = canvas.getContext("2d")!;
+  if (index === 9) {
+    stamp(c, front, 16, 4);
+  } else {
+    const jumping = index === 8;
+    const i = jumping ? 0 : index;
+    const ahead = (i + 1) % 8;
+    const bob = i === 1 || i === 2 || jumping ? -1 : 0;
+    const rearLeap: Limb = [3,2,-2,4,-7,4];
+    const frontLeap: Limb = [1,2,5,3,8,4];
+    leg(c, 14, 11, jumping ? rearLeap : hind[ahead], true);
+    leg(c, 23, 11, jumping ? frontLeap : fore[ahead], true);
+    stamp(c, brush, 0, 11 + bob + (i >= 5 ? 1 : 0));
+    stamp(c, profile, 10, 2 + bob);
+    leg(c, 13, 12, jumping ? rearLeap : hind[i], false);
+    leg(c, 24, 12, jumping ? frontLeap : fore[i], false);
+  }
+  frames.set(index, canvas);
+  return canvas;
 }
 
 export function paintCoyote(c: CanvasRenderingContext2D, x: number, floor: number,
   turn: number, distance: number, hop: number) {
-  const facing = Math.cos(turn * Math.PI);
-  const travel = facing < 0 ? -distance : distance;
-  const phase = ((travel / 6) % 8 + 8) % 8;
-  const angle = phase * Math.PI / 4;
-  const back = 1.6 * Math.sin(angle - 0.4);
+  const retreating = turn > 0.5;
+  const travel = retreating ? -distance : distance;
+  const stride = ((Math.floor(travel / 6) % 8) + 8) % 8;
+  const pivot = turn >= 0.34 && turn <= 0.66;
+  const frame = sprite(pivot ? 9 : hop > 2 ? 8 : stride);
   c.save();
-  c.translate(x, floor);
-  if (Math.abs(facing) < 0.55) {
-    c.save();
-    c.globalAlpha *= Math.min(1, (0.55 - Math.abs(facing)) * 7);
-    shape(c, ink, [-9,-24,-6,-26,4,-27,9,-22,10,-14,7,-9,8,-2,9,0,4,0,2,-9,-2,-9,-4,0,-9,0,-7,-10,-10,-17]);
-    shape(c, ochre, [-8,-23,6,-24,8,-18,5,-12,1,-9,-4,-12,-8,-17]);
-    shape(c, buff, [-6,-20,6,-20,4,-16,1,-13,0,-11,-2,-15]);
-    shape(c, ink, [-8,-33,-2,-28,3,-28,8,-33,7,-25,9,-21,5,-19,2,-15,-2,-15,-5,-19,-9,-21,-6,-25]);
-    shape(c, ochre, [-6,-29,-2,-26,3,-26,6,-29,5,-25,7,-22,3,-21,1,-17,-1,-17,-4,-21,-7,-22,-4,-24]);
-    c.fillStyle = "#ffcd63"; c.fillRect(-5,-23,2,1); c.fillRect(3,-23,2,1);
-    c.fillStyle = ink; c.fillRect(-2,-19,4,2);
-    c.restore();
-  }
-  c.scale(facing, 1);
-  leg(c, hind, phase + 0.95, -13, back, true, hop);
-  leg(c, fore, phase + 0.85, 7, back, true, hop);
-  c.save();
-  c.translate(-15, -13 + back);
-  c.rotate(0.12 * Math.sin(angle - 0.65) - 0.12 * hop / 7);
-  shape(c, ink, [2,-3,-4,-3,-11,0,-20,5,-24,5,-20,10,-14,10,-6,7,2,2]);
-  shape(c, "#8d7665", [1,-2,-4,-2,-12,2,-19,5,-14,7,-7,6,1,1]);
-  c.restore();
-  c.save();
-  c.translate(0, back);
-  c.rotate(0.045 * Math.cos(angle) - hop * 0.018);
+  c.translate(Math.round(x), Math.round(floor));
+  c.scale(retreating ? -2 : 2, 2);
   c.imageSmoothingEnabled = false;
-  c.drawImage(body(), -25, -34);
-  c.restore();
-  leg(c, hind, phase, -11, back, false, hop);
-  leg(c, fore, phase, 10, back, false, hop);
+  c.drawImage(frame, -20, -21);
   c.restore();
 }
