@@ -371,6 +371,10 @@ function mountTerminal(wrapper: HTMLElement): void {
     }
 
     const routes: Record<string, string> = {
+      chicken: "/games/chicken/",
+      freerange: "/games/chicken/",
+      "free-range": "/games/chicken/",
+      number: "/games/number/",
       posts: "/posts/",
       projects: "/projects/",
       topics: "/topics/",
@@ -522,9 +526,7 @@ function mountTerminal(wrapper: HTMLElement): void {
 
   const requestedGame = new URLSearchParams(location.search).get("game");
   if (requestedGame === "chicken" || requestedGame === "number") {
-    wrapper.classList.remove("terminal-typing-enabled");
-    revealShell();
-    arcade.openCommand(requestedGame);
+    location.replace("/games/" + requestedGame + "/" + location.hash);
     return;
   }
 

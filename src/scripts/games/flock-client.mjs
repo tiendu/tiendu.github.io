@@ -222,6 +222,7 @@ async function connect(create) {
       }
       if (msg.id) {
         id = msg.id;
+        history.replaceState(history.state, "", "#room=" + room);
         pending = false;
         return;
       }
@@ -284,8 +285,7 @@ el("code-form").onsubmit = (e) => {
 };
 el("start").onclick = () => send({ type: "start" });
 el("invite").onclick = async () => {
-  const url = new URL(location.href);
-  url.searchParams.set("game", "chicken");
+  const url = new URL("/games/chicken/", location.origin);
   url.hash = "room=" + room;
   try {
     await navigator.clipboard.writeText(url.href);
@@ -296,6 +296,7 @@ el("invite").onclick = async () => {
 };
 el("leave").onclick = () => {
   send({ type: "leave" });
+  history.replaceState(history.state, "", location.pathname);
   reset("Left the race.");
 };
 el("jump").onclick = () => submit("jump");
@@ -337,17 +338,12 @@ window.addEventListener(GAME_EVENTS.chicken.start, () => {
   reset("");
   root.hidden = false;
   const url = new URL(location.href);
-  if (url.searchParams.get("game") === "chicken") {
-    const code = new URLSearchParams(url.hash.slice(1)).get("room");
-    if (code && /^\d{6}$/.test(code)) {
-      showFriends();
-      el("code-form").hidden = false;
-      el("code").value = code;
-      root.dataset.online = "";
-      url.hash = "";
-    }
-    url.searchParams.delete("game");
-    history.replaceState(history.state, "", url);
+  const code = new URLSearchParams(url.hash.slice(1)).get("room");
+  if (code && /^\d{6}$/.test(code)) {
+    showFriends();
+    el("code-form").hidden = false;
+    el("code").value = code;
+    root.dataset.online = "";
   }
   el("flock-exit").focus({ preventScroll: true });
   window.dispatchEvent(new CustomEvent(GAME_EVENTS.chicken.status, {

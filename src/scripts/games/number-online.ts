@@ -8,7 +8,6 @@ export interface OnlineState {
   loserName: string; lastGuess: number | null; expires: number; target?: number;
 }
 interface Hooks {
-  leave: () => void;
   sound: (kind: "confirm" | "leave") => void;
   mode: (active: boolean) => void;
   state: (state: OnlineState) => void;
@@ -198,10 +197,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     const invite = new URL("/games/number/", location.origin);
     invite.hash = `room=${room}`;
     link.value = invite.href;
-    const page = new URL(location.href);
-    page.searchParams.set("game", "number");
-    page.hash = invite.hash;
-    history.replaceState(history.state, "", page);
+    history.replaceState(history.state, "", invite);
     connect();
   };
   create.disabled = !endpoint; joinButton.disabled = !endpoint;
@@ -251,7 +247,7 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     panel.hidden = true; form.hidden = false; mode.textContent = "PASS & PLAY";
     hooks.mode(false);
     info.textContent = lobbyMessage;
-    hooks.leave();
+    history.replaceState(history.state, "", location.pathname);
   });
   copy.addEventListener("click", async () => {
     const copiedLink = link.value;
@@ -285,7 +281,6 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
   });
   const openInvite = () => {
     const url = new URL(location.href);
-    if (url.searchParams.get("game") !== "number") return;
     const invited = new URLSearchParams(url.hash.slice(1)).get("room");
     if (!invited || !/^\d{6}$/.test(invited)) return;
     code.value = invited;

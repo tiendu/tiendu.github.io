@@ -2,8 +2,6 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import SnakeGame from "../components/games/SnakeGame.astro";
 import CraneGame from "../components/games/CraneGame.astro";
-import NumberGame from "../components/games/NumberGame.astro";
-import ChickenRunGame from "../components/games/ChickenRunGame.astro";
 import SystemHeader from "../components/SystemHeader.astro";
 import "../styles/system.css";
 import "../styles/pages/home.css";
@@ -98,6 +96,11 @@ import "../styles/pages/home.css";
               </section>
             </div>
 
+            <nav class="arcade-links" aria-label="Play games">
+              <a href="/games/chicken/">Chicken Run</a>
+              <a href="/games/number/">Number</a>
+            </nav>
+
             <p
               class="terminal-response"
               data-terminal-response
@@ -123,24 +126,6 @@ import "../styles/pages/home.css";
           </div>
 
           <CraneGame />
-
-          <NumberGame />
-          <ChickenRunGame />
-
-          <div
-            class="chicken-mobile-controls"
-            data-chicken-mobile-controls
-            aria-label="Chicken Run controls"
-          >
-            <div class="chicken-mobile-actions">
-              <button type="button" data-chicken-action="pause">PAUSE</button>
-              <button type="button" data-chicken-action="restart">RESTART</button>
-              <button type="button" data-chicken-action="exit">EXIT</button>
-            </div>
-
-            <p class="chicken-mobile-help">JUMP · FLAP · STAY FREE</p>
-          </div>
-
 
           <form class="terminal-shell" data-terminal-shell hidden>
             <span class="prompt">TIENDU@HOME</span>
@@ -190,4 +175,3 @@ import "../styles/pages/home.css";
     </script>
   </section>
 </BaseLayout>
-

@@ -2,7 +2,9 @@
 
 The homepage arcade keeps game markup, typed game logic, rendering, and shared
 browser utilities separate. Each game mounts itself from a small Astro component,
-while `arcade-controller.ts` handles terminal commands and restoring the profile.
+with Snake and Crane mounted inside the terminal. Chicken Run and Number open
+at `/games/chicken/` and `/games/number/` from homepage links or terminal commands.
+Room invites append `#room=123456` to the corresponding game URL.
 
 | Command   | Component              | Runtime                                     | Styles                 |
 | --------- | ---------------------- | ------------------------------------------- | ---------------------- |

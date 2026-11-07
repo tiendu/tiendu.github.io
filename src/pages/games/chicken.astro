@@ -1,9 +1,31 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import GameLayout from "../../layouts/GameLayout.astro";
+import ChickenRunGame from "../../components/games/ChickenRunGame.astro";
 ---
-<BaseLayout title="Chicken Run" description="Race to the coop with your flock.">
-  <a href="/?game=chicken">Open Chicken Run in the arcade</a>
-  <script is:inline>
-    location.replace("/?game=chicken" + location.hash);
-  </script>
-</BaseLayout>
+<GameLayout title="Chicken Run" description="Outrun the fox solo or race to the coop with friends.">
+  <ChickenRunGame />
+</GameLayout>
+
+<script>
+  import "../../scripts/games/flock-client.mjs";
+  import { mountChickenRunGames } from "../../scripts/games/chicken-run";
+  import { GAME_EVENTS, dispatchGameCommand, type GameStatusDetail } from "../../scripts/games/shared/events";
+
+  mountChickenRunGames();
+  const events = GAME_EVENTS.chicken;
+  for (const action of ["pause", "restart"] as const) {
+    document.querySelector('[data-solo-' + action + ']')?.addEventListener("click", () => dispatchGameCommand(events.command, action));
+  }
+  const pause = document.querySelector<HTMLButtonElement>("[data-solo-pause]")!;
+  window.addEventListener(events.status, event => {
+    const state = (event as CustomEvent<GameStatusDetail>).detail;
+    pause.textContent = state.pauseLabel ?? "Pause";
+    pause.disabled = state.pauseDisabled ?? false;
+  });
+  window.addEventListener(events.exit, () => location.assign("/"));
+  window.dispatchEvent(new Event(events.start));
+  window.addEventListener("pageshow", event => {
+    if (event.persisted && document.querySelector<HTMLElement>("[data-chicken-game]")?.hidden)
+      window.dispatchEvent(new Event(events.start));
+  });
+</script>

@@ -123,7 +123,7 @@ const craneScript = await readFile(
   new URL("../src/scripts/games/crane.ts", import.meta.url),
   "utf8",
 );
-for (const name of ["SnakeGame", "CraneGame", "ChickenRunGame"]) {
+for (const name of ["SnakeGame", "CraneGame"]) {
   if (!homePage.includes(name))
     failures.push(`homepage does not render ${name}`);
 }
@@ -133,7 +133,7 @@ if (
   homePage.includes("LiftLoadGame")
 )
   failures.push("homepage still renders a retired game");
-for (const id of ["snake", "crane", "chicken"]) {
+for (const id of ["snake", "crane"]) {
   if (!controller.includes(`id: "${id}"`))
     failures.push(`arcade controller does not register ${id}`);
 }
@@ -222,12 +222,22 @@ for (const [scriptName, eventName] of [
 for (const [moduleName, mountName] of [
   ["./snake", "mountSnakeGames"],
   ["./crane", "mountCraneGames"],
-  ["./chicken-run", "mountChickenRunGames"],
 ]) {
   if (!controller.includes(`import("${moduleName}")`))
     failures.push(`arcade controller does not lazy-load ${moduleName}`);
   if (!controller.includes(mountName))
     failures.push(`arcade controller does not mount ${moduleName}`);
+}
+
+for (const [slug, component, mount] of [
+  ["chicken", "ChickenRunGame", "mountChickenRunGames"],
+  ["number", "NumberGame", "mountNumberGames"],
+]) {
+  const page = await readFile(new URL(`../src/pages/games/${slug}.astro`, import.meta.url), "utf8");
+  if (!page.includes(`<${component} />`) || !page.includes(`${mount}()`))
+    failures.push(`/games/${slug}/ must render and mount its game`);
+  if (!homePage.includes(`href="/games/${slug}/"`))
+    failures.push(`homepage is missing the ${slug} game link`);
 }
 
 if (failures.length > 0) {

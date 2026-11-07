@@ -1,7 +1,21 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import GameLayout from "../../layouts/GameLayout.astro";
+import NumberGame from "../../components/games/NumberGame.astro";
 ---
-<BaseLayout title="Number" description="Play Number in the homepage arcade.">
-  <a href="/?game=number">Open Number</a>
-  <script is:inline>location.replace("/?game=number" + location.hash);</script>
-</BaseLayout>
+<GameLayout title="Number" description="Narrow the range and avoid the hidden number. Pass the phone or invite friends to a room.">
+  <NumberGame />
+</GameLayout>
+
+<script>
+  import { mountNumberGames } from "../../scripts/games/number";
+  import { GAME_EVENTS } from "../../scripts/games/shared/events";
+
+  mountNumberGames();
+  const events = GAME_EVENTS.number;
+  window.addEventListener(events.exit, () => location.assign("/"));
+  window.dispatchEvent(new Event(events.start));
+  window.addEventListener("pageshow", event => {
+    if (event.persisted && document.querySelector<HTMLElement>("[data-number-game]")?.hidden)
+      window.dispatchEvent(new Event(events.start));
+  });
+</script>

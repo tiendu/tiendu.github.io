@@ -1,14 +1,13 @@
 import {
   GAME_EVENTS,
   dispatchGameCommand,
-  type ChickenExitDetail,
   type GameCommandAction,
   type GameStatusDetail,
   type ScoreExitDetail,
 } from "./shared/events";
 
-export type GameId = "snake" | "crane" | "chicken" | "number";
-type ExitDetail = ScoreExitDetail | ChickenExitDetail;
+export type GameId = "snake" | "crane";
+type ExitDetail = ScoreExitDetail;
 
 interface ArcadeHost {
   wrapper: HTMLElement;
@@ -47,25 +46,10 @@ export interface ArcadeController {
 const score = (value: unknown): number =>
   typeof value === "number" && Number.isFinite(value) ? value : 0;
 
-const positive = (value: unknown, fallback: number): number =>
-  typeof value === "number" && Number.isFinite(value) && value > 0
-    ? value
-    : fallback;
-
 const format = (value: number, width: number): string =>
   String(Math.max(0, Math.floor(value))).padStart(width, "0");
 
 const definitions: readonly GameDefinition[] = [
-  {
-    id: "number",
-    aliases: ["number"],
-    rootSelector: "[data-number-game]",
-    load: async () => (await import("./number")).mountNumberGames(),
-    startEvent: GAME_EVENTS.number.start,
-    exitEvent: GAME_EVENTS.number.exit,
-    readyStatus: () => "NUMBER · KEYBOARD OR TOUCH",
-    exitMessage: () => "NUMBER CLOSED",
-  },
   {
     id: "snake",
     load: async () => {
@@ -109,31 +93,7 @@ const definitions: readonly GameDefinition[] = [
       return `STACK TRACE CLOSED · HEIGHT ${format(score(crane.score), 3)} · HIGH ${format(score(crane.highScore), 3)}`;
     },
   },
-  {
-    id: "chicken",
-    load: async () => {
-      const { mountChickenRunGames } = await import("./chicken-run");
-      await import("./flock-client.mjs");
-      mountChickenRunGames();
-    },
-    aliases: ["chicken", "freerange", "free-range"],
-    startEvent: GAME_EVENTS.chicken.start,
-    commandEvent: GAME_EVENTS.chicken.command,
-    statusEvent: GAME_EVENTS.chicken.status,
-    exitEvent: GAME_EVENTS.chicken.exit,
-    rootSelector: "[data-chicken-game]",
-    progressSelector: "[data-chicken-speed]",
-    actionSelector: "[data-chicken-action]",
-    pauseSelector: '[data-chicken-action="pause"]',
-    readyStatus: (speed, fine) =>
-      `SPEED ${speed} · READY · ${fine ? "SPACE/UP" : "TAP TO JUMP"}`,
-    exitMessage: (detail) => {
-      if ("flock" in detail) return "CHICKEN RUN CLOSED";
-      const chicken = detail as Partial<ChickenExitDetail>;
-      const speedLevel = positive(chicken.speed, 1);
-      return `CHICKEN RUN CLOSED · SCORE ${format(score(chicken.score), 4)} · HIGH ${format(score(chicken.highScore), 4)} · SPEED ${format(speedLevel, 2)}`;
-    },
-  },
+
 ];
 
 function setPauseButton(

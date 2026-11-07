@@ -291,7 +291,6 @@ export function mountNumberGames(): void {
       online?.openInvite();
     });
     online = mountNumberOnline(root, {
-      leave: exit,
       sound: (kind) => sounds.play(kind),
       mode(active) {
         get("[data-number-exit]").hidden = active;
