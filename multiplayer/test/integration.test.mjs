@@ -15,7 +15,7 @@ test(`${process.env.NUMBER_TEST_BACKEND==='node'?'Node':'Cloudflare'} backend: 2
   const nodeBackend=process.env.NUMBER_TEST_BACKEND==='node';
   let app;
   if(nodeBackend) app=await startServer({port:8789,host:'127.0.0.1',database:join(directory,'game.sqlite'),origins:origin,maxRooms:1});
-  const server = nodeBackend ? null : spawn(process.execPath, ['node_modules/wrangler/bin/wrangler.js','dev','--port','8789','--ip','127.0.0.1','--persist-to',directory,'--var',`ALLOWED_ORIGINS:${origin}`,'--var','MAX_ROOMS:1'], {
+  const server = nodeBackend ? null : spawn(process.execPath, ['node_modules/wrangler/bin/wrangler.js','dev','--config','wrangler.number.jsonc','--port','8789','--ip','127.0.0.1','--persist-to',directory,'--var',`ALLOWED_ORIGINS:${origin}`,'--var','MAX_ROOMS:1'], {
     stdio:['ignore','pipe','pipe'], env:{...process.env,WRANGLER_SEND_METRICS:'false'}
   });
   let logs='';

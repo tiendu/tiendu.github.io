@@ -7,4 +7,4 @@ Chicken deploys as `chicken-multiplayer` using `wrangler.chicken.jsonc`. It owns
 3. Push the patch to main or run **Chicken multiplayer backend** from Actions on main. Wrangler creates the Worker and SQLite Durable Object namespaces on the first deployment. Run **Deploy to GitHub Pages** again if the public URL was set after the Pages build.
 4. Open Chicken, create a room, and join from two other browsers. The create request should go to the Chicken origin at `/chicken/rooms`. Invite links created with the former combined backend do not migrate.
 
-For local Worker development, run `npx wrangler dev --config wrangler.chicken.jsonc --var ALLOWED_ORIGINS:http://localhost:4321` from this directory and point the frontend's Chicken URL at the local Worker.
+For local Worker development, run `npm run dev:chicken -- --var ALLOWED_ORIGINS:http://localhost:4321` from this directory and point the frontend's Chicken URL at the local Worker.

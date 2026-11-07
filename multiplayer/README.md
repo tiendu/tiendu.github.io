@@ -147,7 +147,7 @@ and switch its routing, while allowing for DNS caches and certificate setup.
 
 ## What is public / private?
 
-- Public: code, `wrangler.jsonc`, origin allowlist, Worker URL, invite link.
+- Public: code, `wrangler.number.jsonc`, origin allowlist, Worker URL, invite link.
 - Private: deployment token (GitHub secret); player tokens (browser storage and
   Durable Object storage); target (server only until the round ends).
 - Anyone with the room code/link can join an available seat. Six-digit codes are
@@ -181,8 +181,7 @@ and switch its routing, while allowing for DNS caches and certificate setup.
 
 ## Lifetime and free usage
 
-Serialized, persistent admission limits each backend deployment to **50
-rooms** × **20 seats** (1,000 possible seats, not a load-tested capacity). Change `MAX_ROOMS` in `wrangler.jsonc` and redeploy
+The Number Worker allows **45 rooms** with **20 seats** each (900 possible seats). Chicken has its own five-room limit. Change `MAX_ROOMS` in `wrangler.number.jsonc` and redeploy
 (valid range 1–1000). Admissions are serialized, so simultaneous requests cannot
 exceed the cap. Lowering the limit preserves existing rooms and blocks new ones
 until capacity is available. Full capacity returns HTTP 503 with Retry-After;
@@ -200,7 +199,7 @@ extend room lifetime. Client player tokens remain in that browser's local storag
 WebSocket auto-responses allow the room to hibernate between turns. No polling or
 continuous simulation runs on the server. Rate limits are 10 creates and 120
 connections per minute per IP. Cloudflare limits are approximate and per location; Node limits are
-per process. Namespace IDs 1001/1002 in wrangler.jsonc should be changed if
+per process. Namespace IDs 1001/1002 in wrangler.number.jsonc should be changed if
 already used for other Cloudflare rate-limit policies in your account.
 
 SQLite-backed Durable Objects are available on Workers Free, subject to request,
@@ -209,15 +208,22 @@ launch. No paid plan upgrade is configured by this code.
 
 ## Development and checks
 
-Requires Node 24 (also used in CI).
+Both Workers use the Wrangler installation in this directory. Run these commands from `multiplayer/` with Node 24.
+
+| Game | Config | Local development | Deployment |
+| --- | --- | --- | --- |
+| Number | `wrangler.number.jsonc` | `npm run dev:number` | `npm run deploy:number` |
+| Chicken | `wrangler.chicken.jsonc` | `npm run dev:chicken` | `npm run deploy:chicken` |
+
+The original `dev`, `check`, and `deploy` scripts are aliases for Number.
 
 ```sh
 cd multiplayer
 npm ci
-npm run check             # handler/rules tests and deployment dry run; no secrets
+npm run check:number      # handler/rules tests and deployment dry run; no secrets
 npm run test:integration  # shared 20-player contract against Cloudflare/workerd
 npm run test:node         # same contract against Node + SQLite restart test
-npm run dev -- --port 8787 --var ALLOWED_ORIGINS:http://localhost:4321
+npm run dev:number -- --port 8787 --var ALLOWED_ORIGINS:http://localhost:4321
 ```
 
 In another terminal from the repo root:
