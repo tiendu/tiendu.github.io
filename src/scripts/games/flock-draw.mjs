@@ -11,17 +11,62 @@ export function drawBird(c, b, x, y, frame = 0) {
   if (chick) c.scale(0.78, 0.78);
   box("#e4b859", -6, -4, 3, 4);
   box("#e4b859", 3, -4, 3, frame % 2 ? 2 : 4);
-  box("#e6dec0", -11, -14, 21, 10);
+  box("#34343b", -11, -14, 21, 11);
+  if (b.shape === "round") box(b.color, -13, -15, 18, 9);
   box(b.color, -10, -16, 20, 11);
   box(b.color, 3, -23, 10, 12);
-  box("#20252c", 9, -20, 2, 2);
+  box("#fff2cb", 8, -21, 4, 4);
+  box("#20252c", 10, -20, 2, 2);
   box("#ffbe4f", 13, -17, 5, 3);
   box(chick ? "#ffd64e" : "#ec5340", 4, -26, tall ? 10 : 5, tall ? 5 : 3);
   box(tall ? "#487f70" : b.color, -15, -19, 6, 8);
   if (tall) box("#375d67", -18, b.shape === "rooster" ? -25 : -22, 5, 10);
   box(b.shape === "round" ? "#a69b86" : "#ffffff66", -5, -13, 8, 3);
+  box(b.shape === "hen" ? "#88768a" : "#f5ce8c", -6, -12, 7, 2);
+  box("#e4b859", -7, -1, 5, 1);
   c.restore();
 }
+// Draw in world pixels so the lobby art and course share the same horizon.
+function pasture(c, w, ground, camera, chase) {
+  const box = (color, x, y, width, height) => {
+    c.fillStyle = color;
+    c.fillRect(Math.round(x), Math.round(y), width, height);
+  };
+  const sky = c.createLinearGradient(0, 0, 0, ground);
+  sky.addColorStop(0, chase ? "#586181" : "#7db9bd");
+  sky.addColorStop(1, chase ? "#edaa80" : "#ffda91");
+  box(sky, 0, 0, w, ground);
+  const sun = Math.round(w * .76);
+  box("#fff0ad", sun - 10, 10, 20, 26);
+  box("#fff0ad", sun - 13, 14, 26, 18);
+  for (let x = -180 - Math.round(camera * .12) % 180; x < w; x += 180) {
+    box("#fbe5c0", x + 7, 24, 40, 4);
+    box("#fbe5c0", x + 18, 20, 19, 5);
+  }
+  for (let x = 0; x < w; x += 6) {
+    const hill = (x + camera * .16) / 72;
+    const ridge = Math.round(ground * (.69 + .08 * Math.sin(hill) + .04 * Math.sin(2 * hill)));
+    box("#789791", x, ridge, 6, ground - ridge);
+    const field = Math.round(ground * (.82 + .05 * Math.cos((x + camera * .36) / 48)));
+    box("#557969", x, field, 6, ground - field);
+  }
+  for (let x = -54 - Math.round(camera * .68) % 54; x < w; x += 54) {
+    box("#a0a278", x, ground - 12, 54, 2);
+    box("#697953", x + 4, ground - 17, 4, 17);
+  }
+  box("#b5b667", 0, ground - 2, w, 4);
+  box("#756448", 0, ground + 2, w, 4);
+  box("#54453e", 0, ground + 6, w, 34);
+  for (let x = -29 - Math.round(camera) % 29; x < w; x += 29)
+    box("#816851", x, ground + 13, 6, 2);
+}
+
+export function drawPoster(canvas) {
+  const c = canvas.getContext("2d");
+  pasture(c, canvas.width, 76, 0, false);
+  birds.forEach((bird, index) => drawBird(c, bird, 61 + index * 45, 75, index));
+}
+
 export function drawRace(canvas, r, track, players, id, elapsed) {
   const c = canvas.getContext("2d"),
     w = canvas.width,
@@ -43,28 +88,25 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
     c.fillText(s, x, y);
   };
   c.font = "bold 12px monospace";
-  rect(r.fox === null ? "#657f92" : "#454962", 0, 0, w, h);
-  rect("#edd299", w * 0.72, 23, 22, 22);
-  for (let i = -1; i < w / 100 + 2; i++)
-    rect(
-      "#485f66",
-      i * 100 - ((camera * 0.25) % 100),
-      ground - 46 + (i % 3) * 6,
-      130,
-      65,
-    );
-  rect("#546e47", 0, ground, w, 8);
-  rect("#685444", 0, ground + 8, w, 30);
+  pasture(c, w, ground, camera, r.fox !== null);
   for (const p of track.roofs) {
     const x = X(p.x),
       y = ground - p.h;
     rect("#84694c", x + 5, y, 5, p.h);
     rect("#84694c", x + p.width - 10, y, 5, p.h);
+    rect("#5e483b", x + 7, y + 6, p.width - 14, 3);
     rect(p.h === 28 ? "#edb852" : "#b8684b", x, y, p.width, 7);
+    rect("#f8ca83", x, y, p.width, 2);
+    for (let tile = 8; tile < p.width - 4; tile += 13)
+      rect("#955c45", x + tile, y + 3, 2, 3);
   }
   track.corn.forEach((p, i) => {
-    if (!r.picked.includes(i))
-      rect("#ffdb52", X(p.x) - 3, ground - p.h - 11, 6, 9);
+    if (r.picked.includes(i)) return;
+    const x = X(p.x), y = ground - p.h - 12;
+    rect("#704e33", x - 4, y, 8, 10);
+    rect("#ffd35a", x - 2, y - 2, 5, 10);
+    rect("#fff4a4", x - 1, y, 2, 4);
+    rect("#71a859", x - 5, y + 5, 3, 5);
   });
   rect("#ae6244", X(finish), ground - 48, 55, 48);
   rect("#eed49d", X(finish) - 5, ground - 52, 65, 7);
@@ -96,6 +138,7 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
       if (p.id === id) text("▼ YOU", x, ground - 38, "#ffe15a");
       c.textAlign = "left";
     });
+    rect("#302d32", 7, 16, 84, 19);
     text("START IN " + Math.ceil(-r.time), 12, 30);
     return;
   }
@@ -122,8 +165,12 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
       continue;
     }
     drawBird(c, b, x, y, Math.floor(r.time * 10));
-    if (p.id === id) text("YOU", x - 10, y - 31, "#ffe15a");
+    if (p.id === id) {
+      rect("#302d32", x - 13, Math.round(y) - 42, 27, 14);
+      text("YOU", x - 10, y - 31, "#ffe15a");
+    }
   }
+  rect("#302d32", 4, 4, 144, 19);
   text(
     "CORN " +
       r.picked.length +

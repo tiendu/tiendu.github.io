@@ -6,7 +6,7 @@ import {
   newRace,
   step,
 } from "../../../multiplayer/src/chicken/race.mjs";
-import { drawBird, drawRace } from "./flock-draw.mjs";
+import { drawBird, drawPoster, drawRace } from "./flock-draw.mjs";
 import { mountGameSound } from "./shared/game-sound";
 
 import { GAME_EVENTS, readGameCommand } from "./shared/events";
@@ -14,7 +14,8 @@ import { GAME_EVENTS, readGameCommand } from "./shared/events";
 const root = document.querySelector("[data-flock]");
 const el = (key) => root.querySelector("[data-" + key + "]");
 const audio = mountGameSound(root, "chicken");
-const canvas = root.querySelector("canvas");
+const canvas = el("board").querySelector("canvas");
+drawPoster(el("poster"));
 let ws = null,
   id = "",
   view = null,

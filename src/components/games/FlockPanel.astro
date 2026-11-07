@@ -4,7 +4,10 @@ import "../../styles/components/flock.css";
 ---
 <section class="flock" aria-label="Flock Run" hidden data-flock data-endpoint={import.meta.env.PUBLIC_CHICKEN_BACKEND_URL || ""}>
 <header><button type="button" data-flock-exit>← Exit</button><SoundToggle /></header>
-<h1>Flock Run</h1>
+<div class="flock-marquee">
+  <h1>Flock Run</h1>
+  <canvas data-poster width="288" height="88" aria-hidden="true"></canvas>
+</div>
 <section data-setup>
 <label>Your name <input data-name maxlength="16" placeholder="Player" autocomplete="nickname" /></label>
 <div class="flock-actions"><button data-create>Create room</button><button data-join>Join room</button><button data-practice>Solo run</button><button data-classic>Free Range solo</button></div>
