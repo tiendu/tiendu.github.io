@@ -1,5 +1,6 @@
 import {
   createSoloBoard,
+  escapeRoutes,
   frontier,
   play,
 } from "../../../multiplayer/src/mines/board.mjs";
@@ -278,6 +279,7 @@ export function mountMines() {
     const tiles = el("tiles"),
       edge = frontier(board, me);
     if (centered !== round) {
+      el("victory").hidden = true;
       tiles.style.setProperty("--size", board.size);
       tiles.replaceChildren(
         ...board.cells.map((_, n) => {
@@ -353,6 +355,29 @@ export function mountMines() {
     if (centered !== round) {
       centered = round;
       center(board.starts[board.players.indexOf(me)]);
+    }
+    if (["connected", "won", "perfect"].includes(board.status)) {
+      const banner = el("victory");
+      if (banner.hidden) {
+        const routes = escapeRoutes(board);
+        const farthest = Math.max(1, ...routes.values());
+        for (const [cell, distance] of routes) {
+          const tile = tiles.children[cell];
+          tile.style.setProperty(
+            "--win-delay",
+            Math.round(650 * (1 - distance / farthest)) + "ms",
+          );
+          tile.dataset.escape = "";
+        }
+        banner.hidden = false;
+      }
+      const message =
+        board.status === "perfect"
+          ? "Perfect clear!"
+          : solo
+            ? "You escaped!"
+            : "Everyone escaped!";
+      if (banner.textContent !== message) banner.textContent = message;
     }
     const labels = {
       digging: solo

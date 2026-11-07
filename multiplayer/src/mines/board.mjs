@@ -266,3 +266,30 @@ export function frontier(board, id) {
   }
   return cells;
 }
+
+// Discover one shortest open route per pennant, sharing the trunk at the exit.
+export function escapeRoutes(board) {
+  const adjacent = movement(board);
+  const parent = new Map([[board.exit, null]]);
+  const distance = new Map([[board.exit, 0]]);
+  for (const cell of parent.keys()) {
+    for (const next of adjacent[cell]) {
+      if (
+        parent.has(next) ||
+        board.cells[next] == null ||
+        board.cells[next] < 0
+      )
+        continue;
+      parent.set(next, cell);
+      distance.set(next, distance.get(cell) + 1);
+    }
+  }
+  const routes = new Map();
+  for (let cell of board.starts) {
+    while (parent.has(cell) && !routes.has(cell)) {
+      routes.set(cell, distance.get(cell));
+      cell = parent.get(cell);
+    }
+  }
+  return routes;
+}

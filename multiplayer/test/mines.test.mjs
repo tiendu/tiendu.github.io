@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   createBoard,
   createSoloBoard,
+  escapeRoutes,
   frontier,
   play,
   provable,
@@ -144,4 +145,43 @@ test("solver rejects a diagonal-only route to a proven safe exit", () => {
 });
 test("bounded solo generation recovers from repeatedly unsuitable layouts", () => {
   assert.ok(provable(createSoloBoard(() => 0)));
+});
+
+test("victory trails join along revealed sides and leave branches unlit", () => {
+  // The upper and lower pennants share the center corridor to the exit.
+  const board = {
+    size: 4,
+    sideOnly: true,
+    starts: [0, 8],
+    exit: 7,
+    cells: [
+      0,
+      null,
+      null,
+      null,
+      0,
+      1,
+      1,
+      0,
+      0,
+      -1,
+      1,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ],
+  };
+  assert.deepEqual(
+    [...escapeRoutes(board)].sort(([a], [b]) => a - b),
+    [
+      [0, 4],
+      [4, 3],
+      [5, 2],
+      [6, 1],
+      [7, 0],
+      [8, 4],
+    ],
+  );
 });
