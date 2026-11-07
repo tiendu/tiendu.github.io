@@ -77,6 +77,8 @@ export interface CrashVisual {
 }
 
 export interface ChickenVisual {
+  color: string;
+  shape: string;
   x: number;
   y: number;
   velocityY: number;
@@ -382,7 +384,7 @@ function drawCarriedEgg(
   context.fillRect(6, 33, 2, 3);
 }
 
-function drawChickenBody(
+export function drawChickenBody(
   context: CanvasRenderingContext2D,
   chicken: ChickenVisual,
   elapsed: number,
@@ -433,7 +435,8 @@ function drawChickenBody(
     context.rotate(Math.atan(chicken.slope) * 0.58);
   }
   if (crash) context.rotate(crash.rotation);
-  context.scale(scaleX, scaleY);
+  const size = chicken.shape === "chick" ? .82 : 1;
+  context.scale(scaleX * size, scaleY * size);
   context.translate(-21, -42 + (mudCrash ? crash.sink : 0));
 
   if (nightFactor > 0.25 || chicken.rescuePulse > 0) {
@@ -446,7 +449,12 @@ function drawChickenBody(
   drawChickenOutline(context, chicken, pose);
   context.shadowBlur = 0;
 
-  context.fillStyle = rgbCss(CHICKEN_SPRITE_PALETTE.body);
+  if (chicken.shape === "rooster" || chicken.shape === "bantam") {
+    context.fillStyle = "#457368";
+    context.fillRect(1, 9, 6, 16);
+    context.fillRect(-3, 6, 5, 11);
+  }
+  context.fillStyle = chicken.color;
   context.fillRect(8, 12, 27, 23);
   context.fillRect(22, 5 + headBob, 17, 17);
   context.fillRect(36, 12 + headBob, 8, 5);

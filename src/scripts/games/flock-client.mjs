@@ -3,8 +3,6 @@ import {
   course,
   input,
   move,
-  newRace,
-  step,
 } from "../../../multiplayer/src/chicken/race.mjs";
 import { drawBird, drawPoster, drawRace } from "./flock-draw.mjs";
 import { mountGameSound } from "./shared/game-sound";
@@ -13,18 +11,16 @@ import { GAME_EVENTS, readGameCommand } from "./shared/events";
 
 const root = document.querySelector("[data-flock]");
 const el = (key) => root.querySelector("[data-" + key + "]");
-const audio = mountGameSound(root, "chicken");
+const audio = mountGameSound(root, "chicken-run");
 const canvas = el("board").querySelector("canvas");
 drawPoster(el("poster"));
 let ws = null,
   id = "",
   view = null,
-  local = false,
+  choosingSolo = false,
   room = "",
   track,
   frame = 0,
-  last = 0,
-  debt = 0,
   received = 0,
   held = false,
   pending = false;
@@ -52,15 +48,16 @@ function reset(message) {
   audio.stop();
   id = "";
   view = null;
-  local = false;
+  choosingSolo = false;
   held = false;
   pending = false;
   delete root.dataset.online;
   el("code-form").hidden = true;
-  el("setup").hidden = false;
+  el("modes").hidden = false;
+  el("setup").hidden = el("back").hidden = true;
   el("lobby").hidden = el("board").hidden = el("leave").hidden = true;
   el("join").disabled = el("create").disabled = !endpoint;
-  el("practice").disabled = false;
+
   status(message);
 }
 function submit(key) {
@@ -68,7 +65,7 @@ function submit(key) {
   if (!p || view.race.time < 0 || view.race.over || p.status !== "running")
     return;
   if (key === "jump" && p.jumps < 2) audio.play("hop");
-  if (!local) send({ type: "input", key });
+  send({ type: "input", key });
   input(p, key);
 }
 function release() {
@@ -83,10 +80,11 @@ function refreshLobby() {
   el("setup").hidden = true;
   el("leave").hidden = false;
   el("lobby").hidden = Boolean(running);
-  el("room").textContent = local ? "Solo practice" : "Room " + room;
-  el("invite").hidden = local;
+  el("back").hidden = true;
+  el("room").textContent = "Room " + room;
+  el("invite").hidden = false;
   el("start").hidden = id !== host;
-  el("start").disabled = !local && players.filter((p) => p.online).length < 2;
+  el("start").disabled = players.filter((p) => p.online).length < 2;
   el("start").textContent = race?.over ? "Race again" : "Start race";
   el("roster").replaceChildren(
     ...players.map((p) => {
@@ -99,7 +97,7 @@ function refreshLobby() {
         " · " +
         birds[p.bird].name +
         (p.id === id ? " · YOU" : "") +
-        (p.id === host && !local ? " · HOST" : "") +
+        (p.id === host ? " · HOST" : "") +
         (runner ? " · " + runner.status + " · " + runner.corn + " corn" : "");
       return li;
     }),
@@ -120,9 +118,9 @@ birds.forEach((b, i) => {
   drawBird(portrait.getContext("2d"), b, 24, 31);
   button.append(portrait, b.name);
   button.onclick = () => {
-    if (local) {
-      view.players[0].bird = i;
-      refreshLobby();
+    if (choosingSolo) {
+      closePanel();
+      window.dispatchEvent(new CustomEvent(GAME_EVENTS.chicken.solo, { detail: b }));
     } else send({ type: "bird", bird: i });
   };
   el("picks").append(button);
@@ -155,26 +153,6 @@ function end() {
 function paint(time) {
   const r = view?.race;
   if (!r || r.over) return;
-  const delta = Math.min(0.2, (time - last) / 1000);
-  last = time;
-  if (local) {
-    const old = {
-      picked: [...r.picked],
-      fox: r.fox,
-      rescued: r.rescued,
-      runners: [{ id, status: mine()?.status }],
-    };
-    debt += delta;
-    while (debt >= 0.05 && !r.over) {
-      step(r, track);
-      debt -= 0.05;
-    }
-    feedback(old, r);
-    if (r.over) {
-      end();
-      return;
-    }
-  }
   if (r.fox !== null && mine()?.status === "running" && time >= nextPulse) {
     const pressure = Math.max(0, 1 - Math.abs(mine().x - r.fox) / 160);
     audio.play("pulse", pressure);
@@ -183,18 +161,16 @@ function paint(time) {
   const ratio = canvas.clientWidth / Math.max(1, canvas.clientHeight);
   const width = Math.max(225, Math.round(256 * ratio));
   if (canvas.width !== width) canvas.width = width;
-  const age = local ? 0 : Math.min(0.1, (time - received) / 1000);
-  const display = local
-    ? r
-    : {
-        ...r,
-        runners: r.runners.map((p) => {
-          const copy = { ...p };
-          if (r.time >= 0 && p.status === "running")
-            move(copy, age, track.roofs);
-          return copy;
-        }),
-      };
+  const age = Math.min(0.1, (time - received) / 1000);
+  const display = {
+    ...r,
+    runners: r.runners.map((p) => {
+      const copy = { ...p };
+      if (r.time >= 0 && p.status === "running")
+        move(copy, age, track.roofs);
+      return copy;
+    }),
+  };
   drawRace(canvas, display, track, view.players, id, 0);
   el("energy").value = mine()?.stamina ?? 0;
   frame = requestAnimationFrame(paint);
@@ -202,8 +178,7 @@ function paint(time) {
 function begin() {
   cancelAnimationFrame(frame);
   held = false;
-  last = received = performance.now();
-  debt = 0;
+  received = performance.now();
   track = course(view.race.seed);
   el("board").hidden = false;
   status("Reach the coop. Three corn earn one flock rescue.");
@@ -216,7 +191,7 @@ async function connect(create) {
   const attempt = generation;
   pending = true;
   root.dataset.online = "";
-  el("practice").disabled = el("create").disabled = el("join").disabled = true;
+  el("create").disabled = el("join").disabled = true;
   let token;
   try {
     room = el("code").value;
@@ -278,17 +253,30 @@ async function connect(create) {
     if (attempt === generation) reset(e.message);
   }
 }
-el("practice").onclick = () => {
-  delete root.dataset.online;
-  local = true;
-  id = "solo";
-  view = {
-    players: [{ id, name: name(), bird: 0, online: true }],
-    host: id,
-    race: null,
-  };
-  refreshLobby();
-  status("Choose your chicken.");
+function showFriends() {
+  el("modes").hidden = true;
+  el("setup").hidden = el("back").hidden = false;
+  root.dataset.online = "";
+  status(endpoint ? "Race to the coop with 2–5 players." : "Online rooms are unavailable.");
+}
+el("friends").onclick = showFriends;
+el("solo").onclick = () => {
+  choosingSolo = true;
+  el("modes").hidden = true;
+  el("lobby").hidden = el("back").hidden = false;
+  el("room").textContent = "Choose your chicken";
+  el("start").hidden = el("invite").hidden = true;
+  el("roster").replaceChildren();
+  for (const button of el("picks").children) {
+    button.disabled = false;
+    button.removeAttribute("aria-pressed");
+  }
+  status("");
+  el("picks").firstElementChild.focus();
+};
+el("back").onclick = () => {
+  reset("");
+  el("solo").focus();
 };
 el("create").onclick = () => connect(true);
 el("join").onclick = () => {
@@ -300,12 +288,7 @@ el("code-form").onsubmit = (e) => {
   e.preventDefault();
   connect(false);
 };
-el("start").onclick = () => {
-  if (local) {
-    view.race = newRace([id], crypto.getRandomValues(new Uint32Array(1))[0]);
-    begin();
-  } else send({ type: "start" });
-};
+el("start").onclick = () => send({ type: "start" });
 el("invite").onclick = async () => {
   const url = new URL(location.href);
   url.searchParams.set("game", "chicken");
@@ -361,7 +344,7 @@ function exitArcade() {
   closePanel();
   window.dispatchEvent(new CustomEvent(GAME_EVENTS.chicken.exit, { detail: { flock: true } }));
 }
-el("classic").onclick = closePanel;
+
 el("flock-exit").onclick = exitArcade;
 window.addEventListener(GAME_EVENTS.chicken.command, (event) => {
   if (!root.hidden && readGameCommand(event) === "exit") exitArcade();
@@ -370,12 +353,13 @@ document.addEventListener("keydown", (event) => {
   if (!root.hidden && event.key === "Escape") exitArcade();
 });
 window.addEventListener(GAME_EVENTS.chicken.start, () => {
-  reset(endpoint ? "Choose solo or join a flock." : "Online rooms are unavailable. Solo is ready.");
+  reset("");
   root.hidden = false;
   const url = new URL(location.href);
   if (url.searchParams.get("game") === "chicken") {
     const code = new URLSearchParams(url.hash.slice(1)).get("room");
     if (code && /^\d{6}$/.test(code)) {
+      showFriends();
       el("code-form").hidden = false;
       el("code").value = code;
       root.dataset.online = "";
@@ -386,6 +370,6 @@ window.addEventListener(GAME_EVENTS.chicken.start, () => {
   }
   el("flock-exit").focus({ preventScroll: true });
   window.dispatchEvent(new CustomEvent(GAME_EVENTS.chicken.status, {
-    detail: { game: "chicken", text: "FLOCK RUN", pauseDisabled: true }
+    detail: { game: "chicken", text: "CHICKEN RUN", pauseDisabled: true }
   }));
 });

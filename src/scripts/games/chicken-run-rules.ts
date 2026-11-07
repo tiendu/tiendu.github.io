@@ -161,13 +161,13 @@ export const RUN_PATTERNS: readonly RunPattern[] = [
 
 export function jumpControlForState(state: JumpControlState): JumpControl {
   if (state.gameOver) {
-    return { label: "RETRY", disabled: false, ariaLabel: "Restart Free Range" };
+    return { label: "RETRY", disabled: false, ariaLabel: "Restart Chicken Run" };
   }
   if (state.crashing) {
     return { label: "—", disabled: true, ariaLabel: "Collision in progress" };
   }
   if (state.paused) {
-    return { label: "RESUME", disabled: false, ariaLabel: "Resume Free Range" };
+    return { label: "RESUME", disabled: false, ariaLabel: "Resume Chicken Run" };
   }
   if (!state.started || state.grounded) {
     return { label: "JUMP", disabled: false, ariaLabel: "Jump" };

@@ -484,7 +484,7 @@ assert.deepEqual(
     grounded: false,
     flapAvailable: false,
   }),
-  { label: "RETRY", disabled: false, ariaLabel: "Restart Free Range" },
+  { label: "RETRY", disabled: false, ariaLabel: "Restart Chicken Run" },
 );
 assert.equal(
   rules.jumpControlForState({

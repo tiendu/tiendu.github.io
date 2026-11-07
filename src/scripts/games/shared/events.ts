@@ -47,6 +47,7 @@ export const GAME_EVENTS = {
   },
   chicken: {
     start: "tiendu:chicken-start",
+    solo: "tiendu:chicken-solo",
     command: "tiendu:chicken-command",
     status: "tiendu:chicken-status",
     exit: "tiendu:chicken-exit",

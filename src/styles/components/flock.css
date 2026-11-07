@@ -137,7 +137,7 @@
   outline: 2px solid #ffcf78;
   outline-offset: 2px;
 }
-.flock [data-create], .flock [data-start], .flock [data-jump] {
+.flock [data-solo], .flock [data-create], .flock [data-start], .flock [data-jump] {
   background: var(--flock-gold);
   color: #35281c;
   border-color: #cb974d;

@@ -1,29 +1,20 @@
 import { birds, finish } from "../../../multiplayer/src/chicken/race.mjs";
-export function drawBird(c, b, x, y, frame = 0) {
+import { drawChickenBody } from "./chicken-run-renderer";
+import { paletteForCycle } from "./chicken-run-sky";
+import { cycleStateForElapsed } from "./chicken-run-cycle";
+
+const daylight = paletteForCycle(cycleStateForElapsed(0));
+
+export function drawBird(c, bird, x, y, frame = 0, airborne = false) {
   c.save();
   c.translate(Math.round(x), Math.round(y));
-  const chick = b.shape === "chick",
-    tall = b.shape === "rooster" || b.shape === "bantam";
-  const box = (color, x, y, w, h) => {
-    c.fillStyle = color;
-    c.fillRect(x, y, w, h);
-  };
-  if (chick) c.scale(0.78, 0.78);
-  box("#e4b859", -6, -4, 3, 4);
-  box("#e4b859", 3, -4, 3, frame % 2 ? 2 : 4);
-  box("#34343b", -11, -14, 21, 11);
-  if (b.shape === "round") box(b.color, -13, -15, 18, 9);
-  box(b.color, -10, -16, 20, 11);
-  box(b.color, 3, -23, 10, 12);
-  box("#fff2cb", 8, -21, 4, 4);
-  box("#20252c", 10, -20, 2, 2);
-  box("#ffbe4f", 13, -17, 5, 3);
-  box(chick ? "#ffd64e" : "#ec5340", 4, -26, tall ? 10 : 5, tall ? 5 : 3);
-  box(tall ? "#487f70" : b.color, -15, -19, 6, 8);
-  if (tall) box("#375d67", -18, b.shape === "rooster" ? -25 : -22, 5, 10);
-  box(b.shape === "round" ? "#a69b86" : "#ffffff66", -5, -13, 8, 3);
-  box(b.shape === "hen" ? "#88768a" : "#f5ce8c", -6, -12, 7, 2);
-  box("#e4b859", -7, -1, 5, 1);
+  c.scale(.72, .72);
+  drawChickenBody(c, {
+    x: -21, y: -42, color: bird.color, shape: bird.shape,
+    velocityY: 0, grounded: !airborne, flapAvailable: airborne, runFrame: frame,
+    takeoffPulse: 0, flapPulse: 0, landingPulse: 0, rescuePulse: 0,
+    invulnerable: false, eggCarried: false, slope: 0, crash: null,
+  }, 0, 0, daylight);
   c.restore();
 }
 // Draw in world pixels so the lobby art and course share the same horizon.
@@ -164,7 +155,7 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
       text("×", x, y);
       continue;
     }
-    drawBird(c, b, x, y, Math.floor(r.time * 10));
+    drawBird(c, b, x, y, Math.floor(r.time * 10), p.jumps > 0);
     if (p.id === id) {
       rect("#302d32", x - 13, Math.round(y) - 42, 27, 14);
       text("YOU", x - 10, y - 31, "#ffe15a");

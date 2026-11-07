@@ -10,10 +10,11 @@ import "../../styles/components/chicken-run-game.css";
 <section
   class="arcade-panel chicken-panel"
   data-chicken-game
-  aria-label="Free Range chicken runner game"
+  aria-label="Chicken Run solo"
   hidden
 >
   <div class="arcade-audio-controls">
+    <button type="button" data-solo-menu>← Menu</button>
     <SoundToggle />
   </div>
   <div class="arcade-scoreboard chicken-scoreboard" aria-live="polite">
@@ -30,22 +31,24 @@ import "../../styles/components/chicken-run-game.css";
       width="640"
       height="320"
       tabindex="0"
-      aria-label="Free Range game board. Press Space, Up, W, or tap to jump. Press again in the air to flap across rolling hills, wind, and rain; collect eggs and outrun the fox at night."
+      aria-label="Chicken Run game board. Press Space, Up, W, or tap to jump. Press again in the air to flap across rolling hills, wind, and rain; collect eggs and outrun the fox at night."
     ></canvas>
 
     <div class="arcade-overlay chicken-overlay" data-chicken-overlay>
       <strong data-chicken-state>SPACE / TAP TO JUMP</strong>
       <span data-chicken-message>PRESS AGAIN IN AIR TO FLAP</span>
-      <ResumePicker game="Free Range" class="chicken-resume-picker" />
+      <ResumePicker game="Chicken Run" class="chicken-resume-picker" />
     </div>
   </div>
 
-  <div class="arcade-pad chicken-pad" aria-label="Free Range controls">
+  <div class="arcade-pad chicken-pad" aria-label="Chicken Run controls">
+    <button type="button" data-solo-sprint>Hold Sprint</button>
+    <label>Stamina <meter data-solo-energy min="0" max="3" value="3"></meter></label>
     <button type="button" data-chicken-control="jump" aria-label="Jump">JUMP</button>
   </div>
 
   <p class="arcade-help chicken-help">
-    <span>SPACE / TAP TO JUMP · AGAIN TO FLAP</span>
+    <span>SHIFT TO SPRINT · SPACE TO JUMP / FLAP</span>
     <span class="chicken-help-secondary">P PAUSE · R RESTART · ESC EXIT</span>
   </p>
 </section>
