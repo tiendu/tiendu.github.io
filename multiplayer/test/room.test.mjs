@@ -8,9 +8,7 @@ const file = new URL('../src/index.mjs',import.meta.url);
 const rules = new URL('../src/rules.mjs',import.meta.url).href;
 const source=(await readFile(file,'utf8'))
  .replace('import { DurableObject } from "cloudflare:workers";', 'class DurableObject { constructor(ctx) { this.ctx = ctx; } }')
- .replace('"./rules.mjs"',JSON.stringify(rules))
- .replace('"./room-service.mjs"',JSON.stringify(new URL('../src/room-service.mjs',import.meta.url).href))
- .replace('"./admission.mjs"',JSON.stringify(new URL('../src/admission.mjs',import.meta.url).href));
+ .replace(/from "(\.\/[^"]+)"/g, (_, path) => 'from '+JSON.stringify(new URL(path,file).href));
 const {RoomLobby,NumberRoom:CloudflareRoom,default:worker}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 class Socket {
   readyState=1; sent=[]; attachment=null;
@@ -132,4 +130,26 @@ test('Cloudflare adapter delegates protocol and persistence to the shared room s
  await room.webSocketMessage(ws,JSON.stringify({type:'join',token:'host-token',name:'Tien'}));
  assert.equal(state(ws).players[0].name,'Tien');assert.equal(ctx.data.get('game').players[0].connected,true);
  await room.webSocketClose(ws,1000,'Closed');assert.equal(ctx.data.get('game').players[0].connected,false);
+});
+
+test('Chicken rooms restore lobby membership on wake and release their lease on expiry', async()=>{
+  const {ChickenRoom}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+  const ctx=context();
+  ctx.getWebSockets=ctx.sockets;
+  ctx.storage.put=async(key,value)=>{
+    if(typeof key==='string')ctx.data.set(key,structuredClone(value));
+    else for(const [k,v] of Object.entries(key))ctx.data.set(k,structuredClone(v));
+  };
+  let released='';
+  const env={LOBBY:{getByName:()=>({fetch:async req=>{released=await req.text();return new Response();}})}};
+  const init=new ChickenRoom(ctx,env);await ctx.runExclusive(async()=>{});
+  await init.fetch(new Request('https://room/init',{method:'POST',body:JSON.stringify({room:'123456',id:'lease',expires:Date.now()+60000,token:'host'})}));
+  const ws=new Socket();ws.serializeAttachment=ws.setAttachment;ws.deserializeAttachment=ws.getAttachment;
+  ctx.addSocket(ws);init.session.attach(ws);
+  await init.webSocketMessage(ws,JSON.stringify({type:'join',name:'Tien',token:'host'}));
+  const resumed=new ChickenRoom(ctx,env);await ctx.runExclusive(async()=>{});
+  await resumed.webSocketMessage(ws,JSON.stringify({type:'bird',bird:3}));
+  assert.equal(ws.sent.at(-1).players[0].bird,3);
+  assert.equal(ws.sent.at(-1).players[0].online,true);
+  await resumed.alarm();assert.equal(released,'lease');assert.equal(ctx.data.size,0);
 });

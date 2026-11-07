@@ -6,6 +6,8 @@ import {pathToFileURL} from 'node:url';
 import {WebSocketServer} from 'ws';
 import {RoomSession} from './room-service.mjs';
 import {reserveRoom} from './admission.mjs';
+import {openFlock} from './chicken/server.mjs';
+import {lobby} from './chicken/room.mjs';
 import {newRoom} from './rules.mjs';
 
 // One process / one replica. SQLite stores rooms across process restarts.
@@ -55,20 +57,21 @@ export async function startServer(options={}) {
     const headers={'Access-Control-Allow-Origin':req.headers.origin,Vary:'Origin','Cache-Control':'no-store'};
     const reply=(status,body,extra={})=>{res.writeHead(status,{...headers,...extra});res.end(body);};
     if(req.method==='OPTIONS') {reply(204,'',{'Access-Control-Allow-Methods':'POST, GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type'});return;}
-    if(req.method!=='POST'||req.url!=='/rooms') {reply(404,'Not found');return;}
+    const chicken=req.url==='/chicken/rooms';
+    if(req.method!=='POST'||(!chicken && req.url!=='/rooms')) {reply(404,'Not found');return;}
     if(!limit(req,'create',10)) {reply(429,'Too many rooms');return;}
     try {
       // No await within admission: transaction + single event loop make it atomic.
       db.exec('BEGIN IMMEDIATE');
-      const leases=Object.fromEntries(db.prepare('SELECT id,code,expires FROM rooms WHERE expires>?').all(Date.now()).map(r=>[r.code,{id:r.id,expires:r.expires}]));
-      const reservation=reserveRoom(leases,cap);
+      const leases=Object.fromEntries(db.prepare("SELECT id,code,expires,json_extract(state, '$.game') AS game FROM rooms WHERE expires>?").all(Date.now()).map(r=>[r.code,{id:r.id,expires:r.expires,game:r.game}]));
+      const reservation=reserveRoom(leases,cap,Date.now(),chicken?"chicken":"number");
       if(!reservation) {db.exec('ROLLBACK');reply(503,'All rooms are busy',{'Retry-After':'60'});return;}
       const {room,id,token,created}=reservation;
       // Remove expired code collisions; active old sessions still expire by time.
       db.prepare('DELETE FROM rooms WHERE code=? AND expires<=?').run(room,created);
-      const state=newRoom(token,created);
+      const state=chicken?{...lobby(token),game:"chicken",expires:leases[room].expires}:newRoom(token,created);
       db.prepare('INSERT INTO rooms VALUES (?,?,?,?)').run(id,room,state.expires,JSON.stringify(state));
-      db.exec('COMMIT');session(id);
+      db.exec('COMMIT');if(!chicken)session(id);
       reply(200,JSON.stringify({room,token}),{'Content-Type':'application/json'});
     } catch(error) {try{db.exec('ROLLBACK');}catch{}failed(error);reply(503,'Room creation unavailable');}
   });
@@ -77,9 +80,27 @@ export async function startServer(options={}) {
     const reject=status=>{socket.end(`HTTP/1.1 ${status} Rejected\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);};
     if(stopping||!allowed(req)) {reject(403);return;}
     if(!limit(req,'connect',120)) {reject(429);return;}
-    const code=req.url?.match(/^\/rooms\/(\d{6})$/)?.[1];
+    const chicken=req.url?.startsWith("/chicken/");
+    const code=(chicken?req.url.slice(8):req.url)?.match(/^\/rooms\/(\d{6})$/)?.[1];
     const record=code && lookup.get(code,Date.now());
     if(!record) {reject(410);return;}
+    if ((JSON.parse(record.state).game==="chicken")!==chicken){reject(404);return;}
+    if(chicken){
+      let entry=rooms.get(record.id);
+      if(!entry){
+        const destroy=()=>{entry.close();remove.run(record.id);rooms.delete(record.id);};
+        const flock=openFlock(JSON.parse(record.state),s=>update.run(JSON.stringify(s),record.id),destroy);
+        const expiry=setTimeout(destroy,Math.max(1,record.expires-Date.now()));
+        entry={flock,close:()=>{clearTimeout(expiry);flock.close();},drain:()=>Promise.resolve()};rooms.set(record.id,entry);
+      }
+      const {flock}=entry;
+      wss.handleUpgrade(req,socket,head,ws=>{
+        if(!flock.attach(ws)){ws.close(4003,"Room busy");return;}
+        ws.on("message",(data,binary)=>flock.receive(ws,binary?null:data.toString()).catch(failed));
+        ws.on("close",()=>flock.detach(ws).catch(failed));
+        ws.on("error",()=>ws.terminate());
+      });return;
+    }
     const {room,sockets}=session(record.id);
     wss.handleUpgrade(req,socket,head,ws=>{
       let attachment=null,alive=true;
@@ -101,8 +122,9 @@ export async function startServer(options={}) {
       ws.on('error',()=>ws.terminate());
     });
   });
-  db.prepare('DELETE FROM rooms WHERE expires<=?').run(Date.now());
-  for(const row of db.prepare('SELECT id FROM rooms').all()) session(row.id);
+  // Race positions are in memory; reclaim interrupted races on a process restart.
+  db.prepare("DELETE FROM rooms WHERE expires<=? OR json_extract(state,'$.game')='chicken'").run(Date.now());
+  for(const row of db.prepare("SELECT id FROM rooms WHERE json_extract(state,'$.game') IS NULL").all()) session(row.id);
   const sweep=setInterval(()=>{for(const [key,b] of buckets)if(b.until<=Date.now())buckets.delete(key);},60_000);
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve);});
   return {server, async close(){

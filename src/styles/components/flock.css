@@ -1,0 +1,82 @@
+.flock {
+  max-width: 56rem;
+  margin: auto;
+  padding: 0.75rem;
+  color: #f6efd7;
+  background: #172321;
+  font-family: VT323, monospace;
+}
+.flock header,
+.flock-hud,
+.flock-actions,
+.flock-picks {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.flock h1,
+.flock h2,
+.flock p {
+  margin: 0.6rem 0;
+}
+.flock button,
+.flock input {
+  min-height: 44px;
+  padding: 0.4rem 0.75rem;
+  font: inherit;
+  color: inherit;
+  background: #293e37;
+  border: 2px solid #708574;
+}
+.flock a {
+  color: inherit;
+}
+.flock [hidden] {
+  display: none !important;
+}
+.flock button[aria-pressed="true"] {
+  border-color: #ffd15c;
+}
+.flock button:disabled {
+  opacity: 0.5;
+}
+.flock label {
+  display: block;
+  margin: 0.4rem 0;
+}
+.flock canvas {
+  width: 100%;
+  height: clamp(190px, 55svh, 360px);
+  display: block;
+  image-rendering: pixelated;
+  background: #33425a;
+}
+.flock-hud button {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.flock meter {
+  width: 4rem;
+}
+.flock-rotate {
+  display: none;
+}
+@media (orientation: portrait) {
+  .flock[data-online] .flock-rotate {
+    display: block;
+  }
+}
+@media (orientation: landscape) and (max-height: 550px) {
+  .flock:has([data-board]:not([hidden])) {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    overflow: auto;
+  }
+  .flock:has([data-board]:not([hidden])) h1 {
+    display: none;
+  }
+}

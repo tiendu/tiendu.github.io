@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SoundToggle from "../../components/games/shared/SoundToggle.astro";
+import "../../styles/components/flock.css";
+---
+<BaseLayout title="Flock Run" description="Race to the coop with your flock.">
+<section class="flock" data-flock data-endpoint={import.meta.env.PUBLIC_NUMBER_BACKEND_URL || ""}>
+<header><a href="/">← HOME</a><SoundToggle /></header>
+<h1>Flock Run</h1>
+<section data-setup>
+<label>Your name <input data-name maxlength="16" placeholder="Player" autocomplete="nickname" /></label>
+<div class="flock-actions"><button data-create>Create room</button><button data-join>Join room</button><button data-practice>Solo run</button></div>
+<form data-code-form hidden><label>Room code <input data-code inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required /></label><button>Join</button></form>
+</section>
+<section data-lobby hidden>
+<h2 data-room></h2><div data-picks class="flock-picks" aria-label="Choose your chicken"></div>
+<ul data-roster></ul>
+<button data-invite>Copy invite</button> <button data-start>Start race</button>
+</section>
+<section data-board hidden>
+<canvas aria-label="Chicken race course" width="720" height="256"></canvas>
+<div class="flock-hud"><button data-sprint>Hold Sprint</button><span>Stamina <meter data-energy min="0" max="3" value="3"></meter></span><button data-jump>Jump / Flap</button></div>
+<span class="flock-rotate">Turn sideways for a wider view.</span>
+</section>
+<p role="status" data-status>Reach the coop. Hold Sprint or Shift to run. Tap Jump or press Space to flap.</p>
+<button data-leave hidden>Leave</button>
+</section>
+<script>import "../../scripts/games/flock-client.mjs";</script>
+</BaseLayout>

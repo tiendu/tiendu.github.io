@@ -7,9 +7,9 @@
     "test": "node --test test/rules.test.mjs test/room.test.mjs",
     "deploy": "wrangler deploy",
     "check": "node --check src/index.mjs && npm test && wrangler deploy --dry-run",
-    "test:integration": "node --test test/integration.test.mjs",
+    "test:integration": "CHICKEN_TEST_BACKEND=worker node --test test/integration.test.mjs test/chicken.test.mjs",
     "start": "node src/node-server.mjs",
-    "test:node": "NUMBER_TEST_BACKEND=node node --test test/integration.test.mjs test/node.test.mjs"
+    "test:node": "NUMBER_TEST_BACKEND=node node --test test/integration.test.mjs test/node.test.mjs test/chicken.test.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.156.0"
