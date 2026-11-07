@@ -236,8 +236,8 @@ for (const [slug, component, mount] of [
   const page = await readFile(new URL(`../src/pages/games/${slug}.astro`, import.meta.url), "utf8");
   if (!page.includes(`<${component} />`) || !page.includes(`${mount}()`))
     failures.push(`/games/${slug}/ must render and mount its game`);
-  if (!homePage.includes(`href="/games/${slug}/"`))
-    failures.push(`homepage is missing the ${slug} game link`);
+  if (homePage.includes(`href="/games/${slug}/"`))
+    failures.push(`homepage unexpectedly shows the ${slug} game link`);
 }
 
 if (failures.length > 0) {

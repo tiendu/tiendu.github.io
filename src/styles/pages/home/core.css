@@ -285,6 +285,3 @@ body.terminal-home .terminal-page-content {
   position: absolute;
   z-index: 3;
 }
-
-.arcade-links { display: flex; gap: 1.25rem; }
-  .arcade-links a { color: var(--terminal-green-bright); }
