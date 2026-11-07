@@ -7,7 +7,7 @@ import {
   type ScoreExitDetail,
 } from "./shared/events";
 
-export type GameId = "snake" | "crane" | "chicken";
+export type GameId = "snake" | "crane" | "chicken" | "number";
 type ExitDetail = ScoreExitDetail | ChickenExitDetail;
 
 interface ArcadeHost {
@@ -28,13 +28,13 @@ interface GameDefinition {
   load: () => Promise<void>;
   aliases: readonly string[];
   startEvent: string;
-  commandEvent: string;
-  statusEvent: string;
+  commandEvent?: string;
+  statusEvent?: string;
   exitEvent: string;
   rootSelector: string;
-  progressSelector: string;
-  actionSelector: string;
-  pauseSelector: string;
+  progressSelector?: string;
+  actionSelector?: string;
+  pauseSelector?: string;
   readyStatus: (progress: string, finePointer: boolean) => string;
   exitMessage: (detail: ExitDetail) => string;
 }
@@ -56,6 +56,16 @@ const format = (value: number, width: number): string =>
   String(Math.max(0, Math.floor(value))).padStart(width, "0");
 
 const definitions: readonly GameDefinition[] = [
+  {
+    id: "number",
+    aliases: ["number"],
+    rootSelector: "[data-number-game]",
+    load: async () => (await import("./number")).mountNumberGames(),
+    startEvent: GAME_EVENTS.number.start,
+    exitEvent: GAME_EVENTS.number.exit,
+    readyStatus: () => "NUMBER · KEYBOARD OR TOUCH",
+    exitMessage: () => "NUMBER CLOSED",
+  },
   {
     id: "snake",
     load: async () => {
@@ -260,24 +270,22 @@ export function createArcadeController(host: ArcadeHost): ArcadeController {
   definitions.forEach((definition) => {
     definition.aliases.forEach((alias) => byAlias.set(alias, definition));
 
-    const progress = host.wrapper.querySelector(definition.progressSelector);
-    const pauseButton = host.wrapper.querySelector<HTMLButtonElement>(
-      definition.pauseSelector,
-    );
+    const progress = definition.progressSelector ? host.wrapper.querySelector(definition.progressSelector) : null;
+    const pauseButton = definition.pauseSelector ? host.wrapper.querySelector<HTMLButtonElement>(definition.pauseSelector) : null;
 
     runtime.set(definition.id, { progress, pauseButton });
 
-    host.wrapper
+    if (definition.actionSelector) host.wrapper
       .querySelectorAll<HTMLButtonElement>(definition.actionSelector)
       .forEach((button) => {
         button.addEventListener("click", () => {
           if (activeGame !== definition.id) return;
           const action = actionFromButton(definition, button);
-          if (action) dispatchGameCommand(definition.commandEvent, action);
+          if (action && definition.commandEvent) dispatchGameCommand(definition.commandEvent, action);
         });
       });
 
-    window.addEventListener(definition.statusEvent, (event) => {
+    if (definition.statusEvent) window.addEventListener(definition.statusEvent, (event) => {
       if (activeGame !== definition.id || !(event instanceof CustomEvent)) {
         return;
       }

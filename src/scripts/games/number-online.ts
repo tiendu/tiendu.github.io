@@ -8,6 +8,7 @@ export interface OnlineState {
   loserName: string; lastGuess: number | null; expires: number; target?: number;
 }
 interface Hooks {
+  leave: () => void;
   sound: (kind: "confirm" | "leave") => void;
   mode: (active: boolean) => void;
   state: (state: OnlineState) => void;
@@ -194,14 +195,18 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     hooks.mode(true);
     panel.hidden = false; form.hidden = true; mode.textContent = "ONLINE · 2–20 PLAYERS";
     get("[data-number-room-code]").textContent = `ROOM ${room}`;
-    const invite = new URL(location.pathname, location.origin);
+    const invite = new URL("/games/number/", location.origin);
     invite.hash = `room=${room}`;
     link.value = invite.href;
-    history.replaceState(null, "", invite);
+    const page = new URL(location.href);
+    page.searchParams.set("game", "number");
+    page.hash = invite.hash;
+    history.replaceState(history.state, "", page);
     connect();
   };
   create.disabled = !endpoint; joinButton.disabled = !endpoint;
-  info.textContent = endpoint ? "Play locally or online with 2–20 players." : "Pass-and-play is ready. Online play will appear after the backend is configured.";
+  const lobbyMessage = endpoint ? "Play locally or online with 2–20 players." : "Pass-and-play is ready. Online play will appear after the backend is configured.";
+  info.textContent = lobbyMessage;
   for (const button of [create, joinButton]) button.addEventListener("keydown", event => event.stopPropagation());
   create.addEventListener("click", () => openDialog("create"));
   joinButton.addEventListener("click", () => openDialog("join"));
@@ -234,7 +239,6 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
   });
   start.addEventListener("click", () => send("start"));
   let copyTimer = 0;
-  let leaveTimer = 0;
   leave.addEventListener("click", () => {
     hooks.sound("leave");
     announceJoin = false;
@@ -245,13 +249,9 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
     try { localStorage.removeItem(identityKey()); } catch { /* Optional. */ }
     active = false; stop(); latest = undefined; token = "";
     panel.hidden = true; form.hidden = false; mode.textContent = "PASS & PLAY";
-    history.replaceState(null, "", location.pathname);
     hooks.mode(false);
-    info.textContent = "Left room. Your local round is preserved.";
-    info.classList.add("number-action-confirmed");
-    clearTimeout(leaveTimer);
-    leaveTimer = window.setTimeout(() => info.classList.remove("number-action-confirmed"), 1200);
-    create.focus({ preventScroll: true });
+    info.textContent = lobbyMessage;
+    hooks.leave();
   });
   copy.addEventListener("click", async () => {
     const copiedLink = link.value;
@@ -283,15 +283,17 @@ export function mountNumberOnline(root: HTMLElement, hooks: Hooks) {
       stop(); retry = 0; connect();
     }
   });
-  const invited = new URLSearchParams(location.hash.slice(1)).get("room");
-  // Defer until the local game's controller has retained this API.
-  if (invited && /^\d{6}$/.test(invited)) {
+  const openInvite = () => {
+    const url = new URL(location.href);
+    if (url.searchParams.get("game") !== "number") return;
+    const invited = new URLSearchParams(url.hash.slice(1)).get("room");
+    if (!invited || !/^\d{6}$/.test(invited)) return;
     code.value = invited;
     let saved = "";
     try { saved = localStorage.getItem(`number-player:${invited}`) || ""; } catch { /* Optional. */ }
-    if (saved) queueMicrotask(() => join(invited));
-    else queueMicrotask(() => openDialog("join"));
-  }
-  return { isActive: () => active, isConnected: () => ready, canPlay: eligible, state: () => latest,
+    if (saved) join(invited);
+    else openDialog("join");
+  };
+  return { openInvite, isActive: () => active, isConnected: () => ready, canPlay: eligible, state: () => latest,
     guess: (value: number) => send("guess", value), rematch: () => send("start"), canStart: () => ready && !pending && latest?.host === latest?.player && (latest?.players.filter(p => p.connected).length ?? 0) >= 2 };
 }

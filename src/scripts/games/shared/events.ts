@@ -33,6 +33,7 @@ export interface GameStatusDetail {
 }
 
 export const GAME_EVENTS = {
+  number: { start: "tiendu:number-start", exit: "tiendu:number-exit" },
   snake: {
     start: "tiendu:snake-start",
     command: "tiendu:snake-command",

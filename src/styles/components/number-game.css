@@ -1,6 +1,11 @@
-/* Standalone Number page; no arcade runtime or styles loaded on the homepage. */
-body:has(.number-game) { background: #090b0b; color: #e9e9da; }
+.number-game[hidden], .number-game [hidden] { display: none !important; }
+.number-mode .terminal-screen { background: #090b0b; }
 .number-game {
+  flex: none;
+  color: #e9e9da;
+  text-shadow: none;
+  letter-spacing: normal;
+  background: #090b0b;
   --number-yellow: #ffd34e;
   --number-muted: #959b91;
   width: min(100%, 520px);
@@ -204,12 +209,6 @@ body:has(.number-game) { background: #090b0b; color: #e9e9da; }
 
 /* Let the room and range share the left side while the keypad stays in reach. */
 @media (min-width: 48rem) {
-  .page-content:has(.number-game) {
-    display: grid;
-    align-items: safe center;
-    padding: clamp(12px, 3vh, 36px) 24px;
-    box-sizing: border-box;
-  }
   .number-game {
     position: relative;
     width: min(100%, 62rem);
@@ -238,4 +237,8 @@ body:has(.number-game) { background: #090b0b; color: #e9e9da; }
   .number-online > .number-online-status { height: auto; }
   .number-game > .number-options { grid-area: options; margin-top: 8px; }
   .number-footer { grid-area: footer; border-top: 1px solid #363d34; padding-top: 8px; }
+}
+
+@media (max-width: 47.99rem) {
+  .number-mode .terminal-content { padding-inline: 0; }
 }

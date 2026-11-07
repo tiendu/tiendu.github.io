@@ -1,6 +1,7 @@
 import { createNumberRound, guessNumber, restoreNumberSession } from "./number-rules";
 import { mountGameSound } from "./shared/game-sound";
 import { mountNumberOnline } from "./number-online";
+import { GAME_EVENTS } from "./shared/events";
 import { mountAllGames } from "./shared/mount";
 
 export function mountNumberGames(): void {
@@ -241,6 +242,8 @@ export function mountNumberGames(): void {
     });
     dialog.addEventListener("close", () => { if (dialog.returnValue === "reset") newRound(); });
     document.addEventListener("keydown", (event) => {
+      if (root.hidden || root.querySelector("dialog[open]")) return;
+      if (event.key === "Escape" && !online?.isActive()) { exit(); return; }
       if (event.ctrlKey || event.metaKey || event.altKey || event.repeat || event.isComposing) return;
       if (event.target instanceof HTMLElement && (event.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName))) return;
       if (round.over || busy || dialog.open || (online?.isActive() && !online.canPlay())) return;
@@ -253,6 +256,7 @@ export function mountNumberGames(): void {
       }
     });
     const settle = () => {
+      if (root.hidden) return;
       save();
       clearTimeout(timer);
       cancelAnimationFrame(frame);
@@ -269,9 +273,29 @@ export function mountNumberGames(): void {
     render();
     if (round.over) reveal(false);
     save();
+    const exit = () => {
+      settle();
+      sounds.stop();
+      root.hidden = true;
+      const url = new URL(location.href);
+      url.searchParams.delete("game");
+      if (url.hash.startsWith("#room=")) url.hash = "";
+      history.replaceState(history.state, "", url);
+      window.dispatchEvent(new Event(GAME_EVENTS.number.exit));
+    };
+    get("[data-number-exit]").addEventListener("click", exit);
+    window.addEventListener(GAME_EVENTS.number.start, () => {
+      root.hidden = false;
+      root.tabIndex = -1;
+      root.focus({ preventScroll: true });
+      online?.openInvite();
+    });
     online = mountNumberOnline(root, {
+      leave: exit,
       sound: (kind) => sounds.play(kind),
       mode(active) {
+        get("[data-number-exit]").hidden = active;
+        get("[data-number-leave]").hidden = !active;
         clearTimeout(timer); cancelAnimationFrame(frame); busy = false;
         canvas.hidden = true; result.hidden = true; controls.hidden = false;
         cells.forEach(cell => cell.classList.remove("number-cell-last", "number-cell-hit"));
