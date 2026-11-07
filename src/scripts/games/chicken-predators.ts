@@ -1,6 +1,13 @@
 import { shape } from "./chicken-sprite-shape";
 
-export { paintCoyote } from "./chicken-coyote";
+import { paintCoyote as coyote } from "./chicken-coyote";
+import { outlinedSprite } from "./chicken-sprite-outline";
+
+function outlined<T extends number[]>(draw: (c: CanvasRenderingContext2D, x: number, y: number, ...pose: T) => void) {
+  return (c: CanvasRenderingContext2D, x: number, y: number, ...pose: T) =>
+    outlinedSprite(c, x, y, sprite => draw(sprite, 0, 0, ...pose));
+}
+export const paintCoyote = outlined(coyote);
 
 const ink = "#382831", rust = "#b14a32", copper = "#e87b43", cream = "#ffe5bb";
 
@@ -22,7 +29,7 @@ function foxLeg(c: CanvasRenderingContext2D, hip: number, phase: number, far: bo
     toe+4,-lift,toe-2,-lift,toe-2,-3-lift]);
 }
 
-export function paintFox(c: CanvasRenderingContext2D, x: number, floor: number,
+function fox(c: CanvasRenderingContext2D, x: number, floor: number,
   frame: number, turn = 0, hop = 0) {
   const facing = Math.cos(turn * Math.PI);
   const stride = frame * Math.PI / 2 * (facing < 0 ? -1 : 1);
@@ -90,7 +97,7 @@ function wing(c: CanvasRenderingContext2D, stroke: number, tuck: number, far: bo
   c.restore();
 }
 
-export function paintEagle(c: CanvasRenderingContext2D, x: number, y: number,
+function eagle(c: CanvasRenderingContext2D, x: number, y: number,
   fold: number, climb: number, time: number) {
   const flare = Math.min(1, climb / 0.22);
   const tuck = fold * (1 - flare);
@@ -116,7 +123,7 @@ export function paintEagle(c: CanvasRenderingContext2D, x: number, y: number,
   c.restore();
 }
 
-export function paintPerchedEagle(c: CanvasRenderingContext2D, x: number, rail: number, time = 0) {
+function perchedEagle(c: CanvasRenderingContext2D, x: number, rail: number, time = 0) {
   c.save();
   c.translate(x, rail);
   shape(c, flightInk, [-6,-13,-1,-16,6,-14,7,-7,3,-3,-2,-3,-9,0,-7,-5,-12,-2]);
@@ -127,3 +134,7 @@ export function paintPerchedEagle(c: CanvasRenderingContext2D, x: number, rail: 
   eagleHead(c);
   c.restore();
 }
+
+export const paintFox = outlined(fox);
+export const paintEagle = outlined(eagle);
+export const paintPerchedEagle = outlined(perchedEagle);

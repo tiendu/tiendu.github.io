@@ -29,7 +29,7 @@ const plumage = {
       "............caaaacbb.",
       ".tt........ccauac....",
       ".ttt......ccaacca....",
-      "..ttttcccccccacc.....",
+      "..ttttcggccccacc.....",
       "...ttcccccuccucc.....",
       "....tccaucccccccc....",
       "....cccccauccccc.....",
@@ -115,7 +115,7 @@ function paintPlumage(ctx: CanvasRenderingContext2D, shape: string, shocked: boo
   const key = shape as keyof typeof plumage;
   const { colors, rows } = plumage[key] ?? plumage.round;
   const [a, c, t, u, r] = colors;
-  const ink: Record<string, string> = { a, c, t, u, r, i: "#211d26", w: "#fffae5", b: "#f4ac44" };
+  const ink: Record<string, string> = { a, c, t, u, r, g: "#85818d", i: "#211d26", w: "#fffae5", b: "#f4ac44" };
   const top = 36 - rows.length * 2;
   for (const [row, pixels] of rows.entries()) {
     for (let x = 0; x < pixels.length;) {

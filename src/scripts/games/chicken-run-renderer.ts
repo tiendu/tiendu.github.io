@@ -1,3 +1,4 @@
+import { outlinedSprite } from "./chicken-sprite-outline";
 import { paintFox } from "./chicken-predators";
 import { drawPlumage } from "./chicken-plumage";
 import type { RunCycleState } from "./chicken-run-cycle";
@@ -406,21 +407,24 @@ export function drawChickenBody(
     context.shadowBlur = 8 + chicken.rescuePulse * 14;
   }
 
-  context.fillStyle = rgbCss(CHICKEN_SPRITE_PALETTE.accent);
-  fillChickenLegs(context, chicken, pose);
-  drawPlumage(context, chicken.shape, headBob, shocked);
-  context.shadowBlur = 0;
-  if (mudCrash || chicken.flapPulse > 0 || !chicken.grounded) {
-    context.fillStyle = chicken.color;
-    context.save();
-    if (!chicken.grounded && !crash) {
-      context.translate(14, 19);
-      context.rotate(Math.tanh(chicken.velocityY / 110) * 0.38);
-      context.translate(-14, -19);
+  outlinedSprite(context, 21, 21, sprite => {
+    sprite.translate(-21, -21);
+    sprite.fillStyle = rgbCss(CHICKEN_SPRITE_PALETTE.accent);
+    fillChickenLegs(sprite, chicken, pose);
+    drawPlumage(sprite, chicken.shape, headBob, shocked);
+    if (mudCrash || chicken.flapPulse > 0 || !chicken.grounded) {
+      sprite.fillStyle = chicken.color;
+      sprite.save();
+      if (!chicken.grounded && !crash) {
+        sprite.translate(14, 19);
+        sprite.rotate(Math.tanh(chicken.velocityY / 110) * 0.38);
+        sprite.translate(-14, -19);
+      }
+      fillChickenWing(sprite, chicken, pose);
+      sprite.restore();
     }
-    fillChickenWing(context, chicken, pose);
-    context.restore();
-  }
+  });
+  context.shadowBlur = 0;
 
   if (chicken.eggCarried && !crash) {
     drawCarriedEgg(context, palette);
