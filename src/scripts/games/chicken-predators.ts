@@ -5,8 +5,15 @@ export { paintCoyote } from "./chicken-coyote";
 const ink = "#382831", rust = "#b14a32", copper = "#e87b43", cream = "#ffe5bb";
 
 function foxLeg(c: CanvasRenderingContext2D, hip: number, phase: number, far: boolean, tuck: number) {
-  const reach = Math.cos(phase) * 8;
-  const lift = Math.max(0, Math.sin(phase)) * 6 + tuck;
+  // One cycle travels 24 world pixels. During its 12-pixel stance the
+  // paw slides back along the body exactly as fast as the body advances.
+  const cycle = phase / (2 * Math.PI);
+  const progress = cycle - Math.floor(cycle);
+  const swing = Math.max(0, progress * 2 - 1);
+  const reach = progress < 0.5
+    ? 6 - 24 * progress
+    : -6 + 12 * swing * swing * (3 - 2 * swing);
+  const lift = 6 * Math.sin(Math.PI * swing) + tuck;
   const knee = hip + (hip < 0 ? 4 : -2);
   const toe = hip + reach;
   shape(c, far ? "#824336" : rust, [hip-3,-11,hip+3,-12,knee+2,-7-lift/3,
