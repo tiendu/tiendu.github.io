@@ -11,12 +11,14 @@
   top: 0;
   left: 0;
   display: grid;
-  place-items: center;
+  place-items: start end;
+  box-sizing: border-box;
+  padding: 2px;
   width: 44px;
   height: 44px;
   filter: drop-shadow(0 2px 1px #070d0a);
 }
-.mines .miner-hat svg { display: block; width: 30px; height: 30px; }
+.mines .miner-hat svg { display: block; width: 16px; height: 16px; }
 /* Make buried fuse legible on covered (including disabled) tiles. */
 .mines .buried-fuse {
   background: #563a27;
