@@ -238,6 +238,10 @@ function isChickenSessionState(value: unknown): value is ChickenSessionState {
   );
 }
 
+export function hasClassicRun(): boolean {
+  return Boolean(readStoredSession(SESSION_KEY, SESSION_VERSION, isChickenSessionState));
+}
+
 export function mountChickenRunGames(): void {
   mountAllGames(
     "[data-chicken-game]",

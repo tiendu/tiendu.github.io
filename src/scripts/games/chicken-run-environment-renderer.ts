@@ -13,6 +13,7 @@ import { terrainHeightAt, terrainSlopeAt } from "./chicken-run-terrain";
 import type { RunWeatherState } from "./chicken-run-weather";
 
 export interface ChickenEnvironmentScene {
+  flatTrack?: boolean;
   width: number;
   height: number;
   groundY: number;
@@ -28,6 +29,7 @@ function screenGroundY(
   worldX: number,
   cameraFactor = 1,
 ): number {
+  if (scene.flatTrack) return scene.groundY;
   return (
     terrainHeightAt(worldX, scene.groundY) +
     scene.cameraOffsetY * cameraFactor

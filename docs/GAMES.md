@@ -36,10 +36,12 @@ the snake reaches it. The arena and obstacles are cached, while the high-DPI
 render scale is capped to keep the game responsive on ordinary laptops and
 phones.
 
-## Free Range
+## Chicken Run
 
-Free Range is the scrolling chicken runner. Its rules, world cycle, weather,
-terrain, effects, and renderers are split into focused modules.
+Solo and multiplayer use the same seeded race, movement rules, hazards and coop
+finish in `multiplayer/src/chicken/race.mjs`. Solo advances it locally in 50 ms
+steps. Online rooms advance it on the server. Both use the same course canvas
+with the countryside, weather and day/night cycle from the original runner.
 
 ## Saved sessions
 
@@ -50,7 +52,8 @@ remain separate from active-run saves.
 - Snake checkpoints after each completed grid step.
 - Stack Trace checkpoints only after a stable landing or bonus choice, so a tab
   closed during a falling load resumes from the previous stable tower.
-- Free Range checkpoints while the chicken is safely grounded, so a tab closed
+- Solo races checkpoint their seed, elapsed ticks and inputs on pause or exit.
+- Existing classic Free Range saves can be continued. The classic runner checkpoints while the chicken is safely grounded, so a tab closed
   mid-jump resumes from the latest safe footing rather than inside a collision.
 
 A completed, collapsed, or explicitly restarted run clears its resume checkpoint.

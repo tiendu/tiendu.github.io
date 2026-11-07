@@ -1,3 +1,5 @@
+import { drawChickenEnvironment } from "./chicken-run-environment-renderer";
+import { weatherStateForElapsed } from "./chicken-run-weather";
 import { paintEagle, paintFox } from "./chicken-predators";
 import { birds, finish } from "../../../multiplayer/src/chicken/race.mjs";
 import { drawChickenBody } from "./chicken-run-renderer";
@@ -19,43 +21,16 @@ export function drawBird(c, bird, x, y, frame = 0, airborne = false) {
   c.restore();
 }
 // Draw in world pixels so the lobby art and course share the same horizon.
-function pasture(c, w, ground, camera, chase) {
-  const box = (color, x, y, width, height) => {
-    c.fillStyle = color;
-    c.fillRect(Math.round(x), Math.round(y), width, height);
-  };
-  const sky = c.createLinearGradient(0, 0, 0, ground);
-  sky.addColorStop(0, chase ? "#586181" : "#7db9bd");
-  sky.addColorStop(1, chase ? "#edaa80" : "#ffda91");
-  box(sky, 0, 0, w, ground);
-  const sun = Math.round(w * .76);
-  box("#fff0ad", sun - 10, 10, 20, 26);
-  box("#fff0ad", sun - 13, 14, 26, 18);
-  for (let x = -180 - Math.round(camera * .12) % 180; x < w; x += 180) {
-    box("#fbe5c0", x + 7, 24, 40, 4);
-    box("#fbe5c0", x + 18, 20, 19, 5);
-  }
-  for (let x = 0; x < w; x += 6) {
-    const hill = (x + camera * .16) / 72;
-    const ridge = Math.round(ground * (.69 + .08 * Math.sin(hill) + .04 * Math.sin(2 * hill)));
-    box("#789791", x, ridge, 6, ground - ridge);
-    const field = Math.round(ground * (.82 + .05 * Math.cos((x + camera * .36) / 48)));
-    box("#557969", x, field, 6, ground - field);
-  }
-  for (let x = -54 - Math.round(camera * .68) % 54; x < w; x += 54) {
-    box("#a0a278", x, ground - 12, 54, 2);
-    box("#697953", x + 4, ground - 17, 4, 17);
-  }
-  box("#b5b667", 0, ground - 2, w, 4);
-  box("#756448", 0, ground + 2, w, 4);
-  box("#54453e", 0, ground + 6, w, 34);
-  for (let x = -29 - Math.round(camera) % 29; x < w; x += 29)
-    box("#816851", x, ground + 13, 6, 2);
+function pasture(c, width, groundY, distance, elapsed) {
+  drawChickenEnvironment(c, {
+    width, height: c.canvas.height, groundY, distance, elapsed, cameraOffsetY: 0, flatTrack: true,
+    cycle: cycleStateForElapsed(elapsed), weather: weatherStateForElapsed(elapsed),
+  });
 }
 
 export function drawPoster(canvas) {
   const c = canvas.getContext("2d");
-  pasture(c, canvas.width, 76, 0, false);
+  pasture(c, canvas.width, 76, 0, 0);
   birds.forEach((bird, index) => drawBird(c, bird, 61 + index * 45, 75, index));
 }
 
@@ -80,7 +55,7 @@ export function drawRace(canvas, r, track, players, id, elapsed) {
     c.fillText(s, x, y);
   };
   c.font = "bold 12px monospace";
-  pasture(c, w, ground, camera, r.fox !== null);
+  pasture(c, w, ground, camera, Math.max(0, r.time));
   for (const p of track.roofs) {
     const x = X(p.x),
       y = ground - p.h;

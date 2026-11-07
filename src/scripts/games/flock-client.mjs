@@ -1,3 +1,5 @@
+import { createSolo, restoreSolo, readSolo, saveSolo, advanceSolo, soloInput, tickMs } from "./flock-solo.mjs";
+import { hasClassicRun } from "./chicken-run";
 import { bindCourseGestures } from "./chicken-gestures";
 import {
   birds,
@@ -39,7 +41,47 @@ try {
   if (!["http:", "https:"].includes(endpoint.protocol)) endpoint = null;
 } catch {}
 let generation = 0;
+let local = null;
+let paused = false;
+let savedSolo;
+function startSolo(run) {
+  choosingSolo = false;
+  local = run;
+  paused = false;
+  id = run.players[0].id;
+  view = run;
+  saveSolo(run);
+  begin();
+}
+function pauseSolo() {
+  if (!local || local.race.over) return;
+  paused = !paused;
+  received = performance.now();
+  el("pause").textContent = paused ? "Resume" : "Pause";
+  if (paused) {
+    saveSolo(local);
+    cancelAnimationFrame(frame);
+  } else frame = requestAnimationFrame(paint);
+}
+el("pause").onclick = pauseSolo;
+el("retry").onclick = () => startSolo(createSolo(mine().bird));
+el("menu").onclick = () => reset("");
+el("resume").onclick = () => startSolo(restoreSolo(savedSolo));
+el("classic").onclick = () => {
+  closePanel();
+  window.dispatchEvent(new CustomEvent(GAME_EVENTS.chicken.solo, { detail: birds[2] }));
+};
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && local && !paused) pauseSolo();
+});
 function reset(message) {
+  if (local) saveSolo(local);
+  local = null;
+  paused = false;
+  savedSolo = readSolo();
+  el("resume").hidden = !savedSolo;
+  el("classic").hidden = !hasClassicRun();
+  el("practice").hidden = true;
   generation++;
   const old = ws;
   ws = null;
@@ -61,9 +103,10 @@ function reset(message) {
 }
 function submit(key) {
   const p = mine();
-  if (!p || view.race.time < 0 || view.race.over || p.status !== "running")
+  if (!p || paused || view.race.time < 0 || view.race.over || p.status !== "running")
     return;
   if (key === "jump" && p.jumps < 2) audio.play("hop");
+  if (local) return soloInput(local, key);
   send({ type: "input", key });
   input(p, key);
 }
@@ -115,26 +158,24 @@ birds.forEach((b, i) => {
   button.append(portrait, b.name, label);
   button.onclick = () => {
     if (choosingSolo) {
-      closePanel();
-      window.dispatchEvent(new CustomEvent(GAME_EVENTS.chicken.solo, { detail: b }));
+      startSolo(createSolo(i));
     } else send({ type: "bird", bird: i });
   };
   el("picks").append(button);
 });
-function feedback(old, r) {
-  if (!old) return;
-  if (old.picked.length < r.picked.length) audio.play("pickup");
-  if (old.fox === null && r.fox !== null) audio.play("alarm");
-  if (!old.rescued && r.rescued) audio.play("bonus");
-  if (
-    old.runners.find((p) => p.id === id)?.status === "running" &&
-    mine()?.status === "caught"
-  )
-    audio.play("impact");
+function soundState(r) {
+  return { corn: r.picked.length, fox: r.fox, rescued: r.rescued,
+    status: r.runners.find(p => p.id === id)?.status };
+}
+function feedback(previous, r) {
+  if (previous.corn < r.picked.length) audio.play("pickup");
+  if (previous.fox === null && r.fox !== null) audio.play("alarm");
+  if (!previous.rescued && r.rescued) audio.play("bonus");
+  if (previous.status === "running" && mine()?.status === "caught") audio.play("impact");
 }
 function end() {
   audio.stop();
-  audio.play("clear");
+  audio.play(local && mine()?.status === "caught" ? "impact" : "clear");
   const r = view.race;
   status(
     r.runners.filter((p) => p.status === "home").length +
@@ -142,13 +183,31 @@ function end() {
       r.runners.length +
       " made it home.",
   );
-  refreshLobby();
-  el("board").hidden = true;
+  if (local) {
+    const result = mine().status === "home" ? "Made it to the coop!" : "Caught!";
+    saveSolo(local);
+    drawRace(canvas, r, track, view.players, id, 0);
+    status(result + " Collected " + mine().corn + " corn.");
+    el("pause").disabled = true;
+  } else {
+    refreshLobby();
+    el("board").hidden = true;
+  }
 }
 function paint(time) {
   const r = view?.race;
   if (!r || r.over) return;
-  if (r.fox !== null && mine()?.status === "running" && time >= nextPulse) {
+  if (local && !paused) {
+    received = Math.max(received, time - 250);
+    while (time - received >= tickMs && !r.over) {
+      const previous = soundState(r);
+      advanceSolo(local);
+      feedback(previous, r);
+      received += tickMs;
+    }
+    if (r.over) return end();
+  }
+  if (!paused && r.fox !== null && mine()?.status === "running" && time >= nextPulse) {
     const pressure = Math.max(0, 1 - Math.abs(mine().x - r.fox) / 160);
     audio.play("pulse", pressure);
     nextPulse = time + 700 - 400 * pressure;
@@ -161,7 +220,7 @@ function paint(time) {
     ...r,
     runners: r.runners.map((p) => {
       const copy = { ...p };
-      if (r.time >= 0 && p.status === "running")
+      if (!paused && r.time >= 0 && p.status === "running")
         move(copy, age, track.roofs);
       return copy;
     }),
@@ -176,7 +235,13 @@ function begin() {
   track = course(view.race.seed);
   el("board").hidden = false;
   status("Tap or Space to jump. Swipe right or press → to sprint. Three corn earn one rescue.");
-  refreshLobby();
+  if (local) {
+    el("modes").hidden = el("lobby").hidden = el("back").hidden = true;
+    el("practice").hidden = false;
+    el("pause").disabled = false;
+    el("pause").textContent = "Pause";
+    canvas.focus({ preventScroll: true });
+  } else refreshLobby();
   frame = requestAnimationFrame(paint);
 }
 async function connect(create) {
@@ -232,7 +297,7 @@ async function connect(create) {
       received = performance.now();
       if (msg.race && !msg.race.over) {
         if (!old || old.over) begin();
-        else feedback(old, msg.race);
+        else feedback(soundState(old), msg.race);
       } else if (msg.race?.over) {
         if (!old?.over) end();
         else refreshLobby();
@@ -303,10 +368,11 @@ el("jump").onclick = () => submit("jump");
 el("sprint").onclick = () => submit("down");
 bindCourseGestures(canvas, () => submit("jump"), () => submit("down"));
 document.addEventListener("keydown", (e) => {
+  if (local && !e.repeat && e.code === "KeyP") pauseSolo();
   if (el("board").hidden || e.repeat || e.target.closest("input")) return;
   if (
     e.code === "Space" &&
-    !e.target.closest("[data-game-sound],[data-leave],[data-flock-exit]")
+    !e.target.closest("[data-game-sound],[data-leave],[data-flock-exit],[data-practice]")
   ) {
     e.preventDefault();
     submit("jump");

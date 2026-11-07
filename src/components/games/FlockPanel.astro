@@ -9,7 +9,7 @@ import "../../styles/components/flock.css";
   <canvas data-poster width="288" height="88" aria-hidden="true"></canvas>
 </div>
 <section data-modes class="flock-actions">
-  <button data-solo>Solo</button><button data-friends>Play with friends</button>
+  <button data-solo>Solo</button><button data-resume hidden>Continue solo</button><button data-classic hidden>Continue classic run</button><button data-friends>Play with friends</button>
 </section>
 <section data-setup hidden>
 <label>Your name <input data-name maxlength="16" placeholder="Player" autocomplete="nickname" /></label>
@@ -23,8 +23,9 @@ import "../../styles/components/flock.css";
 <button data-invite>Copy invite</button> <button data-start>Start race</button>
 </section>
 <section data-board hidden>
-<canvas aria-label="Chicken race course" width="720" height="256"></canvas>
+<canvas tabindex="-1" aria-label="Chicken race course" width="720" height="256"></canvas>
 <div class="flock-hud"><button data-sprint>Sprint</button><span>Stamina <meter data-energy min="0" max="3" value="3"></meter></span><button data-jump>Jump / Flap</button></div>
+<div class="flock-actions" data-practice hidden><button data-pause>Pause</button><button data-retry>Restart</button><button data-menu>Menu</button></div>
 </section>
 <p role="status" data-status>Reach the coop. Press → or swipe right to sprint. Space or tap to jump.</p>
 <button data-back hidden>← Back</button>
