@@ -5,7 +5,7 @@
   "workers_dev": true,
   "vars": {
     "ALLOWED_ORIGINS": "https://tiendu.github.io",
-    "MAX_ROOMS": "50"
+    "MAX_ROOMS": "45"
   },
   "durable_objects": {
     "bindings": [
@@ -13,7 +13,6 @@
         "name": "ROOMS",
         "class_name": "NumberRoom"
       },
-      {"name":"CHICKEN","class_name":"ChickenRoom"},
       {
         "name": "LOBBY",
         "class_name": "RoomLobby"

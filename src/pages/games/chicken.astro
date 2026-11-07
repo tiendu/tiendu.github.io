@@ -4,7 +4,7 @@ import SoundToggle from "../../components/games/shared/SoundToggle.astro";
 import "../../styles/components/flock.css";
 ---
 <BaseLayout title="Flock Run" description="Race to the coop with your flock.">
-<section class="flock" data-flock data-endpoint={import.meta.env.PUBLIC_NUMBER_BACKEND_URL || ""}>
+<section class="flock" data-flock data-endpoint={import.meta.env.PUBLIC_CHICKEN_BACKEND_URL || ""}>
 <header><a href="/">← HOME</a><SoundToggle /></header>
 <h1>Flock Run</h1>
 <section data-setup>

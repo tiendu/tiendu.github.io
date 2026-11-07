@@ -84,6 +84,8 @@ test(
           [
             "node_modules/wrangler/bin/wrangler.js",
             "dev",
+            "--config",
+            "wrangler.chicken.jsonc",
             "--ip",
             "127.0.0.1",
             "--port",

@@ -4,12 +4,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {RoomSession as NumberRoom} from '../src/room-service.mjs';
-const file = new URL('../src/index.mjs',import.meta.url);
 const rules = new URL('../src/rules.mjs',import.meta.url).href;
-const source=(await readFile(file,'utf8'))
- .replace('import { DurableObject } from "cloudflare:workers";', 'class DurableObject { constructor(ctx) { this.ctx = ctx; } }')
- .replace(/from "(\.\/[^"]+)"/g, (_, path) => 'from '+JSON.stringify(new URL(path,file).href));
-const {RoomLobby,NumberRoom:CloudflareRoom,default:worker}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+async function loadWorker(entry) {
+  const file=new URL(entry,import.meta.url);
+  const source=(await readFile(file,'utf8'))
+    .replace('import { DurableObject } from "cloudflare:workers";','class DurableObject { constructor(ctx) { this.ctx = ctx; } }')
+    .replace(/from "(\.\/[^"]+)"/g,(_,path)=>'from '+JSON.stringify(new URL(path,file).href));
+  return import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+}
+const {RoomLobby,NumberRoom:CloudflareRoom,default:worker}=await loadWorker('../src/index.mjs');
+const {ChickenLobby,ChickenRoom,default:chickenWorker}=await loadWorker('../src/chicken-worker.mjs');
 class Socket {
   readyState=1; sent=[]; attachment=null;
   setAttachment(v){this.attachment=structuredClone(v);}
@@ -133,7 +137,6 @@ test('Cloudflare adapter delegates protocol and persistence to the shared room s
 });
 
 test('Chicken rooms restore lobby membership on wake and release their lease on expiry', async()=>{
-  const {ChickenRoom}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
   const ctx=context();
   ctx.getWebSockets=ctx.sockets;
   ctx.storage.put=async(key,value)=>{
@@ -152,4 +155,22 @@ test('Chicken rooms restore lobby membership on wake and release their lease on 
   assert.equal(ws.sent.at(-1).players[0].bird,3);
   assert.equal(ws.sent.at(-1).players[0].online,true);
   await resumed.alarm();assert.equal(released,'lease');assert.equal(ctx.data.size,0);
+});
+
+test('each Worker admits only its own game through its own lobby', async()=>{
+  for(const [router,Lobby,path,other,cap] of [
+    [worker,RoomLobby,'/rooms','/chicken/rooms',45],
+    [chickenWorker,ChickenLobby,'/chicken/rooms','/rooms',5],
+  ]) {
+    const env={...lobbyEnv(String(cap)),ALLOWED_ORIGINS:'https://tiendu.github.io',
+      CREATE_LIMIT:{limit:async()=>({success:true})}};
+    const coordinator=new Lobby(context(),env);
+    env.LOBBY={getByName:()=>coordinator};
+    const create=route=>router.fetch(new Request('https://worker'+route,
+      {method:'POST',headers:{Origin:env.ALLOWED_ORIGINS}}),env);
+    assert.equal((await create(other)).status,404);
+    for(let i=0;i<cap;i++)assert.equal((await create(path)).status,200);
+    assert.equal((await create(path)).status,503);
+    assert.equal(env.initialized.length,cap);
+  }
 });

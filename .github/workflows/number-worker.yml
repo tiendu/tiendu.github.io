@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['multiplayer/**', '.github/workflows/number-worker.yml']
+    paths: ['multiplayer/**', '!multiplayer/src/chicken/**', '!multiplayer/src/chicken-worker.mjs', '!multiplayer/wrangler.chicken.jsonc', '!multiplayer/test/chicken.test.mjs', '.github/workflows/number-worker.yml']
   pull_request:
-    paths: ['multiplayer/**', '.github/workflows/number-worker.yml']
+    paths: ['multiplayer/**', '!multiplayer/src/chicken/**', '!multiplayer/src/chicken-worker.mjs', '!multiplayer/wrangler.chicken.jsonc', '!multiplayer/test/chicken.test.mjs', '.github/workflows/number-worker.yml']
 
 permissions:
   contents: read
