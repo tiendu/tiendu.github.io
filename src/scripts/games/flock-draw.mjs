@@ -174,8 +174,8 @@ export function drawRace(canvas, r, track, players, id, effects) {
       const surface = r.pounce.rail?.h ?? groundHeight(track.hills, leap.x);
       const feet = ground - surface - leap.hop + leap.crouch;
       if (leap.moving) paintEagle(c, X(leap.x), feet - 8, 0.24, 0, r.time);
-      else paintPerchedEagle(c, X(leap.x), feet);
-    } else if (hawk.perched && r.time < hawk.lift) paintPerchedEagle(c, x, floor);
+      else paintPerchedEagle(c, X(leap.x), feet, r.time);
+    } else if (hawk.perched && r.time < hawk.lift) paintPerchedEagle(c, x, floor, r.time);
     else paintEagle(c, X(flight.x), ground - flight.y, flight.fold, lift, r.time);
   }
   if (r.coyote && !r.capture) {
@@ -202,7 +202,7 @@ export function drawRace(canvas, r, track, players, id, effects) {
     }
     const pivot = r.foxSkid ? 0.6 : 0.25;
     const turn = Math.min(1, Math.max(0, (skid - pivot + 0.14) / 0.28));
-    paintFox(c, x, floor, r.fox / 6, turn);
+    paintFox(c, x, floor, worldX / 6, turn, pose?.hop ?? 0);
     if (skid < 0.25) {
       const dust = Math.floor(r.time * 16) % 5;
       rect("#d9b78e", x - 18 - dust, floor - 2 - dust, 4, 2);

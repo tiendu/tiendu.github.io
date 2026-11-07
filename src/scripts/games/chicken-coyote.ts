@@ -1,3 +1,5 @@
+import { shape } from "./chicken-sprite-shape";
+
 // The legs are keyed by distance. During contact each paw sweeps backwards by
 // the distance the body advances, then folds under the belly on recovery.
 type LegPose = readonly [number, number, number, number, number, number];
@@ -15,14 +17,6 @@ const fore: readonly LegPose[] = [
 ];
 
 const ink = "#332c30", saddle = "#594f52", ochre = "#ac8561", buff = "#d4b18a";
-function shape(c: CanvasRenderingContext2D, color: string, points: readonly number[]) {
-  c.fillStyle = color;
-  c.beginPath();
-  c.moveTo(points[0], points[1]);
-  for (let i = 2; i < points.length; i += 2) c.lineTo(points[i], points[i + 1]);
-  c.closePath();
-  c.fill();
-}
 
 let coat: HTMLCanvasElement | undefined;
 function body() {
@@ -58,7 +52,9 @@ function leg(c: CanvasRenderingContext2D, poses: readonly LegPose[], phase: numb
   const at = (i: number) => a[i] + (b[i] - a[i]) * mix;
   const knee = hip + at(0), ky = at(1) + back * 0.45;
   const wrist = hip + at(2), wy = at(3);
-  const paw = hip + at(4) + (poses === fore ? leap : -leap), py = at(5);
+  const extension = poses === fore ? leap : -leap;
+  const paw = hip + at(4) + extension;
+  const py = at(5) - leap * (poses === hind ? 0.95 : 0.45);
   const thigh = poses === hind ? 5 : 3;
   const top = -17 + back;
   shape(c, far ? saddle : ochre, [hip-thigh,top-1,hip+thigh,top-2,knee+2,ky,
@@ -77,11 +73,17 @@ export function paintCoyote(c: CanvasRenderingContext2D, x: number, floor: numbe
   const back = 1.6 * Math.sin(angle - 0.4);
   c.save();
   c.translate(x, floor);
-  if (Math.abs(facing) < 0.5) {
-    // A three-quarter mask carries the silhouette through its pivot.
-    shape(c, saddle, [-6,-28,-2,-25,3,-25,6,-28,6,-18,3,-12,-3,-12,-6,-18]);
-    c.fillStyle = buff; c.fillRect(-2,-19,4,5);
-    c.fillStyle = "#ffcd63"; c.fillRect(-4,-22,2,1); c.fillRect(2,-22,2,1);
+  if (Math.abs(facing) < 0.55) {
+    c.save();
+    c.globalAlpha *= Math.min(1, (0.55 - Math.abs(facing)) * 7);
+    shape(c, ink, [-9,-24,-6,-26,4,-27,9,-22,10,-14,7,-9,8,-2,9,0,4,0,2,-9,-2,-9,-4,0,-9,0,-7,-10,-10,-17]);
+    shape(c, ochre, [-8,-23,6,-24,8,-18,5,-12,1,-9,-4,-12,-8,-17]);
+    shape(c, buff, [-6,-20,6,-20,4,-16,1,-13,0,-11,-2,-15]);
+    shape(c, ink, [-8,-33,-2,-28,3,-28,8,-33,7,-25,9,-21,5,-19,2,-15,-2,-15,-5,-19,-9,-21,-6,-25]);
+    shape(c, ochre, [-6,-29,-2,-26,3,-26,6,-29,5,-25,7,-22,3,-21,1,-17,-1,-17,-4,-21,-7,-22,-4,-24]);
+    c.fillStyle = "#ffcd63"; c.fillRect(-5,-23,2,1); c.fillRect(3,-23,2,1);
+    c.fillStyle = ink; c.fillRect(-2,-19,4,2);
+    c.restore();
   }
   c.scale(facing, 1);
   leg(c, hind, phase + 0.95, -13, back, true, hop);
@@ -94,7 +96,7 @@ export function paintCoyote(c: CanvasRenderingContext2D, x: number, floor: numbe
   c.restore();
   c.save();
   c.translate(0, back);
-  c.rotate(0.045 * Math.cos(angle));
+  c.rotate(0.045 * Math.cos(angle) - hop * 0.018);
   c.imageSmoothingEnabled = false;
   c.drawImage(body(), -25, -34);
   c.restore();
