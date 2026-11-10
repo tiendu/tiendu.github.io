@@ -13,3 +13,13 @@
 @import "./system/about.css";
 @import "./system/topics.css";
 @import "./system/not-found.css";
+
+/* The brand subtitle becomes a live, browser-local digital clock. */
+.system-topbar .system-local-clock {
+  display: inline-block;
+  font: inherit;
+  color: inherit;
+  letter-spacing: .025em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

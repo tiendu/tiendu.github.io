@@ -47,3 +47,87 @@ const isActive = (key: NavigationKey | "home", href: string) => {
     </nav>
   </div>
 </header>
+
+<script is:inline data-tiendu-local-clock>
+  // Browser-local wall clock for the shared site header. No timezone assumption.
+  (() => {
+    const header = document.querySelector('.system-topbar');
+    if (!header || header.dataset.localClockInstalled === 'true') return;
+    header.dataset.localClockInstalled = 'true';
+
+    const clock = document.createElement('time');
+    clock.className = 'system-local-clock';
+    clock.setAttribute('aria-label', 'Local date and time');
+
+    const textNodes = () => {
+      const walker = document.createTreeWalker(header, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      return nodes;
+    };
+    const personal = textNodes().find((node) => /PERSONAL\s+SYSTEM/i.test(node.textContent || ''));
+    if (!personal) {
+      // Don't add a second status area if the shared header was redesigned.
+      console.warn('Local clock: PERSONAL SYSTEM subtitle not found in SystemHeader.');
+      return;
+    }
+
+    // Prefer replacing the complete compact subtitle/status container. This
+    // removes the old REV label and its month/hash together, without affecting
+    // the site title or links elsewhere in the header.
+    const candidates = [...header.querySelectorAll('*')]
+      .filter((element) => {
+        const value = (element.textContent || '').trim();
+        return /PERSONAL\s+SYSTEM/i.test(value) && /\bREV\b/i.test(value) &&
+          value.length < 96 && !element.querySelector('a,button,nav');
+      })
+      .sort((a, b) => a.textContent.length - b.textContent.length);
+
+    if (candidates.length) {
+      candidates[0].replaceChildren(clock);
+    } else {
+      // Some header revisions split the subtitle into separate elements.
+      const value = personal.textContent || '';
+      const found = /PERSONAL\s+SYSTEM/i.exec(value);
+      const head = value.slice(0, found.index);
+      const tail = value.slice(found.index + found[0].length)
+        .replace(/^\s*(?:[\/|·—-]\s*)?REV\.?[\s\S]*$/i, '');
+      const fragment = document.createDocumentFragment();
+      if (head) fragment.append(document.createTextNode(head));
+      fragment.append(clock);
+      if (tail.trim()) fragment.append(document.createTextNode(tail));
+      personal.replaceWith(fragment);
+    }
+
+    // For versions that render REV as a separate sibling, remove just that
+    // status token (never a containing navigation item or the site title).
+    for (const node of textNodes()) {
+      if (!/\bREV\b/i.test(node.textContent || '')) continue;
+      const parent = node.parentElement;
+      if (!parent || parent.closest('nav,a,button') || parent.contains(clock)) continue;
+      if (/^\s*(?:[\/|·—-]\s*)?REV\b/i.test(parent.textContent || '') &&
+          (parent.textContent || '').trim().length < 65 &&
+          ['SPAN', 'SMALL', 'CODE', 'DIV', 'P'].includes(parent.tagName)) {
+        parent.remove();
+      } else {
+        node.textContent = (node.textContent || '')
+          .replace(/\s*(?:[\/|·—-]\s*)?REV\.?\s*(?:[A-Z]{3}\s+\d{4}|[0-9a-f]{7,40})?/gi, '');
+      }
+    }
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const update = () => {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = pad(now.getMonth() + 1);
+      const d = pad(now.getDate());
+      const hh = pad(now.getHours());
+      const mm = pad(now.getMinutes());
+      const ss = pad(now.getSeconds());
+      clock.textContent = `${y}:${m}:${d} ${hh}:${mm}:${ss}`;
+      clock.dateTime = `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
+    };
+    update();
+    setInterval(update, 1000);
+  })();
+</script>
