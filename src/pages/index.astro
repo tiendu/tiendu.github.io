@@ -6,148 +6,21 @@ import "../styles/pages/home.css";
 ---
 
 <BaseLayout
-  terminal
-  description="An interactive terminal for Tien Du’s engineering notes, projects, and small retro games."
+  system
+  description="A living ASCII mai vàng bonsai, with blossoms that shed, drift, and regrow. Engineering notes, writing, and more."
   socialTitle="Tien's Notes"
-  socialDescription="Systems, software, bioinformatics, and things that broke."
-  image="/social/home-preview.png"
-  imageAlt="Tien's Notes amber terminal preview"
-  imageWidth={1200}
-  imageHeight={630}
+  socialDescription="A living mai vàng bonsai made of glowing ASCII characters."
 >
-  <section class="landing-wrapper" aria-labelledby="home-title">
-    <script is:inline data-astro-rerun>
-      (() => {
-        const wrapper = document.currentScript?.parentElement;
-        if (!wrapper) return;
-
-        let introSeen = false;
-        try {
-          introSeen =
-            window.sessionStorage.getItem("tiendu-home-intro-seen") === "true";
-        } catch {
-          // Play the intro when session storage is unavailable.
-        }
-
-        wrapper.classList.add(
-          introSeen ? "terminal-intro-seen" : "terminal-typing-enabled",
-        );
-      })();
-    </script>
-
-
-    <div class="terminal-card">
-      <SystemHeader active="home" />
-
-      <div class="terminal-screen" data-terminal-screen>
-        <div class="terminal-content">
-          <button class="terminal-skip" data-terminal-skip type="button">
-            SKIP INTRO
-          </button>
-
-          <p class="command-line" aria-label="Terminal command: profile">
-            <span class="typed-command">
-              <span class="prompt">TIENDU@HOME</span>
-              <span class="path">:~$</span>
-              <span> PROFILE</span>
-            </span>
-            <span class="block-cursor" aria-hidden="true"></span>
-          </p>
-
-          <div class="profile-view" data-profile-view>
-            <div class="output-stage" data-profile-copy>
-              <div class="output-measure" aria-hidden="true">
-                <p class="terminal-title">I'M TIEN.</p>
-
-                <p>
-                  I work across Linux systems, cloud infrastructure, distributed
-                  workloads, monitoring, automation, and production reliability.
-                </p>
-
-                <p>
-                  This site is where I keep technical notes, engineering references,
-                  small projects, and lessons from systems that failed in interesting
-                  ways.
-                </p>
-              </div>
-
-              <section class="output" aria-busy="false">
-                <h1
-                  id="home-title"
-                  class="terminal-title"
-                  data-terminal-line
-                  data-speed="55"
-                >
-                  I'M TIEN.
-                </h1>
-
-                <p data-terminal-line data-speed="24">
-                  I work across Linux systems, cloud infrastructure, distributed
-                  workloads, monitoring, automation, and production reliability.
-                </p>
-
-                <p data-terminal-line data-speed="24">
-                  This site is where I keep technical notes, engineering references,
-                  small projects, and lessons from systems that failed in interesting
-                  ways.
-                </p>
-              </section>
-            </div>
-
-            <p
-              class="terminal-response"
-              data-terminal-response
-              aria-live="polite"
-              hidden
-            ></p>
-          </div>
-
-
-          <form class="terminal-shell" data-terminal-shell hidden>
-            <span class="prompt">TIENDU@HOME</span>
-            <span class="path">:~$</span>
-            <span class="terminal-shell-entry">
-              <input
-                class="terminal-shell-input"
-                data-terminal-input
-                type="text"
-                maxlength="16"
-                autocomplete="off"
-                autocapitalize="characters"
-                spellcheck="false"
-                enterkeyhint="go"
-                aria-label="Terminal command"
-                aria-describedby="terminal-input-warning"
-              />
-              <span class="shell-block-cursor" aria-hidden="true"></span>
-            </span>
-          </form>
-
-          <p
-            id="terminal-input-warning"
-            class="terminal-input-warning"
-            data-terminal-input-warning
-            role="status"
-            aria-live="polite"
-            hidden
-          >
-            MAX 16 CHARACTERS · PRESS ENTER OR BACKSPACE
-          </p>
-
-          <p class="terminal-footer" data-terminal-footer aria-hidden="true">
-            <span data-footer-state>BOOTING</span>
-            <span>
-              SESSION <span data-session-count>01</span>
-            </span>
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      import { mountHomeTerminal } from "../scripts/home-terminal";
-
-      mountHomeTerminal();
-    </script>
-  </section>
+  <div class="home-bonsai-page">
+    <SystemHeader active="home" />
+    <section class="home-bonsai-stage" aria-labelledby="home-title">
+      <h1 class="sr-only" id="home-title">Mai vàng — a living ASCII bonsai</h1>
+      <iframe
+        class="home-bonsai-art"
+        src="/mai-vang-bonsai.html"
+        title="Glowing ASCII mai vàng bonsai with continuously falling and regrowing petals"
+        loading="eager"
+      ></iframe>
+    </section>
+  </div>
 </BaseLayout>

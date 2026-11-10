@@ -14,10 +14,7 @@ export const SITE = {
 
 export const PRIMARY_NAVIGATION = [
   { key: "posts", href: "/posts/", label: "POSTS", index: "01" },
-  { key: "projects", href: "/projects/", label: "PROJECTS", index: "02" },
-  { key: "games", href: "/games/", label: "GAMES", index: "03" },
-  { key: "topics", href: "/topics/", label: "TOPICS", index: "04" },
-  { key: "about", href: "/about/", label: "ABOUT", index: "05" },
+  { key: "about", href: "/about/", label: "ABOUT", index: "02" },
 ] as const;
 
 export type NavigationKey = (typeof PRIMARY_NAVIGATION)[number]["key"];

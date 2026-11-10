@@ -1,0 +1,30 @@
+/* Landing page: shared navigation above an isolated, responsive ASCII scene. */
+.home-bonsai-page {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh;
+  min-height: 100svh;
+  overflow: hidden;
+  width: 100%;
+  background: #07080b;
+}
+
+.home-bonsai-page .system-topbar {
+  flex-shrink: 0;
+}
+
+.home-bonsai-stage {
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.home-bonsai-art {
+  background: #07080b;
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
