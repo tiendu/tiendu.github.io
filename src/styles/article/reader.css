@@ -285,7 +285,7 @@
 }
 
 .post-content a[target="_blank"]::after {
-  content: "↗";
+  content: "\2197\FE0E";
   font-family: var(--font-panel);
   font-size: 0.84em;
   letter-spacing: 0.02em;
