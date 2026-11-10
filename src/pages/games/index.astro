@@ -1,0 +1,31 @@
+---
+import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
+
+const games = [
+  { title: "CHICKEN RUN", href: "/games/chicken/", type: "RUNNER" },
+  { title: "MINES", href: "/games/mines/", type: "PUZZLE" },
+  { title: "NUMBER", href: "/games/number/", type: "PARTY" },
+] as const;
+---
+<SystemPageLayout
+  title="Games"
+  moduleCode=""
+  description="Small games you can play in your browser."
+  showDescription={false}
+  active="games"
+>
+  <div class="taxonomy-grid" aria-label="Available games">
+    {games.map((game, index) => (
+      <a class="taxonomy-card" href={game.href}>
+        <span class="taxonomy-index" aria-hidden="true">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <h2>{game.title}</h2>
+        <span class="taxonomy-card-footer">
+          <span>{game.type}</span>
+          <span class="taxonomy-selector" aria-hidden="true">&gt;</span>
+        </span>
+      </a>
+    ))}
+  </div>
+</SystemPageLayout>

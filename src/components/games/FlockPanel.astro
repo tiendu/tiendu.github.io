@@ -3,7 +3,7 @@ import SoundToggle from "./shared/SoundToggle.astro";
 import "../../styles/components/flock.css";
 ---
 <section class="flock" aria-label="Chicken Run" hidden data-flock data-endpoint={import.meta.env.PUBLIC_CHICKEN_BACKEND_URL || ""}>
-<header><button type="button" data-flock-exit>← Exit</button><SoundToggle /></header>
+<header><button type="button" data-flock-exit>← HOME</button><SoundToggle /></header>
 <div class="flock-marquee">
   <h1>Chicken Run</h1>
   <canvas data-poster width="288" height="88" aria-hidden="true"></canvas>

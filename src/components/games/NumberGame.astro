@@ -5,7 +5,7 @@ const buildLabel = (import.meta.env.GITHUB_SHA || "").slice(0, 7) || new Date().
 ---
   <section class="number-game" hidden data-number-game data-backend-url={import.meta.env.PUBLIC_NUMBER_BACKEND_URL || ""} aria-labelledby="number-title">
     <header class="number-header">
-      <button type="button" class="number-option number-back" data-number-exit>← EXIT</button>
+      <button type="button" class="number-option number-back" data-number-exit>← HOME</button>
       <button type="button" class="number-option" data-number-leave hidden>LEAVE ROOM</button>
       <SoundToggle class="number-option" />
     </header>
