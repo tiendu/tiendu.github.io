@@ -115,17 +115,23 @@ const isActive = (key: NavigationKey | "home", href: string) => {
       }
     }
 
+    // Use the visitor's browser-local time; no hard-coded timezone.
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+                    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     const pad = (n) => String(n).padStart(2, '0');
     const update = () => {
       const now = new Date();
-      const y = now.getFullYear();
-      const m = pad(now.getMonth() + 1);
-      const d = pad(now.getDate());
-      const hh = pad(now.getHours());
-      const mm = pad(now.getMinutes());
-      const ss = pad(now.getSeconds());
-      clock.textContent = `${y}:${m}:${d} ${hh}:${mm}:${ss}`;
-      clock.dateTime = `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
+      const year = now.getFullYear();
+      const month = months[now.getMonth()];
+      const day = pad(now.getDate());
+      const hour24 = now.getHours();
+      const hour12 = hour24 % 12 || 12;
+      const minute = pad(now.getMinutes());
+      const ampm = hour24 < 12 ? 'AM' : 'PM';
+      const value = `${year} ${month} ${day} ${hour12}:${minute}${ampm}`;
+      // Avoid rewriting the text every second when only minutes are shown.
+      if (clock.textContent !== value) clock.textContent = value;
+      clock.dateTime = `${year}-${pad(now.getMonth() + 1)}-${day}T${pad(hour24)}:${minute}`;
     };
     update();
     setInterval(update, 1000);

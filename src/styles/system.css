@@ -18,8 +18,12 @@
 .system-topbar .system-local-clock {
   display: inline-block;
   font: inherit;
+  font-size: .82em;
+  font-weight: 400;
+  line-height: 1.25;
   color: inherit;
-  letter-spacing: .025em;
+  opacity: .62;
+  letter-spacing: .035em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

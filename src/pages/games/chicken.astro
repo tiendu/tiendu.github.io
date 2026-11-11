@@ -34,6 +34,14 @@ import ChickenRunGame from "../../components/games/ChickenRunGame.astro";
 /* tiendu:chicken-run-layout:v2 */
 (() => {
   const CSS = `
+    /* tiendu:chicken-run-dark-canvas:v3 */
+    /* Paint the entire browser viewport, not just the centered menu strip. */
+    html, body {
+      background-color: #080b0a !important;
+    }
+    html.chicken-layout-menu-active .chicken-layout-ancestor {
+      background-color: #080b0a !important;
+    }
     /* Only while the front menu is visible. Gameplay uses its original layout. */
     html.chicken-layout-menu-active body {
       min-height: 100vh !important;
