@@ -29,3 +29,66 @@ import ChickenRunGame from "../../components/games/ChickenRunGame.astro";
       window.dispatchEvent(new Event(events.start));
   });
 </script>
+
+<script is:inline>
+  /* tiendu:chicken-run-center-menu:v1 */
+  (() => {
+    const match = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const find = (name) => [...document.querySelectorAll('button, a, [role="button"], input[type="button"]')]
+      .find((element) => match(element.tagName === 'INPUT' ? element.value : element.textContent) === name);
+    const childIn = (parent, element) => {
+      let child = element;
+      while (child && child.parentElement !== parent) child = child.parentElement;
+      return child;
+    };
+
+    let adjusted = null;
+    function arrange() {
+      const solo = find('solo');
+      const resume = find('continue solo');
+      const friends = find('play with friends');
+      if (!solo || !resume || !friends) return;
+      let grid = friends.parentElement;
+      while (grid && grid !== document.body) {
+        if (getComputedStyle(grid).display === 'grid' &&
+            grid.contains(solo) && grid.contains(resume)) {
+          const cells = [solo, resume, friends].map((element) => childIn(grid, element));
+          if (cells.every(Boolean) && new Set(cells).size === 3) {
+            const columns = getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean);
+            const [first, , last] = cells;
+            if (columns.length === 2 && first.getBoundingClientRect().width > 0) {
+              last.style.gridColumn = '1 / -1';
+              last.style.justifySelf = 'center';
+              last.style.width = `${Math.round(first.getBoundingClientRect().width)}px`;
+              adjusted = last;
+            } else if (adjusted === last) {
+              last.style.removeProperty('grid-column');
+              last.style.removeProperty('justify-self');
+              last.style.removeProperty('width');
+              adjusted = null;
+            }
+            return;
+          }
+        }
+        grid = grid.parentElement;
+      }
+    }
+    let queued = false;
+    function schedule() {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; arrange(); });
+    }
+    function start() {
+      schedule();
+      new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+      window.addEventListener('resize', schedule, { passive: true });
+      window.addEventListener('pageshow', schedule);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start, { once: true });
+    } else {
+      start();
+    }
+  })();
+</script>
