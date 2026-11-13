@@ -3,18 +3,30 @@ import { newGame, player, occupied, canPlace, legalPlacements, canReclaim, refol
 import { foldedFaces } from './fold.mjs';
 import { paintFoldCanvas } from './canvas.mjs';
 import { paintTubeFrame } from './tubes.mjs';
+import { paintLatchFrame } from './latches.mjs';
 import { legalFits } from './guided.mjs';
 
 const $=id=>document.getElementById(id);
 // Keep the 1.4 Astro page compatible, including checkouts where the existing
 // v1.3 menu or public-room script has already been customized. No page rewrite.
-for(const name of ['v14.css','v15.css']){
+for(const name of ['v14.css','v15.css','v16.css']){
   if(!document.querySelector(`link[href$="/games/unfold/${name}"], style[data-unfold-sheet="${name}"]`)){
     const link=document.createElement('link');link.rel='stylesheet';link.href=`/games/unfold/${name}`;
     document.head.append(link);
   }
 }
-document.querySelectorAll('.version').forEach(label=>label.textContent='1.5');
+document.querySelectorAll('.version').forEach(label=>label.textContent='1.6');
+function latchFrame(){
+  let canvas=$('latch-frame');
+  if(!canvas){canvas=document.createElement('canvas');canvas.id='latch-frame';canvas.className='latch-frame';canvas.setAttribute('aria-hidden','true');tubeFrame().after(canvas);}
+  return canvas;
+}
+function updateLatches(settling=[]){
+  if(!game)return;
+  const roads=game.cubes.flatMap(c=>c.cells);
+  const lifted=new Set([...document.querySelectorAll('.tile.fold-lifting')].map(t=>`${t.dataset.x},${t.dataset.y}`));
+  paintLatchFrame(latchFrame(),game.size,roads,{hidden:lifted,settling});
+}
 function tubeFrame(){
   let canvas=$('tube-frame');
   if(!canvas){canvas=document.createElement('canvas');canvas.id='tube-frame';canvas.className='tube-frame';canvas.setAttribute('aria-hidden','true');$('board').after(canvas);}
@@ -250,6 +262,7 @@ function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContac
   }
   $('board').style.setProperty('--size',game.size);$('board').innerHTML=tiles.join('');
   paintTubeFrame(tubeFrame(),game.size);
+  updateLatches();
   $('board-viewport').classList.toggle('large-board',game.size>=17);
 }
 function showPicker(){
@@ -400,6 +413,7 @@ function finishFoldVisual(){
   stage.hidden=true;stage.replaceChildren();
   document.querySelectorAll('.tile.fold-lifting').forEach(tile=>tile.classList.remove('fold-lifting'));
   $('game').classList.remove('is-unfolding');
+  updateLatches();
   animationFastForward=false;
 }
 function prepareFoldStage(contact){
@@ -428,6 +442,7 @@ function liftedSockets(net,rot,flip,contact,open){
     if(!tile)continue;
     tile.classList.toggle('fold-lifting',face.center[2]>.035);
   }
+  updateLatches();
 }
 // Remain at the same fixed camera position. Closed box relocation is a brief
 // motion of the box, NOT a camera pan or six disconnected tiles teleporting.
@@ -465,6 +480,15 @@ async function animateFold(net,rot,flip,contact,reverse=false){
       const release=reverse?1-progress:ease(Math.min(1,t/.15));
       paintFoldCanvas(canvas,net,rot,flip,openness,{color:ownerColor,release});
       if(reverse)liftedSockets(net,rot,flip,contact,openness);
+      else{
+        // Catchers close on each plate only as it settles. Never cover the
+        // cell early, and never rebuild the steel frame below it.
+        const faces=foldedFaces(net,rot,flip,openness),root=faces[0].flat;
+        const seating=t>.76?faces.filter(f=>f.center[2]<.045).map(f=>[
+          contact[0]+f.flat[0]-root[0],contact[1]+f.flat[1]-root[1]
+        ]):[];
+        updateLatches(seating);
+      }
       if(t<1)requestAnimationFrame(step);else resolve();
     };requestAnimationFrame(step);
   });
@@ -608,7 +632,7 @@ function refreshModeHelp(){
 }
 $('room-mode').addEventListener('change',refreshModeHelp);
 refreshModeHelp();
-document.querySelectorAll('.version').forEach(el=>{el.textContent='1.5';});
+document.querySelectorAll('.version').forEach(el=>{el.textContent='1.6';});
 document.title='UNFOLD · Ironworks';
 
 function setZoom(level,clientX=null,clientY=null){

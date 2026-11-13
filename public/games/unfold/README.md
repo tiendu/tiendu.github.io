@@ -161,3 +161,15 @@ on the player's device. Rooms currently expire after two hours of inactivity.
 - The existing Solo, Co-op, Competitive, rooms and probabilities are unchanged.
 - The old `unfold-v1.4-mobile-unfold-hotfix.patch` is superseded by v1.5.
   Apply v1.5 directly to v1.4, without the earlier experimental hotfix.
+
+## v1.6 — Inset decks and mechanical socket catches
+
+The moving box uses neutral rusty armor on every player. Its interior deck
+shows the owner colour, while bare iron ribs and hinge pins remain visible.
+The six plates occupy 87% of the socket width, leaving the tube grid exposed.
+Straps bridge to the full-size hinges so the panels remain mechanically linked.
+
+The independent `latches.mjs` canvas paints forked jaws over the permanent
+`tubes.mjs` frame. In Unfold they engage as each panel settles; in Refold they
+release as each old plate rises. Neither operation clears the actual frame.
+Only the cube contact cell carries a deployment number. No rules changed.

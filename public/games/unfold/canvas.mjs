@@ -13,9 +13,12 @@ const blend=(a,b,t)=>{
 };
 const armor=['#5b493b','#67503c','#54463b','#5b4b40','#59493c','#67503f'];
 const lining=['#56625c','#4e605c','#596660','#51615a','#52615e','#58665f'];
+// The same battered iron shell is used by every player. Only the inside
+// takes a player colour; metal ribs and hinge pins remain unpainted.
+const PANEL_SCALE=.87; // ~13% smaller than one grid socket; leaves room for catches.
 const rust=['#87492e','#a45a32','#6b3627','#b46c3c','#713f2d','#986037'];
 function position(f,x,y,off=0){
-  return add(add(add(f.center,mul(f.u,x)),mul(f.v,y)),mul(f.normal,off));
+  return add(add(add(f.center,mul(f.u,x*PANEL_SCALE)),mul(f.v,y*PANEL_SCALE)),mul(f.normal,off));
 }
 function paintPoly(ctx,points,fill,stroke=null,width=.025){
   if(points.length<3)return;
@@ -42,6 +45,12 @@ function line(ctx,f,a,b,color,width,alpha=1,off=0){
 function hinge(ctx,f){
   if(!f.hinge)return;
   const [a,b]=f.hinge,normal=mul(f.normal,.065),axis=b.map((v,i)=>v-a[i]);
+  // A thick retaining strap bridges the deliberately inset plate rim to the
+  // real shared hinge axis at the edge of the original, full-sized cube net.
+  const midpoint=mul(add(a,b),.5);
+  const saddle=add(midpoint,mul(add(f.center,mul(midpoint,-1)),.13));
+  stroke(ctx,[saddle,midpoint],'#171f1b',.22);
+  stroke(ctx,[saddle,midpoint],'#be965f',.105);
   stroke(ctx,[a,b],'#101814',.18);
   stroke(ctx,[add(a,normal),add(b,normal)],'#805c37',.14);
   stroke(ctx,[add(a,normal),add(b,normal)],'#d7aa62',.055);
@@ -59,16 +68,22 @@ function hinge(ctx,f){
 function plate(ctx,f,{color,release}){
   const inside=f.normal[2]>=0,plane=inside?.090:-.090;
   const metal=inside?'#bca77a':'#aa7848';
-  const front=f.corners.map(p=>add(p,mul(f.normal,.090)));
-  const back=f.corners.map(p=>add(p,mul(f.normal,-.090)));
+  const perimeter=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]];
+  const front=perimeter.map(([x,y])=>position(f,x,y,.090));
+  const back=perimeter.map(([x,y])=>position(f,x,y,-.090));
   for(let i=0;i<4;i++){
     const j=(i+1)%4;
     paintPoly(ctx,[front[i],front[j],back[j],back[i]],i%2?'#523d2f':'#2b3230','#1b2524',.027);
   }
-  quad(ctx,f,[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]],inside?lining[f.number-1]:armor[f.number-1],plane,'#1a2222',.045);
+  // Interior deck colour is unmistakably the owner's paint (or weathered
+  // neutral steel). Exterior armour is never tinted by ownership.
+  const deck=inside?blend(lining[f.number-1],color||'#707870',color ? .79 : .48):armor[f.number-1];
+  quad(ctx,f,perimeter,deck,plane,'#1a2222',.045);
   quad(ctx,f,[[-.42,-.42],[.42,-.42],[.42,.42],[-.42,.42]],null,plane+.003,inside?'#ada988':'#9e7646',.052);
   if(inside){
-    rect(ctx,f,-.34,-.33,.34,.33,blend('#344440',color,.28),plane+.006);
+    rect(ctx,f,-.34,-.33,.34,.33,blend('#39463e',color||'#737b72',color ? .88 : .53),plane+.006);
+    // Player paint appears on the broad road surface. Bracing is bare iron.
+    rect(ctx,f,-.245,-.19,.245,.19,blend('#3b463e',color||'#778078',color ? .80 : .52),plane+.009);
     rect(ctx,f,-.37,-.37,-.29,.37,'#879389',plane+.008);
     rect(ctx,f,.29,-.37,.37,.37,'#879389',plane+.008);
     for(const y of [-.25,0,.25]){
@@ -88,7 +103,7 @@ function plate(ctx,f,{color,release}){
     for(let i=0;i<3;i++)rect(ctx,f,-.3+i*.11,.28,-.24+i*.11,.30,'#e0a75f',plane-.010);
   }
   const flecks=[[-.39,-.18,.105],[-.27,-.41,.08],[.33,-.35,.10],[-.41,.30,.10],[.34,.23,.10],[.15,.37,.08],[-.08,-.42,.095],[.23,-.38,.085]];
-  flecks.forEach(([x,y,w],i)=>rect(ctx,f,x,y,x+w,y+w,rust[(f.number+i)%rust.length],plane+(inside?.018:-.018)));
+  flecks.filter((_,i)=>!inside||i%3===0).forEach(([x,y,w],i)=>rect(ctx,f,x,y,x+w,y+w,rust[(f.number+i)%rust.length],plane+(inside?.018:-.018)));
   const chips=[[.27,-.23,.07],[-.31,.10,.095],[.11,.29,.08],[-.04,-.32,.06]];
   chips.forEach(([x,y,w])=>{
     rect(ctx,f,x,y,x+w,y+w,inside?'#384d45':'#302f29',plane+(inside?.019:-.019));
@@ -109,8 +124,12 @@ function plate(ctx,f,{color,release}){
   const lock=inside?1:clamp(1-release);
   if(lock>.02){
     ctx.save();ctx.globalAlpha*=lock;
-    rect(ctx,f,-.12,-.5,.12,-.37,'#c3a371',plane-.028);
-    rect(ctx,f,-.12,.37,.12,.5,'#c3a371',plane-.028);
+    // Two retaining tongues reach into the tube's catching slots, beyond
+    // the 87%-width panel. They extend from ±.37 to the full frame edge.
+    rect(ctx,f,-.12,-.54,.12,-.37,'#c3a371',plane-.028);
+    rect(ctx,f,-.12,.37,.12,.54,'#c3a371',plane-.028);
+    rect(ctx,f,-.05,-.53,.05,-.48,'#30372e',plane-.032);
+    rect(ctx,f,-.05,.48,.05,.53,'#30372e',plane-.032);
     ctx.restore();
   }
 }

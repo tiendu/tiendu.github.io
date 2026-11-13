@@ -52,3 +52,41 @@ test('the cube uses a stable canvas to draw both wrapped and unwrapped surfaces'
   assert.ok(calls.clearRect===4,'one stable surface, cleared once per frame');
   assert.ok(calls.fill>first);
 });
+
+import { paintLatchFrame } from '../public/games/unfold/latches.mjs';
+
+test('one socket panel installs two pairs of mechanical jaws over its steel tube',()=>{
+  const {canvas,calls}=mockCanvas();
+  assert.equal(paintLatchFrame(canvas,15,[[3,4]]),true);
+  assert.equal(canvas.width,240);assert.equal(canvas.height,240);
+  const one=calls.fillRect;
+  assert.ok(one>=10,'two clamp heads painted');
+  paintLatchFrame(canvas,15,[[3,4],[3,4],[25,25]]);
+  assert.equal(calls.fillRect,one*2,'duplicate and out-of-frame sockets do not create extra jaws');
+  paintLatchFrame(canvas,15,[[3,4]],{hidden:new Set(['3,4'])});
+  assert.equal(calls.fillRect,one*2,'a lifted plate releases both latches');
+  paintLatchFrame(canvas,15,[],{settling:[[3,4]]});
+  assert.equal(calls.fillRect,one*3,'a settling plate catches the tube');
+});
+
+test('exterior retains one iron material across player colors; interior adopts owner paint',()=>{
+  function renderedColors(owner,openness){
+    const used=[];
+    const ctx={
+      save(){},restore(){},translate(){},scale(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},
+      clearRect(){},fillRect(){used.push(this.fillStyle);},stroke(){},fill(){used.push(this.fillStyle);},
+    };
+    const canvas={width:0,height:0,getContext:()=>ctx};
+    paintFoldCanvas(canvas,0,0,false,openness,{color:owner});
+    return used;
+  }
+  const red=renderedColors('#b85f54',1);
+  const blue=renderedColors('#548aa6',1);
+  const sealedRed=renderedColors('#b85f54',0),sealedBlue=renderedColors('#548aa6',0);
+  assert.ok(sealedRed.includes('#54463b')&&sealedBlue.includes('#54463b'),'same rusty shell material');
+  assert.equal(sealedRed.filter(c=>c==='#54463b').length,sealedBlue.filter(c=>c==='#54463b').length);
+  assert.notDeepEqual(red,blue,'unfolded colored interior differs for different owners');
+  for(const pose of [0,.25,.5,.75,1]){
+    assert.ok(renderedColors('#64937b',pose).length>0);
+  }
+});
