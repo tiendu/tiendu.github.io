@@ -13,9 +13,9 @@ import { installCamera } from './ui/camera.mjs';
 import { escapeText } from './ui/dom.mjs';
 
 const $=id=>document.getElementById(id);
-const UNFOLD_VERSION='1.9.1';
+const UNFOLD_VERSION='1.9.2';
 document.querySelectorAll('.version').forEach(label=>label.textContent=UNFOLD_VERSION);
-document.title='UNFOLD · Ironworks v1.9.1';
+document.title='UNFOLD · Ironworks v1.9.2';
 // Works on both the original v1.6 Astro page and checkouts where the menu
 // cleanup was already applied. Never duplicate or reconstruct the setup form.
 const setupHeading=$('setup-title');

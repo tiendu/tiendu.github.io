@@ -605,3 +605,63 @@
   .frame-topbar .frame-games{font-size:6px}
   .frame-topbar>strong{font-size:8px;gap:3px}
 }
+
+
+/* 1.9.2: machine header hardware, not stickers on the top of the cabinet.
+   All three header elements sit INSIDE a shared flush nameplate. */
+.frame-topbar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;
+  min-height:48px;
+  padding:6px clamp(9px,1.4vw,16px);
+  column-gap:8px;
+  border:1px solid #6b5b42;
+  border-top:2px solid #a88e61;
+  border-bottom:3px solid #4a3d2b;
+  background:linear-gradient(180deg,#303a30 0,#202a22 3px,#19221b 4px,#19221b calc(100% - 4px),#333d2e calc(100% - 3px),#65543a 100%);
+  box-shadow:inset 0 1px #53604b,inset 0 -1px #101712;
+}
+.frame-topbar .frame-games{
+  display:inline-flex;align-items:center;justify-self:start;align-self:center;
+  width:max-content;min-height:32px;
+  padding:2px 6px 2px 4px;
+  border:0;background:transparent;box-shadow:none;
+  color:#d1c09b;text-shadow:1px 1px #080b08;
+  line-height:1.2;
+}
+.frame-topbar .frame-games:is(:hover,:focus-visible){color:#f1dda9;background:transparent}
+.frame-topbar>strong{justify-self:center;align-self:center;margin:0;white-space:nowrap}
+.frame-topbar .frame-new{
+  justify-self:end;align-self:center;box-sizing:border-box;
+  width:64px;height:30px;min-width:0;min-height:0;
+  margin:0;padding:0 8px;
+  font:700 8px/26px var(--pixel-type);
+  color:#dac69c;text-shadow:1px 1px #070a07;
+  background:linear-gradient(180deg,#111a14,#1e2a20 60%,#232f23);
+  border:1px solid #7c6b4c;
+  border-top-color:#4b5540;border-left-color:#4b5540;
+  border-bottom-color:#9b875c;border-right-color:#8d7a55;
+  box-shadow:inset 2px 2px #0b100b,inset -1px -1px #3d4e3b;
+  transform:none;
+}
+.frame-topbar .frame-new:is(:active,.is-pressed):not(:disabled){
+  transform:none;filter:none;color:#ffe1a4;
+  background:linear-gradient(180deg,#101710,#263121);
+  box-shadow:inset 3px 3px #080e09,inset -1px -1px #506143;
+}
+.frame-topbar .frame-new::after{
+  left:11px;right:11px;bottom:1px;height:2px;
+  background:#efb963;box-shadow:0 0 5px rgba(238,171,70,.36);
+}
+@media(max-width:600px){
+  .frame-topbar{min-height:43px;padding:5px 8px;gap:5px}
+  .frame-topbar .frame-games{min-height:29px;padding:2px 3px;font-size:7px}
+  .frame-topbar>strong{font-size:9px;gap:4px}
+  .frame-topbar .frame-new{width:55px;height:29px;font-size:7px;line-height:25px;padding:0 5px}
+}
+@media(max-width:360px){
+  .frame-topbar .frame-games{font-size:6px}
+  .frame-topbar>strong{font-size:8px;gap:3px}
+  .frame-topbar .frame-new{width:51px;font-size:6px}
+}

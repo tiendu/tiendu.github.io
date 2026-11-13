@@ -85,3 +85,46 @@ node --test scripts/test-unfold.mjs scripts/test-guided.mjs \
 After changing `app.mjs`, run an interactive browser smoke test in addition to
 unit tests: Solo launch, one Deploy, Refold, and two synchronized room clients.
 Use an actual phone for the final iOS rendering check.
+
+## Cloudflare multiplayer (1.9.2)
+
+Public GitHub variable: `PUBLIC_UNFOLD_BACKEND_URL=https://unfold-multiplayer.tiendu107.workers.dev`.
+The Astro page reads it at build time, then exposes a browser-side
+URL for the existing room client. GitHub Actions must forward this public
+repository variable into the build environment. The original `room-config.js`
+is preserved as-is, and no secret is embedded in the frontend.
+
+The authoritative API is implemented for both Node (`server/unfold/server.mjs`)
+and Cloudflare (`server/unfold/worker.mjs`) using the shared `RoomRegistry`.
+On Cloudflare, one SQLite-backed Durable Object serializes requests and saves
+room data; sessions and game rules remain unchanged. This is a small-game design
+and is not intended for unlimited rooms/requests.
+
+Deploy manually from repository root (requires access to the Cloudflare account):
+
+```sh
+npx wrangler@4 deploy --config wrangler.unfold.toml
+```
+
+Or use the **Deploy UNFOLD room Worker** workflow in GitHub Actions after
+setting the secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+That workflow is manual (`workflow_dispatch`) to avoid inadvertently replacing
+another Worker at the existing URL. If an existing Durable Object class was
+already deployed under this Worker name, inspect its migrations before applying
+this new `v1-unfold-rooms` migration. Deploying replaces the existing Worker
+code; existing in-memory rooms from a previous implementation won't migrate.
+
+Smoke check after deployment:
+
+```sh
+python3 scripts/check-unfold-deployment.py
+python3 scripts/check-unfold-deployment.py --smoke
+```
+
+Cloudflare 1010 from older Python-urllib checks can be caused by the default
+User-Agent on workers.dev; the updated checker sends a descriptive application
+User-Agent. A 1010 is not, by itself, evidence that the room service failed.
+
+The `RoomRegistry` continues to auto-advance turns when room requests arrive.
+Its room lifetime and reconnect mechanism are unchanged. CORS is restricted to
+`https://tiendu.github.io` and local Astro development origins by default.

@@ -1,5 +1,7 @@
 ---
 // A plain Astro page that serves the dependency-free game from public/games/unfold.
+// Public URL from the Astro build (GitHub Actions must expose vars.PUBLIC_UNFOLD_BACKEND_URL).
+const unfoldBackendUrl = (import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || "").trim();
 ---
 <!doctype html>
 <html lang="en">
@@ -16,6 +18,10 @@
   <link rel="stylesheet" href="/games/unfold/styles/operator.css">
   <meta name="unfold-room-api" content={import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || ""}>
   <script is:inline src="/games/unfold/room-config.js"></script>
+  <script define:vars={{ unfoldBackendUrl }}>
+    // GitHub Actions may pass PUBLIC_UNFOLD_BACKEND_URL to Astro at build time.
+    if (unfoldBackendUrl) window.UNFOLD_ROOM_API = unfoldBackendUrl.replace(/\/$/, '');
+  </script>
   <script is:inline type="module">
     import('/games/unfold/app.mjs').catch(error => {
       console.error('UNFOLD failed to load',error);
