@@ -1,9 +1,26 @@
 import { NETS, oriented } from './nets.mjs';
 import { newGame, player, occupied, canPlace, legalPlacements, canReclaim, refoldable, placedCells, act, endTurn, LABELS, connectedCells } from './engine.mjs';
-import { foldSvg } from './fold.mjs';
+import { foldedFaces } from './fold.mjs';
+import { paintFoldCanvas } from './canvas.mjs';
+import { paintTubeFrame } from './tubes.mjs';
 import { legalFits } from './guided.mjs';
 
 const $=id=>document.getElementById(id);
+// Keep the 1.4 Astro page compatible, including checkouts where the existing
+// v1.3 menu or public-room script has already been customized. No page rewrite.
+for(const name of ['v14.css','v15.css']){
+  if(!document.querySelector(`link[href$="/games/unfold/${name}"], style[data-unfold-sheet="${name}"]`)){
+    const link=document.createElement('link');link.rel='stylesheet';link.href=`/games/unfold/${name}`;
+    document.head.append(link);
+  }
+}
+document.querySelectorAll('.version').forEach(label=>label.textContent='1.5');
+function tubeFrame(){
+  let canvas=$('tube-frame');
+  if(!canvas){canvas=document.createElement('canvas');canvas.id='tube-frame';canvas.className='tube-frame';canvas.setAttribute('aria-hidden','true');$('board').after(canvas);}
+  return canvas;
+}
+
 const SAVE_KEY='unfold-v05'; // Keep game-state saves compatible with v0.7.
 const COLORS=['red','blue','green','gold'];
 const ARROWS=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -65,7 +82,11 @@ async function playRemoteMove(move){
   const origin=oriented(net,rotation,flipped)[0];
   const contact=[x+origin[0],y+origin[1]];
   busy=true;try{
-    if(beforeCube)await animateFold(beforeCube.net,beforeCube.rotation,beforeCube.flipped,beforeCube.cells[0],true);
+    if(beforeCube){
+      await animateFold(beforeCube.net,beforeCube.rotation,beforeCube.flipped,beforeCube.cells[0],true);
+      beforeCube.cells.forEach(([cx,cy])=>$('board').querySelector(`[data-x="${cx}"][data-y="${cy}"]`)?.classList.add('fold-lifting'));
+      await moveClosedBox(beforeCube.cells[0],contact,beforeCube.net,beforeCube.rotation,beforeCube.flipped,PLAYER_COLORS[game.active]);
+    }
     await animateFold(net,rotation,flipped,contact);
   }finally{busy=false;}
 }
@@ -99,6 +120,7 @@ async function receiveRoom(snapshot){
     if(game.winner||game.acted||!myTurn()){selected=false;resetSelection();}
     else if(!rolling&&!busy){activateAction();}
     render();
+    finishFoldVisual();
     $('room-game-note').hidden=false;
     $('room-game-note').textContent=`ROOM ${snapshot.code} · YOU: ${snapshot.seats[snapshot.seat]?.name||'GUEST'} · ${snapshot.seats.length}/4 PLAYERS`;
     $('next-game').hidden=!snapshot.host;
@@ -227,6 +249,7 @@ function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContac
     tiles.push(`<button type="button" role="gridcell" class="${classes.join(' ')}" ${cell?.kind==='cube'?`data-cube-id="${cell.id}"`:''} data-x="${x}" data-y="${y}" aria-label="${cell?.kind||'Empty'} square ${x+1},${y+1}${cubeNumber?`, cube ${cubeNumber} contact square`:''}" title="${cell?.kind||'Empty'} · ${x+1},${y+1}">${content}</button>`);
   }
   $('board').style.setProperty('--size',game.size);$('board').innerHTML=tiles.join('');
+  paintTubeFrame(tubeFrame(),game.size);
   $('board-viewport').classList.toggle('large-board',game.size>=17);
 }
 function showPicker(){
@@ -368,12 +391,21 @@ function createGrit(cells){
   setTimeout(()=>layer.replaceChildren(),680);
 }
 
-// The camera never moves; only the six linked metal plates move within the frame.
-async function animateFold(net,rot,flip,contact,reverse=false){
-  if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||animationSpeed()==='instant')return;
+// Stable renderer: one canvas for the entire operation, no filtered SVG DOM
+// reconstruction. For Refold, individual sockets uncover the black void only
+// once that particular rigid plate has lifted off the table. The frame canvas
+// stays mounted and is never repainted while an animation is running.
+function finishFoldVisual(){
+  const stage=$('fold-stage');
+  stage.hidden=true;stage.replaceChildren();
+  document.querySelectorAll('.tile.fold-lifting').forEach(tile=>tile.classList.remove('fold-lifting'));
+  $('game').classList.remove('is-unfolding');
+  animationFastForward=false;
+}
+function prepareFoldStage(contact){
   const stage=$('fold-stage'),board=$('board'),surface=$('board-surface');
   const tile=board.querySelector(`[data-x="${contact[0]}"][data-y="${contact[1]}"]`);
-  if(!tile)return;
+  if(!tile)return null;
   const surfaceRect=surface.getBoundingClientRect(),rect=tile.getBoundingClientRect();
   const first=board.querySelector('[data-x="0"][data-y="0"]')?.getBoundingClientRect();
   const second=board.querySelector('[data-x="1"][data-y="0"]')?.getBoundingClientRect();
@@ -381,33 +413,63 @@ async function animateFold(net,rot,flip,contact,reverse=false){
   stage.style.setProperty('--fx',`${rect.left+rect.width/2-surfaceRect.left}px`);
   stage.style.setProperty('--fy',`${rect.top+rect.height/2-surfaceRect.top}px`);
   stage.style.setProperty('--cube-canvas',`${pitch*10}px`);
-  stage.hidden=false;animationFastForward=false;
+  const canvas=document.createElement('canvas');canvas.width=200;canvas.height=200;
+  const mechanism=document.createElement('div');mechanism.className='mechanism';mechanism.append(canvas);
+  stage.replaceChildren(mechanism);stage.hidden=false;
   $('game').classList.add('is-unfolding');
-  const ownerColor=['#b85f54','#548aa6','#64937b','#bb984c'][game.active]||'#b85f54';
-  try{
-    await new Promise(resolve=>{
-      const start=performance.now(),duration=ANIMATION_MS[animationSpeed()]*(reverse?.83:1);
-      // Heavy acceleration/deceleration, staggered hinges inside foldSvg.
-      const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
-      let lastFrame=-100;
-      const step=now=>{
-        const t=animationFastForward?1:Math.min(1,(now-start)/duration);
-        const progress=ease(Math.max(0,Math.min(1,(t-.12)/.75)));
-        const openness=reverse?1-progress:progress;
-        const release=reverse?1-progress:ease(Math.min(1,t/.15));
-        if(now-lastFrame>=24||t>=1){
-          stage.innerHTML=`<div class="mechanism">${foldSvg(net,rot,flip,openness,{color:ownerColor,release})}</div>`;
-          lastFrame=now;
-        }
-        if(t<1)requestAnimationFrame(step);else resolve();
-      };
-      requestAnimationFrame(step);
-    });
-  }finally{
-    stage.hidden=true;stage.replaceChildren();
-    $('game').classList.remove('is-unfolding');
-    animationFastForward=false;
+  return canvas;
+}
+function liftedSockets(net,rot,flip,contact,open){
+  const faces=foldedFaces(net,rot,flip,open),root=faces[0].flat;
+  for(const face of faces){
+    if(face.number===1)continue; // Contact face holds the closed cube in place.
+    const x=contact[0]+face.flat[0]-root[0],y=contact[1]+face.flat[1]-root[1];
+    const tile=$('board').querySelector(`[data-x="${x}"][data-y="${y}"]`);
+    if(!tile)continue;
+    tile.classList.toggle('fold-lifting',face.center[2]>.035);
   }
+}
+// Remain at the same fixed camera position. Closed box relocation is a brief
+// motion of the box, NOT a camera pan or six disconnected tiles teleporting.
+async function moveClosedBox(from,to,net,rot,flip,color){
+  if(animationSpeed()==='instant')return;
+  const canvas=prepareFoldStage(from);if(!canvas)return;
+  paintFoldCanvas(canvas,net,rot,flip,0,{color,release:0});
+  const stage=$('fold-stage'),originX=parseFloat(stage.style.getPropertyValue('--fx')),originY=parseFloat(stage.style.getPropertyValue('--fy'));
+  const rect=$('board').querySelector(`[data-x="${to[0]}"][data-y="${to[1]}"]`)?.getBoundingClientRect();
+  const sr=$('board-surface').getBoundingClientRect();if(!rect)return;
+  const targetX=rect.left+rect.width/2-sr.left,targetY=rect.top+rect.height/2-sr.top;
+  const duration=animationSpeed()==='quick'?130:230,start=performance.now();
+  await new Promise(resolve=>{
+    const step=now=>{
+      const t=animationFastForward?1:Math.min(1,(now-start)/duration),ease=t*t*(3-2*t);
+      stage.style.setProperty('--fx',`${originX+(targetX-originX)*ease}px`);
+      stage.style.setProperty('--fy',`${originY+(targetY-originY)*ease}px`);
+      if(t<1)requestAnimationFrame(step);else resolve();
+    };requestAnimationFrame(step);
+  });
+}
+async function animateFold(net,rot,flip,contact,reverse=false){
+  if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||animationSpeed()==='instant')return;
+  const canvas=prepareFoldStage(contact);if(!canvas)return;
+  animationFastForward=false;
+  const ownerColor=['#b85f54','#548aa6','#64937b','#bb984c'][game.active]||'#b85f54';
+  const duration=ANIMATION_MS[animationSpeed()]*(reverse?.83:1);
+  await new Promise(resolve=>{
+    const start=performance.now();
+    const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+    const step=now=>{
+      const t=animationFastForward?1:Math.min(1,(now-start)/duration);
+      const progress=ease(Math.max(0,Math.min(1,(t-.12)/.75)));
+      const openness=reverse?1-progress:progress;
+      const release=reverse?1-progress:ease(Math.min(1,t/.15));
+      paintFoldCanvas(canvas,net,rot,flip,openness,{color:ownerColor,release});
+      if(reverse)liftedSockets(net,rot,flip,contact,openness);
+      if(t<1)requestAnimationFrame(step);else resolve();
+    };requestAnimationFrame(step);
+  });
+  // Do NOT remove the canvas here. It stays in place until the new game state
+  // has rendered, so there cannot be one blank frame at the phase boundary.
 }
 
 async function commit(payload={}){
@@ -428,10 +490,22 @@ async function commit(payload={}){
       remoteAnimateId=snapshot.lastMove?.id;
     }catch(error){busy=false;roomError(error);render();return;}
   }
-  busy=true;foldOriginId=old?.id??null;$('confirm').disabled=true;$('frame-skip').disabled=true;drawBoard();$('placement-tools').hidden=true;
+  busy=true;foldOriginId=old?.id??null;$('confirm').disabled=true;$('frame-skip').disabled=true;$('placement-tools').hidden=true;
+  // Remove only transient selection paint. The actual board cells and the
+  // permanent tubing canvas remain mounted throughout the entire operation.
+  $('board').querySelectorAll('.preview-good,.preview-bad,.legal-anchor,.selected-anchor').forEach(tile=>{
+    tile.classList.remove('preview-good','preview-bad','legal-anchor','selected-anchor');
+    tile.querySelector('.anchor-dot')?.remove();
+  });
   const net=selectedNet,contact=anchor&&[...anchor],movedId=sourceId;
   try{
-    if(old)await animateFold(old.net,old.rotation,old.flipped,old.cells[0],true);
+    if(old){
+      await animateFold(old.net,old.rotation,old.flipped,old.cells[0],true);
+      // All six sockets are now empty while the sealed box moves. Keep the
+      // frame canvas and old board DOM; only change each old tile's surface.
+      old.cells.forEach(([x,y])=>$('board').querySelector(`[data-x="${x}"][data-y="${y}"]`)?.classList.add('fold-lifting'));
+      if(contact)await moveClosedBox(old.cells[0],contact,old.net,old.rotation,old.flipped,PLAYER_COLORS[game.active]);
+    }
     if(inPlacement())await animateFold(net,rotation,flipped,contact);
     else await timing(280);
   }finally{
@@ -440,6 +514,7 @@ async function commit(payload={}){
       lockingCubeId=action==='refold'?movedId:next.cubes.at(-1)?.id;
     }
     render();
+    finishFoldVisual();
     if(['deploy','special','refold'].includes(action)){
       const installed=next.cubes.find(c=>c.id===lockingCubeId);
       if(installed)createGrit(installed.cells);
@@ -533,9 +608,8 @@ function refreshModeHelp(){
 }
 $('room-mode').addEventListener('change',refreshModeHelp);
 refreshModeHelp();
-document.querySelectorAll('.brand .version,.frame-topbar .version').forEach(el=>{el.textContent='1.4';});
-document.title='UNFOLD · Foundry Routes';
-const style=document.createElement('link');style.rel='stylesheet';style.href='/games/unfold/v14.css';document.head.append(style);
+document.querySelectorAll('.version').forEach(el=>{el.textContent='1.5';});
+document.title='UNFOLD · Ironworks';
 
 function setZoom(level,clientX=null,clientY=null){
   const v=$('board-viewport'),before=zoom,box=v.getBoundingClientRect();

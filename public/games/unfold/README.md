@@ -142,3 +142,22 @@ this prototype is not clustered or durable across restarts.
 All network requests carry a private seat token in a POST body; invite links
 contain **only** the six-digit room code. Room tokens are stored in localStorage
 on the player's device. Rooms currently expire after two hours of inactivity.
+
+
+## v1.5 Ironworks: permanent frame + reversible canvas animation
+
+- The black sockets and round iron tubes are separate persistent render layers.
+  `tubes.mjs` paints the frame only when the board dimensions change, not on
+  every animation frame. Sparse hex bolts, collars, rust and grease articulate
+  the joints without decorating every socket.
+- `canvas.mjs` draws six rigid, thick plates from `foldedFaces()` into the same
+  canvas during Unfold and Refold. Exterior armor and inner road surfaces have
+  different materials and visible retaining pins / rivets.
+- When Refold begins, road tiles remain visible until their panels physically
+  lift. They reveal the black sockets progressively; the sealed box moves to its
+  next contact before reopening. The static tube frame is never replaced.
+- The animation canvas stays in place until the new board is painted, avoiding
+  the old blank-frame handoff. The camera does not automatically pan or zoom.
+- The existing Solo, Co-op, Competitive, rooms and probabilities are unchanged.
+- The old `unfold-v1.4-mobile-unfold-hotfix.patch` is superseded by v1.5.
+  Apply v1.5 directly to v1.4, without the earlier experimental hotfix.
