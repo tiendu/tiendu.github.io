@@ -72,9 +72,9 @@
     </section>
     <main id="game" hidden>
       <section class="play-area" aria-label="Assembly table">
-        <div class="board-note">
-          <div class="table-mission"><span id="mode-label" class="eyebrow">SOLO</span><strong id="mission-title">Connect S to ★</strong></div>
-          <div class="board-meta"><span id="board-hint">Spin to begin</span><div class="zoom-actions" aria-label="Board camera"><button id="zoom-out" type="button" aria-label="Zoom out">−</button><button id="zoom-in" type="button" aria-label="Zoom in">+</button><button id="zoom-fit" type="button">FIT</button><span id="zoom-level">100%</span></div></div>
+        <div class="board-note" aria-label="Current game status">
+          <div class="board-note-mode"><span id="mode-label" class="eyebrow">SOLO · STANDARD · 15×15 · TURN 1</span></div>
+          <div class="board-note-mission"><strong id="mission-title">Connect S to ★</strong><span id="board-hint" role="status">Ready</span></div>
         </div>
         <div class="table-rig">
           <div class="frame-topbar">
@@ -97,6 +97,7 @@
           <div class="board-frame" id="board-frame">
             <div class="board-corner c-tl" aria-hidden="true"></div><div class="board-corner c-tr" aria-hidden="true"></div>
             <div class="board-corner c-bl" aria-hidden="true"></div><div class="board-corner c-br" aria-hidden="true"></div>
+            <button id="zoom-fit" class="frame-fit" type="button" aria-label="Fit entire board to view" title="Reset camera to fit">FIT</button>
             <div id="board-viewport" class="board-viewport">
               <div id="board-surface" class="board-surface">
                 <div id="board" class="board" role="grid" aria-label="Iron sockets suspended over darkness, six-panel road modules and crates"></div>
@@ -131,6 +132,12 @@
         <details class="game-options"><summary>OPTIONS / HOW TO PLAY</summary>
           <label for="animation-speed">Unfold speed</label>
           <select id="animation-speed"><option value="normal">Normal · 1.6s</option><option value="quick">Quick · 0.7s</option><option value="instant">Instant</option></select>
+          <div class="camera-options" aria-label="Optional camera controls">
+            <span>CAMERA</span>
+            <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
+            <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+            <output id="zoom-level" aria-live="off">100%</output>
+          </div>
           <p>Roll one action per turn. Tap any marked socket, cycle legal layouts using NEXT FIT, then UNFOLD. Super Deploy lets you select any of the 11 nets. Reclaim and Refold require an eligible target. Skip forfeits the roll.</p>
         </details>
         <p id="instruction" class="sr-only" role="status" aria-live="polite">Roll the action reel.</p>

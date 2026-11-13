@@ -494,3 +494,114 @@
 @media(prefers-reduced-motion:reduce){
   .setup button.primary,.room-entry button.primary,.room-lobby button.primary,.result button.primary,.frame-new,.frame-skip,.zoom-actions button,.context-toolbar-keys button,.lobby-buttons button,#resume{filter:none}
 }
+
+/* Ironworks control fit-out: recessed actions, no loose buttons on the nameplate.
+   The board's upper rim reserves space for FIT; no playable socket is covered. */
+.masthead .back{border:0;background:transparent;box-shadow:none;text-shadow:1px 1px #080b08}
+.frame-topbar{
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  min-height:46px;align-items:center;gap:8px;padding:6px 12px;
+  border:2px solid #736044;border-bottom:3px solid #55452f;
+  background:linear-gradient(180deg,#3a4135 0 2px,#202921 2px 15%,#172018 15% 83%,#494334 83% 92%,#746043 92%);
+  box-shadow:inset 0 1px #9c885d,inset 0 -2px #101611;
+}
+.frame-topbar::before{display:none}
+.frame-topbar .frame-games{
+  justify-self:start;align-self:center;display:inline-flex;min-height:32px;
+  padding:4px 2px;background:none;border:0;box-shadow:none;
+  color:#bcaf8c;text-shadow:1px 2px #070a07;
+  font:700 8px/1.4 var(--pixel-type);letter-spacing:0;
+}
+.frame-topbar .frame-games:is(:hover,:focus-visible){color:#f0d9a8;text-decoration:none}
+.frame-topbar .frame-games:focus-visible{outline:1px dotted #e2c28c;outline-offset:2px}
+.frame-topbar>strong{
+  justify-self:center;display:inline-flex;align-items:center;gap:6px;
+  margin:0;line-height:1.5;color:#e9d4a4;text-shadow:1px 1px #070a07;
+  font-size:clamp(9px,1.3vw,11px);
+}
+.frame-topbar .frame-new{
+  justify-self:end;align-self:center;min-width:58px;min-height:32px;
+  margin:0;padding:6px 9px 7px;
+  background:linear-gradient(180deg,#202a20 0 60%,#273328 60%);
+  border:2px solid #857452;border-top-color:#5f644d;border-left-color:#676b53;
+  border-bottom-color:#b3a072;border-right-color:#ad956a;
+  color:#e6d2a8;text-shadow:1px 1px #060907;
+  box-shadow:inset 2px 3px #0a100c,inset -1px -2px #3e503d;
+  transform:none;
+}
+.frame-topbar .frame-new:is(:active,.is-pressed):not(:disabled){
+  transform:none;filter:none;background:linear-gradient(180deg,#111a13,#28331f);
+  box-shadow:inset 3px 4px #080e09,inset -1px -1px #485741;
+}
+.frame-topbar .frame-new::after{left:10px;right:10px;bottom:2px;height:2px}
+
+/* Compact instrument readout: mode above, mission and fit count below. */
+.board-note{
+  display:flex;flex-direction:column;align-items:stretch;justify-content:center;
+  min-height:41px;gap:3px;padding:3px 5px 5px;
+  font-family:var(--pixel-type);line-height:1.35;
+}
+.board-note-mode,.board-note-mission{display:flex;align-items:center;min-width:0}
+.board-note-mode .eyebrow{margin:0;font:700 6px/1.4 var(--pixel-type);color:#b99c70;white-space:nowrap}
+.board-note-mission{gap:8px;justify-content:space-between}
+.board-note-mission strong{
+  flex:1;min-width:0;max-width:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:700 10px/1.5 var(--pixel-type);letter-spacing:0;color:#f0d8a2;
+}
+#board-hint{
+  flex:none;max-width:44%;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;text-align:right;font:700 9px/1.4 var(--narrow-type);color:#b4bba4;
+}
+
+/* FIT sits in a machined pocket above the playing surface, not over the grid. */
+.board-frame{padding:27px 3px 3px}
+.board-frame::before{
+  content:'CAMERA / FIT';position:absolute;top:8px;left:11px;
+  font:700 7px/1 var(--narrow-type);letter-spacing:.08em;color:#a3946f;
+  pointer-events:none;text-shadow:1px 1px #0b0e0a;
+}
+.board-frame .frame-fit{
+  position:absolute;z-index:7;top:2px;right:8px;
+  min-height:23px;min-width:54px;padding:3px 8px;
+  color:#e2cfa2;background:linear-gradient(180deg,#1b251b,#2c3629);
+  border:2px solid #8b7752;border-top-color:#626952;border-left-color:#697058;
+  border-bottom-color:#aa9062;border-right-color:#a79164;
+  box-shadow:inset 2px 2px #0c130d,inset -1px -1px #465541;
+  font:700 8px/1 var(--pixel-type);text-shadow:1px 1px #090c09;
+  touch-action:manipulation;
+}
+.board-frame .frame-fit:is(:active,.is-pressed):not(:disabled){
+  background:#192419;box-shadow:inset 3px 3px #080e08,inset -1px -1px #4c5b40;
+  color:#ffdc92;
+}
+.board-frame .frame-fit:focus-visible{outline:2px solid #f4d28a;outline-offset:1px}
+.camera-options{display:flex;align-items:center;gap:7px;margin:10px 0 8px;flex-wrap:wrap}
+.camera-options>span{font:700 8px/1.5 var(--pixel-type);color:#c5b18b;margin-right:3px}
+.camera-options button{
+  min-width:45px;min-height:37px;padding:7px 10px;
+  color:#edd5a6;background:#293529;
+  border:2px solid #967c53;border-top-color:#c1a36c;
+  box-shadow:inset 0 2px #58644f;
+  font:700 12px/1 var(--pixel-type);touch-action:manipulation;
+}
+.camera-options button:is(:active,.is-pressed){background:#192219;box-shadow:inset 2px 2px #0c100b;color:#ffe0a0}
+.camera-options output{margin-left:4px;font:700 10px/1 var(--narrow-type);color:#bcb398}
+@media(max-width:650px){
+  .board-note{gap:2px;min-height:37px;padding:2px 4px 4px}
+  .board-note-mode .eyebrow{font-size:6px}
+  .board-note-mission strong{font-size:8px}
+  #board-hint{display:block;font-size:8px;max-width:35%}
+  .frame-topbar{min-height:41px;padding:4px 8px}
+  .frame-topbar .frame-games{font-size:7px}
+  .frame-topbar>strong{font-size:9px}
+  .frame-topbar .frame-new{min-height:32px;min-width:54px;padding:5px 7px}
+  .board-frame{padding-top:25px}
+  .board-frame::before{top:7px;font-size:6px}
+  .board-frame .frame-fit{min-height:21px;top:2px;right:6px}
+}
+@media(max-width:370px){
+  .board-note-mode .eyebrow{font-size:5px}
+  .board-note-mission strong{font-size:7px}
+  .frame-topbar .frame-games{font-size:6px}
+  .frame-topbar>strong{font-size:8px;gap:3px}
+}

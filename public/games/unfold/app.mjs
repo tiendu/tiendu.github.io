@@ -13,9 +13,9 @@ import { installCamera } from './ui/camera.mjs';
 import { escapeText } from './ui/dom.mjs';
 
 const $=id=>document.getElementById(id);
-const UNFOLD_VERSION='1.9';
+const UNFOLD_VERSION='1.9.1';
 document.querySelectorAll('.version').forEach(label=>label.textContent=UNFOLD_VERSION);
-document.title='UNFOLD · Ironworks v1.9';
+document.title='UNFOLD · Ironworks v1.9.1';
 // Works on both the original v1.6 Astro page and checkouts where the menu
 // cleanup was already applied. Never duplicate or reconstruct the setup form.
 const setupHeading=$('setup-title');
@@ -280,7 +280,8 @@ function showPicker(){
   $('fit-count').textContent=count?`${fitIndex+1} / ${count} FITS`:'NO FITS';
   $('next-fit').disabled=count<2||busy||rolling||game.acted;
   $('confirm').disabled=!anchor||!canAt(anchor)||busy||rolling||game.acted;
-  $('board-hint').textContent=`${positions.size} legal landing ${positions.size===1?'spot':'spots'}`;
+  $('board-hint').textContent=`${positions.size} ${positions.size===1?'FIT':'FITS'}`;
+  $('board-hint').title=`${positions.size} legal landing ${positions.size===1?'spot':'spots'}`;
   $('context-cube').textContent=action==='refold'&&sourceId!==null?String(game.cubes.find(c=>c.id===sourceId)?.number||'?').padStart(2,'0'):String(game.nextCubeNumber||1).padStart(2,'0');
 }
 function render(){if(!game)return;
