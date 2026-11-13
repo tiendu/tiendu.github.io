@@ -9,19 +9,40 @@ import { legalFits } from './guided.mjs';
 const $=id=>document.getElementById(id);
 // Keep the 1.4 Astro page compatible, including checkouts where the existing
 // v1.3 menu or public-room script has already been customized. No page rewrite.
-for(const name of ['v14.css','v15.css','v16.css','v17.css']){
+for(const name of ['v14.css','v15.css','v16.css','v17.css','v18.css']){
   if(!document.querySelector(`link[href$="/games/unfold/${name}"], style[data-unfold-sheet="${name}"]`)){
     const link=document.createElement('link');link.rel='stylesheet';link.href=`/games/unfold/${name}`;
     document.head.append(link);
   }
 }
-document.querySelectorAll('.version').forEach(label=>label.textContent='1.7');
-document.title='UNFOLD · Iron Reel v1.7';
+document.querySelectorAll('.version').forEach(label=>label.textContent='1.8');
+document.title='UNFOLD · Iron Console v1.8';
 // Works on both the original v1.6 Astro page and checkouts where the menu
 // cleanup was already applied. Never duplicate or reconstruct the setup form.
 const setupHeading=$('setup-title');
 if(setupHeading&&setupHeading.textContent.trim().toUpperCase()!=='PLAY')setupHeading.textContent='PLAY';
 for(const selector of ['#setup > .intro-mark','#setup > .eyebrow','#setup > .intro'])document.querySelector(selector)?.remove();
+
+function installMechanicalPress(){
+  const selector='button';
+  let active=null;
+  const mark=(el,on)=>{ if(el&&el.matches?.(selector)&&!el.disabled)el.classList.toggle('is-pressed',on); };
+  const clear=()=>{ mark(active,false); active=null; };
+  document.addEventListener('pointerdown',event=>{
+    const el=event.target.closest(selector);
+    if(!el||el.disabled)return;
+    clear(); active=el; mark(active,true);
+  },true);
+  for(const type of ['pointerup','pointercancel'])document.addEventListener(type,clear,true);
+  window.addEventListener('blur',clear);
+  document.addEventListener('keydown',event=>{
+    if((event.key===' '||event.key==='Enter')&&document.activeElement?.matches?.(selector))mark(document.activeElement,true);
+  },true);
+  document.addEventListener('keyup',event=>{
+    if((event.key===' '||event.key==='Enter')&&document.activeElement?.matches?.(selector))mark(document.activeElement,false);
+  },true);
+}
+installMechanicalPress();
 
 function latchFrame(){
   let canvas=$('latch-frame');
@@ -653,8 +674,8 @@ function refreshModeHelp(){
 }
 $('room-mode').addEventListener('change',refreshModeHelp);
 refreshModeHelp();
-document.querySelectorAll('.version').forEach(el=>{el.textContent='1.7';});
-document.title='UNFOLD · Iron Reel v1.7';
+document.querySelectorAll('.version').forEach(el=>{el.textContent='1.8';});
+document.title='UNFOLD · Iron Console v1.8';
 
 function setZoom(level,clientX=null,clientY=null){
   const v=$('board-viewport'),before=zoom,box=v.getBoundingClientRect();
