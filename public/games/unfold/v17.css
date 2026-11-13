@@ -1,0 +1,263 @@
+/* UNFOLD 1.7 — iron operator's console. Purely presentational.
+   Gameplay, tube frame and installed panels retain their v1.6 geometry. */
+:root{
+  --console-iron:#313730;
+  --console-rim:#9d7c4e;
+  --console-brass:#d1a964;
+  --console-shadow:#080b09;
+}
+/* This is a machine, not a stack of beveled web cards. Place fasteners
+   only at structural edges, never on each moving tile. */
+.masthead{
+  position:relative;min-height:48px;padding:5px 8px 9px;
+  border-bottom:3px solid #776346;
+  background:linear-gradient(180deg,#22271f 0 3px,#141913 3px 90%,#524630 90%);
+  box-shadow:inset 0 -1px #bd9b64,0 4px 0 #080a08;
+}
+.masthead::before,.frame-topbar::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:url('./assets/screw-v17.png'),url('./assets/screw-v17.png');
+  background-repeat:no-repeat;background-size:10px 10px;
+  background-position:4px center,calc(100% - 4px) center;
+  image-rendering:pixelated;opacity:.85;
+}
+.masthead .brand{
+  display:inline-flex;align-items:center;gap:6px;min-width:0;
+  color:#e7ce96;text-shadow:2px 2px #080907;
+  letter-spacing:0;
+}
+.masthead .brand-mark{font-size:20px;line-height:1;margin:0}
+.masthead .version,.frame-topbar .version{
+  color:#c4a16d;border:1px solid #66543b;padding:3px 5px;
+  background:#111710;box-shadow:inset 0 1px #84704a;
+  font-size:7px;
+}
+.masthead .back,.frame-games{color:#ddc495;text-decoration:none}
+.masthead .back:hover,.frame-games:hover{color:#ffe4a5}
+
+/* Setup: one solid cast-iron cabinet with chamfered edging and corner fixings.
+   Keep the compact PLAY copy from the previous menu-cleanup patch. */
+.setup{max-width:600px;margin:clamp(20px,5svh,54px) auto 26px}
+.setup h1{
+  margin:0 0 12px;font:900 clamp(18px,3vw,24px)/1.7 var(--pixel-type);
+  color:#f0d6a0;text-shadow:3px 3px #060a07;
+}
+.setup .mode-tagline{margin:0 0 14px;color:#c7b493}
+.setup .entry-tabs{gap:7px;margin:0 0 8px}
+.setup .entry-tabs button{
+  position:relative;min-height:52px;padding:8px 9px 11px;
+  background:#2b3129 url('./assets/console-v17.png') repeat;
+  background-size:64px 64px;
+  border:3px solid #665b49;border-top-color:#a18b64;
+  border-bottom-color:#453d31;color:#ded0aa;
+  box-shadow:inset 0 2px #4b5449,inset -2px -3px #171c16,0 4px #070907;
+  text-shadow:1px 1px #111710;
+  transform:translateY(0);transition:transform .08s steps(2,end),box-shadow .08s steps(2,end);
+}
+.setup .entry-tabs button:before{
+  content:"";position:absolute;top:4px;left:5px;width:9px;height:9px;
+  background:url('./assets/screw-v17.png') center/contain no-repeat;
+  image-rendering:pixelated;pointer-events:none;
+}
+.setup .entry-tabs button.active{
+  background:#a9824d url('./assets/console-v17.png') repeat;
+  background-blend-mode:overlay;
+  color:#151810;border-color:#e4bd7b;
+  box-shadow:inset 0 3px #674626,inset 2px 0 #cb9b62,0 1px #0a0d0a;
+  transform:translateY(3px);text-shadow:none;
+}
+.setup .entry-tabs button.active::after{
+  content:"";display:block;position:absolute;left:calc(50% - 10px);bottom:2px;
+  width:20px;height:3px;background:#f6d59a;box-shadow:0 0 0 1px #4e3922;
+}
+.setup #start-form,.setup .room-entry,.room-lobby{
+  position:relative;isolation:isolate;
+  padding:clamp(14px,3vw,23px);
+  background-color:#262b23;
+  background-image:url('./assets/console-v17.png'),linear-gradient(180deg,#343a2f,#1e241e);
+  background-size:64px 64px,auto;
+  border:4px solid #92754d;
+  border-top-color:#cba56c;border-left-color:#cba56c;
+  border-right-color:#584932;border-bottom-color:#584932;
+  box-shadow:inset 0 0 0 3px #131a14,inset 0 5px #6b6348,0 5px 0 #050805;
+}
+.setup #start-form::before,.setup .room-entry::before,.room-lobby::before{
+  content:"";position:absolute;inset:3px;z-index:2;pointer-events:none;
+  background-image:url('./assets/screw-v17.png'),url('./assets/screw-v17.png'),url('./assets/screw-v17.png'),url('./assets/screw-v17.png');
+  background-repeat:no-repeat;background-size:12px 12px;
+  background-position:left top,right top,left bottom,right bottom;
+  image-rendering:pixelated;
+}
+.setup form>label,.room-entry label{color:#e2c48d;font:9px/1.6 var(--pixel-type);margin:2px 0 0}
+.setup select,.setup input,.room-entry select,.room-entry input{
+  min-height:48px;padding:9px 13px;
+  font:9px/1.6 var(--pixel-type);
+  border:3px solid #84704e;border-top-color:#443b2d;border-left-color:#443b2d;
+  border-bottom-color:#b89a67;border-right-color:#b89a67;
+  color:#ecd8b0;background:#101711;
+  box-shadow:inset 3px 3px #050907,inset -2px -2px #28352a;
+  border-radius:0;
+}
+.setup select,.room-entry select{
+  appearance:none;-webkit-appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,#dbba7d 50%),linear-gradient(135deg,#dbba7d 50%,transparent 50%),linear-gradient(90deg,#70583b,#70583b);
+  background-position:calc(100% - 20px) calc(50% + 1px),calc(100% - 15px) calc(50% + 1px),calc(100% - 39px) center;
+  background-size:5px 5px,5px 5px,2px 60%;background-repeat:no-repeat;
+  padding-right:45px;
+}
+.setup .advanced{margin:3px 0;padding:0 3px;font-family:var(--narrow-type)}
+.setup .advanced summary{padding:6px 0;cursor:pointer;color:#ccb791}
+.setup .small-note{font-size:11px;line-height:1.55}
+/* Physical push-button: beveled top cap, compressed bottom edge and no bounce. */
+.setup button.primary,.room-entry button.primary,.room-lobby button.primary,.result button.primary{
+  position:relative;min-height:52px;margin-top:9px;padding:12px 22px;
+  border:3px solid #e8c58a;border-bottom-color:#825c33;
+  color:#141a13;font:9px/1.5 var(--pixel-type);
+  background:#bf9655 url('./assets/console-v17.png') repeat;
+  background-blend-mode:soft-light;
+  box-shadow:inset 0 3px #f5d79e,inset 0 -4px #91642c,0 5px #0a0c09;
+  border-radius:0;text-shadow:none;
+}
+.setup button.primary::before,.room-entry button.primary::before,.room-lobby button.primary::before{
+  content:"";position:absolute;inset:7px 10px;pointer-events:none;
+  background:url('./assets/screw-v17.png') left center/10px 10px no-repeat,url('./assets/screw-v17.png') right center/10px 10px no-repeat;
+  image-rendering:pixelated;
+}
+.setup button.primary:active:not(:disabled),.room-entry button.primary:active:not(:disabled),.room-lobby button.primary:active:not(:disabled),.result button.primary:active:not(:disabled){
+  transform:translateY(4px);box-shadow:inset 0 5px #79552d,inset 0 -2px #e2b879,0 1px #0a0c09;
+}
+.setup #resume{min-height:44px;margin-top:16px;padding:9px 16px;border:2px solid #8a7552;background:#151b15}
+.room-entry h2{color:#f0cd90}
+.room-lobby{margin-top:15px}
+.room-lobby .lobby-seat{background:#141b15}
+
+/* Board mounted operator rail. The pipe-grid below is deliberately untouched. */
+.table-rig{border-color:#a5885c}
+.frame-topbar{
+  position:relative;min-height:36px;padding:5px 18px;
+  background:linear-gradient(#2b332a 0 3px,#172018 3px 86%,#5f5237 86%);
+  border:2px solid #92764d;border-bottom-color:#4e4333;
+  box-shadow:inset 0 1px #d2af70,0 2px #080907;
+}
+.frame-topbar strong{color:#ecd5a0;text-shadow:1px 2px #090c0a}
+.frame-topbar .frame-new{
+  min-height:32px;padding:6px 9px;min-width:54px;
+  border:2px solid #ad8b55;border-top-color:#e4b975;
+  box-shadow:inset 0 2px #5d654b,0 3px #090b09;
+  color:#f4d8a2;background:#303b2f;
+}
+.frame-command{
+  position:relative;margin:4px 0 5px;padding:5px 9px;
+  border:3px solid #9f8156;border-top-color:#ccab76;
+  border-bottom-color:#584933;
+  background:#202820 url('./assets/console-v17.png') repeat;
+  background-size:64px 64px;
+  box-shadow:inset 0 0 0 3px #0c140e,0 3px 0 #080907;
+}
+.frame-command:before{
+  content:"";position:absolute;inset:3px;pointer-events:none;
+  background-image:url('./assets/screw-v17.png'),url('./assets/screw-v17.png');
+  background-repeat:no-repeat;background-size:9px 9px;
+  background-position:left center,right center;
+  image-rendering:pixelated;
+}
+.frame-status{min-height:55px;gap:10px;justify-content:space-between;padding:0 9px}
+.frame-turn{flex:0 1 auto}
+.frame-turn strong{color:#ead49f}
+.frame-skip,.zoom-actions button,.frame-new,.context-toolbar-keys button,.lobby-buttons button{
+  transition:transform .075s steps(2,end),box-shadow .075s steps(2,end),filter .075s;
+  touch-action:manipulation;border-radius:0;
+}
+.frame-skip{
+  background:#49392b;min-height:42px;min-width:70px;padding:5px 9px;
+  border:2px solid #ac8658;border-top-color:#d5ac77;border-bottom-color:#513a2d;
+  box-shadow:inset 0 3px #74553b,0 4px #090b08;
+}
+.frame-skip:active:not(:disabled),.frame-new:active:not(:disabled),.zoom-actions button:active:not(:disabled),.context-toolbar-keys button:active:not(:disabled){
+  transform:translateY(3px);box-shadow:inset 0 3px #161d15,0 1px #080907;
+}
+/* A framed single-line selector drum, NOT a static title badge. The track
+   still contains exactly the six possible outcomes in the original order. */
+.reel-scene{
+  position:relative;flex:none;width:clamp(128px,16vw,175px);
+  padding:5px 10px 5px 19px;gap:1px;
+  background:#252a21;border:3px solid #987a51;
+  border-top-color:#d0af76;border-bottom-color:#463c2b;
+  box-shadow:inset 0 0 0 2px #11170f,0 3px #080a08;
+}
+.reel-scene::before{
+  content:"";position:absolute;z-index:3;top:calc(50% - 8px);left:3px;
+  width:10px;height:16px;
+  background:#b68a50;clip-path:polygon(0 0,100% 50%,0 100%);
+  filter:drop-shadow(1px 1px #080b09);pointer-events:none;
+}
+.reel-scene::after{
+  content:"";position:absolute;z-index:3;top:2px;right:2px;
+  width:6px;height:6px;background:#b08d57;
+  box-shadow:-1px 1px #30291f,0 0 0 1px #151a14,0 50px #b08d57;
+  pointer-events:none;
+}
+.reel-window{
+  position:relative;height:44px;overflow:hidden;
+  background:#080b08;border:2px solid #aa8654;
+  box-shadow:inset 2px 2px #000,inset -2px -2px #3c4637;
+  isolation:isolate;
+}
+.reel-window::before,.reel-window::after{
+  content:"";position:absolute;z-index:4;left:0;right:0;height:8px;pointer-events:none;
+}
+.reel-window::before{top:0;background:linear-gradient(#050806e8,transparent)}
+.reel-window::after{bottom:0;background:linear-gradient(transparent,#040705da)}
+.reel-track{--reel-cell:40px;display:flex;flex-direction:column;will-change:transform}
+.reel-track span{
+  flex:0 0 40px;height:40px;min-height:40px;padding:0 4px;
+  display:flex;align-items:center;justify-content:center;
+  font:700 8px/1.2 var(--pixel-type);color:#f0d294;
+  text-shadow:1px 1px #000;white-space:nowrap;
+}
+.reel-window .reel-pointer{display:none}
+.reel-mark{display:none}
+.reel-scene.spinning .reel-window{animation:reel-vibrate .13s steps(2,end) infinite}
+.reel-scene.spinning .reel-track span{color:#d2b88a}
+.reel-scene.clunk .reel-window{animation:reel-clunk .18s steps(3,end) both}
+.reel-scene.clunk .reel-track span{color:#ffe3a7}
+@keyframes reel-vibrate{0%,100%{transform:translateY(0)}50%{transform:translateY(1px)}}
+@keyframes reel-clunk{0%{transform:translateY(-2px)}35%{transform:translateY(2px)}100%{transform:translateY(0)}}
+.reel-action{display:none}
+.zoom-actions button{min-height:34px;min-width:34px;border:2px solid #90764d;border-top-color:#caa86d;background:#29352a;box-shadow:inset 0 2px #5c674d,0 3px #080b08}
+.zoom-actions #zoom-fit{min-width:46px}
+.context-tools{border:3px solid #a48a61;background:#151e16;box-shadow:inset 0 0 0 2px #313a2d,0 4px #080b09}
+.context-toolbar-keys .context-confirm{background:#bb9256;border:2px solid #e5c182}
+/* Keep buttons and controls large enough on phones despite their metal edges. */
+@media(max-width:600px){
+  .masthead{min-height:42px;padding-left:13px;padding-right:13px}
+  .masthead::before{opacity:.4}
+  .setup{margin:18px auto 24px}
+  .setup h1{font-size:16px;margin-bottom:7px}
+  .setup .entry-tabs{gap:5px}
+  .setup .entry-tabs button{min-height:46px;padding:5px 3px 8px;font-size:7px}
+  .setup .entry-tabs button:before{width:6px;height:6px;top:2px;left:2px}
+  .setup #start-form,.setup .room-entry{padding:15px 12px;border-width:3px}
+  .setup select,.setup input,.room-entry select,.room-entry input{min-height:44px;font-size:9px}
+  .setup button.primary,.room-entry button.primary{min-height:48px}
+  .frame-topbar{padding:3px 9px;min-height:35px}
+  .frame-topbar::before{display:none}
+  .frame-command{padding:3px 6px;border-width:2px}
+  .frame-status{min-height:51px;padding:0 3px;gap:5px}
+  .reel-scene{width:clamp(115px,36vw,147px);padding:3px 5px 3px 15px;border-width:2px}
+  .reel-scene::after{display:none}
+  .reel-window{height:42px;border-width:2px}
+  .reel-track{--reel-cell:38px}
+  .reel-track span{height:38px;min-height:38px;flex-basis:38px;font-size:7px}
+  .frame-skip{min-width:60px;min-height:40px;padding:4px 5px;font-size:7px}
+  .zoom-actions button{min-height:32px;min-width:32px}
+}
+@media(max-width:360px){
+  .reel-scene{width:112px}
+  .reel-track span{font-size:6px}
+  .frame-turn strong{font-size:6px}
+}
+@media(prefers-reduced-motion:reduce){
+  .reel-scene.spinning .reel-window,.reel-scene.clunk .reel-window{animation:none}
+  .setup .entry-tabs button,.frame-skip,.frame-new,.zoom-actions button{transition:none}
+}
