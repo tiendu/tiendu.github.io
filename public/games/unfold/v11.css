@@ -1,0 +1,180 @@
+/* UNFOLD v1.1 · IRON REEL
+   A quiet 8/16-bit iron grid over darkness. All placement buttons are
+   contextual to the cube on the board, never attached to the top rail. */
+:root{--iron-black:#020403;--iron-shadow:#151918;--rust:#894a30;--brass:#c99e5e}
+html,body{background:#090b09;color:#e4d7b7}
+body{background-image:repeating-linear-gradient(0deg,#080a08 0 3px,#0b0d0a 3px 6px)}
+.shell{width:min(1250px,100%);padding:8px clamp(7px,1.7vw,22px) 15px}
+.masthead{min-height:42px;padding-bottom:4px;border-color:#463c2d}
+.game-heading{margin:7px 0 5px}
+.game-heading .eyebrow{margin-bottom:1px}
+.game-layout{grid-template-columns:minmax(0,1fr) minmax(255px,295px);gap:clamp(12px,1.65vw,23px);align-items:start}
+/* Fit the entire square table to the real height of a laptop screen by default.
+   No artificial browser zoom or camera scaling is needed at load time. */
+.play-area{width:min(100%,calc(100dvh - 265px),800px);justify-self:center;margin:0 auto}
+.board-note{min-height:27px;font-size:10px}
+.board-meta span{font-size:10px}
+.table-rig{
+  padding:4px;border:4px solid #4f4637;background:#292820;
+  background-image:none;border-radius:0;
+  box-shadow:inset 0 0 0 2px #967248,0 5px 0 #0a0b09,0 8px 14px #000a;
+}
+.rig-stamp,.rig-foot{height:13px;padding:0 5px;color:#bfa475;font-size:8px;text-shadow:none}
+.rig-stamp span:last-child{color:#887a60}
+.rig-foot{height:11px}
+.board-frame{
+  padding:3px;border:3px solid #8d6843;
+  background:#252920;background-image:none;
+  box-shadow:inset 0 0 0 2px #121712,inset 0 4px #4b3726;
+}
+.bolt{width:7px;height:7px;border:1px solid #1e201b;background:#a9854d;box-shadow:none}
+.bolt::after{top:3px;left:1px;right:1px}
+.frame-command{
+  padding:2px 5px;margin:0 0 3px;border:1px solid #5e4d36;
+  background:#191e19;background-image:none;box-shadow:inset 0 0 0 1px #343b30;
+}
+.frame-status{min-height:27px;font-size:9px}
+.frame-led{width:7px;height:7px;box-shadow:0 0 0 2px #161912;background:#b07b3e}
+.frame-skip{min-height:27px;min-width:60px;font:700 9px var(--pixel-type);background:#453325;box-shadow:none;border-width:1px}
+#frame-turn-label{font-size:9px}
+.board-viewport{background:#010202;border:2px solid #111814;overflow:hidden;overscroll-behavior:contain}
+.board-surface{transition:none!important;will-change:auto;transform:none!important}
+.board{
+  padding:2px;gap:2px;background:#4a4133;
+  background-image:none;box-shadow:inset 0 0 0 1px #916d46;
+}
+.tile{
+  background:#010202 url('./assets/socket-8bit.png') center/100% 100% no-repeat;
+  border:0;box-shadow:none;image-rendering:pixelated;transition:none;
+}
+.tile:hover{filter:brightness(1.12)}
+.tile[class*="road-"],.tile[class*="base-"]{
+  background-image:url('./assets/deck-8bit.png'),linear-gradient(var(--plate),var(--plate));
+  background-size:100% 100%,cover;border:1px solid #222c26;
+  box-shadow:inset 0 0 0 1px #e4d29c72,inset 0 -2px #152019;
+}
+.tile.road-red,.tile.base-red{--plate:#a7543b}
+.tile.road-blue,.tile.base-blue{--plate:#567c91}
+.tile.road-gold,.tile.base-gold{--plate:#b49a52}
+.tile.road-green,.tile.base-green{--plate:#678a6e}
+.tile.road-neutral{--plate:#616a62}
+.tile.preview-good{
+  background:#385d44 url('./assets/deck-8bit.png') center/100% 100%!important;
+  border:2px solid #dfcb7d!important;box-shadow:inset 0 0 0 1px #102419!important;
+}
+.tile.legal-anchor::after{width:20%;height:20%;border:1px solid #081710;background:#d0b76b;box-shadow:none}
+.tile.goal{background:repeating-linear-gradient(45deg,#d8ac5a 0 5px,#473921 5px 9px);border-color:#ad8a57}
+.tile.goal strong{text-shadow:none}
+.tile .contact-label{border:1px solid #bba373;background:#181c18;box-shadow:none}
+.tile.rubble{border:1px solid #362719;background:#523923 url('./assets/crate.png') center/100% 100% no-repeat}
+.tile.ruin{border:1px solid #20241f;background:#353733 url('./assets/scrap.png') center/100% 100% no-repeat}
+.tile.latch-lock::before{animation:module-lock .38s steps(3,end) both}
+/* Reduce the massive ornamented side instrument. The controls are ON the board. */
+.action-area{
+  position:sticky;top:7px;max-height:calc(100dvh - 15px);overflow-y:auto;
+  padding:9px;gap:8px;border:3px solid #81613e;
+  background:#1c211c;background-image:none;
+  box-shadow:inset 0 0 0 2px #353c30,5px 6px 0 #050605;
+}
+.roll-strip{display:grid;grid-template-columns:110px minmax(0,1fr);grid-template-areas:'die title' 'button button';padding:8px;gap:6px;background:#121913;background-image:none;border:2px solid #614b33;box-shadow:inset 0 0 0 2px #292d24}
+.action-header{border-color:#534734}
+.action-header h2,.rolled-copy strong{font-size:11px;line-height:1.6}
+.roll-controls button{font-family:var(--pixel-type);font-size:10px}
+.rolled-copy small{font-size:7px}
+/* Physical six-stop indicator reel; weight comes from its stopped motion,
+   not a perspective dice or a smooth spinning toy. */
+.reel-scene{grid-area:die;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:3px;min-width:0}
+.reel-window{position:relative;height:38px;overflow:hidden;background:#060b09;border:3px solid #b2874b;box-shadow:inset 0 0 0 2px #202a21,2px 2px 0 #080907}
+.reel-track{--reel-cell:38px;display:flex;flex-direction:column;will-change:transform;transition:none}
+.reel-track span{display:flex;justify-content:center;align-items:center;flex:none;height:38px;padding:0 4px;color:#e4cb8d;font:900 8px/1 var(--pixel-type);white-space:nowrap}
+.reel-pointer{position:absolute;z-index:2;top:7px;left:0;font-size:12px;color:#ed8f47;text-shadow:1px 1px #140e07}
+.reel-mark{font:900 7px/1.4 var(--pixel-type);color:#ac9569;letter-spacing:.03em;text-align:center}
+.roll-controls{display:none}
+.action-header{display:none}
+/* Board-local control capsule: position calculated from the selected six
+   cells. It never travels off-screen or moves the board/camera. */
+.context-tools{
+  position:absolute;top:0;left:0;width:max-content;max-width:calc(100% - 8px);
+  z-index:25;padding:3px;background:#141914;border:2px solid #d4ab62;
+  box-shadow:2px 3px 0 #030604, inset 0 0 0 2px #343a2d;
+  font-family:var(--pixel-type);pointer-events:auto;
+}
+.context-toolbar-label{display:flex;justify-content:space-between;align-items:center;gap:3px;min-height:19px;padding:0 3px;color:#d5bf8c;font-size:7px;line-height:1.3}
+.context-toolbar-label b{color:#f2e0ad}
+.context-close{min-height:20px;width:25px;padding:0!important;font:900 19px/1 var(--narrow-type);background:#392b24;border:1px solid #8f6945;box-shadow:none;color:#f0c7a2}
+.context-toolbar-keys{display:flex;gap:3px;align-items:stretch}
+.context-toolbar-keys button{flex:none;display:grid;place-items:center;min-height:42px;width:40px;padding:0;background:#333d31;border:1px solid #92724a;box-shadow:inset 0 2px #75644a,1px 2px #080a08;font:900 23px/1 var(--narrow-type);color:#f4d48a;touch-action:manipulation}
+.context-toolbar-keys button:focus-visible{outline:2px solid #f5d291;outline-offset:1px}
+.context-toolbar-keys button.context-confirm{width:83px;min-width:76px;background:#c9a360;border:2px solid #edc882;color:#1f1d15;font:900 8px/1.4 var(--pixel-type);text-shadow:none}
+.context-toolbar-keys button[hidden]{display:none!important}
+.context-placement-info{display:block;max-width:260px;padding:4px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ad9878;font:700 9px/1 var(--narrow-type)}
+.grit-layer{position:absolute;inset:0;z-index:13;pointer-events:none;overflow:visible}
+.grit-bit{position:absolute;width:4px;height:4px;background:#8e5636;box-shadow:1px 1px #241a14;image-rendering:pixelated;animation:grit-pop .48s steps(5,end) forwards;opacity:0}
+.grit-bit:nth-child(3n){background:#ad8757;width:3px;height:3px}
+.grit-bit:nth-child(5n){background:#454b42}
+@keyframes grit-pop{0%{transform:translate(0,0);opacity:0}12%{opacity:1}65%{opacity:.8}100%{transform:translate(var(--dx),var(--dy));opacity:0}}
+.fold-stage .mechanism{filter:drop-shadow(2px 3px 0 #030706)}
+.is-unfolding .board-viewport{cursor:pointer;overflow:hidden}
+.is-unfolding .context-tools{display:none}
+.is-unfolding .board-surface{transform:none!important;transition:none!important}
+.is-unfolding .frame-command{filter:none}
+/* For consistency the original top-rail toolbar no longer takes any height. */
+.frame-placement,.board-tools{display:none!important}
+.board-legend{display:none}
+@media(max-width:800px){
+  .shell{padding:3px 4px 10px}
+  .masthead{min-height:35px}
+  .brand{font-size:11px}
+  .game-heading{margin:3px 0}
+  .game-heading h1{font-size:10px}
+  .game-layout{display:flex;flex-direction:column;gap:5px}
+  .play-area{width:min(100%,calc(100svh - 132px),630px);max-width:630px}
+  .board-note{min-height:20px}
+  .table-rig{padding:3px;border-width:3px}
+  .rig-stamp{height:10px;font-size:6px}
+  .rig-foot{display:none}
+  .board-frame{padding:2px;border-width:2px}
+  .board-viewport{border-width:2px}
+  .board{gap:1px;padding:1px}
+  .frame-status{min-height:25px;gap:5px}
+  .frame-status strong{font-size:8px}
+  .frame-command{margin-bottom:3px}
+  .action-area{position:static;max-height:none;overflow:visible;width:min(100%,630px);padding:4px 7px;border-width:2px;box-shadow:none}
+  .roll-strip{grid-template-columns:110px minmax(0,1fr);grid-template-areas:'die title';padding:3px 5px;min-height:45px;border-width:1px}
+  .reel-window{height:34px;border-width:2px}
+  .reel-track{--reel-cell:38px}
+  .reel-track span{height:38px}
+  .reel-mark{font-size:6px}
+  .rolled-copy strong{font-size:10px}
+  .rolled-copy small{font-size:7px}
+  .action-header,.instruction,.action-area .rules,.roll-controls{display:none}
+  .context-tools{padding:2px}
+  .context-toolbar-label{min-height:16px}
+  .context-toolbar-keys button{width:39px;min-height:41px;font-size:22px}
+  .context-toolbar-keys button.context-confirm{width:75px;min-width:75px;font-size:7px}
+  .context-placement-info{display:none}
+  .board-shape-slot .cube-offer{min-height:37px}
+  .board-shape-slot .cube-visual{width:49px;height:35px}
+  .board-shape-slot .cube-visual svg{height:32px}
+}
+@media(max-width:390px){
+  .board-meta span{display:none}
+  .context-toolbar-keys button{width:37px;min-height:41px}
+  .context-toolbar-keys button.context-confirm{width:75px}
+  .reel-mark{display:none}
+}
+@media(max-height:720px) and (max-width:800px){
+  .game-heading .eyebrow{display:none}
+  .game-heading{margin:2px 0}
+  .rig-stamp{display:none}
+  .frame-command{padding:1px 3px}
+  .frame-status{min-height:23px}
+  .board-shape-slot .cube-description span{display:none}
+}
+@media(prefers-reduced-motion:reduce){.grit-bit{animation:none!important;display:none}}
+
+.preferences{font-family:var(--narrow-type);font-size:10px;padding:8px 4px 2px}
+.preferences summary{font:900 8px var(--pixel-type);cursor:pointer}
+.preferences label{display:block;margin:9px 0 4px;color:#b8a483}
+.preferences select{display:block;width:100%;min-height:34px;padding:5px;border:1px solid #856c4c;background:#111712;color:#dbc699;font:700 11px var(--narrow-type)}
+@media(max-width:800px){.action-area .preferences{display:block;padding:4px 0;margin:0;border:none}.preferences summary{font-size:7px}.preferences select{min-height:34px}}

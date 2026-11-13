@@ -1,0 +1,55 @@
+/* UNFOLD 1.3 — multiplayer seats, clear turn identity and independent camera. */
+.entry-choice{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:18px 0 7px;color:#c7a46d;font:8px/1.8 var(--pixel-type)}
+.entry-choice span{font:12px/1.3 var(--narrow-type);color:#9ea697}
+.room-entry{margin:18px 0 0;padding:14px 12px;border:3px solid #8d6d46;background:#1a211a url('./assets/patina.png') center/80px;box-shadow:3px 3px #000}
+.room-entry h2{font:13px/1.7 var(--pixel-type);color:#e8c88a;margin:0 0 8px}
+.room-entry label{display:block;margin:10px 0 5px;color:#c4ad88;font:8px/1.5 var(--pixel-type)}
+.room-entry input,.room-entry select{width:100%;min-height:43px;color:#e4d3a1;background:#111a14;border:2px solid #765a3c;padding:10px;font:10px/1.5 var(--pixel-type)}
+.room-entry button{min-height:44px;margin-top:8px;font:9px var(--pixel-type)}
+.room-entry #create-room{width:100%}
+.join-control{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin-top:8px}
+.join-control button{padding:6px 8px;color:#e8cb92;background:#3a392c;border:2px solid #a47b4c}
+.room-lobby{width:min(95vw,560px);margin:30px auto;padding:18px;border:3px solid #8d6b45;background:#171e17;color:#e6d1a1;font-family:var(--pixel-type)}
+.room-lobby h2{font-size:20px;line-height:1.7}.room-lobby p{font-size:10px;line-height:1.7}.lobby-buttons{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.lobby-buttons button{font:9px var(--pixel-type);min-height:43px;padding:7px;background:#3e372a;color:#f4d4a2;border:2px solid #97734a}
+.lobby-seats{display:grid;gap:8px;margin:15px 0}
+.lobby-seat{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;padding:9px;background:#11150f;border:2px solid #61523b;font:10px/1.5 var(--pixel-type)}
+.lobby-seat .seat-badge{width:13px;height:13px;flex:none;background:var(--seat);border:2px solid #c2ae86}
+.lobby-seat em{color:#a9b4aa;font:10px var(--narrow-type)}
+#start-room{width:100%;min-height:46px}
+.turn-banner{--active:#9e6346;min-height:38px;display:flex;align-items:center;justify-content:space-between;gap:7px;padding:6px 9px;margin:2px 0;border-left:7px solid var(--active);background:color-mix(in srgb,var(--active) 48%,#101611);box-shadow:inset 0 0 0 2px #7d6a45;color:#fff5d9;font:9px/1.5 var(--pixel-type)}
+.turn-banner strong{font:11px/1.5 var(--pixel-type);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.turn-banner span{white-space:nowrap}
+.turn-banner.waiting{filter:saturate(.8)}
+.room-game-note{margin:5px 0;color:#cbb58c;font:10px/1.5 var(--narrow-type)}
+.zoom-actions{display:flex;align-items:center;gap:3px;flex:none}
+.zoom-actions button{min-width:29px;min-height:28px;background:#2b2f29;color:#e9d1a5;border:2px solid #796348;font:10px var(--pixel-type);padding:3px 5px}
+#zoom-fit{font:8px var(--pixel-type)}
+.zoom-actions span{font:9px var(--narrow-type);color:#a89b7a;min-width:31px;text-align:right}
+.board-viewport{overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#655239 #060807}
+.board-surface{width:calc(100% * var(--board-magnification,1));min-width:100%;position:relative}
+.board{touch-action:pan-x pan-y}
+.tile.permanent{background:#394039 url('./assets/scrap-foundry.png') center/100% 100% no-repeat;outline:2px solid #4a4140;outline-offset:-2px}
+.tile.permanent .obstacle-mark{color:#f0a76c}
+.room-entry [hidden],.room-lobby[hidden],.room-game-note[hidden]{display:none!important}
+@media(max-width:650px){
+  .turn-banner{min-height:36px;padding:5px;gap:5px;font:7px/1.4 var(--pixel-type)}
+  .turn-banner strong{font-size:8px;max-width:45%}
+  .zoom-actions button{min-width:30px;min-height:30px}
+  .board-meta{gap:2px}.board-note{gap:3px}
+  #board-hint{display:none}
+  .room-entry{padding:10px}
+}
+@media(max-width:390px){.turn-banner strong{font-size:7px}.turn-banner span{font-size:6px}.board-note .table-mission strong{max-width:120px}}
+
+.entry-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:14px 0 7px}
+.entry-tabs button{min-height:49px;padding:8px 4px;line-height:1.6;color:#d4c5a0;background:#252a22;border:2px solid #66553b;font:8px/1.7 var(--pixel-type);cursor:pointer}
+.entry-tabs button.active{background:#ac8753;color:#141710;border-color:#eac68b}
+#room-entry[hidden],#room-create-fields[hidden],#room-join-fields[hidden],#start-form[hidden]{display:none!important}
+@media(max-width:420px){.entry-tabs button{font-size:7px;padding:4px 2px}}
+
+/* UNFOLD compact game entry — checkout repair */
+.setup{margin:clamp(14px,3vh,28px) auto 30px}
+.setup .setup-title{font:12px/1.6 var(--pixel-type);letter-spacing:0;margin:0 0 10px;color:#e8c88a;text-shadow:none}
+.entry-tabs{margin-top:0}
+.room-entry{margin-top:10px}

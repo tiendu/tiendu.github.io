@@ -1,28 +1,24 @@
 SHELL := /bin/sh
 .DEFAULT_GOAL := help
-
 NPM ?= npm
 
-.PHONY: install dev hot run host styles games check build verify preview clean distclean reinstall ci help
+.PHONY: install dev hot host room-server check build verify preview clean help
 
 install:
 	$(NPM) ci
 
-dev hot run:
-	$(NPM) run dev
+dev hot:
+	$(NPM) run dev -- --host 127.0.0.1 --port 4321
 
 host:
-	$(NPM) run dev:host
+	$(NPM) run dev -- --host 0.0.0.0 --port 4321
 
-styles:
-	$(NPM) run check:styles
-
-games:
-	$(NPM) run check:games
-	$(NPM) run test:games
+room-server:
+	node server/unfold/server.mjs
 
 check:
 	$(NPM) run check
+	node --test scripts/test-unfold.mjs scripts/test-guided.mjs scripts/test-rooms.mjs scripts/test-room-http.mjs scripts/test-difficulty.mjs
 
 build:
 	$(NPM) run build
@@ -35,30 +31,15 @@ preview: build
 clean:
 	rm -rf dist .astro
 
-distclean: clean
-	rm -rf node_modules
-
-reinstall: distclean install
-
-ci: install verify
-
 help:
 	@printf '%s\n' \
-		'Usage: make <target>' \
-		'' \
-		'Targets:' \
-		'  install    Install exact dependencies with npm ci' \
-		'  dev        Start Astro with hot reload' \
-		'  hot        Alias for dev' \
-		'  run        Alias for dev' \
-		'  host       Start Astro on the local network' \
-		'  styles     Check stylesheet ownership and imports' \
-		'  games      Check arcade boundaries, registration, and runner rules' \
-		'  check      Run style, Astro, and TypeScript checks' \
-		'  build      Build the production site' \
-		'  verify     Run check and build' \
-		'  preview    Build and preview production locally' \
-		'  clean      Remove dist/ and .astro/' \
-		'  distclean  Also remove node_modules/' \
-		'  reinstall  Clean everything and reinstall' \
-		'  ci         Install dependencies, check, and build'
+		'install   npm ci' \
+		'dev       Start Astro on http://localhost:4321' \
+		'hot       Same as dev' \
+		'host      Share dev server on your LAN (port 4321)' \
+		'room-server Start authoritative online room server (port 8787)' \
+		'check     Existing npm checks + UNFOLD tests' \
+		'build     Production build' \
+		'verify    Check and build' \
+		'preview   Preview production build' \
+		'clean     Remove dist/ and .astro/'

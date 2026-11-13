@@ -1,0 +1,147 @@
+---
+// A plain Astro page that serves the dependency-free game from public/games/unfold.
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080a09">
+  <meta name="description" content="UNFOLD: build a mechanical walkway across a dark grid, one hinged module at a time.">
+  <title>UNFOLD · Rooms & Relics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/games/unfold/style.css">
+  <link rel="stylesheet" href="/games/unfold/retro.css">
+  <link rel="stylesheet" href="/games/unfold/frame.css">
+  <link rel="stylesheet" href="/games/unfold/v11.css">
+  <link rel="stylesheet" href="/games/unfold/v12.css">
+  <link rel="stylesheet" href="/games/unfold/v13.css">
+  <meta name="unfold-room-api" content={import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || ""}>
+  <script is:inline src="/games/unfold/room-config.js"></script>
+  <script is:inline type="module">
+    import('/games/unfold/app.mjs').catch(error => {
+      console.error('UNFOLD failed to load',error);
+      const message=document.getElementById('boot-note');
+      if(message)message.textContent=`Could not load the game: ${error.message}`;
+    });
+  </script>
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead">
+      <a href="/games/" class="back">← GAMES</a>
+      <div class="brand"><span class="brand-mark">⬡</span> UNFOLD <span class="version">1.3</span></div>
+
+    </header>
+
+    <section id="setup" class="setup" aria-labelledby="setup-title">
+      <h1 id="setup-title" class="setup-title">PLAY</h1>
+      <div class="entry-tabs" role="tablist" aria-label="How to play">
+        <button id="tab-solo" class="active" type="button" role="tab" aria-selected="true">SOLO / LOCAL</button>
+        <button id="tab-create" type="button" role="tab" aria-selected="false">CREATE ROOM</button>
+        <button id="tab-join" type="button" role="tab" aria-selected="false">JOIN ROOM</button>
+      </div>
+      <form id="start-form">
+        <label for="mode">Mode</label>
+        <select id="mode"><option value="solo">Solo</option><option value="coop">Co-op</option><option value="competitive">Versus</option></select>
+        <div id="local-options" hidden><label for="players">Local players (pass the phone)</label><select id="players"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select></div>
+        <div id="level-options"><label for="level">Map</label><select id="level"><option value="starter">Starter</option><option value="open">Open field</option><option value="challenge">Challenge</option></select></div>
+        <details class="advanced"><summary>Optional seed</summary><label for="seed">Repeat a particular board and dice sequence</label><input type="number" id="seed" placeholder="Random" min="1" max="4294967295"></details>
+        <button id="play" class="primary" type="submit" disabled>Loading…</button>
+        <p id="boot-note" class="small-note" role="status">Loading game…</p>
+      </form>
+      <button id="resume" class="quiet" type="button" hidden>Continue previous game</button>
+      <section id="room-entry" class="room-entry" aria-label="Online multiplayer" hidden>
+        <label for="room-name">Name</label>
+        <input id="room-name" maxlength="22" autocomplete="nickname" placeholder="Player name" value="Player">
+        <div id="room-create-fields"><label for="room-mode">Mode</label>
+          <select id="room-mode"><option value="coop">Co-op</option><option value="competitive">Competitive</option></select>
+          <button id="create-room" type="button" class="primary">CREATE ROOM</button>
+        </div>
+        <div id="room-join-fields" hidden><label for="join-code">Room code</label><div class="join-control"><input id="join-code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit room code" aria-label="Six-digit room code"><button id="join-room" type="button">JOIN ROOM</button></div></div>
+        <p id="room-entry-note" class="small-note" role="status">2–4 players</p>
+      </section>
+    </section>
+
+    <section id="room-lobby" class="room-lobby" hidden>
+      <p class="eyebrow">ONLINE MATCH</p>
+      <h2>ROOM <span id="lobby-code">------</span></h2>
+      <p id="lobby-mode">CO-OP</p>
+      <div class="lobby-buttons"><button id="copy-room" type="button">COPY INVITE LINK</button><button id="leave-room" type="button">LEAVE</button></div>
+      <div id="lobby-seats" class="lobby-seats" aria-live="polite"></div>
+      <button id="start-room" type="button" class="primary" hidden>START MATCH</button>
+      <p id="lobby-hint" role="status">Waiting for players…</p>
+    </section>
+    <main id="game" hidden>
+      <section class="play-area" aria-label="Assembly table">
+        <div class="board-note">
+          <div class="table-mission"><span id="mode-label" class="eyebrow">SOLO</span><strong id="mission-title">Connect S to ★</strong></div>
+          <div class="board-meta"><span id="board-hint">Spin to begin</span><div class="zoom-actions" aria-label="Board camera"><button id="zoom-out" type="button" aria-label="Zoom out">−</button><button id="zoom-in" type="button" aria-label="Zoom in">+</button><button id="zoom-fit" type="button">FIT</button><span id="zoom-level">100%</span></div></div>
+        </div>
+        <div class="table-rig">
+          <div class="frame-topbar">
+            <a class="frame-games" href="/games/" aria-label="Back to games">← GAMES</a>
+            <strong>UNFOLD <span class="version">1.3</span></strong>
+            <button id="new-game" class="frame-new" type="button">NEW</button>
+          </div>
+          <div id="turn-banner" class="turn-banner" aria-live="polite"><span id="turn-label">YOUR TURN</span><strong id="turn-player">PLAYER 1</strong><span id="turn-clock">SOLO</span></div>
+          <div class="frame-command" aria-label="Mechanical action selector attached to the table">
+            <div class="frame-status">
+              <div class="frame-turn"><strong id="roll-count">TURN 1 · REEL</strong><span id="clock-box" class="clock" hidden><strong id="clock">60</strong><small>SEC</small></span></div>
+              <div class="reel-scene" role="img" aria-label="Six-stop public action reel: Deploy, Deploy, Super Deploy, Reclaim, Reclaim, Refold">
+                <div class="reel-window"><span class="reel-pointer" aria-hidden="true">▸</span><div id="reel-track" class="reel-track"><span>DEPLOY</span></div></div>
+                <span class="reel-mark">ACTION REEL</span>
+              </div>
+              <strong id="rolled-action" class="reel-action">ROLLING</strong>
+              <button id="frame-skip" class="frame-skip" type="button" disabled>SKIP ↷</button>
+            </div>
+          </div>
+          <div class="board-frame" id="board-frame">
+            <div class="board-corner c-tl" aria-hidden="true"></div><div class="board-corner c-tr" aria-hidden="true"></div>
+            <div class="board-corner c-bl" aria-hidden="true"></div><div class="board-corner c-br" aria-hidden="true"></div>
+            <div id="board-viewport" class="board-viewport">
+              <div id="board-surface" class="board-surface">
+                <div id="board" class="board" role="grid" aria-label="Iron sockets suspended over darkness, six-panel road modules and crates"></div>
+                <div id="fold-stage" class="fold-stage" hidden aria-hidden="true"></div>
+                <div id="grit-layer" class="grit-layer" aria-hidden="true"></div>
+              </div>
+              <div id="placement-tools" class="context-tools" role="toolbar" aria-label="Guided placement controls" hidden>
+                <div class="context-toolbar-label"><span>MODULE <b id="context-cube">01</b></span><span id="fit-count" class="fit-count">1 / 1 FITS</span></div>
+                <div class="context-toolbar-keys">
+                  <button id="next-fit" class="context-next" type="button">↻ NEXT FIT</button>
+                  <button id="confirm" class="context-confirm" type="button" disabled>✓ UNFOLD</button>
+                </div>
+                <span id="placement-info" class="context-placement-info" role="status">Choose a highlighted socket.</span>
+              </div>
+            </div>
+          </div>
+          <div id="board-shape-slot" class="board-shape-slot" hidden>
+            <div id="cube-offer" class="cube-offer" hidden>
+              <div id="cube-visual" class="cube-visual"></div>
+              <div class="cube-description"><strong id="cube-name">NET 01 · FIXED</strong><span id="cube-help">Tap any marked socket</span></div>
+            </div>
+            <div id="shape-picker" class="shape-picker" hidden>
+              <div class="picker-head"><strong>SUPER / REFOLD: CHOOSE NET</strong><span>11 shapes · swipe</span></div>
+              <div id="shape-list" class="shape-list" aria-label="Choose one of eleven cube nets"></div>
+            </div>
+          </div>
+          <div id="result" class="result" hidden>
+            <strong id="result-title">ROUTE COMPLETE</strong>
+            <button id="next-game" class="primary" type="button">NEXT →</button>
+          </div>
+        </div>
+        <details class="game-options"><summary>OPTIONS / HOW TO PLAY</summary>
+          <label for="animation-speed">Unfold speed</label>
+          <select id="animation-speed"><option value="normal">Normal · 1.6s</option><option value="quick">Quick · 0.7s</option><option value="instant">Instant</option></select>
+          <p>Roll one action per turn. Tap any marked socket, cycle legal layouts using NEXT FIT, then UNFOLD. Super Deploy lets you select any of the 11 nets. Reclaim and Refold require an eligible target. Skip forfeits the roll.</p>
+        </details>
+        <p id="instruction" class="sr-only" role="status" aria-live="polite">Roll the action reel.</p>
+        <p id="room-game-note" class="room-game-note" role="status" hidden></p>
+      </section>
+    </main>
+    <footer>UNFOLD / IRONWORKS · SERIES 11</footer>
+  </div>
+</body>
+</html>

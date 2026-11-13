@@ -12,7 +12,7 @@ import NumberGame from "../../components/games/NumberGame.astro";
 
   mountNumberGames();
   const events = GAME_EVENTS.number;
-  window.addEventListener(events.exit, () => location.assign("/"));
+  window.addEventListener(events.exit, () => location.assign("/games/"));
   window.dispatchEvent(new Event(events.start));
   window.addEventListener("pageshow", event => {
     if (event.persisted && document.querySelector<HTMLElement>("[data-number-game]")?.hidden)

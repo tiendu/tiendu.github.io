@@ -1,0 +1,215 @@
+/* UNFOLD 0.9 — hand-pixeled ironworks. This is the art layer; style.css
+   continues to own layout, accessibility and gameplay control states. */
+:root{
+  --bg:#161711;--panel:#312c23;--panel2:#24231d;
+  --steel:#756d58;--rail:#766c54;--edge:#be9a62;
+  --line:#5d5545;--ink:#eadfc5;--muted:#b9ae96;
+  --brass:#dbac5b;--red:#a9533e;--blue:#557f89;
+  --gold:#b9944e;--green:#64836b;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+html{background:#161711}
+body{
+  color:var(--ink);
+  background-image:
+    linear-gradient(180deg,#120f0bec,transparent 26%,#16140fe9 90%),
+    url('./assets/patina.png'),
+    repeating-linear-gradient(0deg,#2c261d 0 2px,#1a1d1a 2px 6px);
+  background-size:auto,128px 128px,auto;
+  background-color:#161711;
+}
+button,select,input{border-radius:2px}
+button{
+  color:#f4e7c9;border:2px solid #746850;
+  background-image:url('./assets/patina.png'),linear-gradient(180deg,#746c58 0 3px,#3c403a 3px,#33352f 77%,#211f1a 77%);
+  background-size:100px,auto;
+  box-shadow:inset 2px 2px #b4a07850,inset -3px -3px #161b1890,0 3px 0 #100f0c;
+  text-shadow:1px 1px #181712;
+  letter-spacing:.01em;
+}
+button:hover:not(:disabled){filter:brightness(1.14);border-color:#d5ac68}
+button:active:not(:disabled){transform:translateY(2px);box-shadow:inset 2px 3px #0007}
+button:disabled{opacity:.5}
+button.primary,
+.primary{
+  border:2px solid #ebc27d;color:#26241e;text-shadow:none;
+  background-image:url('./assets/patina.png'),linear-gradient(180deg,#f0d398 0 3px,#c89a52 3px 83%,#866033 83%);
+  box-shadow:inset 2px 2px #fff4d170,inset -3px -3px #7b522777,0 3px 0 #2f2315;
+}
+button.quiet{border:1px solid #817459;background:transparent;color:#d1c5a8;text-shadow:none}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #eac376;outline-offset:3px}
+.eyebrow,.back,.version,.board-note,.rig-stamp,.rig-foot,.rolled-copy small,.action-header #action-step,footer{
+  font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;
+  font-weight:800;letter-spacing:.1em;
+}
+.brand{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;letter-spacing:.15em;color:#f0dcaf;text-shadow:2px 2px #0d0e0c}
+.brand-mark{color:#d49e59}.version{color:#ac9775}
+.masthead{border-bottom:3px double #6e5d44;box-shadow:0 3px #0d0e0b}
+.setup h1{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;letter-spacing:-.045em;line-height:1.14;text-shadow:3px 4px #0b0f0c}
+.setup h1 em{color:#e1b96c}
+.intro-mark{
+  background:linear-gradient(150deg,#b38550,#4b4838 23%,#242d2a 23%,#292f2a 80%,#75553a 80%);
+  border-radius:1px;border:4px solid #8d7450;
+  box-shadow:inset 0 0 0 3px #171c19,6px 8px 0 #0009;
+}
+.setup form,.action-area{
+  border:5px ridge #7b6850;border-radius:2px;
+  background-image:url('./assets/patina.png'),linear-gradient(155deg,#42382b,#252922 55%,#29271f);
+  background-size:128px,auto;
+  box-shadow:inset 0 0 0 3px #28241c,5px 9px 0 #0b0b0a,0 12px 26px #0505049a;
+}
+.setup select,.setup input{
+  background:#1d221e;color:#f2e2c4;border-radius:1px;border:2px solid #87765a;
+  box-shadow:inset 2px 2px 2px #0008;
+}
+.clock{background:#281f1a;border:3px ridge #927c55;border-radius:1px}
+.clock strong{color:#ffcc74}.clock small{color:#b7a17b}
+.game-heading h1{font-family:ui-monospace,Consolas,monospace;font-weight:900;text-shadow:2px 2px #11130d}
+.board-note strong{color:#e2c38d}
+.board-meta span{color:#b0a38c}
+.zoom-toggle{background-color:#39362c}
+/* Die and instrument readout are separate cast-metal modules, not glass panels. */
+.roll-strip{
+  background:url('./assets/patina.png') repeat,linear-gradient(#524937,#2d2f29);
+  background-blend-mode:normal;
+  background-color:#3e3a30;
+  border:3px ridge #8f7a58;border-radius:1px;
+  box-shadow:inset 0 0 0 3px #27251f,0 4px 0 #131511;
+}
+.die-face{
+  border:3px ridge #c8ab72;border-radius:1px;
+  background:url('./assets/patina.png') repeat,linear-gradient(140deg,#a49573,#524b3d 32%,#3b3e37 82%);
+  background-blend-mode:normal;background-color:#665945;
+  color:#fff1d0;box-shadow:inset 0 0 0 3px #24281f,inset 0 3px #e1c58a4b;
+  text-shadow:1px 2px #1a1c17;font-family:ui-monospace,monospace;
+}
+.rolled-copy strong{font-family:ui-monospace,Consolas,monospace;letter-spacing:-.06em;color:#f3ddaf}
+.action-header{border-top:2px solid #77654c}
+.action-header h2{font-family:ui-monospace,monospace;color:#f5dfa9}
+.instruction{color:#e1d4b9}
+.control-dock{border-top:2px dashed #806f4f}
+.cube-offer{border:2px solid #7c6547;border-radius:0;background:#262820}
+.cube-visual{background:#161b18;border:2px solid #594b35;image-rendering:pixelated}
+.cube-description strong,.picker-head strong{font-family:ui-monospace,monospace;color:#ebcf90}
+.cube-description span,.picker-head span{color:#c4b59a}
+.shape-list{scrollbar-color:#ae8449 #2e2921}
+.net-option{border:2px solid #79654a;border-radius:1px;background:#292d25}
+.net-option.active{background:#5d4b32;border-color:#ebbf6c}
+.net-option svg{image-rendering:pixelated}
+.net-option small{font-family:ui-monospace,monospace;font-weight:800;color:#e2c6a0}
+.board-tools button,.board-commit button{border-radius:1px}
+.board-tools button span{color:#e6d3ae}
+.board-commit .micro{color:#caba9d}
+.rules{border-top:2px solid #72644b;color:#c0b6a0}
+.rules summary,.rules b{color:#ead4a4}
+/* Workbench: battered cast iron frame with pitted rust, exposed bolts,
+   angular seams, heavy tube bars, and an inset grid of receiver sockets. */
+.table-rig{
+  isolation:isolate;
+  padding:9px 10px 11px;border:5px ridge #8c7551;border-radius:1px;
+  background-image:url('./assets/patina.png'),repeating-linear-gradient(0deg,#4d4939 0 3px,#33372f 3px 9px,#433d30 9px 12px);
+  background-size:96px 96px,auto;
+  box-shadow:inset 0 0 0 3px #262922,inset 2px 2px #e1c4895e,0 6px 0 #1f1c15,0 17px 28px #050505c4;
+}
+.rig-stamp,.rig-foot{color:#e0c591;text-shadow:1px 2px #15160f}
+.rig-stamp span:last-child{color:#af9f7c}
+.rig-foot{color:#bb9661}
+.board-frame{
+  padding:clamp(8px,1.35vw,14px);border:5px ridge #b39a67;border-radius:0;
+  background-image:url('./assets/patina.png'),
+    repeating-linear-gradient(90deg,#4c4a3b 0 5px,#32362f 5px 9px,#69614b 9px 12px);
+  background-size:96px,auto;
+  box-shadow:inset 0 0 0 4px #222820,inset 0 7px 14px #000b,0 2px #dcc58c65;
+}
+.bolt{width:12px;height:12px;border-radius:1px;border:2px solid #3d392b;
+  background:linear-gradient(135deg,#ecd19d 0 20%,#856c45 20% 65%,#332b22 65%);
+  box-shadow:inset -1px -1px #1e1d16,2px 2px #171a13;
+}
+.bolt::after{left:1px;right:1px;top:4px;border-color:#261d18;transform:rotate(42deg)}
+.board{gap:1px;padding:3px;background:#93846b;box-shadow:inset 0 0 0 2px #c1a77a,inset 0 0 17px #000c}
+.tile{
+  border:none;border-radius:0;box-shadow:none;
+  background:#282f2a url('./assets/socket.png') center / 100% 100% no-repeat;
+  image-rendering:pixelated;
+  transition:filter .09s;
+}
+.tile[class*="road-"],.tile[class*="base-"]{
+  background-image:url('./assets/panel-wear.png'),linear-gradient(145deg,#fff4d22e,transparent 42%,#090f0b6a),linear-gradient(var(--plate),var(--plate));
+  background-size:100% 100%,cover,cover;
+  border:1px solid #161c18;
+  box-shadow:inset 0 0 0 1px #c6aa6b77,inset 0 -3px #141b18a3;
+  image-rendering:pixelated;
+}
+.tile.road-red,.tile.base-red{--plate:#a84f3c}
+.tile.road-blue,.tile.base-blue{--plate:#537e89}
+.tile.road-gold,.tile.base-gold{--plate:#ac8a44}
+.tile.road-green,.tile.base-green{--plate:#5b8266}
+.tile.road-neutral{--plate:#6e7068;filter:saturate(.42) brightness(.8)}
+.tile[class*="base-"]{outline:2px solid #e3ba6f;outline-offset:-3px}
+.tile.goal{
+  border:1px solid #be9b56;
+  background:repeating-linear-gradient(45deg,#d5b367 0 3px,#654c2d 3px 5px,#b99650 5px 8px);
+  box-shadow:inset 0 0 0 3px #3e3225,0 0 0 1px #d2b36a;
+  color:#181e19;
+}
+.tile.goal strong{text-shadow:1px 1px #ffecb0}
+.tile.rubble{
+  background:#534230 url('./assets/crate.png') center /100% 100% no-repeat;
+  border:1px solid #2a281e;box-shadow:inset 0 0 0 1px #a87a47;
+}
+.tile.ruin{
+  background:#3d403a url('./assets/scrap.png') center /100% 100% no-repeat;
+  border:1px solid #252a23;
+}
+/* Original symbols replaced by the hand-drawn crate/scrap graphics. */
+.tile.rubble .obstacle-mark,.tile.ruin .obstacle-mark{display:none}
+.tile .contact-label{
+  inset:auto 7% 6% auto;min-width:45%;border-radius:0;
+  background:#27251c;border:1px solid #deb96b;
+  color:#f8e5b4;text-shadow:1px 1px #0e100e;
+  box-shadow:1px 1px #141610;font-family:ui-monospace,monospace;
+}
+.tile.preview-good{
+  border:2px solid #e2cb78!important;
+  background:linear-gradient(#2c806eaa,#2c806eaa),url('./assets/socket.png') center/100% 100%!important;
+  box-shadow:inset 0 0 0 1px #d4e2a8!important;
+}
+.tile.preview-bad{background:#793d33!important;border:2px solid #d88264!important}
+.tile.legal-anchor:after{border-radius:0;width:25%;height:25%;border:2px solid #172b23;background:#e2c076;box-shadow:1px 1px #0a140e}
+.tile.target{outline:2px solid #f7c66c;outline-offset:-2px}
+.tile.selected-anchor{outline:2px solid #fff0a6;outline-offset:-2px}
+.tile.latch-lock::before{
+  background:linear-gradient(90deg,#d3b47a,#52412a);
+  box-shadow:0 0 0 1px #382e21;
+}
+.board-legend{color:#c3b49a}
+.board-legend .dot{border-radius:0}
+/* The moving hinged assembly retains hard metal silhouettes rather than a
+   soft/glossy CSS filter. Pixel treatment comes from the plate geometry. */
+.mechanism{filter:drop-shadow(2px 5px 0 #070908c9)}
+.mechanism svg{image-rendering:pixelated}
+.fold-stage{will-change:contents}
+.is-unfolding .control-dock{opacity:.62}
+.result{border:3px ridge #7b9a7a;background:#2d3c2c;border-radius:0}
+@media(max-width:800px){
+  .shell{padding:7px 7px 18px}
+  .masthead{min-height:48px}
+  .table-rig{padding:6px 6px 8px;border-width:4px}
+  .board-frame{padding:7px;border-width:4px}
+  .game-layout{gap:12px}
+  .action-area{padding:11px;border-width:4px}
+  .board-note strong{font-size:10px}
+  .board-tools button{min-height:51px}
+  .net-option{min-width:69px}
+  .rig-stamp{font-size:8px}
+}
+@media(max-width:390px){
+  .table-rig{padding:5px;border-width:3px}
+  .board-frame{padding:5px;border-width:3px}
+  .board-note .serial{display:none}
+  .board-tools button{font-size:19px;min-height:49px}
+  .roll-strip{padding:8px 6px}
+}
+@media(prefers-reduced-motion:reduce){
+  .mechanism,.fold-stage{filter:none}
+}
