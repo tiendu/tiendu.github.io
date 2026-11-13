@@ -1,47 +1,27 @@
 import { NETS, oriented } from './nets.mjs';
 import { newGame, player, occupied, canPlace, legalPlacements, canReclaim, refoldable, placedCells, act, endTurn, LABELS, connectedCells } from './engine.mjs';
 import { foldedFaces } from './fold.mjs';
-import { paintFoldCanvas } from './canvas.mjs';
-import { paintTubeFrame } from './tubes.mjs';
-import { paintLatchFrame } from './latches.mjs';
+import { paintFoldCanvas } from './render/canvas.mjs';
+import { paintTubeFrame } from './render/tubes.mjs';
+import { paintLatchFrame } from './render/latches.mjs';
 import { legalFits } from './guided.mjs';
+import { installMechanicalPress } from './ui/press.mjs';
+import { REEL_FACES, reelFace } from './ui/reel.mjs';
+import { makeRoomRequest } from './online/transport.mjs';
+import { saveSolo, loadSolo, saveRoom } from './ui/storage.mjs';
+import { installCamera } from './ui/camera.mjs';
+import { escapeText } from './ui/dom.mjs';
 
 const $=id=>document.getElementById(id);
-// Keep the 1.4 Astro page compatible, including checkouts where the existing
-// v1.3 menu or public-room script has already been customized. No page rewrite.
-for(const name of ['v14.css','v15.css','v16.css','v17.css','v18.css']){
-  if(!document.querySelector(`link[href$="/games/unfold/${name}"], style[data-unfold-sheet="${name}"]`)){
-    const link=document.createElement('link');link.rel='stylesheet';link.href=`/games/unfold/${name}`;
-    document.head.append(link);
-  }
-}
-document.querySelectorAll('.version').forEach(label=>label.textContent='1.8');
-document.title='UNFOLD · Iron Console v1.8';
+const UNFOLD_VERSION='1.9';
+document.querySelectorAll('.version').forEach(label=>label.textContent=UNFOLD_VERSION);
+document.title='UNFOLD · Ironworks v1.9';
 // Works on both the original v1.6 Astro page and checkouts where the menu
 // cleanup was already applied. Never duplicate or reconstruct the setup form.
 const setupHeading=$('setup-title');
 if(setupHeading&&setupHeading.textContent.trim().toUpperCase()!=='PLAY')setupHeading.textContent='PLAY';
 for(const selector of ['#setup > .intro-mark','#setup > .eyebrow','#setup > .intro'])document.querySelector(selector)?.remove();
 
-function installMechanicalPress(){
-  const selector='button';
-  let active=null;
-  const mark=(el,on)=>{ if(el&&el.matches?.(selector)&&!el.disabled)el.classList.toggle('is-pressed',on); };
-  const clear=()=>{ mark(active,false); active=null; };
-  document.addEventListener('pointerdown',event=>{
-    const el=event.target.closest(selector);
-    if(!el||el.disabled)return;
-    clear(); active=el; mark(active,true);
-  },true);
-  for(const type of ['pointerup','pointercancel'])document.addEventListener(type,clear,true);
-  window.addEventListener('blur',clear);
-  document.addEventListener('keydown',event=>{
-    if((event.key===' '||event.key==='Enter')&&document.activeElement?.matches?.(selector))mark(document.activeElement,true);
-  },true);
-  document.addEventListener('keyup',event=>{
-    if((event.key===' '||event.key==='Enter')&&document.activeElement?.matches?.(selector))mark(document.activeElement,false);
-  },true);
-}
 installMechanicalPress();
 
 function latchFrame(){
@@ -71,20 +51,12 @@ const ROOM_SESSION_KEY='unfold-room-v13';
 const ROOM_API=(window.UNFOLD_ROOM_API||(['localhost','127.0.0.1'].includes(location.hostname)?`${location.protocol}//${location.hostname}:8787`:'' )).replace(/\/$/,'');
 let roomSession=null,roomSnapshot=null,roomInterval=null,roomBusy=false,roomShownRevision=-1;
 let remoteAnimateId=null,clockSkew=0,roomRenderedRound=null;
-let zoom=1,pinchStart=null;
 const PLAYER_COLORS=['#ae5845','#4f829f','#628569','#bc994d'];
 const isRemote=()=>Boolean(roomSession);
 const myTurn=()=>!isRemote()||Boolean(roomSnapshot?.game&&!roomSnapshot.game.winner&&roomSnapshot.seat===roomSnapshot.game.active);
 const nowServer=()=>Date.now()+clockSkew;
-function saveRoomSession(){try{if(roomSession)localStorage.setItem(ROOM_SESSION_KEY,JSON.stringify(roomSession));else localStorage.removeItem(ROOM_SESSION_KEY);}catch{}}
-async function roomRequest(op,details={}){
-  if(!ROOM_API)throw new Error('Online rooms need a room server. Configure window.UNFOLD_ROOM_API.');
-  const body=JSON.stringify(details);
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);
-  try{const res=await fetch(`${ROOM_API}/api/unfold/${op}`,{method:'POST',headers:{'Content-Type':'application/json'},body,signal:controller.signal});
-    const data=await res.json();if(!res.ok)throw new Error(data.error||`Room error (${res.status})`);return data;
-  }finally{clearTimeout(timer);}
-}
+function saveRoomSession(){saveRoom(ROOM_SESSION_KEY,roomSession);}
+const roomRequest=makeRoomRequest(ROOM_API);
 function roomArgs(extra={}){return {...roomSession,...extra};}
 function roomError(error){const msg=error?.message||String(error);$('room-entry-note').textContent=msg;$('lobby-hint').textContent=msg;
   const note=$('room-game-note');if(note){note.hidden=false;note.textContent=`Connection: ${msg}`;}}
@@ -97,7 +69,7 @@ function renderLobby(){if(!roomSnapshot||roomSnapshot.game)return;
   $('start-room').disabled=roomSnapshot.seats.length<2;
   $('lobby-hint').textContent=roomSnapshot.host?(roomSnapshot.seats.length<2?'Invite at least one friend to start.':'Ready. Start whenever everyone has joined.'):'Waiting for the host to start…';
 }
-function escapeText(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
 function updateClock(){if(!game||game.mode==='solo')return;
   if(isRemote()&&roomSnapshot?.deadline){const left=Math.max(0,Math.ceil((roomSnapshot.deadline-nowServer())/1000));$('clock').textContent=String(left);$('clock-box').classList.toggle('urgent',left<=10);$('turn-clock').textContent=game.winner?'FINISHED':`${left}s`;
   }else if(!isRemote())$('turn-clock').textContent=$('clock').textContent+'s';
@@ -192,23 +164,10 @@ async function createOrJoin(op){
   }catch(error){roomError(error);}
 }
 
-const REEL_FACES=['DEPLOY','DEPLOY','SUPER','RECLAIM','RECLAIM','REFOLD'];
 const ANIMATION_MS={normal:1600,quick:700,instant:0};
 let currentAnimationSpeed='normal';
 try{const v=localStorage.getItem('unfold-animation-speed');if(Object.hasOwn(ANIMATION_MS,v))currentAnimationSpeed=v;}catch{/* memory-only setting in private browsers */}
 function animationSpeed(){return currentAnimationSpeed;}
-function reelFace(face){
-  const label=REEL_FACES[face-1]||'DEPLOY';
-  const reel=$('reel-track'),housing=document.querySelector('.reel-scene');
-  housing?.classList.remove('spinning','clunk');
-  reel.classList.remove('spinning');reel.style.transition='none';reel.style.transform='none';
-  void reel.offsetHeight;reel.innerHTML=`<span>${label}</span>`;
-  reel.setAttribute('data-face',String(face));
-  // A brief detent as the drum locks. No change to randomization or timing.
-  if(housing&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
-    void housing.offsetHeight;housing.classList.add('clunk');
-  }
-}
 
 const gameAction=()=>game?.die?.action;
 function actionAvailable(){
@@ -250,11 +209,8 @@ function selectContact(contact){
   anchor=contact;fitIndex=0;setPose();return true;
 }
 const timing=ms=>new Promise(r=>setTimeout(r,ms));
-function persist(){if(isRemote())return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(game));}catch{/* storage can be disabled */}}
-function stored(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(s?.version!==5||!s.players?.length||!s.die||!Array.isArray(s.cubes))return null;
-    s.cubes.forEach((c,i)=>{if(!Number.isInteger(c.number))c.number=i+1;});
-    s.nextCubeNumber=Math.max(0,...s.cubes.map(c=>c.number))+1;
-    return s;}catch{return null;}}
+function persist(){if(!isRemote())saveSolo(SAVE_KEY,game);}
+function stored(){return loadSolo(SAVE_KEY);}
 function resetSelection(){selected=false;selectedNet=0;rotation=0;flipped=false;anchor=null;sourceId=null;fitIndex=0;fitCache=null;}
 function announce(text){$('instruction').textContent=text;}
 function chooseSpot(){
@@ -674,32 +630,9 @@ function refreshModeHelp(){
 }
 $('room-mode').addEventListener('change',refreshModeHelp);
 refreshModeHelp();
-document.querySelectorAll('.version').forEach(el=>{el.textContent='1.8';});
-document.title='UNFOLD · Iron Console v1.8';
 
-function setZoom(level,clientX=null,clientY=null){
-  const v=$('board-viewport'),before=zoom,box=v.getBoundingClientRect();
-  const x=clientX===null?box.width/2:clientX-box.left,y=clientY===null?box.height/2:clientY-box.top;
-  const contentX=(v.scrollLeft+x)/before,contentY=(v.scrollTop+y)/before;
-  zoom=Math.max(1,Math.min(3,Math.round(level*100)/100));
-  $('board-surface').style.setProperty('--board-magnification',String(zoom));
-  $('zoom-level').textContent=`${Math.round(zoom*100)}%`;
-  v.scrollLeft=Math.max(0,contentX*zoom-x);v.scrollTop=Math.max(0,contentY*zoom-y);
-  positionContextTools();
-}
-$('zoom-in').addEventListener('click',()=>setZoom(zoom+.25));
-$('zoom-out').addEventListener('click',()=>setZoom(zoom-.25));
-$('zoom-fit').addEventListener('click',()=>setZoom(1));
-$('board-viewport').addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom*(e.deltaY<0?1.12:.89),e.clientX,e.clientY);},{passive:false});
-$('board-viewport').addEventListener('touchstart',e=>{
-  if(e.touches.length===2){const a=e.touches[0],b=e.touches[1];pinchStart={distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),zoom};}
-},{passive:true});
-$('board-viewport').addEventListener('touchmove',e=>{
-  if(e.touches.length===2&&pinchStart){e.preventDefault();const a=e.touches[0],b=e.touches[1];const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
-    setZoom(pinchStart.zoom*d/Math.max(1,pinchStart.distance),(a.clientX+b.clientX)/2,(a.clientY+b.clientY)/2);
-  }
-},{passive:false});
-$('board-viewport').addEventListener('touchend',e=>{if(e.touches.length<2)pinchStart=null;});
+
+installCamera($,positionContextTools);
 $('board').addEventListener('click',e=>{const b=e.target.closest('[data-x]');if(b)tapTile(Number(b.dataset.x),Number(b.dataset.y));});
 $('shape-list').addEventListener('click',e=>{const b=e.target.closest('[data-net]');if(b)chooseNet(Number(b.dataset.net));});
 $('next-fit').addEventListener('click',nextFit);
