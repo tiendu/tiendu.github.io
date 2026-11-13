@@ -22,7 +22,12 @@ const unfoldBackendUrl = (import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || "").trim(
     // GitHub Actions may pass PUBLIC_UNFOLD_BACKEND_URL to Astro at build time.
     if (unfoldBackendUrl) window.UNFOLD_ROOM_API = unfoldBackendUrl.replace(/\/$/, '');
   </script>
-  <script is:inline type="module">
+    <script is:inline>
+    // UNFOLD GitHub Pages backend fallback; build variable wins when available.
+    if (location.hostname === 'tiendu.github.io' && !window.UNFOLD_ROOM_API)
+      window.UNFOLD_ROOM_API = 'https://unfold-multiplayer.tiendu107.workers.dev';
+  </script>
+<script is:inline type="module">
     import('/games/unfold/app.mjs').catch(error => {
       console.error('UNFOLD failed to load',error);
       const message=document.getElementById('boot-note');
