@@ -91,12 +91,15 @@ function challengeTerrain(s){
   }
   const gates=[];
   if(s.mode==='solo'){
-    const rows=s.level==='hard'?[s.size-5,Math.floor(s.size/2),4]:
-      s.level==='standard'?[s.size-5,Math.floor(s.size/2),4]:[Math.floor(s.size*.52)];
+    // Vary the steel bands and openings while keeping the base and goal clear.
+    const rows=s.level==='hard'?[s.size-5-pick(s,2),Math.floor(s.size/2)+pick(s,3)-1,4+pick(s,2)]:
+      s.level==='standard'?[s.size-5,Math.floor(s.size/2),4+pick(s,2)]:
+      [Math.floor(s.size*.52)+pick(s,3)-1];
     const leftFirst=pick(s,2)===0,span=s.level==='hard'?8:s.level==='standard'?6:5;
+    const edge=s.size-span-1,spread=Math.max(1,Math.floor((edge-1)/2));
     for(const [i,y] of rows.entries()){
       const left=i%2===0?leftFirst:!leftFirst;
-      const start=left?1:s.size-span-1;
+      const start=left?1+pick(s,spread):edge-pick(s,spread);
       for(let x=0;x<s.size;x++){
         if(x>=start&&x<start+span)continue;
         s.obstacles.push({id:s.nextId++,type:'permanent',cells:[[x,y]]});
@@ -185,6 +188,29 @@ function hasOpening(s,actor){
   }
   return nets>=9;
 }
+// Record the initial layout before any actions can remove or add terrain.
+function layoutSignature(s){
+  const tiles=Array(s.size*s.size).fill('.');
+  const mark=(cells,value)=>{for(const [x,y] of cells)tiles[y*s.size+x]=value;};
+  for(const p of s.players)mark([p.base],'B');
+  if(s.goal)mark([s.goal],'G');
+  for(const o of s.obstacles)mark(o.cells,o.type==='permanent'?'P':'R');
+  for(const c of s.cubes)if(c.owner===null)mark(c.cells,'N');
+  return tiles.join('');
+}
+// A new seed alone does not guarantee a visibly different board. Retry when
+// the generated terrain matches the completed game's *original* layout.
+export function newDistinctGame(config,previous=null){
+  let next=newGame(config);
+  if(!previous)return next;
+  const oldBoard=previous.layoutId??layoutSignature(previous);
+  for(let retry=1;retry<=16&&next.layoutId===oldBoard;retry++){
+    const seed=(((Number(config.seed)>>>0)+Math.imul(retry,0x9e3779b9))>>>0)||1;
+    next=newGame({...config,seed});
+  }
+  if(next.layoutId===oldBoard)throw Error('Unable to generate a different board');
+  return next;
+}
 export function newGame({mode='solo',count=1,level='standard',seed=12345}={}){
   if(!['solo','coop','competitive'].includes(mode))throw Error('Invalid mode');
   if(level==='challenge')level='standard'; // migrate saved v1.3 puzzles
@@ -197,6 +223,12 @@ export function newGame({mode='solo',count=1,level='standard',seed=12345}={}){
     active:0,turn:1,acted:false,die:null,cubes:[],obstacles:[],
     goal:mode==='solo'||mode==='coop'?[Math.floor(size/2),mode==='solo'?1:Math.floor(size/2)]:null,
     nextId:1,nextCubeNumber:1,winner:null,announcement:''};
+  if(mode==='solo'&&level==='open'){
+    // Keep the field empty but vary both ends of the route every round.
+    const mid=Math.floor(size/2);
+    s.players[0].base=[mid-2+pick(s,5),size-2];
+    s.goal=[mid-2+pick(s,5),1];
+  }
   if(mode==='competitive'){
     let accepted=false;
     for(let attempt=0;attempt<16;attempt++){
@@ -213,6 +245,7 @@ export function newGame({mode='solo',count=1,level='standard',seed=12345}={}){
     }
     if(!accepted)throw Error('Unable to generate a playable construction map');
   }
+  s.layoutId=layoutSignature(s);
   s.die=roll(s);return s;
 }
 function walk(available,roots){const seen=new Set(),queue=[];for(const r of roots)if(available.has(r)){seen.add(r);queue.push(r);}for(let i=0;i<queue.length;i++){const [x,y]=split(queue[i]);for(const [dx,dy]of DIRECTIONS){const k=key([x+dx,y+dy]);if(available.has(k)&&!seen.has(k)){seen.add(k);queue.push(k);}}}return seen;}

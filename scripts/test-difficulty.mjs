@@ -1,9 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {newGame,legalPlacements,connectedCells,occupied} from '../public/games/unfold/engine.mjs';
+import {newGame,newDistinctGame,legalPlacements,connectedCells,occupied} from '../public/games/unfold/engine.mjs';
 import {NETS} from '../public/games/unfold/nets.mjs';
 const key=p=>p.join(',');
 const distance=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]);
+
+test('NEXT always regenerates terrain across Solo and multiplayer modes',()=>{
+  const configs=[
+    ...['open','starter','standard','hard'].map(level=>({mode:'solo',level})),
+    {mode:'coop',count:2},{mode:'competitive',count:2},
+  ];
+  for(const config of configs){
+    const previous=newGame({...config,seed:1234}),original=previous.layoutId;
+    // Simulate progress after the original board was created.
+    previous.obstacles.shift();
+    previous.cubes.push({id:99999,owner:0,cells:[[0,0]]});
+    // Even a seed source returning the same value cannot replay the old map.
+    const next=newDistinctGame({...config,seed:1234},previous);
+    assert.notEqual(next.layoutId,original,JSON.stringify(config));
+    assert.deepEqual(newDistinctGame({...config,seed:1234},previous),next);
+    assert.equal(next.turn,1);
+    assert.equal(next.mode,previous.mode);
+    assert.equal(next.level,previous.level);
+    assert.equal(next.players.length,previous.players.length);
+    if(config.level==='open')assert.equal(next.obstacles.length,0);
+  }
+});
 
 test('generated Solo map families remain deterministic with legal starting nets',()=>{
   for(const level of ['starter','standard','hard'])for(const seed of [1,3,17,89,20261113]){

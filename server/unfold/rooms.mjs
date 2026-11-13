@@ -1,7 +1,7 @@
 // UNFOLD room authority: deterministic engine, no client-supplied board or die.
 // Transport-independent; also used directly by the test suite.
 import { randomInt, randomBytes } from 'node:crypto';
-import { newGame, act, endTurn } from '../../public/games/unfold/engine.mjs';
+import { newDistinctGame, act, endTurn } from '../../public/games/unfold/engine.mjs';
 
 const CODE_LENGTH=6, REEL_MS=760, TURN_MS=60_000, LOCK_MS=1700;
 const cleanName=v=>String(v??'').trim().replace(/[<>\u0000-\u001f]/g,'').slice(0,22);
@@ -68,8 +68,9 @@ export class RoomRegistry {
     this.newRound(room);return this.snapshot(room,token);
   }
   newRound(room){
+    const next=newDistinctGame({mode:room.mode,count:room.seats.length,seed:this.seed()},room.game);
     room.round++;
-    room.game=newGame({mode:room.mode,count:room.seats.length,seed:this.seed()});
+    room.game=next;
     room.game.players.forEach((p,i)=>{p.name=room.seats[i].name;});
     room.revealAt=this.clock()+REEL_MS;
     room.deadline=room.revealAt+TURN_MS;

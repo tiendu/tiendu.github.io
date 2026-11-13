@@ -65,8 +65,11 @@ test('server validates turn/replay and owns the public reel & net',()=>{
 test('host starts NEXT only on completed match',()=>{
   const {rooms,host,guest}=start();
   assert.throws(()=>rooms.next({code:host.code,token:host.token}),/Finish/);
-  const r=rooms.requireRoom(host.code);r.game.winner={kind:'competitive',players:[0]};
+  const r=rooms.requireRoom(host.code),oldLayout=r.game.layoutId;
+  r.game.winner={kind:'competitive',players:[0]};
   assert.throws(()=>rooms.next({code:host.code,token:guest.token}),/Only the host/);
   const next=rooms.next({code:host.code,token:host.token});assert.equal(next.round,2);
   assert.equal(next.game.winner,null);assert.equal(next.seats.length,2);
+  // The fixture's seed provider returns the same seed for both rounds.
+  assert.notEqual(next.game.layoutId,oldLayout);
 });

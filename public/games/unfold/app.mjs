@@ -1,5 +1,5 @@
 import { NETS, oriented } from './nets.mjs';
-import { newGame, player, occupied, canPlace, legalPlacements, canReclaim, refoldable, placedCells, act, endTurn, LABELS, connectedCells } from './engine.mjs';
+import { newGame, newDistinctGame, player, occupied, canPlace, legalPlacements, canReclaim, refoldable, placedCells, act, endTurn, LABELS, connectedCells } from './engine.mjs';
 import { foldedFaces } from './fold.mjs';
 import { paintFoldCanvas } from './render/canvas.mjs';
 import { paintTubeFrame } from './render/tubes.mjs';
@@ -597,9 +597,10 @@ async function advance(){if(!game||rolling||busy||game.winner)return;
   if(game.winner){render();return;}
   rollAnimation();
 }
-function begin(config){
+function begin(config,previous=null){
+  const next=previous?newDistinctGame(config,previous):newGame(config);
   roomSession=null;roomSnapshot=null;saveRoomSession();if(roomInterval)clearInterval(roomInterval);roomInterval=null;
-  rollToken++;clearInterval(timer);game=newGame(config);resetSelection();busy=false;render();rollAnimation();
+  rollToken++;clearInterval(timer);game=next;resetSelection();busy=false;render();rollAnimation();
 }
 $('start-form').addEventListener('submit',e=>{
   e.preventDefault();const mode=$('mode').value,seed=Number($('seed').value)||(Date.now()>>>0);
@@ -651,7 +652,22 @@ $('new-game').addEventListener('click',()=>{
   clearInterval(timer);rollToken++;rolling=false;busy=false;game=null;resetSelection();document.body.classList.remove('playing');$('game').hidden=true;$('setup').hidden=false;$('resume').hidden=!stored();
 });
 $('resume').addEventListener('click',()=>{const s=stored();if(!s)return;rollToken++;rolling=false;game=s;resetSelection();activateAction();render();reelFace(game.die.face);startClock();});
-$('next-game').addEventListener('click',async()=>{if(!game?.winner)return;if(isRemote()){if(!roomSnapshot?.host)return;try{const s=await roomRequest('next',roomArgs());await receiveRoom(s);}catch(e){roomError(e);}return;}const {mode,level,players,seed}=game;let nextSeed=0;try{nextSeed=crypto.getRandomValues(new Uint32Array(1))[0];}catch{nextSeed=(Date.now()+Math.floor(Math.random()*65536))>>>0;}if(!nextSeed||nextSeed===seed)nextSeed=(seed+1)>>>0||1;begin({mode,level,count:players.length,seed:nextSeed});});
+$('next-game').addEventListener('click',async()=>{
+  if(!game?.winner)return;
+  if(isRemote()){
+    if(!roomSnapshot?.host)return;
+    try{const s=await roomRequest('next',roomArgs());await receiveRoom(s);}
+    catch(e){roomError(e);}
+    return;
+  }
+  const previous=game,{mode,level,players,seed}=previous;
+  let nextSeed=0;
+  try{nextSeed=crypto.getRandomValues(new Uint32Array(1))[0];}
+  catch{nextSeed=(Date.now()+Math.floor(Math.random()*65536))>>>0;}
+  if(!nextSeed||nextSeed===seed)nextSeed=(seed+1)>>>0||1;
+  try{begin({mode,level,count:players.length,seed:nextSeed},previous);}
+  catch(e){console.error(e);announce('Unable to start a new board. Try again.');}
+});
 // Keyboard access on desktop; mobile uses the same tap controls.
 document.addEventListener('keydown',e=>{
   if(!game||e.target.matches('input,select,textarea'))return;
