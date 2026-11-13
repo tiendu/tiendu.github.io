@@ -665,3 +665,36 @@
   .frame-topbar>strong{font-size:8px;gap:3px}
   .frame-topbar .frame-new{width:51px;font-size:6px}
 }
+
+/* Action beacons. Each eligible six-panel cube lights up as a single object.
+   Selection removes REFOLD beacons and shows legal landing sockets instead. */
+.board .tile.reclaim-target,
+.board .tile.refold-target{
+  outline:2px solid var(--action-edge);
+  outline-offset:-2px;
+  z-index:2;
+  box-shadow:inset 0 0 0 2px var(--action-edge)!important;
+  cursor:pointer;
+}
+.board .tile.reclaim-target{--action-edge:#ffe1a0;--action-rgb:255,196,93}
+.board .tile.refold-target{--action-edge:#b6f7c7;--action-rgb:111,222,158}
+.board .tile.reclaim-target::after,
+.board .tile.refold-target::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border:2px solid rgba(var(--action-rgb),.95);
+  background:rgba(var(--action-rgb),.14);
+  box-shadow:inset 0 0 10px rgba(var(--action-rgb),.4);
+  opacity:.45;
+  animation:unfold-action-pulse 1.45s ease-in-out infinite;
+}
+@keyframes unfold-action-pulse{
+  0%,100%{opacity:.45}
+  50%{opacity:1}
+}
+@media(prefers-reduced-motion:reduce){
+  .board .tile.reclaim-target::after,
+  .board .tile.refold-target::after{animation:none;opacity:.85}
+}

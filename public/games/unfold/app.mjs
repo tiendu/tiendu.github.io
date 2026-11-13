@@ -231,7 +231,15 @@ function netThumbnail(n){const cells=NETS[n],maxX=Math.max(...cells.map(c=>c[0])
   const scale=16,offsetX=(96-(maxX+1)*scale)/2,offsetY=(80-(maxY+1)*scale)/2;
   return `<svg viewBox="0 0 96 80" aria-hidden="true">${cells.map(([x,y],i)=>`<rect x="${offsetX+x*scale}" y="${offsetY+y*scale}" width="${scale-1}" height="${scale-1}" rx="0" fill="${i?'#70847c':'#d5ab63'}" stroke="#e1eff6" stroke-width="1"/>`).join('')}</svg>`;
 }
+// Use the same rules as tapTile(), and calculate them per object rather than per cell.
+function actionTargets(action){
+  if(action==='reclaim')return [...game.obstacles,...game.cubes].filter(o=>canReclaim(game,game.active,o.id));
+  if(action==='refold'&&sourceId===null)return game.cubes.filter(c=>refoldable(game,game.active,c.id));
+  return [];
+}
 function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContacts().map(key)),preview=new Map();
+  const action=selected&&!busy&&!rolling&&!game.acted&&!game.winner&&myTurn()?gameAction():null;
+  const targets=new Set(actionTargets(action).map(o=>o.id));
   if(!busy&&inPlacement()&&anchor){const [x,y]=fromContact(anchor),valid=canAt(anchor),cells=placedCells(selectedNet,rotation,flipped,x,y);
     cells.forEach((c,i)=>{if(c[0]>=0&&c[1]>=0&&c[0]<game.size&&c[1]<game.size)preview.set(key(c),{valid,contact:i===0});});
   }
@@ -246,15 +254,15 @@ function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContac
     if(p)classes.push(p.valid?'preview-good':'preview-bad');
     if(hasMark)classes.push('legal-anchor');
     if(anchor&&key(anchor)===k&&inPlacement())classes.push('selected-anchor');
-    if(selected&&gameAction()==='reclaim'&&cell&&['obstacle','cube'].includes(cell.kind)&&canReclaim(game,game.active,cell.id))classes.push('target');
-    if(selected&&gameAction()==='refold'&&sourceId===null&&cell?.kind==='cube'&&refoldable(game,game.active,cell.id))classes.push('target');
+    const available=cell&&['obstacle','cube'].includes(cell.kind)&&targets.has(cell.id);
+    if(available)classes.push(action==='reclaim'?'reclaim-target':'refold-target');
     const cubeNumber=cell?.kind==='cube'&&cell.contact?cell.number:null;
     let content=cubeNumber?`<span class="contact-label" aria-label="Cube ${cubeNumber}">${cubeNumber}</span>`:'';
     if(cell?.kind==='base')content=`<strong>${game.mode==='solo'?'S':cell.id+1}</strong>`;
     if(cell?.kind==='goal')content='<strong>★</strong>';
     if(cell?.kind==='obstacle')content=['ruin','permanent'].includes(cell.type)?'<span class="obstacle-mark scrap-mark" aria-hidden="true">✕</span>':'<span class="obstacle-mark crate-mark" aria-hidden="true"><span class="crate-x"></span></span>';
     if(hasMark)content+='<span class="anchor-dot"></span>';
-    tiles.push(`<button type="button" role="gridcell" class="${classes.join(' ')}" ${cell?.kind==='cube'?`data-cube-id="${cell.id}"`:''} data-x="${x}" data-y="${y}" aria-label="${cell?.kind||'Empty'} square ${x+1},${y+1}${cubeNumber?`, cube ${cubeNumber} contact square`:''}" title="${cell?.kind||'Empty'} · ${x+1},${y+1}">${content}</button>`);
+    tiles.push(`<button type="button" role="gridcell" class="${classes.join(' ')}" ${cell?.kind==='cube'?`data-cube-id="${cell.id}"`:''} data-x="${x}" data-y="${y}" aria-label="${cell?.kind||'Empty'} square ${x+1},${y+1}${cubeNumber?`, cube ${cubeNumber} contact square`:''}${available?`, ${action.toUpperCase()} available`:''}" title="${cell?.kind||'Empty'} · ${x+1},${y+1}${available?` · ${action.toUpperCase()} available`:''}">${content}</button>`);
   }
   $('board').style.setProperty('--size',game.size);$('board').innerHTML=tiles.join('');
   paintTubeFrame(tubeFrame(),game.size);
@@ -267,7 +275,18 @@ function showPicker(){
   $('cube-offer').hidden=!shown||action!=='deploy';
   $('shape-picker').hidden=!shown||action==='deploy';
   $('placement-tools').hidden=!shown||!anchor;
-  if(!shown){$('board-hint').textContent=game.acted?'Action complete':selected&&action==='reclaim'?'Tap a highlighted target':selected&&action==='refold'?'Choose a rear cube':'Action ready';return;}
+  if(!shown){
+    const hint=$('board-hint');
+    if(selected&&['reclaim','refold'].includes(action)&&!busy&&!rolling&&!game.acted&&myTurn()){
+      const count=actionTargets(action).length;
+      hint.textContent=`${count} ${action.toUpperCase()} ${count===1?'TARGET':'TARGETS'}`;
+      hint.title=action==='reclaim'?'Tap an amber target to reclaim it':'Tap a green rear cube to refold it';
+    }else{
+      hint.textContent=game.acted?'Action complete':!rolling&&action==='reclaim'&&!actionAvailable()?'NO RECLAIM TARGETS':!rolling&&action==='refold'&&!actionAvailable()?'NO REFOLD TARGETS':'Action ready';
+      hint.title='';
+    }
+    return;
+  }
   if(action==='deploy'){
     $('cube-visual').innerHTML=netThumbnail(selectedNet);
     $('cube-name').textContent=`NET ${String(selectedNet+1).padStart(2,'0')} · FIXED`;
@@ -301,8 +320,8 @@ function render(){if(!game)return;
   if(!selected&&!game.acted)announce(rolling?'The reel is spinning…':available?'Tap a marked landing spot, or skip this turn.':cannotUseReason());
   if(game.acted)announce(game.announcement);
   if(selected&&!game.acted){
-    if(action==='reclaim')announce('Tap a highlighted adjacent obstacle or cube.');
-    else if(action==='refold'&&sourceId===null)announce('Choose a highlighted rear cube.');
+    if(action==='reclaim')announce('Tap a pulsing amber obstacle or cube to reclaim it.');
+    else if(action==='refold'&&sourceId===null)announce('Tap a pulsing green rear cube to refold it.');
     else announce('Tap a marked socket · NEXT FIT cycles legal orientations · UNFOLD installs it.');
   }
   showPicker();drawBoard();positionContextTools();persist();
