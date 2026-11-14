@@ -13,6 +13,7 @@ import { installCamera } from './ui/camera.mjs';
 import { escapeText } from './ui/dom.mjs';
 import { actionAvailable, actionTargets, cannotUseReason } from './ui/actions.mjs';
 import { netThumbnail } from './ui/net-thumbnail.mjs';
+import { renderBoardTiles } from './ui/board-tiles.mjs';
 
 const $=id=>document.getElementById(id);
 const UNFOLD_VERSION='1.9.3';
@@ -44,7 +45,6 @@ function tubeFrame(){
 }
 
 const SAVE_KEY='unfold-v05'; // Keep game-state saves compatible with v0.7.
-const COLORS=['red','blue','green','gold'];
 const ARROWS=[[1,0],[-1,0],[0,1],[0,-1]];
 let game=null,selected=false,selectedNet=0,rotation=0,flipped=false,anchor=null,sourceId=null,fitIndex=0,fitCache=null,rollToken=0;
 let busy=false,rolling=false,deadline=0,timer=null,lockingCubeId=null;
@@ -220,28 +220,10 @@ function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContac
   if(!busy&&inPlacement()&&anchor){const [x,y]=fromContact(anchor),valid=canAt(anchor),cells=placedCells(selectedNet,rotation,flipped,x,y);
     cells.forEach((c,i)=>{if(c[0]>=0&&c[1]>=0&&c[0]<game.size&&c[1]<game.size)preview.set(key(c),{valid,contact:i===0});});
   }
-  const tiles=[];for(let y=0;y<game.size;y++)for(let x=0;x<game.size;x++){
-    const k=`${x},${y}`,cell=used.get(k),p=preview.get(k),classes=['tile'],hasMark=spots.has(k);
-    if(cell?.kind==='base')classes.push('base-'+(COLORS[cell.owner]||'neutral'));
-    if(cell?.kind==='cube')classes.push('road-'+(COLORS[cell.owner]||'neutral'));
-    if(cell?.kind==='goal')classes.push('goal');
-    if(cell?.kind==='cube'&&cell.id===lockingCubeId)classes.push('latch-lock');
-    if(cell?.kind==='cube'&&cell.id===foldOriginId)classes.push('fold-origin');
-    if(cell?.kind==='obstacle')classes.push(cell.type);
-    if(p)classes.push(p.valid?'preview-good':'preview-bad');
-    if(hasMark)classes.push('legal-anchor');
-    if(anchor&&key(anchor)===k&&inPlacement())classes.push('selected-anchor');
-    const available=cell&&['obstacle','cube'].includes(cell.kind)&&targets.has(cell.id);
-    if(available)classes.push(action==='reclaim'?'reclaim-target':'refold-target');
-    const cubeNumber=cell?.kind==='cube'&&cell.contact?cell.number:null;
-    let content=cubeNumber?`<span class="contact-label" aria-label="Cube ${cubeNumber}">${cubeNumber}</span>`:'';
-    if(cell?.kind==='base')content=`<strong>${game.mode==='solo'?'S':cell.id+1}</strong>`;
-    if(cell?.kind==='goal')content='<strong>★</strong>';
-    if(cell?.kind==='obstacle')content=['ruin','permanent'].includes(cell.type)?'<span class="obstacle-mark scrap-mark" aria-hidden="true">✕</span>':'<span class="obstacle-mark crate-mark" aria-hidden="true"><span class="crate-x"></span></span>';
-    if(hasMark)content+='<span class="anchor-dot"></span>';
-    tiles.push(`<button type="button" role="gridcell" class="${classes.join(' ')}" ${cell?.kind==='cube'?`data-cube-id="${cell.id}"`:''} data-x="${x}" data-y="${y}" aria-label="${cell?.kind||'Empty'} square ${x+1},${y+1}${cubeNumber?`, cube ${cubeNumber} contact square`:''}${available?`, ${action.toUpperCase()} available`:''}" title="${cell?.kind||'Empty'} · ${x+1},${y+1}${available?` · ${action.toUpperCase()} available`:''}">${content}</button>`);
-  }
-  $('board').style.setProperty('--size',game.size);$('board').innerHTML=tiles.join('');
+  const placing=inPlacement();
+  $('board').style.setProperty('--size',game.size);
+  $('board').innerHTML=renderBoardTiles({size:game.size,mode:game.mode,used,spots,preview,action,targets,
+    anchor,placing,lockingCubeId,foldOriginId});
   paintTubeFrame(tubeFrame(),game.size);
   updateLatches();
   $('board-viewport').classList.toggle('large-board',game.size>=17);

@@ -52,3 +52,29 @@ test('MINES and NUMBER retain separate page, logic, and online entry points',asy
   assert.match(numberLogic,/from ['"]\.\/number-online['"]/);
   assert.match(numberOnline,/export function mountNumberOnline/);
 });
+
+test('UNFOLD board tile renderer preserves grid, contact, preview, and capture markings',async()=>{
+  const app=await source('public/games/unfold/app.mjs');
+  assert.match(app,/from ['"]\.\/ui\/board-tiles\.mjs['"]/);
+  assert.doesNotMatch(app,/const tiles=\[\];for\(let y=/);
+  const {renderBoardTiles}=await import('../public/games/unfold/ui/board-tiles.mjs');
+  const used=new Map([
+    ['0,0',{kind:'base',id:0,owner:0}],
+    ['1,0',{kind:'cube',id:8,owner:1,contact:true,number:4}],
+    ['2,0',{kind:'obstacle',id:12,type:'permanent'}],
+    ['3,0',{kind:'goal'}],
+  ]);
+  const html=renderBoardTiles({size:4,mode:'competitive',used,
+    spots:new Set(['1,2']),preview:new Map([['1,2',{valid:true,contact:true}]]),
+    action:'reclaim',targets:new Set([8]),anchor:[1,2],placing:true,
+    lockingCubeId:8,foldOriginId:null});
+  assert.equal((html.match(/role="gridcell"/g)||[]).length,16);
+  assert.match(html,/class="tile base-red"/);
+  assert.match(html,/class="tile road-blue latch-lock reclaim-target"/);
+  assert.match(html,/class="tile permanent"/);
+  assert.match(html,/class="tile goal"/);
+  assert.match(html,/aria-label="Cube 4"/);
+  assert.match(html,/cube 4 contact square/);
+  assert.match(html,/class="tile preview-good legal-anchor selected-anchor"/);
+  assert.match(html,/RECLAIM available/);
+});
