@@ -18,7 +18,7 @@ room-server:
 
 check:
 	$(NPM) run check
-	node --test scripts/test-unfold.mjs scripts/test-guided.mjs scripts/test-rooms.mjs scripts/test-room-http.mjs scripts/test-difficulty.mjs scripts/test-render.mjs scripts/test-maintenance.mjs scripts/test-unfold-worker.mjs scripts/test-game-boundaries.mjs
+	node --test scripts/test-unfold.mjs scripts/test-guided.mjs scripts/test-rooms.mjs scripts/test-room-http.mjs scripts/test-difficulty.mjs scripts/test-terrain.mjs scripts/test-render.mjs scripts/test-maintenance.mjs scripts/test-unfold-worker.mjs scripts/test-game-boundaries.mjs
 
 build:
 	$(NPM) run build

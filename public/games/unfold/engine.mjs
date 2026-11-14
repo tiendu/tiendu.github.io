@@ -1,5 +1,6 @@
 // UNFOLD v0.5: deterministic, renderer-independent rules.
 import { NETS, oriented } from './nets.mjs';
+import { random, pick, bases, seededMultiplayerTerrain, layoutSignature } from './terrain.mjs';
 export const FACES = Object.freeze(['deploy','deploy','special','reclaim','reclaim','refold']);
 export const LABELS = Object.freeze({deploy:'Deploy',special:'Super Deploy',reclaim:'Reclaim',refold:'Refold'});
 const DIRECTIONS=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -8,8 +9,6 @@ const split=k=>k.split(',').map(Number);
 const adjacent=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])===1;
 const inside=(s,[x,y])=>x>=0&&y>=0&&x<s.size&&y<s.size;
 export const clone=s=>structuredClone(s);
-function random(s){let x=s.seed>>>0||0x6d2b79f5;x^=x<<13;x^=x>>>17;x^=x<<5;s.seed=x>>>0;return s.seed/4294967296;}
-const pick=(s,n)=>Math.floor(random(s)*n);
 function roll(s){const index=pick(s,6);const action=FACES[index];return {face:index+1,action,net:action==='deploy'?pick(s,NETS.length):null};}
 export const player=(s,id=s.active)=>s.players[id];
 export const occupied=s=>{
@@ -20,7 +19,6 @@ export const occupied=s=>{
   for(const [ordinal,cube] of s.cubes.entries())cube.cells.forEach((c,face)=>result.set(key(c),{kind:'cube',id:cube.id,owner:cube.owner,contact:face===0,number:cube.number??null}));
   return result;
 };
-function bases(size,count,mode){const m=Math.floor(size/2);if(mode==='solo')return [[m,size-2]];if(count===2)return [[m,1],[m,size-2]];if(count===3)return [[m,1],[size-2,m],[1,size-2]];return [[m,1],[size-2,m],[m,size-2],[1,m]];}
 // An actual, legal sequence of six-panel deployments is reserved before we
 // scatter terrain. This is a feasibility witness, not a suggested solution.
 // It is deliberately discarded from the starting board.
@@ -142,40 +140,6 @@ function challengeTerrain(s){
   if(s.goal&&!s.players.every(p=>[...connectedCells(check,p.id)].some(c=>distance(split(c),s.goal)<=1)))return false;
   return true;
 }
-// Multiplayer terrain is seeded and generated ONCE by the room authority.
-// A neutral module is always an actual complete 6-panel cube, never a group of
-// unrelated squares. Competing bases get a clear buffer and comparable openings.
-function seededMultiplayerTerrain(s){
-  const count=s.players.length,freeOfBases=c=>s.players.every(p=>
-    Math.abs(p.base[0]-c[0])+Math.abs(p.base[1]-c[1])>3);
-  const used=new Set(s.players.map(p=>key(p.base)));
-  const cellsFree=cells=>cells.every(c=>inside(s,c)&&!used.has(key(c))&&freeOfBases(c));
-  const addObstacle=(type,cells)=>{s.obstacles.push({id:s.nextId++,type,cells});cells.forEach(c=>used.add(key(c)));};
-  const addNeutral=(net,rotation,flipped,cells)=>{
-    s.cubes.push({id:s.nextId++,number:null,owner:null,net,rotation,flipped,cells});
-    cells.forEach(c=>used.add(key(c)));
-  };
-  // Keep the two regions either side of each player open, avoiding unfair
-  // starting traps. Neutral cubes deliberately sit in the contested interior.
-  const neutralCount=count===2?2:count===3?3:4;
-  for(let i=0;i<neutralCount;i++)for(let attempt=0;attempt<180;attempt++){
-    const net=pick(s,11),rotation=pick(s,4),flipped=pick(s,2)===1;
-    const shape=oriented(net,rotation,flipped),x=pick(s,s.size-4),y=pick(s,s.size-4);
-    const cells=shape.map(([dx,dy])=>[x+dx,y+dy]);
-    if(!cellsFree(cells))continue;
-    // Prevent a disproportionate neutral advantage for one base.
-    const distances=s.players.map(p=>Math.min(...cells.map(c=>
-      Math.abs(p.base[0]-c[0])+Math.abs(p.base[1]-c[1]))));
-    if(Math.max(...distances)-Math.min(...distances)>Math.ceil(s.size*.6))continue;
-    addNeutral(net,rotation,flipped,cells);break;
-  }
-  const obstacleCount=Math.round(s.size*s.size*.028);
-  for(let i=0;i<obstacleCount;i++)for(let attempt=0;attempt<120;attempt++){
-    const cell=[pick(s,s.size),pick(s,s.size)];
-    if(!cellsFree([cell]))continue;
-    addObstacle(i%4===0?'permanent':'rubble',[cell]);break;
-  }
-}
 function hasOpening(s,actor){
   // Assess starting opportunities against every possible net rather than the
   // randomly rolled net. Bad rolls still require skips: no luck compensation.
@@ -187,16 +151,6 @@ function hasOpening(s,actor){
     if(possible)nets++;
   }
   return nets>=9;
-}
-// Record the initial layout before any actions can remove or add terrain.
-function layoutSignature(s){
-  const tiles=Array(s.size*s.size).fill('.');
-  const mark=(cells,value)=>{for(const [x,y] of cells)tiles[y*s.size+x]=value;};
-  for(const p of s.players)mark([p.base],'B');
-  if(s.goal)mark([s.goal],'G');
-  for(const o of s.obstacles)mark(o.cells,o.type==='permanent'?'P':'R');
-  for(const c of s.cubes)if(c.owner===null)mark(c.cells,'N');
-  return tiles.join('');
 }
 // A new seed alone does not guarantee a visibly different board. Retry when
 // the generated terrain matches the completed game's *original* layout.
