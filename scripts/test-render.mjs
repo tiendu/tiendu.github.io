@@ -2,6 +2,7 @@
 // underlay, and a canvas renderer usable without repeatedly replacing SVG.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { foldedFaces } from '../public/games/unfold/fold.mjs';
 import { paintFoldCanvas } from '../public/games/unfold/canvas.mjs';
 import { paintTubeFrame } from '../public/games/unfold/tubes.mjs';
@@ -89,4 +90,34 @@ test('exterior retains one iron material across player colors; interior adopts o
   for(const pose of [0,.25,.5,.75,1]){
     assert.ok(renderedColors('#64937b',pose).length>0);
   }
+});
+
+test('animation controller extraction preserves timing, hooks and action flow',async()=>{
+  const {createFoldAnimator,ANIMATION_MS}=await import('../public/games/unfold/render/animation.mjs');
+  const app=await readFile(new URL('../public/games/unfold/app.mjs',import.meta.url),'utf8');
+  assert.deepEqual(ANIMATION_MS,{normal:1600,quick:700,instant:0});
+  assert.match(app,/from ['"]\.\/render\/animation\.mjs['"]/);
+  assert.doesNotMatch(app,/function (createGrit|prepareFoldStage|animateFold|moveClosedBox)\(/);
+  assert.match(app,/if\(busy\)fastForwardAnimation\(\)/);
+  let latchUpdates=0;
+  const stage={hidden:false,children:[1],replaceChildren(...children){this.children=children;}};
+  const lifted={classList:{removed:[],remove(name){this.removed.push(name);}}};
+  const game={classList:{removed:[],remove(name){this.removed.push(name);}}};
+  const originalDocument=globalThis.document;
+  globalThis.document={querySelectorAll:()=>[lifted]};
+  try{
+    const animator=createFoldAnimator({$:id=>({ 'fold-stage':stage,game })[id],
+      getGame:()=>({size:13,active:0}),animationSpeed:()=> 'instant',
+      updateLatches:()=>{latchUpdates++;}});
+    assert.deepEqual(Object.keys(animator).sort(),
+      ['animateFold','createGrit','fastForwardAnimation','finishFoldVisual','moveClosedBox'].sort());
+    animator.fastForwardAnimation();
+    animator.finishFoldVisual();
+    assert.equal(stage.hidden,true);
+    assert.deepEqual(stage.children,[]);
+    assert.deepEqual(lifted.classList.removed,['fold-lifting']);
+    assert.deepEqual(game.classList.removed,['is-unfolding']);
+    assert.equal(latchUpdates,1);
+    await animator.moveClosedBox([1,1],[2,2],0,0,false,'#fff');
+  }finally{globalThis.document=originalDocument;}
 });
