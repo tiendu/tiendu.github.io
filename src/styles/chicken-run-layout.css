@@ -1,0 +1,88 @@
+/* Chicken Run menu layout. Moved verbatim from the former runtime-injected CSS. */
+/* tiendu:chicken-run-dark-canvas:v3 */
+/* Paint the entire browser viewport, not just the centered menu strip. */
+html, body {
+  background-color: #080b0a !important;
+}
+html.chicken-layout-menu-active .chicken-layout-ancestor {
+  background-color: #080b0a !important;
+}
+/* Only while the front menu is visible. Gameplay uses its original layout. */
+html.chicken-layout-menu-active body {
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+html.chicken-layout-menu-active .chicken-layout-ancestor {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100%;
+  min-height: 0 !important;
+  height: auto !important;
+}
+html.chicken-layout-menu-active .chicken-layout-frame {
+  box-sizing: border-box !important;
+  margin-block: auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  max-width: 100%;
+}
+html.chicken-layout-menu-active .chicken-layout-toolbar {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  width: 100% !important;
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 0 clamp(16px, 2vw, 24px) !important;
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+}
+html.chicken-layout-menu-active .chicken-layout-toolbar > .chicken-layout-toolbar-item,
+html.chicken-layout-menu-active .chicken-layout-toolbar > a,
+html.chicken-layout-menu-active .chicken-layout-toolbar > button {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  margin-block: 0 !important;
+}
+html.chicken-layout-menu-active .chicken-layout-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-auto-flow: row !important;
+  gap: clamp(8px, 1.2vw, 16px) !important;
+  align-items: stretch !important;
+  justify-items: stretch !important;
+  width: 100% !important;
+}
+html.chicken-layout-menu-active .chicken-layout-actions > .chicken-layout-action {
+  grid-column: auto !important;
+  grid-row: auto !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+html.chicken-layout-menu-active .chicken-layout-actions > .chicken-layout-action button,
+html.chicken-layout-menu-active .chicken-layout-actions > .chicken-layout-action a {
+  max-width: 100%;
+}
+@media (max-width: 600px) {
+  html.chicken-layout-menu-active .chicken-layout-actions {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  html.chicken-layout-menu-active .chicken-layout-frame {
+    max-width: 100% !important;
+  }
+}
