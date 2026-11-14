@@ -121,3 +121,40 @@ test('UNFOLD room controller owns session, reconnect, and lobby lifecycle',async
     if(beforeDocument===undefined)delete globalThis.document;else globalThis.document=beforeDocument;
   }
 });
+
+test('Neon Grid uses one visual system, preserves existing menu IDs and attention priority',async()=>{
+  const [page,app,foundation,operator,canvas]=await Promise.all([
+    source('src/pages/games/unfold/index.astro'),
+    source('public/games/unfold/app.mjs'),
+    source('public/games/unfold/styles/foundation.css'),
+    source('public/games/unfold/styles/operator.css'),
+    source('public/games/unfold/render/canvas.mjs')]);
+  for(const id of ['tab-solo','tab-create','tab-join','start-form','play','resume','room-entry',
+    'room-mode','join-code','room-lobby','board','board-viewport','placement-tools','confirm',
+    'next-fit','frame-skip','reel-track','animation-speed','instruction','result']){
+    assert(page.includes(`id="${id}"`),`missing runtime element #${id}`);
+  }
+  assert.match(page,/BUILD THE CONNECTION/);
+  assert.doesNotMatch(page,/styles\/clarity\.css|IRONWORKS/);
+  assert.doesNotMatch(app,/paintTubeFrame|paintLatchFrame|updateLatches/);
+  assert.match(operator,/\.tile\.legal-anchor/);
+  assert.match(operator,/\.tile\.gate-just-opened/);
+  assert.match(operator,/prefers-reduced-motion/);
+  assert.match(page,/PLAY LOCAL|CREATE ROOM|JOIN ROOM/);
+  assert.match(canvas,/foldedFaces/);
+});
+
+
+test('powered gates receive one finite path pulse, not ambient grid animation',async()=>{
+  const {circuitPulseCells}=await import('../public/games/unfold/ui/circuit-pulse.mjs');
+  const game={players:[{id:0,alive:true,base:[0,0]}]};
+  const connected=new Set(['0,0','1,0','2,0','3,0','3,1']);
+  const gate={open:true,terminals:[[2,0],[3,1]],cells:[[2,1]]};
+  assert.equal(circuitPulseCells(game,[],()=>connected).size,0);
+  assert.equal(circuitPulseCells(game,[{...gate,open:false}],()=>connected).size,0);
+  const pulse=circuitPulseCells(game,[gate],()=>connected);
+  assert.equal(pulse.get('0,0'),0);
+  assert(pulse.get('1,0')<pulse.get('2,0'));
+  assert(pulse.get('2,1')>pulse.get('3,1'));
+  assert.equal(circuitPulseCells(game,[gate],()=>new Set(['0,0'])).size,0);
+});

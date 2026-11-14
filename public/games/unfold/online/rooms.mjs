@@ -7,7 +7,7 @@ import { saveRoom } from '../ui/storage.mjs';
 import { makeRoomRequest } from './transport.mjs';
 
 const ROOM_SESSION_KEY='unfold-room-v13';
-const PLAYER_COLORS=['#ae5845','#4f829f','#628569','#bc994d'];
+const PLAYER_COLORS=['#49ddf5','#ff68bd','#ffcd65','#b3f36d'];
 
 export function createRoomController({$,getGame,setGame,getBusy,setBusy,getRolling,setRolling,
   clearLocalClock,resetSelection,activateAction,render,finishFoldVisual,

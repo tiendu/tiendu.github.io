@@ -8,12 +8,9 @@ const unfoldBackendUrl = (import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || "").trim(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#080a09">
-  <meta name="description" content="UNFOLD: build a mechanical walkway across a dark grid, one hinged module at a time.">
-  <title>UNFOLD · Rooms & Relics</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#070B14">
+  <meta name="description" content="UNFOLD: unfold luminous six-panel modules to connect roads across a tactical neon grid.">
+  <title>UNFOLD · Neon Grid</title>
   <link rel="stylesheet" href="/games/unfold/styles/foundation.css">
   <link rel="stylesheet" href="/games/unfold/styles/operator.css">
   <link rel="stylesheet" href="/games/unfold/styles/navigation.css">
@@ -45,31 +42,51 @@ const unfoldBackendUrl = (import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || "").trim(
     </header>
 
     <section id="setup" class="setup" aria-labelledby="setup-title">
-      <h1 id="setup-title" class="setup-title">PLAY</h1>
+      <div class="menu-hero">
+        <p class="menu-overline">SIGNAL / TACTICAL CONSTRUCTION</p>
+        <h1 id="setup-title" class="setup-title">UNFOLD</h1>
+        <p class="menu-lead">Build a path. Unfold the grid.</p>
+        <div class="menu-steps"><span><b>01</b> ROLL</span><span><b>02</b> UNFOLD</span><span><b>03</b> CONNECT</span></div>
+      </div>
       <div class="entry-tabs" role="tablist" aria-label="How to play">
-        <button id="tab-solo" class="active" type="button" role="tab" aria-selected="true">SOLO / LOCAL</button>
-        <button id="tab-create" type="button" role="tab" aria-selected="false">CREATE ROOM</button>
-        <button id="tab-join" type="button" role="tab" aria-selected="false">JOIN ROOM</button>
+        <button id="tab-solo" class="active" type="button" role="tab" aria-selected="true" aria-controls="start-form"><span class="menu-card-icon" aria-hidden="true">◇</span><span class="menu-tab-name">PLAY LOCAL</span><small>Solo puzzles or pass-and-play · Offline</small></button>
+        <button id="tab-create" type="button" role="tab" aria-selected="false" aria-controls="room-entry"><span class="menu-card-icon" aria-hidden="true">＋</span><span class="menu-tab-name">CREATE ROOM</span><small>Host an online Co-op or Versus match</small></button>
+        <button id="tab-join" type="button" role="tab" aria-selected="false" aria-controls="room-entry"><span class="menu-card-icon" aria-hidden="true">→</span><span class="menu-tab-name">JOIN ROOM</span><small>Enter a six-digit invite code</small></button>
       </div>
       <form id="start-form">
-        <label for="mode">Mode</label>
-        <select id="mode"><option value="solo">Solo</option><option value="coop">Co-op</option><option value="competitive">Versus</option></select>
-        <div id="local-options" hidden><label for="players">Local players (pass the phone)</label><select id="players"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select></div>
-        <div id="level-options"><label for="level">Map</label><select id="level"><option value="starter">Starter</option><option value="open">Open field</option><option value="challenge">Challenge</option></select></div>
-        <details class="advanced"><summary>Optional seed</summary><label for="seed">Repeat a particular board and dice sequence</label><input type="number" id="seed" placeholder="Random" min="1" max="4294967295"></details>
+        <div class="menu-fields">
+          <div class="menu-field">
+            <label for="mode">Game mode</label>
+            <select id="mode"><option value="solo">Solo — one player</option><option value="coop">Co-op — connect together</option><option value="competitive">Versus — capture opponents</option></select>
+            <span class="menu-field-help">Choose how you want to build your network.</span>
+          </div>
+          <div id="level-options" class="menu-field">
+            <label for="level">Map difficulty</label>
+            <select id="level"><option value="starter">Starter</option><option value="standard" selected>Standard</option><option value="hard">Hard</option><option value="open">Open field</option></select>
+            <span class="menu-field-help">Start with Starter if you're learning.</span>
+          </div>
+          <div id="local-options" class="menu-field" hidden>
+            <label for="players">Local players</label>
+            <select id="players"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select>
+            <span class="menu-field-help">Pass the device after each turn.</span>
+          </div>
+        </div>
+        <details class="advanced"><summary>Advanced · repeat a board with a seed</summary><label for="seed">Board seed (optional)</label><input type="number" id="seed" placeholder="Random" min="1" max="4294967295"></details>
         <button id="play" class="primary" type="submit" disabled>Loading…</button>
         <p id="boot-note" class="small-note" role="status">Loading game…</p>
       </form>
-      <button id="resume" class="quiet" type="button" hidden>Continue previous game</button>
+      <button id="resume" class="quiet" type="button" hidden>CONTINUE GAME</button>
       <section id="room-entry" class="room-entry" aria-label="Online multiplayer" hidden>
-        <label for="room-name">Name</label>
-        <input id="room-name" maxlength="22" autocomplete="nickname" placeholder="Player name" value="Player">
-        <div id="room-create-fields"><label for="room-mode">Mode</label>
-          <select id="room-mode"><option value="coop">Co-op</option><option value="competitive">Competitive</option></select>
+        <div class="menu-field"><label for="room-name">Your name</label><input id="room-name" maxlength="22" autocomplete="nickname" placeholder="Player name" value="Player"></div>
+        <div id="room-create-fields">
+          <div class="menu-field"><label for="room-mode">Match mode</label><select id="room-mode"><option value="coop">Co-op — connect all bases</option><option value="competitive">Versus — conquer opponents</option></select></div>
           <button id="create-room" type="button" class="primary">CREATE ROOM</button>
         </div>
-        <div id="room-join-fields" hidden><label for="join-code">Room code</label><div class="join-control"><input id="join-code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit room code" aria-label="Six-digit room code"><button id="join-room" type="button">JOIN ROOM</button></div></div>
-        <p id="room-entry-note" class="small-note" role="status">2–4 players</p>
+        <div id="room-join-fields" hidden>
+          <label for="join-code">Six-digit room code</label>
+          <div class="join-control"><input id="join-code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="000000" aria-label="Six-digit room code"><button id="join-room" class="primary" type="button">JOIN ROOM</button></div>
+        </div>
+        <p id="room-entry-note" class="small-note" role="status">2–4 players · Share a private room code with friends</p>
       </section>
     </section>
 
@@ -84,10 +101,11 @@ const unfoldBackendUrl = (import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || "").trim(
     </section>
     <main id="game" hidden>
       <section class="play-area" aria-label="Assembly table">
-        <div class="board-note" aria-label="Current game status">
+        <div id="board-note" class="board-note" aria-label="Current game status">
           <div class="board-note-mode"><span id="mode-label" class="eyebrow">SOLO · STANDARD · 15×15 · TURN 1</span></div>
           <div class="board-note-mission"><strong id="mission-title">Connect S to ★</strong><span id="board-hint" role="status">Ready</span></div>
         </div>
+        <p id="instruction" class="instruction-live" role="status" aria-live="polite">Roll the action reel.</p>
         <div class="table-rig">
           <div class="frame-topbar">
             <a class="frame-games" href="/games/" aria-label="Back to games"><svg class="unfold-back-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11 3H8V6H5V9H2V15H5V18H8V21H11V16H22V8H11Z"/></svg><span>GAMES</span></a>
@@ -112,7 +130,7 @@ const unfoldBackendUrl = (import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || "").trim(
             <button id="zoom-fit" class="frame-fit" type="button" aria-label="Fit entire board to view" title="Reset camera to fit">FIT</button>
             <div id="board-viewport" class="board-viewport">
               <div id="board-surface" class="board-surface">
-                <div id="board" class="board" role="grid" aria-label="Iron sockets suspended over darkness, six-panel road modules and crates"></div>
+                <div id="board" class="board" role="grid" aria-label="Tactical grid with illuminated roads, obstacles, bases and electric gates"></div>
                 <div id="fold-stage" class="fold-stage" hidden aria-hidden="true"></div>
                 <div id="grit-layer" class="grit-layer" aria-hidden="true"></div>
               </div>
@@ -141,7 +159,7 @@ const unfoldBackendUrl = (import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || "").trim(
             <button id="next-game" class="primary" type="button">NEXT →</button>
           </div>
         </div>
-        <details class="game-options"><summary>OPTIONS / HOW TO PLAY</summary>
+        <details class="game-options"><summary>HOW TO PLAY &amp; SETTINGS</summary>
           <label for="animation-speed">Unfold speed</label>
           <select id="animation-speed"><option value="normal">Normal · 1.6s</option><option value="quick">Quick · 0.7s</option><option value="instant">Instant</option></select>
           <div class="camera-options" aria-label="Optional camera controls">
@@ -152,11 +170,10 @@ const unfoldBackendUrl = (import.meta.env.PUBLIC_UNFOLD_BACKEND_URL || "").trim(
           </div>
           <p>Roll one action per turn. Tap any marked socket, cycle legal layouts using NEXT FIT, then UNFOLD. Super Deploy lets you select any of the 11 nets. Reclaim and Refold require an eligible target. Skip forfeits a legal roll. An impossible construction roll causes a loss (Co-op: teammates get a turn each to clear it). Connect the + and − terminals with one base-powered road to open a steel gate permanently.</p>
         </details>
-        <p id="instruction" class="sr-only" role="status" aria-live="polite">Roll the action reel.</p>
         <p id="room-game-note" class="room-game-note" role="status" hidden></p>
       </section>
     </main>
-    <footer>UNFOLD / IRONWORKS · SERIES 11</footer>
+    <footer>UNFOLD / NEON GRID · BUILD THE CONNECTION</footer>
   </div>
 </body>
 </html>

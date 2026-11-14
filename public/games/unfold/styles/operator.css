@@ -1,711 +1,240 @@
-/* UNFOLD 1.9 — styles from this checkout, original cascade order.
-   Keep section ordering: earlier rules are intentionally overridden below. */
-
-
-/* ===== v14.css ===== */
-/* UNFOLD 1.4 — restrained setup help without rebuilding the 1.3 menu. */
-.mode-tagline,.room-mode-tagline{
-  color:#d0bea0;font:clamp(12px,1.45vw,15px)/1.65 var(--narrow-type,system-ui,sans-serif);
-  margin:4px 0 10px;max-width:52ch;
-}
-.room-mode-tagline{font-size:12px;margin:8px 0 4px;color:#d8c09b}
-#setup-title+.mode-tagline{margin-bottom:14px}
-#room-entry .room-mode-tagline{padding:0 2px}
-@media(max-width:600px){
-  .mode-tagline{font-size:12px;line-height:1.55;margin:2px 0 9px}
-  .room-mode-tagline{font-size:11px}
-}
-
-
-/* ===== v15.css ===== */
-/* v1.5 IRONWORKS: frame tubes exist independently of the moving mechanism. */
-.board-surface{isolation:isolate}
-.board{position:relative;z-index:0;background:#010302!important;gap:0!important;padding:0!important;box-shadow:none!important}
-.tile{position:relative;min-width:0;background-color:#010302!important;background-image:none!important;outline-offset:-2px;box-shadow:none}
-.tile[class*="road-"],.tile[class*="base-"]{
-  background-image:url('../assets/deck-foundry.png'),linear-gradient(var(--plate),var(--plate))!important;
-  background-size:100% 100%,100% 100%!important;
-  border:0!important;
-}
-.tile.rubble{background:#4c3b2d url('../assets/crate-foundry.png') center/100% 100%!important}
-.tile.ruin,.tile.permanent{background:#303a32 url('../assets/scrap-foundry.png') center/100% 100%!important}
-.tile.goal{background:repeating-linear-gradient(45deg,#bf9958 0 4px,#332b1d 4px 8px)!important}
-.tile.preview-good{background:#567958 url('../assets/deck-foundry.png') center/100% 100%!important}
-/* Refold: only the plates that have physically left their sockets uncover
-   the void. The empty cell DOM nodes and the tube frame never disappear. */
-.tile.fold-lifting{background:#010302!important;background-image:none!important;outline:none!important;box-shadow:none!important}
-.tile.fold-lifting>*{visibility:hidden!important}
-/* The raised tubing remains visible above road and obstacle art and below
-   the rotating box. It never handles input or redraws during animation. */
-.tube-frame{position:absolute;inset:0;display:block;width:100%;height:100%;z-index:4;pointer-events:none;image-rendering:pixelated}
-.fold-stage{z-index:8;pointer-events:none;isolation:isolate;overflow:visible}
-.fold-stage .mechanism,.mechanism{filter:none!important;will-change:auto!important}
-.mechanism canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
-.is-unfolding .board-surface{transition:none!important;transform:none!important}
-.is-unfolding .tile{pointer-events:none}
-/* Explicit tube ends frame the table; a few large mechanical fasteners are
-   enough. Avoid four tiny rivets on every black hole. */
-.board-frame{background:#34392f;border:4px solid #665744;box-shadow:inset 0 0 0 2px #111b13,3px 4px 0 #080b09}
-.board-corner{width:11px;height:11px;background:#9a8054;border:2px solid #292b21;box-shadow:inset -2px -2px #5a462f}
-@media(max-width:800px){.board-frame{border-width:3px}.board-corner{width:7px;height:7px}}
-
-
-/* ===== v16.css ===== */
-/* v1.6 - installable panels with player-painted interiors and tube catches. */
-/* The void remains exposed around each inset plate; no tile becomes floor. */
-.tile[class*="road-"]{
-  background-color:#010302!important;
-  background-image:url('../assets/deck-v16.png'),linear-gradient(var(--plate),var(--plate))!important;
-  background-position:center center,center center!important;
-  background-repeat:no-repeat,no-repeat!important;
-  background-size:87% 87%,87% 87%!important;
-  border:0!important;
-  box-shadow:none!important;
-}
-.tile.road-neutral{--plate:#747c74;filter:none!important}
-/* Base cells keep their larger distinct pedestal, rather than masquerading
-   as one of the six unfolding panels. */
-.latch-frame{
-  position:absolute;inset:0;display:block;width:100%;height:100%;z-index:5;
-  pointer-events:none;image-rendering:pixelated;
-}
-/* Contact identification floats above the tube and catches, never repeated
-   on each of the six panel faces. */
-.tile .contact-label{z-index:7;position:absolute}
-/* Clamps have a short seating flash. The structural tubing never flashes. */
-.tile.latch-lock:before{inset:12%!important;border:1px solid #d4b278!important;box-shadow:inset 0 0 0 1px #282e25!important}
-
-
-/* ===== v17.css ===== */
-/* UNFOLD 1.7 — iron operator's console. Purely presentational.
-   Gameplay, tube frame and installed panels retain their v1.6 geometry. */
-:root{
-  --console-iron:#313730;
-  --console-rim:#9d7c4e;
-  --console-brass:#d1a964;
-  --console-shadow:#080b09;
-}
-/* This is a machine, not a stack of beveled web cards. Place fasteners
-   only at structural edges, never on each moving tile. */
-.masthead{
-  position:relative;min-height:48px;padding:5px 8px 9px;
-  border-bottom:3px solid #776346;
-  background:linear-gradient(180deg,#22271f 0 3px,#141913 3px 90%,#524630 90%);
-  box-shadow:inset 0 -1px #bd9b64,0 4px 0 #080a08;
-}
-.masthead::before,.frame-topbar::before{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background-image:url('../assets/screw-v17.png'),url('../assets/screw-v17.png');
-  background-repeat:no-repeat;background-size:10px 10px;
-  background-position:4px center,calc(100% - 4px) center;
-  image-rendering:pixelated;opacity:.85;
-}
-.masthead .brand{
-  display:inline-flex;align-items:center;gap:6px;min-width:0;
-  color:#e7ce96;text-shadow:2px 2px #080907;
-  letter-spacing:0;
-}
-.masthead .brand-mark{font-size:20px;line-height:1;margin:0}
-.masthead .version,.frame-topbar .version{
-  color:#c4a16d;border:1px solid #66543b;padding:3px 5px;
-  background:#111710;box-shadow:inset 0 1px #84704a;
-  font-size:7px;
-}
-.masthead .back,.frame-games{color:#ddc495;text-decoration:none}
-.masthead .back:hover,.frame-games:hover{color:#ffe4a5}
-
-/* Setup: one solid cast-iron cabinet with chamfered edging and corner fixings.
-   Keep the compact PLAY copy from the previous menu-cleanup patch. */
-.setup{max-width:600px;margin:clamp(20px,5svh,54px) auto 26px}
-.setup h1{
-  margin:0 0 12px;font:900 clamp(18px,3vw,24px)/1.7 var(--pixel-type);
-  color:#f0d6a0;text-shadow:3px 3px #060a07;
-}
-.setup .mode-tagline{margin:0 0 14px;color:#c7b493}
-.setup .entry-tabs{gap:7px;margin:0 0 8px}
-.setup .entry-tabs button{
-  position:relative;min-height:52px;padding:8px 9px 11px;
-  background:#2b3129 url('../assets/console-v17.png') repeat;
-  background-size:64px 64px;
-  border:3px solid #665b49;border-top-color:#a18b64;
-  border-bottom-color:#453d31;color:#ded0aa;
-  box-shadow:inset 0 2px #4b5449,inset -2px -3px #171c16,0 4px #070907;
-  text-shadow:1px 1px #111710;
-  transform:translateY(0);transition:transform .08s steps(2,end),box-shadow .08s steps(2,end);
-}
-.setup .entry-tabs button:before{
-  content:"";position:absolute;top:4px;left:5px;width:9px;height:9px;
-  background:url('../assets/screw-v17.png') center/contain no-repeat;
-  image-rendering:pixelated;pointer-events:none;
-}
-.setup .entry-tabs button.active{
-  background:#a9824d url('../assets/console-v17.png') repeat;
-  background-blend-mode:overlay;
-  color:#151810;border-color:#e4bd7b;
-  box-shadow:inset 0 3px #674626,inset 2px 0 #cb9b62,0 1px #0a0d0a;
-  transform:translateY(3px);text-shadow:none;
-}
-.setup .entry-tabs button.active::after{
-  content:"";display:block;position:absolute;left:calc(50% - 10px);bottom:2px;
-  width:20px;height:3px;background:#f6d59a;box-shadow:0 0 0 1px #4e3922;
-}
-.setup #start-form,.setup .room-entry,.room-lobby{
-  position:relative;isolation:isolate;
-  padding:clamp(14px,3vw,23px);
-  background-color:#262b23;
-  background-image:url('../assets/console-v17.png'),linear-gradient(180deg,#343a2f,#1e241e);
-  background-size:64px 64px,auto;
-  border:4px solid #92754d;
-  border-top-color:#cba56c;border-left-color:#cba56c;
-  border-right-color:#584932;border-bottom-color:#584932;
-  box-shadow:inset 0 0 0 3px #131a14,inset 0 5px #6b6348,0 5px 0 #050805;
-}
-.setup #start-form::before,.setup .room-entry::before,.room-lobby::before{
-  content:"";position:absolute;inset:3px;z-index:2;pointer-events:none;
-  background-image:url('../assets/screw-v17.png'),url('../assets/screw-v17.png'),url('../assets/screw-v17.png'),url('../assets/screw-v17.png');
-  background-repeat:no-repeat;background-size:12px 12px;
-  background-position:left top,right top,left bottom,right bottom;
-  image-rendering:pixelated;
-}
-.setup form>label,.room-entry label{color:#e2c48d;font:9px/1.6 var(--pixel-type);margin:2px 0 0}
-.setup select,.setup input,.room-entry select,.room-entry input{
-  min-height:48px;padding:9px 13px;
-  font:9px/1.6 var(--pixel-type);
-  border:3px solid #84704e;border-top-color:#443b2d;border-left-color:#443b2d;
-  border-bottom-color:#b89a67;border-right-color:#b89a67;
-  color:#ecd8b0;background:#101711;
-  box-shadow:inset 3px 3px #050907,inset -2px -2px #28352a;
-  border-radius:0;
-}
-.setup select,.room-entry select{
-  appearance:none;-webkit-appearance:none;
-  background-image:linear-gradient(45deg,transparent 50%,#dbba7d 50%),linear-gradient(135deg,#dbba7d 50%,transparent 50%),linear-gradient(90deg,#70583b,#70583b);
-  background-position:calc(100% - 20px) calc(50% + 1px),calc(100% - 15px) calc(50% + 1px),calc(100% - 39px) center;
-  background-size:5px 5px,5px 5px,2px 60%;background-repeat:no-repeat;
-  padding-right:45px;
-}
-.setup .advanced{margin:3px 0;padding:0 3px;font-family:var(--narrow-type)}
-.setup .advanced summary{padding:6px 0;cursor:pointer;color:#ccb791}
-.setup .small-note{font-size:11px;line-height:1.55}
-/* Physical push-button: beveled top cap, compressed bottom edge and no bounce. */
-.setup button.primary,.room-entry button.primary,.room-lobby button.primary,.result button.primary{
-  position:relative;min-height:52px;margin-top:9px;padding:12px 22px;
-  border:3px solid #e8c58a;border-bottom-color:#825c33;
-  color:#141a13;font:9px/1.5 var(--pixel-type);
-  background:#bf9655 url('../assets/console-v17.png') repeat;
-  background-blend-mode:soft-light;
-  box-shadow:inset 0 3px #f5d79e,inset 0 -4px #91642c,0 5px #0a0c09;
-  border-radius:0;text-shadow:none;
-}
-.setup button.primary::before,.room-entry button.primary::before,.room-lobby button.primary::before{
-  content:"";position:absolute;inset:7px 10px;pointer-events:none;
-  background:url('../assets/screw-v17.png') left center/10px 10px no-repeat,url('../assets/screw-v17.png') right center/10px 10px no-repeat;
-  image-rendering:pixelated;
-}
-.setup button.primary:active:not(:disabled),.room-entry button.primary:active:not(:disabled),.room-lobby button.primary:active:not(:disabled),.result button.primary:active:not(:disabled){
-  transform:translateY(4px);box-shadow:inset 0 5px #79552d,inset 0 -2px #e2b879,0 1px #0a0c09;
-}
-.setup #resume{min-height:44px;margin-top:16px;padding:9px 16px;border:2px solid #8a7552;background:#151b15}
-.room-entry h2{color:#f0cd90}
-.room-lobby{margin-top:15px}
-.room-lobby .lobby-seat{background:#141b15}
-
-/* Board mounted operator rail. The pipe-grid below is deliberately untouched. */
-.table-rig{border-color:#a5885c}
-.frame-topbar{
-  position:relative;min-height:36px;padding:5px 18px;
-  background:linear-gradient(#2b332a 0 3px,#172018 3px 86%,#5f5237 86%);
-  border:2px solid #92764d;border-bottom-color:#4e4333;
-  box-shadow:inset 0 1px #d2af70,0 2px #080907;
-}
-.frame-topbar strong{color:#ecd5a0;text-shadow:1px 2px #090c0a}
-.frame-topbar .frame-new{
-  min-height:32px;padding:6px 9px;min-width:54px;
-  border:2px solid #ad8b55;border-top-color:#e4b975;
-  box-shadow:inset 0 2px #5d654b,0 3px #090b09;
-  color:#f4d8a2;background:#303b2f;
-}
-.frame-command{
-  position:relative;margin:4px 0 5px;padding:5px 9px;
-  border:3px solid #9f8156;border-top-color:#ccab76;
-  border-bottom-color:#584933;
-  background:#202820 url('../assets/console-v17.png') repeat;
-  background-size:64px 64px;
-  box-shadow:inset 0 0 0 3px #0c140e,0 3px 0 #080907;
-}
-.frame-command:before{
-  content:"";position:absolute;inset:3px;pointer-events:none;
-  background-image:url('../assets/screw-v17.png'),url('../assets/screw-v17.png');
-  background-repeat:no-repeat;background-size:9px 9px;
-  background-position:left center,right center;
-  image-rendering:pixelated;
-}
-.frame-status{min-height:55px;gap:10px;justify-content:space-between;padding:0 9px}
-.frame-turn{flex:0 1 auto}
-.frame-turn strong{color:#ead49f}
-.frame-skip,.zoom-actions button,.frame-new,.context-toolbar-keys button,.lobby-buttons button{
-  transition:transform .075s steps(2,end),box-shadow .075s steps(2,end),filter .075s;
-  touch-action:manipulation;border-radius:0;
-}
-.frame-skip{
-  background:#49392b;min-height:42px;min-width:70px;padding:5px 9px;
-  border:2px solid #ac8658;border-top-color:#d5ac77;border-bottom-color:#513a2d;
-  box-shadow:inset 0 3px #74553b,0 4px #090b08;
-}
-.frame-skip:active:not(:disabled),.frame-new:active:not(:disabled),.zoom-actions button:active:not(:disabled),.context-toolbar-keys button:active:not(:disabled){
-  transform:translateY(3px);box-shadow:inset 0 3px #161d15,0 1px #080907;
-}
-/* A framed single-line selector drum, NOT a static title badge. The track
-   still contains exactly the six possible outcomes in the original order. */
-.reel-scene{
-  position:relative;flex:none;width:clamp(128px,16vw,175px);
-  padding:5px 10px 5px 19px;gap:1px;
-  background:#252a21;border:3px solid #987a51;
-  border-top-color:#d0af76;border-bottom-color:#463c2b;
-  box-shadow:inset 0 0 0 2px #11170f,0 3px #080a08;
-}
-.reel-scene::before{
-  content:"";position:absolute;z-index:3;top:calc(50% - 8px);left:3px;
-  width:10px;height:16px;
-  background:#b68a50;clip-path:polygon(0 0,100% 50%,0 100%);
-  filter:drop-shadow(1px 1px #080b09);pointer-events:none;
-}
-.reel-scene::after{
-  content:"";position:absolute;z-index:3;top:2px;right:2px;
-  width:6px;height:6px;background:#b08d57;
-  box-shadow:-1px 1px #30291f,0 0 0 1px #151a14,0 50px #b08d57;
-  pointer-events:none;
-}
-.reel-window{
-  position:relative;height:44px;overflow:hidden;
-  background:#080b08;border:2px solid #aa8654;
-  box-shadow:inset 2px 2px #000,inset -2px -2px #3c4637;
-  isolation:isolate;
-}
-.reel-window::before,.reel-window::after{
-  content:"";position:absolute;z-index:4;left:0;right:0;height:8px;pointer-events:none;
-}
-.reel-window::before{top:0;background:linear-gradient(#050806e8,transparent)}
-.reel-window::after{bottom:0;background:linear-gradient(transparent,#040705da)}
-.reel-track{--reel-cell:40px;display:flex;flex-direction:column;will-change:transform}
-.reel-track span{
-  flex:0 0 40px;height:40px;min-height:40px;padding:0 4px;
-  display:flex;align-items:center;justify-content:center;
-  font:700 8px/1.2 var(--pixel-type);color:#f0d294;
-  text-shadow:1px 1px #000;white-space:nowrap;
-}
-.reel-window .reel-pointer{display:none}
-.reel-mark{display:none}
-.reel-scene.spinning .reel-window{animation:reel-vibrate .13s steps(2,end) infinite}
-.reel-scene.spinning .reel-track span{color:#d2b88a}
-.reel-scene.clunk .reel-window{animation:reel-clunk .18s steps(3,end) both}
-.reel-scene.clunk .reel-track span{color:#ffe3a7}
-@keyframes reel-vibrate{0%,100%{transform:translateY(0)}50%{transform:translateY(1px)}}
-@keyframes reel-clunk{0%{transform:translateY(-2px)}35%{transform:translateY(2px)}100%{transform:translateY(0)}}
-.reel-action{display:none}
-.zoom-actions button{min-height:34px;min-width:34px;border:2px solid #90764d;border-top-color:#caa86d;background:#29352a;box-shadow:inset 0 2px #5c674d,0 3px #080b08}
-.zoom-actions #zoom-fit{min-width:46px}
-.context-tools{border:3px solid #a48a61;background:#151e16;box-shadow:inset 0 0 0 2px #313a2d,0 4px #080b09}
-.context-toolbar-keys .context-confirm{background:#bb9256;border:2px solid #e5c182}
-/* Keep buttons and controls large enough on phones despite their metal edges. */
-@media(max-width:600px){
-  .masthead{min-height:42px;padding-left:13px;padding-right:13px}
-  .masthead::before{opacity:.4}
-  .setup{margin:18px auto 24px}
-  .setup h1{font-size:16px;margin-bottom:7px}
-  .setup .entry-tabs{gap:5px}
-  .setup .entry-tabs button{min-height:46px;padding:5px 3px 8px;font-size:7px}
-  .setup .entry-tabs button:before{width:6px;height:6px;top:2px;left:2px}
-  .setup #start-form,.setup .room-entry{padding:15px 12px;border-width:3px}
-  .setup select,.setup input,.room-entry select,.room-entry input{min-height:44px;font-size:9px}
-  .setup button.primary,.room-entry button.primary{min-height:48px}
-  .frame-topbar{padding:3px 9px;min-height:35px}
-  .frame-topbar::before{display:none}
-  .frame-command{padding:3px 6px;border-width:2px}
-  .frame-status{min-height:51px;padding:0 3px;gap:5px}
-  .reel-scene{width:clamp(115px,36vw,147px);padding:3px 5px 3px 15px;border-width:2px}
-  .reel-scene::after{display:none}
-  .reel-window{height:42px;border-width:2px}
-  .reel-track{--reel-cell:38px}
-  .reel-track span{height:38px;min-height:38px;flex-basis:38px;font-size:7px}
-  .frame-skip{min-width:60px;min-height:40px;padding:4px 5px;font-size:7px}
-  .zoom-actions button{min-height:32px;min-width:32px}
-}
-@media(max-width:360px){
-  .reel-scene{width:112px}
-  .reel-track span{font-size:6px}
-  .frame-turn strong{font-size:6px}
-}
-@media(prefers-reduced-motion:reduce){
-  .reel-scene.spinning .reel-window,.reel-scene.clunk .reel-window{animation:none}
-  .setup .entry-tabs button,.frame-skip,.frame-new,.zoom-actions button{transition:none}
-}
-
-
-/* ===== v18.css ===== */
-/* UNFOLD 1.8 — palette cleanup + mounted controls + dim service lamps.
-   Purely presentational. Gameplay and board geometry stay unchanged. */
-:root{
-  --v18-bg:#1d231d;
-  --v18-panel:#2a3028;
-  --v18-panel-2:#30372d;
-  --v18-panel-dark:#111611;
-  --v18-rim:#b68d58;
-  --v18-rim-dark:#5a4832;
-  --v18-rim-soft:#d3af76;
-  --v18-cream:#ead4a0;
-  --v18-copy:#ccb88f;
-  --v18-copper:#9b6543;
-  --v18-copper-dark:#643f2a;
-  --v18-brass:#c39a5b;
-  --v18-amber:rgba(243,196,98,.36);
-  --v18-amber-line:rgba(252,219,145,.86);
-}
-
-.masthead{
-  display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px;
-  background:linear-gradient(180deg,#252c23 0 3px,#151a15 3px 80%,#5b4d35 80%);
-}
-.masthead .brand{justify-self:end;color:var(--v18-cream)}
-.masthead .version,.frame-topbar .version{color:#d6b276;background:#131812;border-color:#6e5a3f;box-shadow:inset 0 1px #95805c}
-
-.setup{max-width:620px}
-.setup h1{color:#f1dcb1;text-shadow:3px 3px #050704}
-.setup .mode-tagline{max-width:38ch;color:#d2c09a;line-height:1.5}
-.setup .entry-tabs{gap:8px;margin:0 0 10px}
-.setup .entry-tabs button{
-  background-image:linear-gradient(180deg,#364034 0,#272e27 58%,#1a201a 58%,#222821 100%),url('../assets/console-v17.png');
-  background-size:auto,64px 64px;background-blend-mode:normal,multiply;
-  border-color:#76624a;border-top-color:#b79766;border-left-color:#9c7f59;border-right-color:#4c3f31;border-bottom-color:#40352a;
-  color:#dfd2b2;box-shadow:inset 0 2px #50594c,inset -2px -3px #151913,0 4px #060805;
-}
-.setup .entry-tabs button.active{
-  color:#12140f;
-  background-image:linear-gradient(180deg,#b17b52 0,#9c6745 62%,#6f452f 62%,#88553a 100%),url('../assets/console-v17.png');
-  border-color:#e0bd80;border-right-color:#5c3e2b;border-bottom-color:#4e3324;
-  box-shadow:inset 0 2px #d9aa72,inset 0 -3px #593625,0 1px #070907,0 6px 12px -10px rgba(248,196,103,.45);
-}
-.setup .entry-tabs button.active::after{bottom:3px;height:4px;width:24px;background:var(--v18-amber-line);box-shadow:0 0 0 1px #583a24,0 0 6px rgba(247,207,122,.35)}
-
-.setup #start-form,.setup .room-entry,.room-lobby{
-  background-color:var(--v18-panel);
-  background-image:linear-gradient(180deg,rgba(255,255,255,.04),transparent 8%,transparent),url('../assets/console-v17.png'),linear-gradient(180deg,#32382d,#20251f 72%,#191e18);
-  background-size:auto,64px 64px,auto;background-blend-mode:screen,multiply,normal;
-  border-color:#a18157;border-top-color:#d2ad74;border-left-color:#d2ad74;border-right-color:#5c4a35;border-bottom-color:#584733;
-  box-shadow:inset 0 0 0 3px #121712,inset 0 4px #716444,0 5px 0 #050705;
-}
-.setup form>label,.room-entry label{color:#dfc791}
-.setup select,.setup input,.room-entry select,.room-entry input{
-  color:#f0dfbd;background:#0d120e;
-  border-color:#af915f;border-top-color:#43392b;border-left-color:#43392b;border-bottom-color:#cfb07a;border-right-color:#cfb07a;
-  box-shadow:inset 2px 2px #050806,inset -2px -2px #253026;
-}
-.setup .small-note{color:#c9b896}
-.setup .advanced summary{color:#d5c29f}
-
-.setup button.primary,.room-entry button.primary,.room-lobby button.primary,.result button.primary,
-.frame-new,.frame-skip,.zoom-actions button,.context-toolbar-keys button,.lobby-buttons button,#resume{
-  position:relative;overflow:hidden;
-}
-
-.setup button.primary,.room-entry button.primary,.room-lobby button.primary,.result button.primary{
-  background-image:linear-gradient(180deg,#d2ab68 0,#bf9656 54%,#9c733b 54%,#bb9150 100%),url('../assets/console-v17.png');
-  background-blend-mode:normal,soft-light;border-color:#efca8d;border-bottom-color:#7c542d;border-right-color:#8f6436;color:#12150f;
-  box-shadow:inset 0 2px #f6dba5,inset 0 -4px #885d2c,0 5px #080a07;
-}
-.setup button.primary::after,.room-entry button.primary::after,.room-lobby button.primary::after,.result button.primary::after,
-.frame-new::after,.frame-skip::after,.zoom-actions button::after,.context-toolbar-keys button::after,.lobby-buttons button::after,#resume::after{
-  content:"";position:absolute;left:10px;right:10px;bottom:2px;height:3px;opacity:0;pointer-events:none;
-  background:linear-gradient(90deg,transparent,var(--v18-amber-line) 18%,var(--v18-amber-line) 82%,transparent);
-  box-shadow:0 0 8px var(--v18-amber);transition:opacity .08s steps(2,end),transform .08s steps(2,end);
-}
-.setup button.primary:is(:active,.is-pressed):not(:disabled),.room-entry button.primary:is(:active,.is-pressed):not(:disabled),.room-lobby button.primary:is(:active,.is-pressed):not(:disabled),.result button.primary:is(:active,.is-pressed):not(:disabled),
-.frame-new:is(:active,.is-pressed):not(:disabled),.frame-skip:is(:active,.is-pressed):not(:disabled),.zoom-actions button:is(:active,.is-pressed):not(:disabled),.context-toolbar-keys button:is(:active,.is-pressed):not(:disabled),.lobby-buttons button:is(:active,.is-pressed):not(:disabled),#resume:is(:active,.is-pressed):not(:disabled){
-  transform:translateY(3px);filter:saturate(1.06);
-}
-.setup button.primary:is(:active,.is-pressed):not(:disabled)::after,.room-entry button.primary:is(:active,.is-pressed):not(:disabled)::after,.room-lobby button.primary:is(:active,.is-pressed):not(:disabled)::after,.result button.primary:is(:active,.is-pressed):not(:disabled)::after,
-.frame-new:is(:active,.is-pressed):not(:disabled)::after,.frame-skip:is(:active,.is-pressed):not(:disabled)::after,.zoom-actions button:is(:active,.is-pressed):not(:disabled)::after,.context-toolbar-keys button:is(:active,.is-pressed):not(:disabled)::after,.lobby-buttons button:is(:active,.is-pressed):not(:disabled)::after,#resume:is(:active,.is-pressed):not(:disabled)::after{opacity:1;transform:translateY(1px)}
-
-#resume{
-  min-height:46px;background:#141914;border:2px solid #8f7653;color:#e3d1a7;
-  box-shadow:inset 0 1px #4f5b49,0 4px #070907;
-}
-
-.frame-topbar{
-  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;
-  padding:4px 12px;background:linear-gradient(180deg,#263026 0 3px,#161e17 3px 82%,#69573c 82%);
-}
-.frame-topbar strong{justify-self:center;display:inline-flex;align-items:center;gap:6px;color:var(--v18-cream)}
-.frame-topbar .frame-new{
-  justify-self:end;min-height:34px;padding:6px 10px;min-width:58px;color:#f0d8aa;background:linear-gradient(180deg,#384337,#283127 62%,#21281f 62%,#2a3028);
-  border-color:#b99661;border-top-color:#e2bf7d;border-bottom-color:#4a3e2e;box-shadow:inset 0 2px #596652,0 4px #060806;
-}
-.turn-banner{background:linear-gradient(180deg,#885742,#7a4b39 60%,#613326);border-top-color:#c88e71;border-left-color:#c88e71;border-right-color:#492a22;border-bottom-color:#492a22}
-
-.frame-command{
-  background-image:linear-gradient(180deg,rgba(255,255,255,.04),transparent 8%),url('../assets/console-v17.png'),linear-gradient(180deg,#31382e,#1f261f 70%,#181d18);
-  background-size:auto,64px 64px,auto;background-blend-mode:screen,multiply,normal;
-  border-color:#a4875c;border-top-color:#d1b179;border-bottom-color:#4f4230;box-shadow:inset 0 0 0 3px #0c110d,0 4px 0 #070806;
-}
-.frame-status{align-items:center;gap:10px}
-.frame-turn strong{color:#f0d8a6}
-.frame-skip{
-  background:linear-gradient(180deg,#5d4836,#4b392b 60%,#36291f);color:#f0d7a1;
-  border-color:#b08c5b;border-top-color:#ddb77d;border-bottom-color:#4a3526;box-shadow:inset 0 2px #7b5d44,0 4px #080907;
-}
-.reel-scene{
-  background-image:linear-gradient(180deg,#364034,#252d25 62%,#1a1f1a 62%,#232924 100%),url('../assets/console-v17.png');
-  background-size:auto,64px 64px;background-blend-mode:normal,multiply;
-  border-color:#a6885b;border-top-color:#d6b57e;border-bottom-color:#493e2d;box-shadow:inset 0 0 0 2px #11160f,0 4px #080907;
-}
-.reel-scene::before{left:4px;background:#c09455;filter:drop-shadow(1px 1px #090b08)}
-.reel-scene::after{width:7px;height:7px;background:#c09d63;box-shadow:-1px 1px #2a221a,0 0 0 1px #141812,0 15px #c09d63,0 30px #c09d63}
-.reel-window{
-  background-image:linear-gradient(180deg,#020302,#0b0f0b 20%,#040604 80%,#0f150f),linear-gradient(90deg,transparent 0 6%,rgba(255,255,255,.05) 6% 8%,transparent 8% 92%,rgba(255,255,255,.04) 92% 94%,transparent 94% 100%);
-  border-color:#b28e5a;box-shadow:inset 2px 2px #000,inset -2px -2px #344036,0 0 0 1px #11160f;
-}
-.reel-track span{color:#f0d79e}
-.reel-scene.spinning .reel-window{box-shadow:inset 2px 2px #000,inset -2px -2px #344036,0 0 0 1px #11160f,0 0 10px rgba(248,197,98,.12)}
-.reel-scene.clunk .reel-window{box-shadow:inset 2px 2px #000,inset -2px -2px #344036,0 0 0 1px #11160f,0 0 14px rgba(248,197,98,.18)}
-
-.zoom-actions{gap:4px}
-.zoom-actions button{
-  background:linear-gradient(180deg,#384338,#293128 62%,#212821);color:#edd8ab;border-color:#9b7f56;border-top-color:#cfac74;
-  box-shadow:inset 0 2px #5e6854,0 3px #080a08;
-}
-.zoom-actions #zoom-fit{min-width:50px}
-.context-tools{border-color:#a88c61;background:#151c15;box-shadow:inset 0 0 0 2px #313a2e,0 4px #080b09}
-.context-toolbar-keys .context-next{background:linear-gradient(180deg,#334033,#252e25 62%,#202820);color:#e1cfaa;border:2px solid #9d8258;border-top-color:#c8a96f}
-.context-toolbar-keys .context-confirm{background:linear-gradient(180deg,#d0a466,#ba8f52 58%,#98703b);color:#13170f;border:2px solid #e3bf82}
-.lobby-buttons button{background:#1f271f;border:2px solid #94764d;color:#e0cfa8;box-shadow:inset 0 2px #515c4c,0 3px #080907}
-
-@media(max-width:600px){
-  .masthead{gap:8px;padding-left:12px;padding-right:12px}
-  .setup .mode-tagline{margin-bottom:12px;font-size:14px}
-  .setup .entry-tabs{gap:6px}
-  .setup .entry-tabs button{min-height:48px;padding:6px 4px 9px}
-  .frame-topbar{padding:4px 8px;gap:6px}
-  .frame-topbar strong{font-size:11px}
-  .frame-topbar .frame-new{min-width:54px;padding:6px 8px}
-  .frame-status{gap:6px;padding:0 4px}
-  .frame-skip{min-width:64px}
-  .reel-scene{width:clamp(118px,36vw,150px)}
-}
-@media(prefers-reduced-motion:reduce){
-  .setup button.primary,.room-entry button.primary,.room-lobby button.primary,.result button.primary,.frame-new,.frame-skip,.zoom-actions button,.context-toolbar-keys button,.lobby-buttons button,#resume{filter:none}
-}
-
-/* Ironworks control fit-out: recessed actions, no loose buttons on the nameplate.
-   The board's upper rim reserves space for FIT; no playable socket is covered. */
-.masthead .back{border:0;background:transparent;box-shadow:none;text-shadow:1px 1px #080b08}
-.frame-topbar{
-  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-  min-height:46px;align-items:center;gap:8px;padding:6px 12px;
-  border:2px solid #736044;border-bottom:3px solid #55452f;
-  background:linear-gradient(180deg,#3a4135 0 2px,#202921 2px 15%,#172018 15% 83%,#494334 83% 92%,#746043 92%);
-  box-shadow:inset 0 1px #9c885d,inset 0 -2px #101611;
-}
-.frame-topbar::before{display:none}
-.frame-topbar .frame-games{
-  justify-self:start;align-self:center;display:inline-flex;min-height:32px;
-  padding:4px 2px;background:none;border:0;box-shadow:none;
-  color:#bcaf8c;text-shadow:1px 2px #070a07;
-  font:700 8px/1.4 var(--pixel-type);letter-spacing:0;
-}
-.frame-topbar .frame-games:is(:hover,:focus-visible){color:#f0d9a8;text-decoration:none}
-.frame-topbar .frame-games:focus-visible{outline:1px dotted #e2c28c;outline-offset:2px}
-.frame-topbar>strong{
-  justify-self:center;display:inline-flex;align-items:center;gap:6px;
-  margin:0;line-height:1.5;color:#e9d4a4;text-shadow:1px 1px #070a07;
-  font-size:clamp(9px,1.3vw,11px);
-}
-.frame-topbar .frame-new{
-  justify-self:end;align-self:center;min-width:58px;min-height:32px;
-  margin:0;padding:6px 9px 7px;
-  background:linear-gradient(180deg,#202a20 0 60%,#273328 60%);
-  border:2px solid #857452;border-top-color:#5f644d;border-left-color:#676b53;
-  border-bottom-color:#b3a072;border-right-color:#ad956a;
-  color:#e6d2a8;text-shadow:1px 1px #060907;
-  box-shadow:inset 2px 3px #0a100c,inset -1px -2px #3e503d;
-  transform:none;
-}
-.frame-topbar .frame-new:is(:active,.is-pressed):not(:disabled){
-  transform:none;filter:none;background:linear-gradient(180deg,#111a13,#28331f);
-  box-shadow:inset 3px 4px #080e09,inset -1px -1px #485741;
-}
-.frame-topbar .frame-new::after{left:10px;right:10px;bottom:2px;height:2px}
-
-/* Compact instrument readout: mode above, mission and fit count below. */
-.board-note{
-  display:flex;flex-direction:column;align-items:stretch;justify-content:center;
-  min-height:41px;gap:3px;padding:3px 5px 5px;
-  font-family:var(--pixel-type);line-height:1.35;
-}
-.board-note-mode,.board-note-mission{display:flex;align-items:center;min-width:0}
-.board-note-mode .eyebrow{margin:0;font:700 6px/1.4 var(--pixel-type);color:#b99c70;white-space:nowrap}
-.board-note-mission{gap:8px;justify-content:space-between}
-.board-note-mission strong{
-  flex:1;min-width:0;max-width:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font:700 10px/1.5 var(--pixel-type);letter-spacing:0;color:#f0d8a2;
-}
-#board-hint{
-  flex:none;max-width:44%;min-width:0;overflow:hidden;text-overflow:ellipsis;
-  white-space:nowrap;text-align:right;font:700 9px/1.4 var(--narrow-type);color:#b4bba4;
-}
-
-/* FIT sits in a machined pocket above the playing surface, not over the grid. */
-.board-frame{padding:27px 3px 3px}
-.board-frame::before{
-  content:'CAMERA / FIT';position:absolute;top:8px;left:11px;
-  font:700 7px/1 var(--narrow-type);letter-spacing:.08em;color:#a3946f;
-  pointer-events:none;text-shadow:1px 1px #0b0e0a;
-}
-.board-frame .frame-fit{
-  position:absolute;z-index:7;top:2px;right:8px;
-  min-height:23px;min-width:54px;padding:3px 8px;
-  color:#e2cfa2;background:linear-gradient(180deg,#1b251b,#2c3629);
-  border:2px solid #8b7752;border-top-color:#626952;border-left-color:#697058;
-  border-bottom-color:#aa9062;border-right-color:#a79164;
-  box-shadow:inset 2px 2px #0c130d,inset -1px -1px #465541;
-  font:700 8px/1 var(--pixel-type);text-shadow:1px 1px #090c09;
-  touch-action:manipulation;
-}
-.board-frame .frame-fit:is(:active,.is-pressed):not(:disabled){
-  background:#192419;box-shadow:inset 3px 3px #080e08,inset -1px -1px #4c5b40;
-  color:#ffdc92;
-}
-.board-frame .frame-fit:focus-visible{outline:2px solid #f4d28a;outline-offset:1px}
-.camera-options{display:flex;align-items:center;gap:7px;margin:10px 0 8px;flex-wrap:wrap}
-.camera-options>span{font:700 8px/1.5 var(--pixel-type);color:#c5b18b;margin-right:3px}
-.camera-options button{
-  min-width:45px;min-height:37px;padding:7px 10px;
-  color:#edd5a6;background:#293529;
-  border:2px solid #967c53;border-top-color:#c1a36c;
-  box-shadow:inset 0 2px #58644f;
-  font:700 12px/1 var(--pixel-type);touch-action:manipulation;
-}
-.camera-options button:is(:active,.is-pressed){background:#192219;box-shadow:inset 2px 2px #0c100b;color:#ffe0a0}
-.camera-options output{margin-left:4px;font:700 10px/1 var(--narrow-type);color:#bcb398}
-@media(max-width:650px){
-  .board-note{gap:2px;min-height:37px;padding:2px 4px 4px}
-  .board-note-mode .eyebrow{font-size:6px}
-  .board-note-mission strong{font-size:8px}
-  #board-hint{display:block;font-size:8px;max-width:35%}
-  .frame-topbar{min-height:41px;padding:4px 8px}
-  .frame-topbar .frame-games{font-size:7px}
-  .frame-topbar>strong{font-size:9px}
-  .frame-topbar .frame-new{min-height:32px;min-width:54px;padding:5px 7px}
-  .board-frame{padding-top:25px}
-  .board-frame::before{top:7px;font-size:6px}
-  .board-frame .frame-fit{min-height:21px;top:2px;right:6px}
-}
-@media(max-width:370px){
-  .board-note-mode .eyebrow{font-size:5px}
-  .board-note-mission strong{font-size:7px}
-  .frame-topbar .frame-games{font-size:6px}
-  .frame-topbar>strong{font-size:8px;gap:3px}
-}
-
-
-/* 1.9.2: machine header hardware, not stickers on the top of the cabinet.
-   All three header elements sit INSIDE a shared flush nameplate. */
-.frame-topbar{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-  align-items:center;
-  min-height:48px;
-  padding:6px clamp(9px,1.4vw,16px);
-  column-gap:8px;
-  border:1px solid #6b5b42;
-  border-top:2px solid #a88e61;
-  border-bottom:3px solid #4a3d2b;
-  background:linear-gradient(180deg,#303a30 0,#202a22 3px,#19221b 4px,#19221b calc(100% - 4px),#333d2e calc(100% - 3px),#65543a 100%);
-  box-shadow:inset 0 1px #53604b,inset 0 -1px #101712;
-}
-.frame-topbar .frame-games{
-  display:inline-flex;align-items:center;justify-self:start;align-self:center;
-  width:max-content;min-height:32px;
-  padding:2px 6px 2px 4px;
-  border:0;background:transparent;box-shadow:none;
-  color:#d1c09b;text-shadow:1px 1px #080b08;
-  line-height:1.2;
-}
-.frame-topbar .frame-games:is(:hover,:focus-visible){color:#f1dda9;background:transparent}
-.frame-topbar>strong{justify-self:center;align-self:center;margin:0;white-space:nowrap}
-.frame-topbar .frame-new{
-  justify-self:end;align-self:center;box-sizing:border-box;
-  width:64px;height:30px;min-width:0;min-height:0;
-  margin:0;padding:0 8px;
-  font:700 8px/26px var(--pixel-type);
-  color:#dac69c;text-shadow:1px 1px #070a07;
-  background:linear-gradient(180deg,#111a14,#1e2a20 60%,#232f23);
-  border:1px solid #7c6b4c;
-  border-top-color:#4b5540;border-left-color:#4b5540;
-  border-bottom-color:#9b875c;border-right-color:#8d7a55;
-  box-shadow:inset 2px 2px #0b100b,inset -1px -1px #3d4e3b;
-  transform:none;
-}
-.frame-topbar .frame-new:is(:active,.is-pressed):not(:disabled){
-  transform:none;filter:none;color:#ffe1a4;
-  background:linear-gradient(180deg,#101710,#263121);
-  box-shadow:inset 3px 3px #080e09,inset -1px -1px #506143;
-}
-.frame-topbar .frame-new::after{
-  left:11px;right:11px;bottom:1px;height:2px;
-  background:#efb963;box-shadow:0 0 5px rgba(238,171,70,.36);
-}
-@media(max-width:600px){
-  .frame-topbar{min-height:43px;padding:5px 8px;gap:5px}
-  .frame-topbar .frame-games{min-height:29px;padding:2px 3px;font-size:7px}
-  .frame-topbar>strong{font-size:9px;gap:4px}
-  .frame-topbar .frame-new{width:55px;height:29px;font-size:7px;line-height:25px;padding:0 5px}
-}
-@media(max-width:360px){
-  .frame-topbar .frame-games{font-size:6px}
-  .frame-topbar>strong{font-size:8px;gap:3px}
-  .frame-topbar .frame-new{width:51px;font-size:6px}
-}
-
-/* Action beacons. Each eligible six-panel cube lights up as a single object.
-   Selection removes REFOLD beacons and shows legal landing sockets instead. */
-.board .tile.reclaim-target,
-.board .tile.refold-target{
-  outline:2px solid var(--action-edge);
-  outline-offset:-2px;
-  z-index:2;
-  box-shadow:inset 0 0 0 2px var(--action-edge)!important;
-  cursor:pointer;
-}
-.board .tile.reclaim-target{--action-edge:#ffe1a0;--action-rgb:255,196,93}
-.board .tile.refold-target{--action-edge:#b6f7c7;--action-rgb:111,222,158}
-.board .tile.reclaim-target::after,
-.board .tile.refold-target::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  border:2px solid rgba(var(--action-rgb),.95);
-  background:rgba(var(--action-rgb),.14);
-  box-shadow:inset 0 0 10px rgba(var(--action-rgb),.4);
-  opacity:.45;
-  animation:unfold-action-pulse 1.45s ease-in-out infinite;
-}
-@keyframes unfold-action-pulse{
-  0%,100%{opacity:.45}
-  50%{opacity:1}
-}
-@media(prefers-reduced-motion:reduce){
-  .board .tile.reclaim-target::after,
-  .board .tile.refold-target::after{animation:none;opacity:.85}
-}
-
-/* UNFOLD circuit door overlays. Terminals remain visible under installed roads. */
-#board .tile.gate { background: repeating-linear-gradient(90deg,#735733 0 4px,#292f2d 4px 8px); }
-#board .gate-shutter { color:#ffe4a4; font-size:1.2em; text-shadow:0 0 5px #cf8c31; }
-#board .tile.gate-open { box-shadow: inset 0 0 0 2px #b38847; }
-#board .gate-floor { color:#9a8154; opacity:.65; }
-#board .gate-terminal { position:absolute; z-index:3; right:1px; bottom:0; padding:0 2px;
-  color:#f7d28a; background:#1c2927; border:1px solid #8b7448; font-weight:bold; font-size:11px; line-height:1.1; }
-#board .tile.terminal-powered .gate-terminal { color:#bbffca; border-color:#83b99d; text-shadow:0 0 4px #9afcb8; animation:unfold-current 1.2s steps(3,end) infinite; }
-@keyframes unfold-current { 50% { color:#ffffff; box-shadow:0 0 7px #a4ffbe; } }
-@media (prefers-reduced-motion:reduce) { #board .tile.terminal-powered .gate-terminal { animation:none; } }
+/* UNFOLD Neon Grid — gameplay and motion. Only the active presentation system. */
+#game { max-width: 100%; }
+.play-area { min-width: 0; width:100%; max-width:940px; margin:22px auto 0; }
+.board-note { display:grid; gap:4px; padding:6px 2px 10px; }
+.board-note-mode { display:flex; min-width:0; }
+.board-note .eyebrow { color:var(--muted); font:700 11px/1.4 ui-monospace,monospace; letter-spacing:.045em; }
+.board-note-mission { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px 12px; align-items:baseline; }
+.board-note-mission strong { font-size:clamp(15px,2.1vw,20px); font-weight:800; letter-spacing:-.02em; }
+#board-hint { color:var(--mint); font:700 12px/1.4 ui-monospace,monospace; }
+.board-note.crisis { padding:10px 12px; border:1px solid var(--danger); border-radius:9px; background:#311b30; }
+.board-note.crisis .board-note-mission strong { color:#ffd9dd; }
+#instruction {
+  display:block; margin:0 0 11px; min-height:22px; color:#d2e5f6;
+  font-size:13px; line-height:1.5;
+}
+.table-rig {
+  padding:10px; border-radius:14px; border:1px solid #3a5672;
+  background:#0f1b2c; box-shadow:0 15px 35px #0003;
+}
+.frame-topbar {
+  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  gap:12px; align-items:center; min-height:45px; padding:3px 7px;
+  border-bottom:1px solid #2b435a; margin-bottom:8px;
+}
+.frame-topbar > strong { justify-self:center; font:800 15px/1.3 ui-monospace,monospace; letter-spacing:.16em; color:var(--text); }
+.frame-new { justify-self:end; min-height:34px; padding:5px 13px; font-size:12px; background:transparent; border-color:#4f6b83; }
+.turn-banner {
+  --active:var(--cyan); display:flex; gap:10px; align-items:center; justify-content:space-between;
+  min-height:39px; padding:9px 12px; border-radius:8px;
+  background:color-mix(in srgb,var(--active) 12%,#102034);
+  border-left:4px solid var(--active); color:var(--text);
+}
+.turn-banner span { color:#d2e2f0; font:700 11px/1.4 ui-monospace,monospace; }
+.turn-banner strong { font:850 14px/1.4 system-ui,sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.turn-banner.waiting { background:#192437; border-left-color:#758c9f; }
+.frame-command { margin:10px 0; border:1px solid #304d68; border-radius:9px; background:#111f33; }
+.frame-status { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:10px; align-items:center; padding:8px 12px; }
+.frame-turn { display:flex; gap:8px; flex-wrap:wrap; align-items:center; min-width:0; }
+.frame-turn > strong { color:var(--muted); font:750 11px/1.4 ui-monospace,monospace; }
+.clock { display:inline-flex; gap:4px; align-items:baseline; padding:3px 7px; border-radius:6px; border:1px solid #3b6680; }
+.clock strong { color:var(--cyan); font:850 22px/1.2 ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+.clock small { color:var(--muted); font:650 10px ui-monospace,monospace; }
+.clock.urgent { border-color:var(--danger); }
+.clock.urgent strong { color:var(--danger); }
+.frame-skip { justify-self:end; background:transparent; color:#c6d5e7; min-width:85px; min-height:39px; font:750 12px ui-monospace,monospace; }
+.reel-scene { display:block; width:clamp(136px,20vw,196px); background:#07111f; border:1px solid #3e677f; border-radius:8px; padding:4px; }
+.reel-window { height:43px; width:100%; overflow:hidden; position:relative; }
+.reel-window::before,.reel-window::after { content:""; position:absolute; z-index:2; left:0; right:0; height:5px; pointer-events:none; }
+.reel-window::before { top:0; background:linear-gradient(#07111f,transparent); }
+.reel-window::after { bottom:0; background:linear-gradient(transparent,#07111f); }
+.reel-track { --reel-cell:38px; display:flex; flex-direction:column; width:100%; will-change:transform; }
+.reel-track span {
+  display:flex; flex:0 0 38px; height:38px; width:100%; align-items:center; justify-content:center;
+  color:var(--cyan); white-space:nowrap; font:850 clamp(10px,1.4vw,14px)/1 ui-monospace,monospace; letter-spacing:.025em;
+}
+.reel-scene.spinning .reel-track span { color:#719cb4; }
+.reel-scene.clunk .reel-track span { color:var(--mint); }
+.reel-pointer,.reel-mark,.reel-action { display:none; }
+/* Quiet surfaces until the player chooses something. */
+.board-frame { position:relative; padding:42px 4px 4px; border:1px solid #36546f; border-radius:10px; background:#0b1525; }
+.board-frame::before {
+  content:'TACTICAL GRID'; position:absolute; left:12px; top:15px;
+  font:750 11px/1.2 ui-monospace,monospace; letter-spacing:.075em; color:#9ebbd5;
+}
+.board-corner,.bolt,.tube-frame,.latch-frame { display:none; }
+.board-frame .frame-fit {
+  position:absolute; right:9px; top:6px; z-index:10; min-height:30px; min-width:58px;
+  padding:5px 12px; background:#1d3347; border:1px solid #527491; border-radius:7px;
+  font:750 11px/1.2 ui-monospace,monospace;
+}
+.board-viewport { position:relative; width:100%; overflow:auto; overscroll-behavior:contain; scrollbar-color:#476c85 #101b2b; border-radius:5px; }
+.board-viewport.large-board { scrollbar-width:thin; }
+.board-surface { position:relative; width:calc(100% * var(--board-magnification,1)); min-width:100%; isolation:isolate; }
+.board {
+  --size:11; display:grid; grid-template-columns:repeat(var(--size),minmax(0,1fr)); gap:2px;
+  width:100%; aspect-ratio:1; padding:2px; background:#0a1728; touch-action:pan-x pan-y;
+}
+.tile {
+  --plate:var(--cell); display:grid; place-items:center; position:relative; min-width:0; min-height:0;
+  aspect-ratio:1; padding:0; border:1px solid var(--grid); border-radius:2px;
+  background:var(--cell); color:var(--text); overflow:hidden;
+  box-shadow:none; font-weight:800; touch-action:manipulation; transition:none;
+}
+.tile:hover { border-color:#507a9c; background:#1b3046; }
+.tile:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; z-index:5; }
+.tile strong { font:800 clamp(10px,1.65vw,18px)/1 ui-monospace,monospace; z-index:2; }
+.tile[class*="road-"],.tile[class*="base-"] {
+  --owner:var(--neutral); --owner-fill:#27384b;
+  border-color:var(--owner); background:var(--owner-fill);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--owner) 35%,transparent);
+}
+.tile.road-red,.tile.base-red { --owner:var(--cyan); --owner-fill:#15465d; }
+.tile.road-blue,.tile.base-blue { --owner:var(--pink); --owner-fill:#4f244b; }
+.tile.road-green,.tile.base-green { --owner:var(--amber); --owner-fill:#504127; }
+.tile.road-gold,.tile.base-gold { --owner:var(--lime); --owner-fill:#294828; }
+.tile.road-neutral,.tile.base-neutral { --owner:var(--neutral); --owner-fill:#364355; }
+.tile[class*="base-"] { border-width:2px; color:var(--owner); background:#0d2036; }
+.tile[class*="base-"]::before { content:""; position:absolute; inset:17%; border:1px solid var(--owner); border-radius:50%; opacity:.7; }
+.tile.goal { border:2px solid var(--amber); background:#554127; color:#ffe6a4; }
+.tile.goal strong { font-size:clamp(14px,2.3vw,24px); }
+.tile.rubble { background:#42372e; border:1px solid #bc855e; color:#e5b787; }
+.tile.rubble::before { content:""; position:absolute; inset:22%; border:2px solid #e5b787; transform:rotate(14deg); }
+.tile.ruin,.tile.permanent { background:repeating-linear-gradient(135deg,#233043 0 5px,#303d50 5px 10px); border-color:#62758a; color:#b8c5d7; }
+.tile.permanent::before { content:""; position:absolute; inset:0; border-top:2px solid #7c95ad; }
+.tile .obstacle-mark { display:grid; place-items:center; z-index:2; font-size:clamp(12px,1.6vw,18px); font-weight:900; }
+.tile.rubble .obstacle-mark { display:none; }
+.tile .crate-mark,.tile .crate-x { display:none; }
+.tile .contact-label {
+  position:absolute; right:1px; bottom:1px; z-index:3; min-width:40%; text-align:center;
+  padding:0 1px; border-radius:2px; background:#0a1525; color:var(--text);
+  border:1px solid var(--owner,var(--neutral));
+  font:800 clamp(9px,1.15vw,13px)/1.25 ui-monospace,monospace;
+}
+.tile.preview-good { background:#285b51 !important; border:2px solid var(--mint)!important; color:#d2ffe9; }
+.tile.preview-bad { background:#62313e!important; border:2px solid var(--danger)!important; }
+.tile.preview-good::before,.tile.preview-bad::before { content:""; position:absolute; inset:20%; border:1px solid currentColor; opacity:.55; }
+.tile.preview-good::before { color:var(--mint); }
+.tile.preview-bad::before { color:var(--danger); }
+.tile.legal-anchor { border-color:var(--mint); }
+.tile .anchor-dot { position:absolute; inset:31%; z-index:4; border-radius:50%; border:2px solid var(--mint); background:#0b2f2b; pointer-events:none; }
+.tile.selected-anchor { outline:2px solid var(--focus); outline-offset:-2px; z-index:3; }
+.tile.selected-anchor .anchor-dot { background:var(--focus); border-color:#0c2f34; }
+.tile.reclaim-target,.tile.refold-target { outline:2px solid var(--amber); outline-offset:-2px; z-index:2; cursor:pointer; }
+.tile.refold-target { outline-color:var(--mint); }
+.tile.reclaim-target::after,.tile.refold-target::after { content:""; position:absolute; inset:24%; border:1px solid var(--amber); pointer-events:none; }
+.tile.refold-target::after { border-color:var(--mint); }
+.tile.fold-lifting { background:var(--cell)!important; border-color:var(--grid)!important; }
+.tile.fold-lifting > * { visibility:hidden; }
+.tile.latch-lock { animation:neon-land .52s ease-out 1 both; }
+.tile.fold-origin { border-style:dashed; }
+@keyframes neon-land { 0%{box-shadow:inset 0 0 0 3px var(--mint),0 0 12px var(--mint)} 100%{box-shadow:none} }
+/* Gate terminals are readable as glyphs even when all lighting is disabled. */
+.tile.gate { border-color:var(--danger); background:repeating-linear-gradient(90deg,#48283d 0 5px,#5c3248 5px 8px); }
+.tile .gate-shutter { font:850 clamp(13px,2vw,22px)/1 ui-monospace,monospace; color:#ffb9c6; }
+.tile.gate-open { border:1px dashed #5cbbd3; background:#183549; }
+.tile .gate-floor { font:700 15px/1 ui-monospace,monospace; color:#719aaa; opacity:.8; }
+.tile .gate-terminal {
+  position:absolute; z-index:5; top:0; right:0; display:grid; place-items:center;
+  min-width:clamp(10px,1.6vw,16px); min-height:clamp(10px,1.6vw,16px);
+  border-radius:1px; border:1px solid #aebdd2; background:#081725; color:var(--text);
+  font:900 clamp(9px,1.3vw,13px)/1 ui-monospace,monospace;
+}
+.tile.terminal-powered .gate-terminal { border-color:var(--mint); background:#174439; color:#c3ffe9; }
+.tile.gate-just-opened { animation:gate-activation .46s ease-out 1 both; }
+@keyframes gate-activation { 0%{box-shadow:inset 0 0 0 3px #d1ffff,0 0 14px var(--cyan)} 100%{box-shadow:none} }
+/* Moving light module is the only visually theatrical element on the board. */
+.fold-stage,.grit-layer { position:absolute; inset:0; pointer-events:none; }
+.fold-stage { z-index:8; overflow:visible; isolation:isolate; }
+.mechanism { position:absolute; width:var(--cube-canvas,400px); height:var(--cube-canvas,400px); left:var(--fx,50%); top:var(--fy,50%); transform:translate(-50%,-50%); }
+.mechanism canvas { width:100%; height:100%; display:block; image-rendering:auto; filter:drop-shadow(0 0 9px #49ddf54c); }
+.grit-layer { z-index:9; overflow:hidden; }
+.grit-bit { position:absolute; width:4px; height:4px; background:var(--cyan); border-radius:50%; animation:energy-drift .55s ease-out both; }
+@keyframes energy-drift { to { opacity:0; transform:translate(var(--dx),var(--dy)) scale(.35); } }
+.is-unfolding .board { pointer-events:none; }
+/* Context buttons are positioned by existing geometry-aware JS outside selected panels. */
+.context-tools {
+  position:absolute; z-index:25; width:max-content; max-width:calc(100% - 8px);
+  padding:9px; border:1px solid var(--cyan); border-radius:9px;
+  background:#0d1d2feb; box-shadow:0 8px 22px #000a;
+}
+.context-toolbar-label { display:flex; justify-content:space-between; align-items:center; gap:15px; color:var(--muted); font:750 11px ui-monospace,monospace; }
+.context-toolbar-label b { color:var(--text); }
+.context-toolbar-keys { display:flex; gap:7px; margin:7px 0 4px; }
+.context-toolbar-keys button { min-height:45px; white-space:nowrap; padding:8px 12px; font-size:12px; }
+.context-toolbar-keys .context-confirm { background:var(--mint); border-color:var(--mint); color:#071b20; }
+.context-placement-info { display:block; color:var(--muted); font:11px/1.3 ui-monospace,monospace; }
+.board-shape-slot { margin:8px 0 0; }
+.cube-offer { display:flex; align-items:center; gap:15px; padding:10px 12px; border:1px solid #345878; border-radius:9px; background:#15273d; }
+.cube-visual { flex:0 0 85px; width:85px; height:65px; }
+.cube-visual svg { width:100%; height:100%; }
+.cube-description { display:flex; flex-direction:column; gap:4px; }
+.cube-description strong { font:800 13px ui-monospace,monospace; }
+.cube-description span { color:var(--muted); font-size:12px; }
+.shape-picker { padding:10px; border:1px solid #345878; border-radius:9px; background:#15273d; }
+.picker-head { display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px; align-items:center; margin-bottom:8px; }
+.picker-head strong { font-size:12px; }
+.picker-head span { color:var(--muted); font-size:11px; }
+.shape-list { display:flex; overflow-x:auto; gap:7px; padding-bottom:4px; scroll-snap-type:x mandatory; }
+.net-option { min-height:67px; flex:0 0 70px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; scroll-snap-align:center; border-radius:7px; background:#102035; }
+.net-option svg { width:64px; height:48px; }
+.net-option.active { border:2px solid var(--mint); background:#20463e; }
+.net-option small { color:var(--muted); font-size:10px; }
+.result { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-top:10px; padding:14px; border:1px solid var(--mint); border-radius:9px; background:#18342d; }
+.result strong { color:#dcffef; font:850 15px/1.4 ui-monospace,monospace; }
+.result.is-defeat { border-color:var(--danger); background:#3a2035; }
+.result.is-defeat strong { color:#ffe0e4; }
+.game-options { margin:12px 0; border:1px solid #2e4c64; border-radius:9px; padding:9px 13px; color:var(--muted); background:#0d1929; font-size:13px; }
+.game-options summary { cursor:pointer; color:var(--text); font-weight:700; }
+.game-options label { display:block; margin:12px 0 6px; }
+.game-options select { min-height:40px; padding:7px 11px; border:1px solid #50708e; border-radius:7px; background:#0a1625; color:var(--text); }
+.game-options p { max-width:75ch; line-height:1.65; }
+.camera-options { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:12px 0; }
+.camera-options > span { color:var(--muted); font:750 11px ui-monospace,monospace; }
+.camera-options button { min-height:44px; min-width:44px; }
+#zoom-level { min-width:42px; font:750 12px ui-monospace,monospace; }
+.room-game-note { color:var(--muted); font-size:12px; }
+@media(max-width:680px) {
+  .play-area { margin:12px auto 0; }
+  .table-rig { padding:5px; border-radius:9px; }
+  .board-note-mission strong { font-size:15px; }
+  #board-hint { font-size:11px; }
+  .frame-topbar { min-height:40px; margin:0 0 5px; }
+  .turn-banner { padding:6px 8px; min-height:35px; }
+  .turn-banner span { font-size:9px; }
+  .turn-banner strong { font-size:12px; }
+  .frame-status { grid-template-columns:minmax(0,1fr) auto auto; gap:5px; padding:6px; }
+  .frame-turn > strong { font-size:10px; }
+  .reel-scene { width:clamp(105px,32vw,150px); }
+  .reel-track span { font-size:10px; }
+  .frame-skip { min-width:60px; font-size:10px; padding:5px; }
+  .board-frame { padding:38px 2px 2px; }
+  .board { gap:1px; padding:1px; }
+  .tile .contact-label { font-size:9px; }
+  .tile .gate-terminal { right:0; top:0; }
+  .context-tools { padding:6px; max-width:calc(100% - 8px); }
+  .context-toolbar-keys { gap:5px; }
+  .context-toolbar-keys button { padding:5px 8px; font-size:11px; }
+  .context-placement-info { font-size:10px; }
+  .board-viewport.large-board { max-height:80svh; }
+}
+@media(max-width:380px) {
+  .frame-topbar > strong { font-size:12px; }
+  .board-note .eyebrow { font-size:9px; }
+  .turn-banner { gap:5px; }
+  .turn-banner span { font-size:8px; }
+  .reel-scene { width:102px; }
+  .reel-track span { font-size:9px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .tile.latch-lock,.tile.gate-just-opened,.grit-bit { animation:none!important; }
+  .grit-bit { display:none; }
+}
+/* A single route pulse after power-up; no continuously animated roads. */
+.tile.circuit-pulse::after {
+  content:""; position:absolute; z-index:4; inset:0; pointer-events:none;
+  border:2px solid #c9ffff; opacity:0;
+  animation:circuit-arrival .38s ease-out var(--pulse-delay,0ms) 1 both;
+}
+@keyframes circuit-arrival { 0%{opacity:0} 30%{opacity:1} 100%{opacity:0} }
+@media(prefers-reduced-motion:reduce) { .tile.circuit-pulse::after{animation:none!important} }

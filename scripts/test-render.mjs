@@ -1,11 +1,9 @@
-// v1.5 rendering regression checks: actual six-plate geometry, stable tube
-// underlay, and a canvas renderer usable without repeatedly replacing SVG.
+// Neon Grid rendering regressions: exact six-face geometry and stable Canvas.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { foldedFaces } from '../public/games/unfold/fold.mjs';
 import { paintFoldCanvas } from '../public/games/unfold/canvas.mjs';
-import { paintTubeFrame } from '../public/games/unfold/tubes.mjs';
 function mockCanvas(){
   const calls={fillRect:0,stroke:0,fill:0,clearRect:0};
   const ctx={
@@ -29,67 +27,28 @@ test('every cube net closes as one unit and unfolds to a flat six-cell panel',()
     }
   }
 });
-test('the permanent tube frame paints only on board-size changes',()=>{
+test('energy cube renders all states without mechanical fasteners or reallocated canvas',()=>{
   const {canvas,calls}=mockCanvas();
-  assert.equal(paintTubeFrame(canvas,15),true);
-  assert.equal(canvas.width,240);assert.equal(canvas.height,240);
-  const before=calls.fillRect;
-  assert.ok(before>500);
-  assert.equal(paintTubeFrame(canvas,15),false);
-  assert.equal(calls.fillRect,before,'frame did not repaint');
-  assert.equal(paintTubeFrame(canvas,19),true);
-  assert.equal(canvas.width,304);assert.ok(calls.fillRect>before);
-});
-test('the cube uses a stable canvas to draw both wrapped and unwrapped surfaces',()=>{
-  const {canvas,calls}=mockCanvas();
-  assert.equal(paintFoldCanvas(canvas,0,0,false,0),true);
+  assert.equal(paintFoldCanvas(canvas,0,0,false,0,{color:'#49ddf5'}),true);
   assert.equal(canvas.width,200);assert.equal(canvas.height,200);
   const first=calls.fill;
-  assert.ok(first>30,'thick plates and rivets were drawn');
-  assert.equal(paintFoldCanvas(canvas,0,0,false,.5),true);
-  assert.equal(paintFoldCanvas(canvas,0,0,false,1),true);
-  assert.equal(paintFoldCanvas(canvas,0,0,false,.2),true,'reverse pose uses same renderer');
-  assert.equal(canvas.width,200);
-  assert.ok(calls.clearRect===4,'one stable surface, cleared once per frame');
-  assert.ok(calls.fill>first);
+  assert.ok(first>8,'faces are solid geometric surfaces');
+  for(const progress of [.25,.5,.75,1])assert.equal(paintFoldCanvas(canvas,0,0,false,progress,{color:'#49ddf5'}),true);
+  assert.equal(calls.clearRect,5);
+  assert.ok(calls.stroke>0,'luminous outlines are visible without bloom');
 });
-
-import { paintLatchFrame } from '../public/games/unfold/latches.mjs';
-
-test('one socket panel installs two pairs of mechanical jaws over its steel tube',()=>{
-  const {canvas,calls}=mockCanvas();
-  assert.equal(paintLatchFrame(canvas,15,[[3,4]]),true);
-  assert.equal(canvas.width,240);assert.equal(canvas.height,240);
-  const one=calls.fillRect;
-  assert.ok(one>=10,'two clamp heads painted');
-  paintLatchFrame(canvas,15,[[3,4],[3,4],[25,25]]);
-  assert.equal(calls.fillRect,one*2,'duplicate and out-of-frame sockets do not create extra jaws');
-  paintLatchFrame(canvas,15,[[3,4]],{hidden:new Set(['3,4'])});
-  assert.equal(calls.fillRect,one*2,'a lifted plate releases both latches');
-  paintLatchFrame(canvas,15,[],{settling:[[3,4]]});
-  assert.equal(calls.fillRect,one*3,'a settling plate catches the tube');
-});
-
-test('exterior retains one iron material across player colors; interior adopts owner paint',()=>{
-  function renderedColors(owner,openness){
-    const used=[];
-    const ctx={
-      save(){},restore(){},translate(){},scale(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},
-      clearRect(){},fillRect(){used.push(this.fillStyle);},stroke(){},fill(){used.push(this.fillStyle);},
-    };
-    const canvas={width:0,height:0,getContext:()=>ctx};
-    paintFoldCanvas(canvas,0,0,false,openness,{color:owner});
-    return used;
-  }
-  const red=renderedColors('#b85f54',1);
-  const blue=renderedColors('#548aa6',1);
-  const sealedRed=renderedColors('#b85f54',0),sealedBlue=renderedColors('#548aa6',0);
-  assert.ok(sealedRed.includes('#54463b')&&sealedBlue.includes('#54463b'),'same rusty shell material');
-  assert.equal(sealedRed.filter(c=>c==='#54463b').length,sealedBlue.filter(c=>c==='#54463b').length);
-  assert.notDeepEqual(red,blue,'unfolded colored interior differs for different owners');
-  for(const pose of [0,.25,.5,.75,1]){
-    assert.ok(renderedColors('#64937b',pose).length>0);
-  }
+test('neon cube has stable dark shell but player-specific illuminated panels',()=>{
+  const colors=(color,progress)=>{
+    const fills=[];
+    const ctx={save(){},restore(){},translate(){},scale(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},clearRect(){},
+      stroke(){fills.push(this.strokeStyle)},fill(){fills.push(this.fillStyle)}};
+    paintFoldCanvas({width:0,height:0,getContext:()=>ctx},0,0,false,progress,{color});
+    return fills;
+  };
+  const a=colors('#49ddf5',1),b=colors('#ff68bd',1);
+  assert.notDeepEqual(a,b);
+  assert(a.includes('#102a3b')||a.some(c=>c?.startsWith?.('#')));
+  assert(colors('#49ddf5',0).includes('#111d31'));
 });
 
 test('animation controller extraction preserves timing, hooks and action flow',async()=>{
@@ -99,7 +58,6 @@ test('animation controller extraction preserves timing, hooks and action flow',a
   assert.match(app,/from ['"]\.\/render\/animation\.mjs['"]/);
   assert.doesNotMatch(app,/function (createGrit|prepareFoldStage|animateFold|moveClosedBox)\(/);
   assert.match(app,/if\(busy\)fastForwardAnimation\(\)/);
-  let latchUpdates=0;
   const stage={hidden:false,children:[1],replaceChildren(...children){this.children=children;}};
   const lifted={classList:{removed:[],remove(name){this.removed.push(name);}}};
   const game={classList:{removed:[],remove(name){this.removed.push(name);}}};
@@ -107,8 +65,7 @@ test('animation controller extraction preserves timing, hooks and action flow',a
   globalThis.document={querySelectorAll:()=>[lifted]};
   try{
     const animator=createFoldAnimator({$:id=>({ 'fold-stage':stage,game })[id],
-      getGame:()=>({size:13,active:0}),animationSpeed:()=> 'instant',
-      updateLatches:()=>{latchUpdates++;}});
+      getGame:()=>({size:13,active:0}),animationSpeed:()=> 'instant'});
     assert.deepEqual(Object.keys(animator).sort(),
       ['animateFold','createGrit','fastForwardAnimation','finishFoldVisual','moveClosedBox'].sort());
     animator.fastForwardAnimation();
@@ -117,7 +74,6 @@ test('animation controller extraction preserves timing, hooks and action flow',a
     assert.deepEqual(stage.children,[]);
     assert.deepEqual(lifted.classList.removed,['fold-lifting']);
     assert.deepEqual(game.classList.removed,['is-unfolding']);
-    assert.equal(latchUpdates,1);
     await animator.moveClosedBox([1,1],[2,2],0,0,false,'#fff');
   }finally{globalThis.document=originalDocument;}
 });

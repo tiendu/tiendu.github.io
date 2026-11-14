@@ -1,8 +1,6 @@
 import { NETS, oriented } from './nets.mjs';
 import { newGame, newDistinctGame, player, occupied, canPlace, legalPlacements, canReclaim, refoldable, placedCells, act, endTurn, LABELS, connectedCells } from './engine.mjs';
 import { createFoldAnimator, ANIMATION_MS } from './render/animation.mjs';
-import { paintTubeFrame } from './render/tubes.mjs';
-import { paintLatchFrame } from './render/latches.mjs';
 import { legalFits } from './guided.mjs';
 import { installMechanicalPress } from './ui/press.mjs';
 import { REEL_FACES, reelFace } from './ui/reel.mjs';
@@ -12,35 +10,17 @@ import { installCamera } from './ui/camera.mjs';
 import { actionAvailable, actionTargets, cannotUseReason } from './ui/actions.mjs';
 import { netThumbnail } from './ui/net-thumbnail.mjs';
 import { renderBoardTiles } from './ui/board-tiles.mjs';
+import { circuitPulseCells } from './ui/circuit-pulse.mjs';
 
 const $=id=>document.getElementById(id);
 const UNFOLD_VERSION='1.9.3';
 document.querySelectorAll('.version').forEach(label=>label.textContent=UNFOLD_VERSION);
-document.title='UNFOLD · Ironworks v1.9.3';
+document.title='UNFOLD · Neon Grid';
 // Works on both the original v1.6 Astro page and checkouts where the menu
 // cleanup was already applied. Never duplicate or reconstruct the setup form.
-const setupHeading=$('setup-title');
-if(setupHeading&&setupHeading.textContent.trim().toUpperCase()!=='PLAY')setupHeading.textContent='PLAY';
 for(const selector of ['#setup > .intro-mark','#setup > .eyebrow','#setup > .intro'])document.querySelector(selector)?.remove();
 
 installMechanicalPress();
-
-function latchFrame(){
-  let canvas=$('latch-frame');
-  if(!canvas){canvas=document.createElement('canvas');canvas.id='latch-frame';canvas.className='latch-frame';canvas.setAttribute('aria-hidden','true');tubeFrame().after(canvas);}
-  return canvas;
-}
-function updateLatches(settling=[]){
-  if(!game)return;
-  const roads=game.cubes.flatMap(c=>c.cells);
-  const lifted=new Set([...document.querySelectorAll('.tile.fold-lifting')].map(t=>`${t.dataset.x},${t.dataset.y}`));
-  paintLatchFrame(latchFrame(),game.size,roads,{hidden:lifted,settling});
-}
-function tubeFrame(){
-  let canvas=$('tube-frame');
-  if(!canvas){canvas=document.createElement('canvas');canvas.id='tube-frame';canvas.className='tube-frame';canvas.setAttribute('aria-hidden','true');$('board').after(canvas);}
-  return canvas;
-}
 
 const SAVE_KEY='unfold-v05'; // Keep game-state saves compatible with v0.7.
 const ARROWS=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -48,7 +28,7 @@ let game=null,selected=false,selectedNet=0,rotation=0,flipped=false,anchor=null,
 let busy=false,rolling=false,deadline=0,timer=null,lockingCubeId=null;
 let foldOriginId=null;
 // Room state, polling, synchronization, and lobby UI live in online/rooms.mjs.
-const PLAYER_COLORS=['#ae5845','#4f829f','#628569','#bc994d'];
+const PLAYER_COLORS=['#49ddf5','#ff68bd','#ffcd65','#b3f36d'];
 const room=createRoomController({$,
   getGame:()=>game,setGame:value=>{game=value;},
   getBusy:()=>busy,setBusy:value=>{busy=value;},
@@ -78,7 +58,7 @@ let currentAnimationSpeed='normal';
 try{const v=localStorage.getItem('unfold-animation-speed');if(Object.hasOwn(ANIMATION_MS,v))currentAnimationSpeed=v;}catch{/* memory-only setting in private browsers */}
 function animationSpeed(){return currentAnimationSpeed;}
 const {createGrit,finishFoldVisual,moveClosedBox,animateFold,fastForwardAnimation}=
-  createFoldAnimator({$,getGame:()=>game,animationSpeed,updateLatches});
+  createFoldAnimator({$,getGame:()=>game,animationSpeed});
 
 const gameAction=()=>game?.die?.action;
 const inPlacement=()=>selected&&['deploy','special','refold'].includes(gameAction())&&(gameAction()!=='refold'||sourceId!==null);
@@ -123,6 +103,7 @@ function nextFit(){
   if(count<2)return;
   fitIndex=(fitIndex+1)%count;setPose();render();
 }
+let previousGateLayout=null,previousOpenGates=new Set();
 function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContacts().map(key)),preview=new Map();
   const action=selected&&!busy&&!rolling&&!game.acted&&!game.winner&&myTurn()?gameAction():null;
   const targets=new Set(actionTargets(game,action,sourceId).map(o=>o.id));
@@ -130,17 +111,24 @@ function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContac
     cells.forEach((c,i)=>{if(c[0]>=0&&c[1]>=0&&c[0]<game.size&&c[1]<game.size)preview.set(key(c),{valid,contact:i===0});});
   }
   const gateMarks=new Map();
-  for(const gate of game.obstacles.filter(o=>o.type==='gate')){
-    for(const cell of gate.cells)gateMarks.set(key(cell),{kind:'gate',open:gate.open});
+  const layout=`${game.mode}/${game.seed}/${game.layoutId||game.size}`;
+  const gateList=game.obstacles.filter(o=>o.type==='gate');
+  if(layout!==previousGateLayout){
+    previousGateLayout=layout;
+    previousOpenGates=new Set(gateList.filter(g=>g.open).map(g=>g.id));
+  }
+  for(const gate of gateList){
+    for(const cell of gate.cells)gateMarks.set(key(cell),{kind:'gate',open:gate.open,opening:gate.open&&!previousOpenGates.has(gate.id)});
     gate.terminals?.forEach((cell,i)=>gateMarks.set(key(cell),
       {kind:'terminal',sign:i===0?'+':'−',open:gate.open}));
   }
+  const openingGates=gateList.filter(g=>g.open&&!previousOpenGates.has(g.id));
+  const pulseCells=circuitPulseCells(game,openingGates,connectedCells);
+  previousOpenGates=new Set(gateList.filter(g=>g.open).map(g=>g.id));
   const placing=inPlacement();
   $('board').style.setProperty('--size',game.size);
   $('board').innerHTML=renderBoardTiles({size:game.size,mode:game.mode,used,spots,preview,action,targets,
-    anchor,placing,lockingCubeId,foldOriginId,gateMarks});
-  paintTubeFrame(tubeFrame(),game.size);
-  updateLatches();
+    anchor,placing,lockingCubeId,foldOriginId,gateMarks,pulseCells});
   $('board-viewport').classList.toggle('large-board',game.size>=17);
 }
 function showPicker(){
@@ -185,18 +173,20 @@ function render(){if(!game)return;
   $('roll-count').textContent=`TURN ${game.turn} · REEL ${game.die.face}/6`;
   $('rolled-action').textContent=rolling?'ROLLING':LABELS[action].toUpperCase();
   const available=actionAvailable(game);
+  $('board-note').classList.toggle('crisis',Boolean(game.crisis&&!game.winner));
   updateTurnBanner();
   if(game.crisis&&!game.winner)$('mission-title').textContent=`CONSTRUCTION CRISIS · ${game.crisis.remaining} TEAM TURN${game.crisis.remaining===1?'':'S'} LEFT`;
   $('frame-skip').disabled=busy||rolling||Boolean(game.winner)||!myTurn()||Boolean(game.acted&&isRemote());
   $('frame-skip').textContent=game.acted?'LOCKED':'SKIP ↷';
   $('clock-box').hidden=game.mode==='solo';
   $('result').hidden=!game.winner;
+  $('result').classList.toggle('is-defeat',Boolean(game.winner?.kind==='stuck'));
   if(game.winner)$('result-title').textContent=game.announcement||'Route complete';
   if(!selected&&!game.acted)announce(rolling?'The reel is spinning…':available?'Tap a marked landing spot, or skip this turn.':cannotUseReason(gameAction()));
   if(game.acted)announce(game.announcement);
   if(selected&&!game.acted){
-    if(action==='reclaim')announce('Tap a pulsing amber obstacle or cube to reclaim it.');
-    else if(action==='refold'&&sourceId===null)announce('Tap a pulsing green rear cube to refold it.');
+    if(action==='reclaim')announce('Tap a highlighted amber obstacle or cube to reclaim it.');
+    else if(action==='refold'&&sourceId===null)announce('Tap a highlighted mint rear cube to refold it.');
     else announce('Tap a marked socket · NEXT FIT cycles legal orientations · UNFOLD installs it.');
   }
   showPicker();drawBoard();positionContextTools();persist();

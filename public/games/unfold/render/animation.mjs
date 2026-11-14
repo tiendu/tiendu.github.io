@@ -2,7 +2,7 @@
 import { foldedFaces } from '../fold.mjs';
 import { paintFoldCanvas } from './canvas.mjs';
 export const ANIMATION_MS={normal:1600,quick:700,instant:0};
-export function createFoldAnimator({$,getGame,animationSpeed,updateLatches}){
+export function createFoldAnimator({$,getGame,animationSpeed}){
   let animationFastForward=false;
   function createGrit(cells){
     const layer=$('grit-layer'),surface=$('board-surface'),sr=surface.getBoundingClientRect();
@@ -36,7 +36,6 @@ export function createFoldAnimator({$,getGame,animationSpeed,updateLatches}){
     stage.hidden=true;stage.replaceChildren();
     document.querySelectorAll('.tile.fold-lifting').forEach(tile=>tile.classList.remove('fold-lifting'));
     $('game').classList.remove('is-unfolding');
-    updateLatches();
     animationFastForward=false;
   }
   function prepareFoldStage(contact){
@@ -65,7 +64,6 @@ export function createFoldAnimator({$,getGame,animationSpeed,updateLatches}){
       if(!tile)continue;
       tile.classList.toggle('fold-lifting',face.center[2]>.035);
     }
-    updateLatches();
   }
   // Remain at the same fixed camera position. Closed box relocation is a brief
   // motion of the box, NOT a camera pan or six disconnected tiles teleporting.
@@ -91,7 +89,7 @@ export function createFoldAnimator({$,getGame,animationSpeed,updateLatches}){
     if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||animationSpeed()==='instant')return;
     const canvas=prepareFoldStage(contact);if(!canvas)return;
     animationFastForward=false;
-    const ownerColor=['#b85f54','#548aa6','#64937b','#bb984c'][getGame().active]||'#b85f54';
+    const ownerColor=['#49ddf5','#ff68bd','#ffcd65','#b3f36d'][getGame().active]||'#49ddf5';
     const duration=ANIMATION_MS[animationSpeed()]*(reverse?.83:1);
     await new Promise(resolve=>{
       const start=performance.now();
@@ -103,15 +101,6 @@ export function createFoldAnimator({$,getGame,animationSpeed,updateLatches}){
         const release=reverse?1-progress:ease(Math.min(1,t/.15));
         paintFoldCanvas(canvas,net,rot,flip,openness,{color:ownerColor,release});
         if(reverse)liftedSockets(net,rot,flip,contact,openness);
-        else{
-          // Catchers close on each plate only as it settles. Never cover the
-          // cell early, and never rebuild the steel frame below it.
-          const faces=foldedFaces(net,rot,flip,openness),root=faces[0].flat;
-          const seating=t>.76?faces.filter(f=>f.center[2]<.045).map(f=>[
-            contact[0]+f.flat[0]-root[0],contact[1]+f.flat[1]-root[1]
-          ]):[];
-          updateLatches(seating);
-        }
         if(t<1)requestAnimationFrame(step);else resolve();
       };requestAnimationFrame(step);
     });

@@ -8,8 +8,6 @@ import {REEL_FACES} from '../public/games/unfold/ui/reel.mjs';
 import {loadSolo,saveSolo,saveRoom} from '../public/games/unfold/ui/storage.mjs';
 import {escapeText} from '../public/games/unfold/ui/dom.mjs';
 import {makeRoomRequest} from '../public/games/unfold/online/transport.mjs';
-import {paintTubeFrame} from '../public/games/unfold/render/tubes.mjs';
-import {paintLatchFrame} from '../public/games/unfold/render/latches.mjs';
 import {paintFoldCanvas} from '../public/games/unfold/render/canvas.mjs';
 
 const dir=path.dirname(fileURLToPath(import.meta.url));
@@ -46,7 +44,7 @@ test('the HTTP room transport keeps the same endpoint and error contract',async(
   await assert.rejects(makeRoomRequest('',async()=>({}))('state'),/room server/);
   await assert.rejects(makeRoomRequest('https://rooms.example.test',async()=>({ok:false,status:403,json:async()=>({error:'Forbidden'})}))('state'),/Forbidden/);
 });
-test('CSS consolidation preserves load order, existing assets and entry points',async()=>{
+test('Neon Grid replaces legacy styles and removes unused frame painters',async()=>{
   const astro=await readFile(path.join(dir,'../src/pages/games/unfold/index.astro'),'utf8');
   assert.match(astro,/styles\/foundation\.css/);
   assert.match(astro,/styles\/operator\.css/);
@@ -59,7 +57,11 @@ test('CSS consolidation preserves load order, existing assets and entry points',
       await access(path.resolve(site,'styles',match[1]));
     }
   }
-  assert.equal(typeof paintTubeFrame,'function');
   assert.equal(typeof paintFoldCanvas,'function');
-  assert.equal(typeof paintLatchFrame,'function');
+  assert.doesNotMatch(app,/paintTubeFrame|paintLatchFrame|tubeFrame\(\)/);
+  for(const name of ['foundation.css','operator.css']){
+    const css=await readFile(path.join(site,'styles',name),'utf8');
+    assert.doesNotMatch(css,/\.tube-frame\s*\{/);
+    assert.doesNotMatch(css,/console-v17|deck-v16|crate-foundry/);
+  }
 });
