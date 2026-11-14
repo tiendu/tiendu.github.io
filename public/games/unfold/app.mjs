@@ -12,6 +12,7 @@ import { actionAvailable, actionTargets, cannotUseReason } from './ui/actions.mj
 import { netThumbnail } from './ui/net-thumbnail.mjs';
 import { renderBoardTiles } from './ui/board-tiles.mjs';
 import { gameIcon } from './ui/icons.mjs';
+import {actionGuidance,displayTeamName,displayTeamMessage} from './ui/ux.mjs';
 import { circuitPulseCells } from './ui/circuit-pulse.mjs';
 
 const $=id=>document.getElementById(id);
@@ -29,6 +30,7 @@ const ARROWS=[[1,0],[-1,0],[0,1],[0,-1]];
 let game=null,selected=false,selectedNet=0,rotation=0,flipped=false,anchor=null,sourceId=null,fitIndex=0,fitCache=null,rollToken=0;
 let busy=false,rolling=false,deadline=0,timer=null,lockingCubeId=null;
 let foldOriginId=null;
+let keyboardCell=[0,0],lastResultKey=null;
 // Room state, polling, synchronization, and lobby UI live in online/rooms.mjs.
 const PLAYER_COLORS=['#49ddf5','#ff68bd','#ffcd65','#b3f36d'];
 const room=createRoomController({$,
@@ -48,11 +50,11 @@ function updateClock(){if(!game||game.mode==='solo')return;
   }else if(!isRemote())$('turn-clock').textContent=$('clock').textContent+'s';
 }
 function updateTurnBanner(){if(!game)return;
-  const p=player(game),banner=$('turn-banner'),index=game.active;
+  const p=player(game),banner=$('turn-banner'),index=game.active,name=displayTeamName(p);
   banner.style.setProperty('--active',PLAYER_COLORS[index]||PLAYER_COLORS[0]);
   banner.classList.toggle('waiting',!myTurn());
-  $('turn-label').textContent=game.winner?'ROUND ENDED':game.mode==='solo'?'SOLO':myTurn()?(isRemote()?'YOUR TURN':'LOCAL TURN'):`WAITING FOR ${p.name.toUpperCase()}`;
-  $('turn-player').textContent=p.name.toUpperCase();
+  $('turn-label').textContent=game.winner?'ROUND ENDED':game.mode==='solo'?'SOLO':myTurn()?(isRemote()?'YOUR TURN':'LOCAL TURN'):`WAITING FOR ${name.toUpperCase()}`;
+  $('turn-player').textContent=name.toUpperCase();
   $('turn-clock').textContent=game.mode==='solo'?'NO TIMER':isRemote()?'60s':$('clock').textContent+'s';
   updateClock();
 }
@@ -63,7 +65,6 @@ const {createGrit,finishFoldVisual,moveClosedBox,animateFold,fastForwardAnimatio
   createFoldAnimator({$,getGame:()=>game,animationSpeed});
 
 const gameAction=()=>game?.die?.action;
-const ACTION_TIPS={deploy:'Place the assigned six-panel net on a mint socket.',special:'Choose any cube net, then place its six panels.',reclaim:'Select an amber target touching your connected road.',refold:'Choose an eligible rear module and reposition it.'};
 const inPlacement=()=>selected&&['deploy','special','refold'].includes(gameAction())&&(gameAction()!=='refold'||sourceId!==null);
 const key=([x,y])=>`${x},${y}`;
 const rootOffset=()=>oriented(selectedNet,rotation,flipped)[0];
@@ -107,7 +108,11 @@ function nextFit(){
   fitIndex=(fitIndex+1)%count;setPose();render();
 }
 let previousGateLayout=null,previousOpenGates=new Set();
-function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContacts().map(key)),preview=new Map();
+function drawBoard(){
+  const focused=document.activeElement?.closest?.('.tile');
+  const restoreFocus=focused?.parentElement===$('board')?[Number(focused.dataset.x),Number(focused.dataset.y)]:null;
+  if(restoreFocus)keyboardCell=restoreFocus;
+  const used=occupied(game),spots=new Set(busy?[]:validContacts().map(key)),preview=new Map();
   const action=selected&&!busy&&!rolling&&!game.acted&&!game.winner&&myTurn()?gameAction():null;
   const targets=new Set(actionTargets(game,action,sourceId).map(o=>o.id));
   if(!busy&&inPlacement()&&anchor){const [x,y]=fromContact(anchor),valid=canAt(anchor),cells=placedCells(selectedNet,rotation,flipped,x,y);
@@ -131,7 +136,8 @@ function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContac
   const placing=inPlacement();
   $('board').style.setProperty('--size',game.size);
   $('board').innerHTML=renderBoardTiles({size:game.size,mode:game.mode,used,spots,preview,action,targets,
-    anchor,placing,lockingCubeId,foldOriginId,gateMarks,pulseCells});
+    anchor,placing,lockingCubeId,foldOriginId,gateMarks,pulseCells,focusCell:keyboardCell});
+  if(restoreFocus)$('board').querySelector(`[data-x="${keyboardCell[0]}"][data-y="${keyboardCell[1]}"]`)?.focus({preventScroll:true});
   $('board-viewport').classList.toggle('large-board',game.size>=17);
 }
 function showPicker(){
@@ -142,12 +148,14 @@ function showPicker(){
   $('placement-tools').hidden=!shown||!anchor;
   if(!shown){
     const hint=$('board-hint');
-    if(selected&&['reclaim','refold'].includes(action)&&!busy&&!rolling&&!game.acted&&myTurn()){
+    if(game.winner){
+      hint.textContent=game.winner.kind==='stuck'?'ROUND LOST':'ROUND COMPLETE';hint.title='';
+    }else if(selected&&['reclaim','refold'].includes(action)&&!busy&&!rolling&&!game.acted&&myTurn()){
       const count=actionTargets(game,action,sourceId).length;
       hint.textContent=`${count} ${action.toUpperCase()} ${count===1?'TARGET':'TARGETS'}`;
       hint.title=action==='reclaim'?'Tap an amber target to reclaim it':'Tap a green rear cube to refold it';
     }else{
-      hint.textContent=game.acted?'Action complete':!rolling&&action==='reclaim'&&!actionAvailable(game)?'NO RECLAIM TARGETS':!rolling&&action==='refold'&&!actionAvailable(game)?'NO REFOLD TARGETS':'Action ready';
+      hint.textContent=game.acted?'Action complete':!rolling&&action==='reclaim'&&!actionAvailable(game)?'NO RECLAIM TARGETS':!rolling&&action==='refold'&&!actionAvailable(game)?'NO REFOLD TARGETS':!myTurn()?'WAITING FOR TURN':'Action ready';
       hint.title='';
     }
     return;
@@ -175,9 +183,10 @@ function render(){if(!game)return;
   $('mission-title').textContent=game.mode==='solo'?'Connect S to ★':game.mode==='coop'?'Connect all bases to ★':`${p.name} · conquer an opponent`;
   $('roll-count').textContent=`TURN ${game.turn} · REEL ${game.die.face}/6`;
   $('rolled-action').textContent=rolling?'ROLLING':LABELS[action].toUpperCase();
-  $('action-tip').textContent=game.winner?'Round complete.':game.crisis?'Construction crisis: a teammate must restore a legal route.':ACTION_TIPS[action]||'Select your next move.';
+  const guidance=actionGuidance(game,{rolling,busy,ownTurn:myTurn(),selected,sourceId,activeName:displayTeamName(p)});
+  $('action-tip').textContent=guidance.tip;
+  $('frame-command').dataset.state=guidance.state;
   $('current-action-icon').innerHTML=gameIcon(({deploy:'deploy',special:'super',reclaim:'reclaim',refold:'refold'})[action]||'deploy');
-  const available=actionAvailable(game);
   $('board-note').classList.toggle('crisis',Boolean(game.crisis&&!game.winner));
   updateTurnBanner();
   if(game.crisis&&!game.winner)$('mission-title').textContent=`CONSTRUCTION CRISIS · ${game.crisis.remaining} TEAM TURN${game.crisis.remaining===1?'':'S'} LEFT`;
@@ -186,14 +195,14 @@ function render(){if(!game)return;
   $('clock-box').hidden=game.mode==='solo';
   $('result').hidden=!game.winner;
   $('result').classList.toggle('is-defeat',Boolean(game.winner?.kind==='stuck'));
-  if(game.winner)$('result-title').textContent=game.announcement||'Route complete';
-  if(!selected&&!game.acted)announce(rolling?'The reel is spinning…':available?'Tap a marked landing spot, or skip this turn.':cannotUseReason(gameAction()));
-  if(game.acted)announce(game.announcement);
-  if(selected&&!game.acted){
-    if(action==='reclaim')announce('Tap a highlighted amber obstacle or cube to reclaim it.');
-    else if(action==='refold'&&sourceId===null)announce('Tap a highlighted mint rear cube to refold it.');
-    else announce('Tap a marked socket · NEXT FIT cycles legal orientations · UNFOLD installs it.');
+  if(game.winner)$('result-title').textContent=displayTeamMessage(game,game.announcement)||'Route complete';
+  const resultKey=game.winner?`${game.mode}/${game.seed}/${game.layoutId}/${game.turn}/${game.winner.kind}`:null;
+  if(resultKey&&resultKey!==lastResultKey){
+    lastResultKey=resultKey;
+    requestAnimationFrame(()=>{if(game?.winner&&lastResultKey===resultKey)$('result').scrollIntoView({block:'nearest'});});
   }
+  if(!resultKey)lastResultKey=null;
+  announce(guidance.tip);
   showPicker();drawBoard();positionContextTools();persist();
 }
 function activateAction(){if(!game||rolling||busy||game.acted||!actionAvailable(game))return;
@@ -377,6 +386,7 @@ async function advance(){if(!game||rolling||busy||game.winner)return;
 function begin(config,previous=null){
   const next=previous?newDistinctGame(config,previous):newGame(config);
   room.disconnect();
+  keyboardCell=[...player(next).base];lastResultKey=null;
   rollToken++;clearInterval(timer);game=next;resetSelection();busy=false;render();rollAnimation();
 }
 $('start-form').addEventListener('submit',e=>{
@@ -413,6 +423,22 @@ refreshModeHelp();
 
 installDesktopPlacement($,positionContextTools);
 installCamera($,positionContextTools);
+// One tab stop for the entire grid; arrow keys move the focused cell.
+$('board').addEventListener('focusin',event=>{
+  const tile=event.target.closest?.('.tile');if(!tile)return;
+  const old=$('board').querySelector('.tile[tabindex="0"]');if(old)old.tabIndex=-1;
+  tile.tabIndex=0;keyboardCell=[Number(tile.dataset.x),Number(tile.dataset.y)];
+});
+$('board').addEventListener('keydown',event=>{
+  const tile=event.target.closest?.('.tile');if(!tile)return;
+  const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+  const dir=directions[event.key];if(!dir)return;
+  event.preventDefault();
+  const x=Math.max(0,Math.min(game.size-1,Number(tile.dataset.x)+dir[0]));
+  const y=Math.max(0,Math.min(game.size-1,Number(tile.dataset.y)+dir[1]));
+  const target=$('board').querySelector(`[data-x="${x}"][data-y="${y}"]`);
+  target?.focus({preventScroll:true});target?.scrollIntoView({block:'nearest',inline:'nearest'});
+});
 $('board').addEventListener('click',e=>{const b=e.target.closest('[data-x]');if(b)tapTile(Number(b.dataset.x),Number(b.dataset.y));});
 $('shape-list').addEventListener('click',e=>{const b=e.target.closest('[data-net]');if(b)chooseNet(Number(b.dataset.net));});
 $('next-fit').addEventListener('click',nextFit);
@@ -427,9 +453,9 @@ window.addEventListener('resize',positionContextTools,{passive:true});
 $('new-game').addEventListener('click',()=>{
   if(game&&!game.winner&&!confirm('Leave this match? You can still resume it.'))return;
   if(isRemote())room.disconnect();
-  clearInterval(timer);rollToken++;rolling=false;busy=false;game=null;resetSelection();document.body.classList.remove('playing');$('game').hidden=true;$('setup').hidden=false;$('resume').hidden=!stored();
+  clearInterval(timer);rollToken++;rolling=false;busy=false;game=null;lastResultKey=null;resetSelection();document.body.classList.remove('playing');$('game').hidden=true;$('setup').hidden=false;$('resume').hidden=!stored();
 });
-$('resume').addEventListener('click',()=>{const s=stored();if(!s)return;rollToken++;rolling=false;game=s;resetSelection();activateAction();render();reelFace(game.die.face);startClock();});
+$('resume').addEventListener('click',()=>{const s=stored();if(!s)return;rollToken++;rolling=false;game=s;keyboardCell=[...player(s).base];lastResultKey=null;resetSelection();activateAction();render();reelFace(game.die.face);startClock();});
 $('next-game').addEventListener('click',async()=>{
   if(!game?.winner)return;
   if(isRemote()){
@@ -448,10 +474,12 @@ $('next-game').addEventListener('click',async()=>{
 });
 // Keyboard access on desktop; mobile uses the same tap controls.
 document.addEventListener('keydown',e=>{
-  if(!game||e.target.matches('input,select,textarea'))return;
+  if(!game||e.target?.matches?.('input,select,textarea,[contenteditable]'))return;
   if(e.key==='Escape'&&inPlacement()){anchor=null;render();}
-  if(e.key.toLowerCase()==='f'&&inPlacement())nextFit();
-  if(e.key==='Enter'&&inPlacement()&&!$('confirm').disabled)commit();
+  if(!e.ctrlKey&&!e.altKey&&!e.metaKey&&e.key.toLowerCase()==='f'&&inPlacement()&&e.target?.closest?.('#board')){
+    e.preventDefault();nextFit();
+  }
+  // Enter/Space belong to the focused native button (tile, NEXT FIT or UNFOLD).
 });
 $('animation-speed').value=animationSpeed();
 $('animation-speed').addEventListener('change',e=>{currentAnimationSpeed=e.target.value;try{localStorage.setItem('unfold-animation-speed',e.target.value);}catch{/* memory-only setting */}});
@@ -461,7 +489,7 @@ $('resume').hidden=!stored();$('play').disabled=false;$('play').textContent='PLA
 function setEntryTab(tab){
   for(const name of ['solo','create','join']){
     const button=$(`tab-${name}`);button.classList.toggle('active',tab===name);
-    button.setAttribute('aria-selected',String(tab===name));
+    button.setAttribute('aria-selected',String(tab===name));button.tabIndex=tab===name?0:-1;
   }
   $('start-form').hidden=tab!=='solo';$('room-entry').hidden=tab==='solo';
   $('room-create-fields').hidden=tab!=='create';$('room-join-fields').hidden=tab!=='join';
@@ -469,6 +497,18 @@ function setEntryTab(tab){
   else $('resume').hidden=!stored();
   refreshModeHelp();
 }
-for(const tab of ['solo','create','join'])$(`tab-${tab}`).addEventListener('click',()=>setEntryTab(tab));
+const entryTabs=['solo','create','join'];
+for(const tab of entryTabs){
+  const button=$(`tab-${tab}`);
+  button.addEventListener('click',()=>setEntryTab(tab));
+  button.addEventListener('keydown',event=>{
+    const offset={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[event.key];
+    if(offset===undefined&&event.key!=='Home'&&event.key!=='End')return;
+    event.preventDefault();
+    const index=event.key==='Home'?0:event.key==='End'?entryTabs.length-1:
+      (entryTabs.indexOf(tab)+offset+entryTabs.length)%entryTabs.length;
+    setEntryTab(entryTabs[index]);$(`tab-${entryTabs[index]}`).focus();
+  });
+}
 room.installUI(setEntryTab);
 setInterval(()=>{if(isRemote()&&game)updateClock();},250);

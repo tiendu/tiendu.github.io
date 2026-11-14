@@ -184,3 +184,61 @@ test('neon icons have static SVG geometry and accessible text remains present',a
   assert.match(html,/aria-label="base square 1,1"/);
   assert.match(html,/aria-label="goal square 2,1"/);
 });
+
+
+test('UX guidance never asks for a missing RECLAIM or REFOLD target',async()=>{
+  const {actionGuidance}=await import('../public/games/unfold/ui/ux.mjs');
+  const {newGame}=await import('../public/games/unfold/engine.mjs');
+  const s=newGame({mode:'solo',level:'open',seed:71});
+  s.die={face:4,action:'reclaim',net:null};
+  const empty=actionGuidance(s);
+  assert.equal(empty.state,'unavailable');
+  assert.match(empty.tip,/No adjacent obstacle or reclaimable cube/);
+  assert.doesNotMatch(empty.tip,/Select one/);
+  s.die={face:6,action:'refold',net:null};
+  assert.equal(actionGuidance(s).state,'unavailable');
+  s.die={face:1,action:'deploy',net:0};
+  assert.equal(actionGuidance(s).state,'available');
+  assert.match(actionGuidance(s,{rolling:true}).tip,/Rolling/);
+  assert.equal(actionGuidance(s,{ownTurn:false}).state,'waiting');
+  s.winner={kind:'stuck',players:[]};s.announcement='No legal placement for the rolled construction cube.';
+  const finished=actionGuidance(s);
+  assert.equal(finished.state,'finished');
+  assert.match(finished.tip,/No legal placement/);
+  assert.doesNotMatch(finished.tip,/Skip this roll/);
+});
+
+test('neon team labels leave saved/default engine names and custom names untouched',async()=>{
+  const {displayTeamName,displayTeamMessage}=await import('../public/games/unfold/ui/ux.mjs');
+  const players=['Red','Blue','Green','Gold'].map((name,id)=>({id,name}));
+  assert.deepEqual(players.map(displayTeamName),['Cyan','Pink','Amber','Lime']);
+  assert.equal(displayTeamName({id:0,name:'Alice'}),'Alice');
+  assert.equal(displayTeamMessage({mode:'competitive',players},'Red conquered Blue.'),'Cyan conquered Pink.');
+  assert.equal(players[0].name,'Red','display conversion does not mutate engine state');
+});
+
+test('board uses one roving tab stop and retains coordinates and native button semantics',async()=>{
+  const {renderBoardTiles}=await import('../public/games/unfold/ui/board-tiles.mjs');
+  const markup=renderBoardTiles({size:3,mode:'solo',used:new Map(),spots:new Set(),
+    preview:new Map(),action:null,targets:new Set(),placing:false,focusCell:[1,2]});
+  assert.equal((markup.match(/tabindex="0"/g)||[]).length,1);
+  assert.equal((markup.match(/tabindex="-1"/g)||[]).length,8);
+  assert.match(markup,/tabindex="0" data-x="1" data-y="2"/);
+  const app=await source('public/games/unfold/app.mjs');
+  assert.match(app,/\.addEventListener\('keydown',event=>/);
+  assert.match(app,/ArrowLeft/);
+  assert.doesNotMatch(app,/if\(e\.key==='Enter'&&inPlacement\(\)/);
+});
+
+test('one in-game header, consistent result placement, and accessible menu tabs',async()=>{
+  const page=await source('src/pages/games/unfold/index.astro');
+  const app=await source('public/games/unfold/app.mjs');
+  const css=await source('public/games/unfold/styles/operator.css');
+  assert.equal((page.match(/id="new-game"/g)||[]).length,1);
+  assert.equal((page.match(/class="frame-games"/g)||[]).length,0);
+  assert.equal((page.match(/<header class="masthead">/g)||[]).length,1);
+  assert.match(page,/id="result" class="result" role="status"/);
+  assert.match(app,/setAttribute\('aria-selected'/);
+  assert.match(app,/tabIndex=tab===name\?0:-1/);
+  assert.match(css,/\.desktop-play-grid \.result \{ order:3/);
+});

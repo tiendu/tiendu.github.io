@@ -2,7 +2,7 @@
 import { gameIcon } from './icons.mjs';
 const COLORS=['red','blue','green','gold'];
 const key=([x,y])=>`${x},${y}`;
-export function renderBoardTiles({size,mode,used,spots,preview,action,targets,anchor,placing,lockingCubeId,foldOriginId,gateMarks=new Map(),pulseCells=new Map()}){
+export function renderBoardTiles({size,mode,used,spots,preview,action,targets,anchor,placing,lockingCubeId,foldOriginId,gateMarks=new Map(),pulseCells=new Map(),focusCell=[0,0]}){
   const tiles=[];for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const k=`${x},${y}`,cell=used.get(k),p=preview.get(k),mark=gateMarks.get(k),classes=['tile'],hasMark=spots.has(k);
     if(mark?.kind==='gate'&&mark.open){classes.push('gate-open');if(mark.opening)classes.push('gate-just-opened');}
@@ -27,7 +27,7 @@ export function renderBoardTiles({size,mode,used,spots,preview,action,targets,an
     if(mark?.kind==='terminal')content+=`<span class="gate-terminal" aria-label="Electrical terminal ${mark.sign}">${mark.sign}</span>`;
     if(mark?.kind==='gate'&&mark.open&&!cell)content+=`<span class="gate-floor">${gameIcon('gate-open')}</span>`;
     if(hasMark)content+='<span class="anchor-dot"></span>';
-    tiles.push(`<button type="button" role="gridcell" class="${classes.join(' ')}" ${pulseCells.has(k)?`style="--pulse-delay:${pulseCells.get(k)}ms"`:''} ${cell?.kind==='cube'?`data-cube-id="${cell.id}"`:''} data-x="${x}" data-y="${y}" aria-label="${mark?.kind==='terminal'?`${mark.sign} electrical terminal ${mark.open?'powered':'unpowered'}`:mark?.kind==='gate'?`${mark.open?'Open':'Closed'} electric gate`:cell?.kind||'Empty'} square ${x+1},${y+1}${cubeNumber?`, cube ${cubeNumber} contact square`:''}${available?`, ${action.toUpperCase()} available`:''}" title="${cell?.kind||'Empty'} · ${x+1},${y+1}${available?` · ${action.toUpperCase()} available`:''}">${content}</button>`);
+    tiles.push(`<button type="button" role="gridcell" class="${classes.join(' ')}" ${pulseCells.has(k)?`style="--pulse-delay:${pulseCells.get(k)}ms"`:''} ${cell?.kind==='cube'?`data-cube-id="${cell.id}"`:''} tabindex="${focusCell[0]===x&&focusCell[1]===y?0:-1}" data-x="${x}" data-y="${y}" aria-label="${mark?.kind==='terminal'?`${mark.sign} electrical terminal ${mark.open?'powered':'unpowered'}`:mark?.kind==='gate'?`${mark.open?'Open':'Closed'} electric gate`:cell?.kind||'Empty'} square ${x+1},${y+1}${cubeNumber?`, cube ${cubeNumber} contact square`:''}${available?`, ${action.toUpperCase()} available`:''}" title="${cell?.kind||'Empty'} · ${x+1},${y+1}${available?` · ${action.toUpperCase()} available`:''}">${content}</button>`);
   }
   return tiles.join('');
 }

@@ -7,9 +7,12 @@ export function installDesktopPlacement(get, reposition){
   if(!media)return;
   const update=()=>{
     const target=media.matches?slot:viewport;
+    const focus=document.activeElement;
+    const restore=tools.contains(focus)?focus:null;
     if(tools.parentElement!==target)target.append(tools);
     tools.style.removeProperty('top');tools.style.removeProperty('left');
     reposition();
+    restore?.focus?.({preventScroll:true});
   };
   if(media.addEventListener)media.addEventListener('change',update);
   else media.addListener?.(update);

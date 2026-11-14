@@ -242,17 +242,18 @@
 /* Wide-screen tactical layout: board left, persistent command rail right.
    On narrow screens the original menu and gameplay order is preserved. */
 @media (min-width: 1100px) {
-  .play-area { max-width:1480px; margin:8px auto 0; }
+  .play-area { max-width:1200px; margin:8px auto 0; }
   .board-note { padding:4px 1px 5px; gap:3px; }
   .board-note-mission strong { font-size:21px; }
   #instruction { margin:0 0 8px; min-height:0; font-size:13px; }
   .table-rig { padding:10px 12px 12px; }
   .frame-topbar { min-height:40px; margin-bottom:9px; }
   .desktop-play-grid {
-    display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,340px);
-    align-items:start; gap:18px;
+    display:grid;
+    grid-template-columns:minmax(0,min(820px,max(440px,calc(100svh - 185px)),calc(100vw - 455px))) 330px;
+    align-items:start; justify-content:center; gap:18px;
   }
-  .desktop-play-grid > .board-frame { min-width:0; width:100%; max-width:min(100%,max(520px,calc(100svh - 205px))); }
+  .desktop-play-grid > .board-frame { min-width:0; width:100%; }
   .command-rail {
     display:flex; flex-direction:column; gap:11px; min-width:0;
     position:sticky; top:12px; max-height:calc(100svh - 24px); overflow-y:auto;
@@ -395,4 +396,38 @@
 @media(prefers-reduced-motion:reduce) {
   .reel-scene.action-arrival { animation:none!important; }
   .entry-tabs button { transition:none; }
+}
+
+/* UX stabilization: a single header, an attached desktop rail, unambiguous actions. */
+.masthead { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); }
+.masthead .back { justify-self:start; }
+.masthead .brand { grid-column:2; justify-self:center; white-space:nowrap; }
+.masthead #new-game { grid-column:3; justify-self:end; min-height:40px; }
+body:not(.playing) .masthead #new-game { display:none; }
+.frame-command[data-state="unavailable"] { border-color:#6b8eae; }
+.frame-command[data-state="unavailable"] .reel-scene { opacity:.7; }
+.frame-command[data-state="unavailable"] .frame-skip { border-color:var(--mint); color:#d4ffec; background:#173b3a; }
+.frame-command[data-state="finished"] .reel-scene,
+.frame-command[data-state="waiting"] .reel-scene { opacity:.65; }
+.tile:focus-visible { outline:3px solid var(--focus); outline-offset:-3px; z-index:7; }
+.result { border-width:2px; box-shadow:0 0 0 1px #80f0c138; }
+.result.is-defeat { box-shadow:0 0 0 1px #ff78823d; }
+@media (min-width:1100px) {
+  .play-area { width:max-content; max-width:100%; }
+  .table-rig { width:max-content; max-width:100%; margin-inline:auto; }
+  .desktop-play-grid { width:max-content; max-width:100%; margin-inline:auto; }
+  .desktop-play-grid > .board-frame { max-width:none; }
+}
+@media (max-width:1099.98px) {
+  .desktop-play-grid .result { order:3; width:100%; }
+  .desktop-play-grid > .board-frame { order:4; }
+  .desktop-play-grid .board-shape-slot { order:5; }
+  .desktop-play-grid .grid-legend { order:6; }
+  .desktop-play-grid .game-options { order:7; }
+}
+@media(max-width:420px){
+  .masthead { gap:6px; }
+  .masthead .brand { font-size:clamp(14px,4.2vw,18px); letter-spacing:.09em; }
+  .masthead .back { font-size:10px; gap:4px; }
+  .masthead #new-game { padding:6px 8px; font-size:11px; min-height:38px; }
 }
