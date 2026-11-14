@@ -1,8 +1,9 @@
 SHELL := /bin/sh
 .DEFAULT_GOAL := help
 NPM ?= npm
+PYTHON ?= python3
 
-.PHONY: install dev hot host room-server check build verify preview clean help
+.PHONY: install dev hot host room-server check check-ui build verify preview clean help
 
 install:
 	$(NPM) ci
@@ -19,6 +20,12 @@ room-server:
 check:
 	$(NPM) run check
 	node --test scripts/test-unfold.mjs scripts/test-guided.mjs scripts/test-rooms.mjs scripts/test-room-http.mjs scripts/test-difficulty.mjs scripts/test-terrain.mjs scripts/test-render.mjs scripts/test-maintenance.mjs scripts/test-unfold-worker.mjs scripts/test-game-boundaries.mjs scripts/test-construction-gates.mjs
+
+# Optional real-browser regression suite. Install tests/browser/requirements.txt
+# and Chromium once; keep the regular `make check` fast.
+check-ui:
+	$(NPM) run build
+	$(PYTHON) -m unittest discover -s tests/browser -p 'test_*.py' -v
 
 build:
 	$(NPM) run build
@@ -39,6 +46,7 @@ help:
 		'host      Share dev server on your LAN (port 4321)' \
 		'room-server Start authoritative online room server (port 8787)' \
 		'check     Existing npm checks + UNFOLD tests' \
+		'check-ui  Build + headless Chromium UI regressions (optional Playwright)' \
 		'build     Production build' \
 		'verify    Check and build' \
 		'preview   Preview production build' \

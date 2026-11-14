@@ -1,0 +1,2 @@
+# Browser tests only; intentionally kept outside the website's npm dependencies.
+playwright==1.57.0
