@@ -6,10 +6,9 @@ import { paintLatchFrame } from './render/latches.mjs';
 import { legalFits } from './guided.mjs';
 import { installMechanicalPress } from './ui/press.mjs';
 import { REEL_FACES, reelFace } from './ui/reel.mjs';
-import { makeRoomRequest } from './online/transport.mjs';
-import { saveSolo, loadSolo, saveRoom } from './ui/storage.mjs';
+import { createRoomController } from './online/rooms.mjs';
+import { saveSolo, loadSolo } from './ui/storage.mjs';
 import { installCamera } from './ui/camera.mjs';
-import { escapeText } from './ui/dom.mjs';
 import { actionAvailable, actionTargets, cannotUseReason } from './ui/actions.mjs';
 import { netThumbnail } from './ui/net-thumbnail.mjs';
 import { renderBoardTiles } from './ui/board-tiles.mjs';
@@ -48,31 +47,22 @@ const ARROWS=[[1,0],[-1,0],[0,1],[0,-1]];
 let game=null,selected=false,selectedNet=0,rotation=0,flipped=false,anchor=null,sourceId=null,fitIndex=0,fitCache=null,rollToken=0;
 let busy=false,rolling=false,deadline=0,timer=null,lockingCubeId=null;
 let foldOriginId=null;
-const ROOM_SESSION_KEY='unfold-room-v13';
-const ROOM_API=(window.UNFOLD_ROOM_API||(['localhost','127.0.0.1'].includes(location.hostname)?`${location.protocol}//${location.hostname}:8787`:'' )).replace(/\/$/,'');
-let roomSession=null,roomSnapshot=null,roomInterval=null,roomBusy=false,roomShownRevision=-1;
-let remoteAnimateId=null,clockSkew=0,roomRenderedRound=null;
+// Room state, polling, synchronization, and lobby UI live in online/rooms.mjs.
 const PLAYER_COLORS=['#ae5845','#4f829f','#628569','#bc994d'];
-const isRemote=()=>Boolean(roomSession);
-const myTurn=()=>!isRemote()||Boolean(roomSnapshot?.game&&!roomSnapshot.game.winner&&roomSnapshot.seat===roomSnapshot.game.active);
-const nowServer=()=>Date.now()+clockSkew;
-function saveRoomSession(){saveRoom(ROOM_SESSION_KEY,roomSession);}
-const roomRequest=makeRoomRequest(ROOM_API);
-function roomArgs(extra={}){return {...roomSession,...extra};}
-function roomError(error){const msg=error?.message||String(error);$('room-entry-note').textContent=msg;$('lobby-hint').textContent=msg;
-  const note=$('room-game-note');if(note){note.hidden=false;note.textContent=`Connection: ${msg}`;}}
-function renderLobby(){if(!roomSnapshot||roomSnapshot.game)return;
-  $('setup').hidden=true;$('game').hidden=true;$('room-lobby').hidden=false;document.body.classList.remove('playing');
-  $('lobby-code').textContent=roomSnapshot.code;
-  $('lobby-mode').textContent=roomSnapshot.mode==='coop'?'CO-OP':'COMPETITIVE';
-  $('lobby-seats').innerHTML=roomSnapshot.seats.map((p,i)=>`<div class="lobby-seat" style="--seat:${PLAYER_COLORS[i]}"><span class="seat-badge"></span><strong>${escapeText(p.name)}</strong><em>${p.connected?'CONNECTED':'AWAY'}${i===0?' · HOST':''}</em></div>`).join('')+Array.from({length:4-roomSnapshot.seats.length},()=>'<div class="lobby-seat"><span>＋ OPEN SEAT</span></div>').join('');
-  $('start-room').hidden=!roomSnapshot.host;
-  $('start-room').disabled=roomSnapshot.seats.length<2;
-  $('lobby-hint').textContent=roomSnapshot.host?(roomSnapshot.seats.length<2?'Invite at least one friend to start.':'Ready. Start whenever everyone has joined.'):'Waiting for the host to start…';
-}
-
+const room=createRoomController({$,
+  getGame:()=>game,setGame:value=>{game=value;},
+  getBusy:()=>busy,setBusy:value=>{busy=value;},
+  getRolling:()=>rolling,setRolling:value=>{rolling=value;},
+  clearLocalClock:()=>clearInterval(timer),
+  resetSelection,activateAction,render,
+  finishFoldVisual:()=>finishFoldVisual(),
+  animateFold:(...args)=>animateFold(...args),
+  moveClosedBox:(...args)=>moveClosedBox(...args),updateClock,
+});
+const isRemote=()=>room.isRemote();
+const myTurn=()=>room.myTurn();
 function updateClock(){if(!game||game.mode==='solo')return;
-  if(isRemote()&&roomSnapshot?.deadline){const left=Math.max(0,Math.ceil((roomSnapshot.deadline-nowServer())/1000));$('clock').textContent=String(left);$('clock-box').classList.toggle('urgent',left<=10);$('turn-clock').textContent=game.winner?'FINISHED':`${left}s`;
+  if(isRemote()&&room.snapshot?.deadline){const left=Math.max(0,Math.ceil((room.snapshot.deadline-room.nowServer())/1000));$('clock').textContent=String(left);$('clock-box').classList.toggle('urgent',left<=10);$('turn-clock').textContent=game.winner?'FINISHED':`${left}s`;
   }else if(!isRemote())$('turn-clock').textContent=$('clock').textContent+'s';
 }
 function updateTurnBanner(){if(!game)return;
@@ -84,87 +74,6 @@ function updateTurnBanner(){if(!game)return;
   $('turn-clock').textContent=game.mode==='solo'?'NO TIMER':isRemote()?'60s':$('clock').textContent+'s';
   updateClock();
 }
-async function playRemoteMove(move){
-  if(!move||remoteAnimateId===move.id)return;
-  remoteAnimateId=move.id;
-  const {action,payload,beforeCube}=move;
-  if(!['deploy','special','refold'].includes(action))return;
-  const net=action==='deploy'?game.die.net:Number(payload.netIndex);
-  if(!Number.isInteger(net))return;
-  const {x,y,rotation=0,flipped=false}=payload;
-  const origin=oriented(net,rotation,flipped)[0];
-  const contact=[x+origin[0],y+origin[1]];
-  busy=true;try{
-    if(beforeCube){
-      await animateFold(beforeCube.net,beforeCube.rotation,beforeCube.flipped,beforeCube.cells[0],true);
-      beforeCube.cells.forEach(([cx,cy])=>$('board').querySelector(`[data-x="${cx}"][data-y="${cy}"]`)?.classList.add('fold-lifting'));
-      await moveClosedBox(beforeCube.cells[0],contact,beforeCube.net,beforeCube.rotation,beforeCube.flipped,PLAYER_COLORS[game.active]);
-    }
-    await animateFold(net,rotation,flipped,contact);
-  }finally{busy=false;}
-}
-async function receiveRoom(snapshot){
-  if(!roomSession)return;
-  clockSkew=snapshot.now-Date.now();roomSnapshot=snapshot;
-  if(!snapshot.game){roomShownRevision=snapshot.revision;renderLobby();return;}
-  $('room-lobby').hidden=true;
-  if(snapshot.revision===roomShownRevision){updateClock();return;}
-  if(roomBusy)return;
-  roomBusy=true;
-  try{
-    if(game&&snapshot.lastMove&&!snapshot.lastMove.wasLocal&&remoteAnimateId!==snapshot.lastMove.id&&snapshot.game.acted){
-      await playRemoteMove(snapshot.lastMove);
-    }
-    const previousTurn=game?.turn,previousRound=roomRenderedRound;
-    game=snapshot.game;roomShownRevision=snapshot.revision;roomRenderedRound=snapshot.round;
-    const newTurn=previousTurn!==game.turn||previousRound!==snapshot.round;
-    if(newTurn){
-      resetSelection();rolling=nowServer()<snapshot.revealAt;
-      if(rolling){
-        const track=$('reel-track'),stop=game.die.face-1;
-        document.querySelector('.reel-scene')?.classList.add('spinning');
-        track.classList.remove('spinning');track.style.transition='none';track.style.transform='translateY(0)';
-        track.innerHTML=Array.from({length:4},()=>REEL_FACES).flat().map(x=>`<span>${x}</span>`).join('');
-        const px=parseFloat(getComputedStyle(track).getPropertyValue('--reel-cell'))||38;
-        void track.offsetHeight;track.classList.add('spinning');
-        track.style.transition=`transform ${Math.max(100,snapshot.revealAt-nowServer())}ms cubic-bezier(.12,.68,.12,1)`;
-        track.style.transform=`translateY(-${(18+stop)*px}px)`;
-      }else reelFace(game.die.face);
-    }
-    if(game.winner||game.acted||!myTurn()){selected=false;resetSelection();}
-    else if(!rolling&&!busy){activateAction();}
-    render();
-    finishFoldVisual();
-    $('room-game-note').hidden=false;
-    $('room-game-note').textContent=`ROOM ${snapshot.code} · YOU: ${snapshot.seats[snapshot.seat]?.name||'GUEST'} · ${snapshot.seats.length}/4 PLAYERS`;
-    $('next-game').hidden=!snapshot.host;
-    if(rolling){
-      // The public reel reveal is server-timed; the 60s clock starts afterwards.
-      const ms=Math.max(0,snapshot.revealAt-nowServer());
-      setTimeout(()=>{if(!roomSession||!game||roomShownRevision!==snapshot.revision)return;rolling=false;
-        reelFace(game.die.face);
-        if(myTurn()&&!game.acted)activateAction();render();},ms);
-    }
-  }finally{roomBusy=false;}
-}
-async function refreshRoom(){if(!roomSession||roomBusy||busy)return;
-  try{const s=await roomRequest('state',roomArgs());await receiveRoom(s);}
-  catch(error){roomError(error);}
-}
-async function attachRoom(data){
-  roomSession={code:data.code,token:data.token};saveRoomSession();roomShownRevision=-1;roomRenderedRound=null;remoteAnimateId=null;clearInterval(timer);
-  if(roomInterval)clearInterval(roomInterval);
-  await receiveRoom(data.snapshot);
-  roomInterval=setInterval(refreshRoom,950);
-}
-async function createOrJoin(op){
-  const name=$('room-name').value.trim(),mode=$('room-mode').value,code=$('join-code').value.trim();
-  try{
-    const data=await roomRequest(op,op==='create'?{name,mode}:{name,code});
-    await attachRoom(data);
-  }catch(error){roomError(error);}
-}
-
 let currentAnimationSpeed='normal';
 try{const v=localStorage.getItem('unfold-animation-speed');if(Object.hasOwn(ANIMATION_MS,v))currentAnimationSpeed=v;}catch{/* memory-only setting in private browsers */}
 function animationSpeed(){return currentAnimationSpeed;}
@@ -369,10 +278,10 @@ async function commit(payload={}){
   if(isRemote()){
     busy=true;render();
     try{
-      const snapshot=await roomRequest('action',roomArgs({turn:game.turn,payload:to}));
-      roomSnapshot=snapshot;next=snapshot.game;
-      remoteAnimateId=snapshot.lastMove?.id;
-    }catch(error){busy=false;roomError(error);render();return;}
+      const snapshot=await room.request('action',room.args({turn:game.turn,payload:to}));
+      room.setSnapshot(snapshot);next=snapshot.game;
+      room.markMove(snapshot.lastMove?.id);
+    }catch(error){busy=false;room.error(error);render();return;}
   }
   busy=true;foldOriginId=old?.id??null;$('confirm').disabled=true;$('frame-skip').disabled=true;$('placement-tools').hidden=true;
   // Remove only transient selection paint. The actual board cells and the
@@ -407,7 +316,7 @@ async function commit(payload={}){
       const finishedGame=game;
       setTimeout(()=>{if(game===finishedGame&&!busy&&game.acted)advance();},850);
     }
-    if(isRemote()){roomShownRevision=roomSnapshot?.revision??roomShownRevision;refreshRoom();}
+    if(isRemote()){room.syncRevision();room.refresh();}
     if(lockingCubeId!==null){
       const id=lockingCubeId;
       setTimeout(()=>{
@@ -452,7 +361,7 @@ async function advance(){if(!game||rolling||busy||game.winner)return;
   if(isRemote()){
     if(!myTurn()||game.acted)return;
     busy=true;render();
-    try{const snapshot=await roomRequest('pass',roomArgs({turn:game.turn}));busy=false;resetSelection();await receiveRoom(snapshot);}catch(error){busy=false;roomError(error);render();}
+    try{const snapshot=await room.request('pass',room.args({turn:game.turn}));busy=false;resetSelection();await room.receive(snapshot);}catch(error){busy=false;room.error(error);render();}
     return;
   }
   clearInterval(timer);
@@ -462,7 +371,7 @@ async function advance(){if(!game||rolling||busy||game.winner)return;
 }
 function begin(config,previous=null){
   const next=previous?newDistinctGame(config,previous):newGame(config);
-  roomSession=null;roomSnapshot=null;saveRoomSession();if(roomInterval)clearInterval(roomInterval);roomInterval=null;
+  room.disconnect();
   rollToken++;clearInterval(timer);game=next;resetSelection();busy=false;render();rollAnimation();
 }
 $('start-form').addEventListener('submit',e=>{
@@ -511,16 +420,16 @@ window.addEventListener('resize',positionContextTools,{passive:true});
 
 $('new-game').addEventListener('click',()=>{
   if(game&&!game.winner&&!confirm('Leave this match? You can still resume it.'))return;
-  if(isRemote()){roomSession=null;roomSnapshot=null;saveRoomSession();clearInterval(roomInterval);roomInterval=null;}
+  if(isRemote())room.disconnect();
   clearInterval(timer);rollToken++;rolling=false;busy=false;game=null;resetSelection();document.body.classList.remove('playing');$('game').hidden=true;$('setup').hidden=false;$('resume').hidden=!stored();
 });
 $('resume').addEventListener('click',()=>{const s=stored();if(!s)return;rollToken++;rolling=false;game=s;resetSelection();activateAction();render();reelFace(game.die.face);startClock();});
 $('next-game').addEventListener('click',async()=>{
   if(!game?.winner)return;
   if(isRemote()){
-    if(!roomSnapshot?.host)return;
-    try{const s=await roomRequest('next',roomArgs());await receiveRoom(s);}
-    catch(e){roomError(e);}
+    if(!room.snapshot?.host)return;
+    try{const s=await room.request('next',room.args());await room.receive(s);}
+    catch(e){room.error(e);}
     return;
   }
   const previous=game,{mode,level,players,seed}=previous;
@@ -555,29 +464,5 @@ function setEntryTab(tab){
   refreshModeHelp();
 }
 for(const tab of ['solo','create','join'])$(`tab-${tab}`).addEventListener('click',()=>setEntryTab(tab));
-$('create-room').addEventListener('click',()=>createOrJoin('create'));
-$('join-room').addEventListener('click',()=>createOrJoin('join'));
-$('join-code').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,6);});
-$('start-room').addEventListener('click',async()=>{
-  try{const s=await roomRequest('start',roomArgs());await receiveRoom(s);}catch(e){roomError(e);}
-});
-$('copy-room').addEventListener('click',async()=>{
-  const url=new URL(location.href);url.searchParams.set('room',roomSession.code);
-  try{await navigator.clipboard.writeText(url.toString());$('lobby-hint').textContent='Invite link copied.';}
-  catch{$('lobby-hint').textContent=`Invite link: ${url.toString()}`;}
-});
-$('leave-room').addEventListener('click',async()=>{
-  if(roomSession&&roomSnapshot&&!roomSnapshot.game){try{await roomRequest('leave',roomArgs());}catch(e){roomError(e);}}
-  roomSession=null;roomSnapshot=null;saveRoomSession();clearInterval(roomInterval);roomInterval=null;
-  $('room-lobby').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');
-});
-const invited=new URLSearchParams(location.search).get('room');
-if(invited&&/^\d{6}$/.test(invited)){setEntryTab('join');$('join-code').value=invited;$('room-entry-note').textContent='Invite detected. Enter your name and Join Room.';}
-try{
-  const existing=JSON.parse(localStorage.getItem(ROOM_SESSION_KEY)||'null');
-  if(existing&&/^\d{6}$/.test(existing.code)&&typeof existing.token==='string'&&(!invited||invited===existing.code)){
-    roomSession={code:existing.code,token:existing.token};
-    refreshRoom();roomInterval=setInterval(refreshRoom,950);
-  }
-}catch{/* offline/local play is always available */}
+room.installUI(setEntryTab);
 setInterval(()=>{if(isRemote()&&game)updateClock();},250);

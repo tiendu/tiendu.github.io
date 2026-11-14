@@ -78,3 +78,46 @@ test('UNFOLD board tile renderer preserves grid, contact, preview, and capture m
   assert.match(html,/class="tile preview-good legal-anchor selected-anchor"/);
   assert.match(html,/RECLAIM available/);
 });
+
+
+test('UNFOLD room controller owns session, reconnect, and lobby lifecycle',async()=>{
+  const { createRoomController }=await import('../public/games/unfold/online/rooms.mjs');
+  const saved=new Map(),calls=[],elements=new Map();
+  const beforeStorage=globalThis.localStorage,beforeDocument=globalThis.document;
+  const $=id=>{
+    if(!elements.has(id))elements.set(id,{hidden:false,disabled:false,textContent:'',innerHTML:'',value:'',
+      classList:{add(){},remove(){}},addEventListener(){}});
+    return elements.get(id);
+  };
+  globalThis.localStorage={getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
+  globalThis.document={body:{classList:{remove(){}}}};
+  let game=null,clears=0;
+  const controller=createRoomController({$,request:async(op,args)=>{
+    calls.push({op,args});
+    return {code:'123456',token:'secret',snapshot:{now:Date.now(),revision:1,
+      mode:'coop',host:true,seats:[{name:'Alice',connected:true}],code:'123456',game:null}};
+  },getGame:()=>game,setGame:v=>{game=v;},getBusy:()=>false,setBusy(){},getRolling:()=>false,
+    setRolling(){},clearLocalClock(){clears++;},resetSelection(){},activateAction(){},
+    render(){},finishFoldVisual(){},animateFold:async()=>{},moveClosedBox:async()=>{},updateClock(){}});
+  try{
+    assert.equal(controller.isRemote(),false);
+    $('room-name').value='Alice';$('room-mode').value='coop';
+    await controller.createOrJoin('create');
+    assert.deepEqual(calls[0],{op:'create',args:{name:'Alice',mode:'coop'}});
+    assert.deepEqual(controller.session,{code:'123456',token:'secret'});
+    assert.equal(JSON.parse(saved.get('unfold-room-v13')).code,'123456');
+    assert.equal($('lobby-code').textContent,'123456');
+    assert.equal(clears,1);
+    controller.setSnapshot({game:{active:1,winner:null},seat:1});
+    assert.equal(controller.myTurn(),true);
+    controller.setSnapshot({game:{active:1,winner:null},seat:0});
+    assert.equal(controller.myTurn(),false);
+    controller.disconnect();
+    assert.equal(controller.isRemote(),false);
+    assert.equal(saved.has('unfold-room-v13'),false);
+  }finally{
+    controller.disconnect();
+    if(beforeStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=beforeStorage;
+    if(beforeDocument===undefined)delete globalThis.document;else globalThis.document=beforeDocument;
+  }
+});
