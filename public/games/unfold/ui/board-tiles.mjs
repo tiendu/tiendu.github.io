@@ -1,9 +1,11 @@
 // Pure board tile HTML. No DOM, game actions, storage, or timers.
 const COLORS=['red','blue','green','gold'];
 const key=([x,y])=>`${x},${y}`;
-export function renderBoardTiles({size,mode,used,spots,preview,action,targets,anchor,placing,lockingCubeId,foldOriginId}){
+export function renderBoardTiles({size,mode,used,spots,preview,action,targets,anchor,placing,lockingCubeId,foldOriginId,gateMarks=new Map()}){
   const tiles=[];for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-    const k=`${x},${y}`,cell=used.get(k),p=preview.get(k),classes=['tile'],hasMark=spots.has(k);
+    const k=`${x},${y}`,cell=used.get(k),p=preview.get(k),mark=gateMarks.get(k),classes=['tile'],hasMark=spots.has(k);
+    if(mark?.kind==='gate'&&mark.open)classes.push('gate-open');
+    if(mark?.kind==='terminal')classes.push(mark.open?'terminal-powered':'terminal-idle');
     if(cell?.kind==='base')classes.push('base-'+(COLORS[cell.owner]||'neutral'));
     if(cell?.kind==='cube')classes.push('road-'+(COLORS[cell.owner]||'neutral'));
     if(cell?.kind==='goal')classes.push('goal');
@@ -19,7 +21,9 @@ export function renderBoardTiles({size,mode,used,spots,preview,action,targets,an
     let content=cubeNumber?`<span class="contact-label" aria-label="Cube ${cubeNumber}">${cubeNumber}</span>`:'';
     if(cell?.kind==='base')content=`<strong>${mode==='solo'?'S':cell.id+1}</strong>`;
     if(cell?.kind==='goal')content='<strong>★</strong>';
-    if(cell?.kind==='obstacle')content=['ruin','permanent'].includes(cell.type)?'<span class="obstacle-mark scrap-mark" aria-hidden="true">✕</span>':'<span class="obstacle-mark crate-mark" aria-hidden="true"><span class="crate-x"></span></span>';
+    if(cell?.kind==='obstacle')content=cell.type==='gate'?'<span class="gate-shutter" aria-hidden="true">▥</span>':['ruin','permanent'].includes(cell.type)?'<span class="obstacle-mark scrap-mark" aria-hidden="true">✕</span>':'<span class="obstacle-mark crate-mark" aria-hidden="true"><span class="crate-x"></span></span>';
+    if(mark?.kind==='terminal')content+=`<span class="gate-terminal" aria-label="Electrical terminal ${mark.sign}">${mark.sign}</span>`;
+    if(mark?.kind==='gate'&&mark.open&&!cell)content+='<span class="gate-floor" aria-hidden="true">▤</span>';
     if(hasMark)content+='<span class="anchor-dot"></span>';
     tiles.push(`<button type="button" role="gridcell" class="${classes.join(' ')}" ${cell?.kind==='cube'?`data-cube-id="${cell.id}"`:''} data-x="${x}" data-y="${y}" aria-label="${cell?.kind||'Empty'} square ${x+1},${y+1}${cubeNumber?`, cube ${cubeNumber} contact square`:''}${available?`, ${action.toUpperCase()} available`:''}" title="${cell?.kind||'Empty'} · ${x+1},${y+1}${available?` · ${action.toUpperCase()} available`:''}">${content}</button>`);
   }

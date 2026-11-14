@@ -698,3 +698,14 @@
   .board .tile.reclaim-target::after,
   .board .tile.refold-target::after{animation:none;opacity:.85}
 }
+
+/* UNFOLD circuit door overlays. Terminals remain visible under installed roads. */
+#board .tile.gate { background: repeating-linear-gradient(90deg,#735733 0 4px,#292f2d 4px 8px); }
+#board .gate-shutter { color:#ffe4a4; font-size:1.2em; text-shadow:0 0 5px #cf8c31; }
+#board .tile.gate-open { box-shadow: inset 0 0 0 2px #b38847; }
+#board .gate-floor { color:#9a8154; opacity:.65; }
+#board .gate-terminal { position:absolute; z-index:3; right:1px; bottom:0; padding:0 2px;
+  color:#f7d28a; background:#1c2927; border:1px solid #8b7448; font-weight:bold; font-size:11px; line-height:1.1; }
+#board .tile.terminal-powered .gate-terminal { color:#bbffca; border-color:#83b99d; text-shadow:0 0 4px #9afcb8; animation:unfold-current 1.2s steps(3,end) infinite; }
+@keyframes unfold-current { 50% { color:#ffffff; box-shadow:0 0 7px #a4ffbe; } }
+@media (prefers-reduced-motion:reduce) { #board .tile.terminal-powered .gate-terminal { animation:none; } }

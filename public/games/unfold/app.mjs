@@ -129,10 +129,16 @@ function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContac
   if(!busy&&inPlacement()&&anchor){const [x,y]=fromContact(anchor),valid=canAt(anchor),cells=placedCells(selectedNet,rotation,flipped,x,y);
     cells.forEach((c,i)=>{if(c[0]>=0&&c[1]>=0&&c[0]<game.size&&c[1]<game.size)preview.set(key(c),{valid,contact:i===0});});
   }
+  const gateMarks=new Map();
+  for(const gate of game.obstacles.filter(o=>o.type==='gate')){
+    for(const cell of gate.cells)gateMarks.set(key(cell),{kind:'gate',open:gate.open});
+    gate.terminals?.forEach((cell,i)=>gateMarks.set(key(cell),
+      {kind:'terminal',sign:i===0?'+':'−',open:gate.open}));
+  }
   const placing=inPlacement();
   $('board').style.setProperty('--size',game.size);
   $('board').innerHTML=renderBoardTiles({size:game.size,mode:game.mode,used,spots,preview,action,targets,
-    anchor,placing,lockingCubeId,foldOriginId});
+    anchor,placing,lockingCubeId,foldOriginId,gateMarks});
   paintTubeFrame(tubeFrame(),game.size);
   updateLatches();
   $('board-viewport').classList.toggle('large-board',game.size>=17);
@@ -180,6 +186,7 @@ function render(){if(!game)return;
   $('rolled-action').textContent=rolling?'ROLLING':LABELS[action].toUpperCase();
   const available=actionAvailable(game);
   updateTurnBanner();
+  if(game.crisis&&!game.winner)$('mission-title').textContent=`CONSTRUCTION CRISIS · ${game.crisis.remaining} TEAM TURN${game.crisis.remaining===1?'':'S'} LEFT`;
   $('frame-skip').disabled=busy||rolling||Boolean(game.winner)||!myTurn()||Boolean(game.acted&&isRemote());
   $('frame-skip').textContent=game.acted?'LOCKED':'SKIP ↷';
   $('clock-box').hidden=game.mode==='solo';

@@ -47,7 +47,7 @@ export function layoutSignature(s){
   const mark=(cells,value)=>{for(const [x,y] of cells)tiles[y*s.size+x]=value;};
   for(const p of s.players)mark([p.base],'B');
   if(s.goal)mark([s.goal],'G');
-  for(const o of s.obstacles)mark(o.cells,o.type==='permanent'?'P':'R');
+  for(const o of s.obstacles)mark(o.cells,o.type==='permanent'?'P':o.type==='gate'?'E':'R');
   for(const c of s.cubes)if(c.owner===null)mark(c.cells,'N');
   return tiles.join('');
 }
@@ -145,6 +145,60 @@ export function makeTerrainGeneration({occupied,connectedCells,canPlace,legalPla
     }
     const proof=constructionWitness(s,gates);
     if(!proof)return false;
+    // Replace pre-existing steel (never the protected witness route) with
+    // short latching doors. The proven detour remains playable while closed.
+    const route=proof.route.flatMap(c=>c.cells.map(cell=>({cell,owner:c.owner})));
+    const routeNear=(site,side,owner=null)=>route.filter(r=>
+      (owner===null||r.owner===owner)&&
+      (side==='above'?r.cell[1]<site.y:side==='below'?r.cell[1]>site.y:true))
+      .sort((a,b)=>distance(a.cell,[site.x,site.y])-distance(b.cell,[site.x,site.y]));
+    if(s.mode==='solo'){
+      for(const site of gates){
+        const length=s.level==='starter'?1:s.level==='hard'?3:2;
+        const nearSteel=s.obstacles.filter(o=>o.type==='permanent'&&o.cells[0][1]===site.y);
+        let selected=null;
+        // The side of the gap provides a straight 1-3-cell steel segment.
+        for(const dir of [-1,1]){
+          const x0=site.x+(dir===-1?-Math.ceil((s.level==='hard'?8:s.level==='standard'?6:5)/2):Math.ceil((s.level==='hard'?8:s.level==='standard'?6:5)/2));
+          const line=Array.from({length},(_,i)=>[x0+dir*i,site.y]);
+          const pieces=line.map(c=>nearSteel.find(o=>o.cells.some(t=>key(t)===key(c))));
+          if(pieces.every(Boolean)){selected=pieces;break;}
+        }
+        if(!selected){
+          // Try any consecutive steel at this row closest to the passage.
+          const byX=new Map(nearSteel.map(o=>[o.cells[0][0],o]));
+          for(const x of [...byX.keys()].sort((a,b)=>Math.abs(a-site.x)-Math.abs(b-site.x))){
+            const p=Array.from({length},(_,i)=>byX.get(x+i));
+            if(p.every(Boolean)){selected=p;break;}
+          }
+        }
+        if(!selected)return false;
+        const plus=routeNear(site,'below')[0]?.cell;
+        const minus=routeNear(site,'above')[0]?.cell;
+        if(!plus||!minus||key(plus)===key(minus))return false;
+        const door={id:selected[0].id,type:'gate',open:false,
+          cells:selected.map(o=>o.cells[0]),terminals:[plus,minus]};
+        const ids=new Set(selected.map(o=>o.id));
+        s.obstacles=s.obstacles.filter(o=>!ids.has(o.id));s.obstacles.push(door);
+      }
+    }else if(s.mode==='coop'){
+      // One optional circuit door near a verified route, not over any module.
+      const first=route.filter(r=>r.owner===0),used=new Set([
+        ...proof.reserve,...s.obstacles.flatMap(o=>o.cells.map(key)),
+        ...s.players.map(p=>key(p.base)),...(s.goal?[key(s.goal)]:[])]);
+      const candidates=[];
+      for(const r of first)for(const [dx,dy] of DIRECTIONS){
+        const c=[r.cell[0]+dx,r.cell[1]+dy];
+        if(inside(s,c)&&!used.has(key(c))&&s.players.every(p=>distance(c,p.base)>2)&&distance(c,s.goal)>1)
+          candidates.push(c);
+      }
+      if(candidates.length&&first.length>=2){
+        const cell=candidates[pick(s,candidates.length)];
+        const firstRoute=first.slice().sort((a,b)=>distance(a.cell,cell)-distance(b.cell,cell));
+        const terminals=[firstRoute[0].cell,firstRoute.find(r=>key(r.cell)!==key(firstRoute[0].cell))?.cell];
+        if(terminals[1])s.obstacles.push({id:s.nextId++,type:'gate',open:false,cells:[cell],terminals});
+      }
+    }
     const used=new Set([...proof.reserve,...s.obstacles.flatMap(o=>o.cells.map(key)),...s.players.map(p=>key(p.base)),...(s.goal?[key(s.goal)]:[])]);
     const protectedBase=c=>s.players.some(p=>distance(c,p.base)<=2)||s.goal&&distance(c,s.goal)<=1;
     const free=c=>inside(s,c)&&!used.has(key(c))&&!protectedBase(c);

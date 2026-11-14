@@ -34,7 +34,7 @@ test('generated Solo map families remain deterministic with legal starting nets'
     assert(s.goal&&s.cubes.every(c=>c.owner===null&&c.cells.length===6));
     assert(s.obstacles.some(o=>o.type==='rubble'));
     assert(s.obstacles.some(o=>o.type==='permanent'));
-    const occupiedCells=occupied(s);assert.equal(occupiedCells.size,s.players.length+1+s.cubes.length*6+s.obstacles.length);
+    const occupiedCells=occupied(s);assert.equal(occupiedCells.size,s.players.length+1+s.cubes.length*6+s.obstacles.reduce((total,o)=>total+o.cells.length,0));
     let open=0;
     for(let n=0;n<NETS.length;n++){
       if([false,true].some(flip=>[0,1,2,3].some(rot=>legalPlacements(s,0,n,rot,flip).length)))open++;

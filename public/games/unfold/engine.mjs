@@ -15,7 +15,7 @@ export const occupied=s=>{
   const result=new Map();
   for(const p of s.players)result.set(key(p.base),{kind:'base',id:p.id,owner:p.baseOwner});
   if(s.goal)result.set(key(s.goal),{kind:'goal'});
-  for(const o of s.obstacles)for(const c of o.cells)result.set(key(c),{kind:'obstacle',id:o.id,type:o.type});
+  for(const o of s.obstacles)if(o.type!=='gate'||!o.open)for(const c of o.cells)result.set(key(c),{kind:'obstacle',id:o.id,type:o.type});
   for(const [ordinal,cube] of s.cubes.entries())cube.cells.forEach((c,face)=>result.set(key(c),{kind:'cube',id:cube.id,owner:cube.owner,contact:face===0,number:cube.number??null}));
   return result;
 };
@@ -70,13 +70,19 @@ export function newGame({mode='solo',count=1,level='standard',seed=12345}={}){
     if(!accepted)throw Error('Unable to generate a playable construction map');
   }
   s.layoutId=layoutSignature(s);
-  s.die=roll(s);return s;
+  s.die=roll(s);
+  // New players never lose to an impossible opening construction roll.
+  for(let tries=0;tries<24&&constructionBlocked(s,s.active,s.die);tries++)s.die=roll(s);
+  if(constructionBlocked(s,s.active,s.die))s.die={face:3,action:'special',net:null};
+  return s;
 }
 function walk(available,roots){const seen=new Set(),queue=[];for(const r of roots)if(available.has(r)){seen.add(r);queue.push(r);}for(let i=0;i<queue.length;i++){const [x,y]=split(queue[i]);for(const [dx,dy]of DIRECTIONS){const k=key([x+dx,y+dy]);if(available.has(k)&&!seen.has(k)){seen.add(k);queue.push(k);}}}return seen;}
 export function connectedCells(s,actor,excluded=null){
   const friendly=s.mode==='coop'?s.players.filter(p=>p.alive).map(p=>p.id):[actor],available=new Set(),roots=[];
   for(const p of s.players){if(friendly.includes(p.baseOwner))available.add(key(p.base));if(p.id===actor)roots.push(key(p.base));}
   for(const c of s.cubes)if(c.id!==excluded&&friendly.includes(c.owner))for(const cell of c.cells)available.add(key(cell));
+  // Opened metal doors are public walkable floor, and still accept new cubes.
+  for(const gate of s.obstacles)if(gate.type==='gate'&&gate.open)for(const cell of gate.cells)available.add(key(cell));
   return walk(available,roots);
 }
 const touchesNetwork=(cells,network)=>cells.some(([x,y])=>DIRECTIONS.some(([dx,dy])=>network.has(key([x+dx,y+dy]))));
@@ -96,7 +102,7 @@ export function canReclaim(s,actor,id){
   const cube=s.cubes.find(c=>c.id===id),obstacle=s.obstacles.find(o=>o.id===id),target=cube||obstacle;
   if(!target)return false;
   if(cube&&(cube.owner===actor||(s.mode!=='competitive'&&cube.owner!==null)))return false;
-  if(obstacle&&obstacle.type==='permanent')return false;
+  if(obstacle&&['permanent','gate'].includes(obstacle.type))return false;
   return touchesNetwork(target.cells,connectedCells(s,actor));
 }
 export function refoldable(s,actor,id){
@@ -122,6 +128,7 @@ function victory(s,actor){
   if(s.mode==='coop'){
     const available=new Set(s.players.filter(p=>p.alive).map(p=>key(p.base)));
     for(const c of s.cubes)if(c.owner!==null)for(const cell of c.cells)available.add(key(cell));
+    for(const gate of s.obstacles)if(gate.type==='gate'&&gate.open)for(const cell of gate.cells)available.add(key(cell));
     const active=walk(available,[key(s.players[0].base)]);
     const goalReached=!s.goal||DIRECTIONS.some(([dx,dy])=>active.has(key([s.goal[0]+dx,s.goal[1]+dy])));
     if(goalReached&&s.players.every(p=>active.has(key(p.base)))){s.winner={kind:'coop',players:s.players.map(p=>p.id)};s.announcement='All bases connected to the goal!';}return;
@@ -146,6 +153,80 @@ export function hasPhysicalMove(s,actor){
   }
   return false;
 }
+// A construction roll is judged by THIS offer, not by unrelated RECLAIM
+// or REFOLD opportunities. A fixed DEPLOY can be blocked while SUPER can fit.
+export function canConstruct(s,actor=s.active,die=s.die){
+  if(!die||!['deploy','special'].includes(die.action))return true;
+  const nets=die.action==='deploy'?[die.net]:Array.from({length:NETS.length},(_,i)=>i);
+  // Enumerate placements from the open network border instead of repeatedly
+  // rebuilding the occupancy map for every cell of the entire board.
+  const used=occupied(s),border=new Map();
+  for(const v of connectedCells(s,actor)){
+    const [x,y]=split(v);
+    for(const [dx,dy] of DIRECTIONS){
+      const c=[x+dx,y+dy],k=key(c);
+      if(inside(s,c)&&!used.has(k))border.set(k,c);
+    }
+  }
+  for(const net of nets){
+    if(!Number.isInteger(net)||net<0||net>=NETS.length)continue;
+    for(const flip of [false,true])for(let rotation=0;rotation<4;rotation++){
+      const shape=oriented(net,rotation,flip);
+      for(const contact of border.values())for(const offset of shape){
+        const x=contact[0]-offset[0],y=contact[1]-offset[1];
+        if(!shape.every(([a,b])=>inside(s,[x+a,y+b])&&!used.has(key([x+a,y+b]))))continue;
+        // Confirm through the authoritative placement validator.
+        if(canPlace(s,actor,net,rotation,flip,x,y))return true;
+      }
+    }
+  }
+  return false;
+}
+const constructionBlocked=(s,actor=s.active,die=s.die)=>
+  !!die&&['deploy','special'].includes(die.action)&&!canConstruct(s,actor,die);
+
+// Terminal tiles are ordinary buildable sockets. Both must belong to the same
+// base-connected road. Opening a door is permanent for this game round.
+export function powerGates(s){
+  let opened=0;
+  for(const gate of s.obstacles){
+    if(gate.type!=='gate'||gate.open||!Array.isArray(gate.terminals)||gate.terminals.length!==2)continue;
+    const charged=s.players.some(p=>p.alive&&gate.terminals.every(t=>connectedCells(s,p.id).has(key(t))));
+    if(charged){gate.open=true;opened++;}
+  }
+  if(opened)s.announcement=`${opened} electrical ${opened===1?'gate':'gates'} powered open.`;
+  return opened;
+}
+
+function eliminate(s,actor){
+  const p=s.players[actor];p.alive=false;p.baseOwner=null;
+  for(const c of s.cubes)if(c.owner===actor){c.owner=null;c.neutralFrom=actor;}
+  s.announcement=`${p.name} cannot place the rolled construction cube and is eliminated.`;
+}
+// Resolve the rolled action immediately. During a Co-op crisis, teammates
+// retain their ordinary turns to clear space for the original blocked roll.
+function resolveRoll(s){
+  for(let skipped=0;skipped<s.players.length;skipped++){
+    if(!constructionBlocked(s,s.active,s.die))return s;
+    if(s.mode==='solo'){
+      s.winner={kind:'stuck',players:[]};
+      s.announcement='No legal placement for the rolled construction cube.';return s;
+    }
+    if(s.mode==='coop'){
+      if(s.crisis)return s; // A teammate can skip their unlucky roll.
+      s.crisis={actor:s.active,die:{...s.die},remaining:s.players.filter(p=>p.alive).length-1};
+      s.announcement='Construction crisis! Teammates have one turn each to clear a placement.';
+    }else{
+      eliminate(s,s.active);
+      const survivors=s.players.filter(p=>p.alive);
+      if(survivors.length===1){s.winner={kind:'competitive',players:[survivors[0].id]};return s;}
+    }
+    do{s.active=(s.active+1)%s.players.length;}while(!s.players[s.active].alive);
+    s.turn++;s.acted=false;s.die=roll(s);
+    if(s.mode==='coop')return s;
+  }
+  return s;
+}
 // All actions use the same rule entry point and may occur only once per turn.
 export function act(s,payload={}){
   if(s.winner||s.acted)throw Error('This turn is finished');
@@ -166,28 +247,28 @@ export function act(s,payload={}){
     else next.cubes.push({id:next.nextId++,number:next.nextCubeNumber??(next.cubes.length+1),owner:actor,cells,net,rotation,flipped});
     if(!old)next.nextCubeNumber=(next.nextCubeNumber??next.cubes.length)+1;
   }else throw Error('Unsupported action');
-  next.acted=true;victory(next,actor);next.announcement ||= `${player(next).name} used ${LABELS[action]}.`;
+  next.acted=true;powerGates(next);victory(next,actor);next.announcement ||= `${player(next).name} used ${LABELS[action]}.`;
   return next;
 }
 export function endTurn(s){
   if(s.winner)return s;
   const next=clone(s);next.announcement='';
-  // Passing is always legal: a poor roll is luck, not a defeat.
-  if(next.mode==='competitive'&&!hasPhysicalMove(next,next.active)){
-    const p=player(next);p.alive=false;p.baseOwner=null;
-    for(const c of next.cubes)if(c.owner===p.id){c.owner=null;c.neutralFrom=p.id;}
-    next.announcement=`${p.name} has no physical moves and is eliminated.`;
-  }
-  const alive=next.players.filter(p=>p.alive);
-  if(next.mode==='competitive'&&alive.length===1){next.winner={kind:'competitive',players:[alive[0].id]};return next;}
-  if(next.mode==='coop'&&!next.players.some(p=>p.alive&&hasPhysicalMove(next,p.id))){
-    next.winner={kind:'stuck',players:[]};next.announcement='Team has no legal moves remaining.';return next;
-  }
-  if(next.mode==='solo'&&!hasPhysicalMove(next,0)){
-    next.winner={kind:'stuck',players:[]};next.announcement='No legal moves remain.';return next;
+  // Handle old saved games or explicit skips that encounter a blocked roll.
+  if(!next.acted&&constructionBlocked(next,next.active,next.die)&&!next.crisis)
+    return resolveRoll(next);
+  if(next.crisis){
+    if(canConstruct(next,next.crisis.actor,next.crisis.die)){
+      delete next.crisis;
+      next.announcement='Construction crisis resolved.';
+    }else if(--next.crisis.remaining<=0){
+      next.winner={kind:'stuck',players:[]};
+      next.announcement='Construction crisis failed. No legal placement was restored.';
+      return next;
+    }
   }
   if(next.mode==='competitive'){
     do{next.active=(next.active+1)%next.players.length;}while(!player(next).alive);
   }else if(next.mode==='coop')next.active=(next.active+1)%next.players.length;
-  next.turn++;next.acted=false;next.die=roll(next);return next;
+  next.turn++;next.acted=false;next.die=roll(next);
+  return resolveRoll(next);
 }
