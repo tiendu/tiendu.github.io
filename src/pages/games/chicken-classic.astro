@@ -1,0 +1,212 @@
+---
+import GameLayout from "../../layouts/GameLayout.astro";
+import ChickenRunGame from "../../components/games/ChickenRunGame.astro";
+import "../../styles/chicken-run-layout.css";
+---
+<GameLayout title="Chicken Run" description="Outrun the fox solo or race to the coop with friends.">
+  <ChickenRunGame />
+</GameLayout>
+
+<script>
+  import "../../scripts/games/flock-client.mjs";
+  import { mountChickenRunGames } from "../../scripts/games/chicken-run";
+  import { GAME_EVENTS, dispatchGameCommand, type GameStatusDetail } from "../../scripts/games/shared/events";
+
+  mountChickenRunGames();
+  const events = GAME_EVENTS.chicken;
+  for (const action of ["pause", "restart"] as const) {
+    document.querySelector('[data-solo-' + action + ']')?.addEventListener("click", () => dispatchGameCommand(events.command, action));
+  }
+  const pause = document.querySelector<HTMLButtonElement>("[data-solo-pause]")!;
+  window.addEventListener(events.status, event => {
+    const state = (event as CustomEvent<GameStatusDetail>).detail;
+    pause.textContent = state.pauseLabel ?? "Pause";
+    pause.disabled = state.pauseDisabled ?? false;
+  });
+  window.addEventListener(events.exit, () => location.assign("/"));
+  window.dispatchEvent(new Event(events.start));
+  window.addEventListener("pageshow", event => {
+    if (event.persisted && document.querySelector<HTMLElement>("[data-chicken-game]")?.hidden)
+      window.dispatchEvent(new Event(events.start));
+  });
+</script>
+
+<script is:inline>
+/* tiendu:chicken-run-layout:v2 */
+(() => {
+  // Menu CSS is bundled by Astro from src/styles/chicken-run-layout.css.
+
+  const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const clickable = () => [...document.querySelectorAll('button, a, [role="button"], input[type="button"]')];
+  const label = el => norm(el.tagName === 'INPUT' ? el.value : el.textContent);
+  const action = name => clickable().find(el => label(el) === name);
+  const homeControl = () => clickable().find(el => /^(?:←|⟵|<|‹|↩|⮌)?\s*home$/.test(label(el))) ||
+    clickable().find(el => /\bhome$/.test(label(el)) && !/chicken/.test(label(el)));
+  const soundControl = () => clickable().find(el => /^sound\s+(on|off)$/.test(label(el)));
+  const title = () => [...document.querySelectorAll('h1, h2, h3, [class*="title"], [class*="banner"]')]
+    .find(el => label(el) === 'chicken run' && el.children.length < 4);
+  const visible = el => {
+    if (!el || !el.isConnected) return false;
+    if (!el.getClientRects().length) return false;
+    let node = el;
+    while (node && node.nodeType === 1) {
+      const css = getComputedStyle(node);
+      if (node.hidden || css.display === 'none' || css.visibility === 'hidden') return false;
+      node = node.parentElement;
+    }
+    return true;
+  };
+  const common = (els) => {
+    if (!els.length || els.some(el => !el)) return null;
+    for (let a = els[0]; a && a !== document.body; a = a.parentElement) {
+      if (els.every(el => a.contains(el))) return a;
+    }
+    return null;
+  };
+  const cell = (ancestor, el) => {
+    let a = el;
+    while (a && a.parentElement !== ancestor) a = a.parentElement;
+    return a && a.parentElement === ancestor ? a : null;
+  };
+  const setClass = (el, name) => { if (el && !el.classList.contains(name)) el.classList.add(name); };
+  let current = null;
+  let toolbarCreated = false;
+  let busy = false;
+  let pending = false;
+
+  function layout() {
+    if (busy) return;
+    busy = true;
+    try {
+      const solo = action('solo');
+      const friends = action('play with friends');
+      const resume = action('continue solo');
+      if (!solo || !friends || !visible(solo) || !visible(friends)) {
+        document.documentElement.classList.remove('chicken-layout-menu-active');
+        return;
+      }
+      const home = homeControl();
+      const sound = soundControl();
+      const heading = title();
+      const entries = [solo, resume, friends].filter(Boolean);
+      const actions = common(entries);
+      if (!actions || actions === document.body || (heading && actions.contains(heading))) return;
+
+      // Drop the styles added by the previous patch, and let the grid flow
+      // naturally: Solo -> Continue solo (if available) -> Play with friends.
+      const cells = entries.map(el => cell(actions, el));
+      if (cells.some(el => !el) || new Set(cells).size !== cells.length) return;
+      for (const part of cells) {
+        setClass(part, 'chicken-layout-action');
+        if (part.style.gridColumn === '1 / -1' || part.style.justifySelf === 'center') {
+          part.style.removeProperty('grid-column');
+          part.style.removeProperty('justify-self');
+          part.style.removeProperty('width');
+        }
+      }
+      // Reorder only if needed: unconditional append causes an observer loop.
+      const currentOrder = [...actions.children].filter(part => cells.includes(part));
+      if (currentOrder.some((part, i) => part !== cells[i])) {
+        for (const part of cells) actions.appendChild(part);
+      }
+      if (resume) {
+        const cellResume = cell(actions, resume);
+        // Hidden resume should not reserve a grid column.
+        // Check whether the action itself was hidden by the game, excluding
+        // the wrapper that this patch may have hidden in the previous frame.
+        let gameHidResume = false;
+        for (let el = resume; el && el !== cellResume; el = el.parentElement) {
+          const css = getComputedStyle(el);
+          if (el.hidden || css.display === 'none' || css.visibility === 'hidden') {
+            gameHidResume = true;
+            break;
+          }
+        }
+        if (gameHidResume && cellResume !== resume) {
+          if (cellResume.dataset.chickenHiddenByPatch !== '1') {
+            cellResume.dataset.chickenPriorDisplay = cellResume.style.display;
+            cellResume.style.display = 'none';
+            cellResume.dataset.chickenHiddenByPatch = '1';
+          }
+        } else if (cellResume.dataset.chickenHiddenByPatch === '1') {
+          cellResume.style.display = cellResume.dataset.chickenPriorDisplay || '';
+          delete cellResume.dataset.chickenHiddenByPatch;
+          delete cellResume.dataset.chickenPriorDisplay;
+        }
+      }
+      setClass(actions, 'chicken-layout-actions');
+
+      const nodes = [solo, friends, home, sound, heading].filter(Boolean);
+      let frame = common(nodes);
+      if (!frame || frame === document.body || frame === document.documentElement) {
+        frame = common([solo, friends, heading].filter(Boolean));
+      }
+      if (!frame || frame === document.body) return;
+      setClass(frame, 'chicken-layout-frame');
+      current = frame;
+
+      // Center intermediate wrappers too (when Astro uses a page component
+      // between the main frame and the body).
+      for (let a = frame.parentElement; a && a !== document.body; a = a.parentElement) {
+        setClass(a, 'chicken-layout-ancestor');
+      }
+
+      if (home && sound) {
+        let toolbar = common([home, sound]);
+        // If no dedicated toolbar exists, create a row immediately before
+        // the banner. Moving DOM nodes preserves their click listeners.
+        if (!toolbar || toolbar === frame || toolbar.contains(actions) ||
+            (heading && toolbar.contains(heading))) {
+          if (!toolbarCreated) {
+            toolbar = document.createElement('div');
+            toolbar.className = 'chicken-layout-toolbar';
+            const before = heading ? cell(frame, heading) : cell(frame, actions);
+            if (before) frame.insertBefore(toolbar, before);
+            else frame.insertBefore(toolbar, frame.firstChild);
+            toolbar.append(home, sound);
+            toolbarCreated = true;
+          } else {
+            toolbar = frame.querySelector('.chicken-layout-toolbar');
+          }
+        }
+        if (toolbar && toolbar !== frame) {
+          setClass(toolbar, 'chicken-layout-toolbar');
+          for (const el of [home, sound]) {
+            const item = cell(toolbar, el);
+            if (item) setClass(item, 'chicken-layout-toolbar-item');
+          }
+        }
+      }
+      document.documentElement.classList.add('chicken-layout-menu-active');
+    } finally { busy = false; }
+  }
+
+  function schedule() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      layout();
+    });
+  }
+  function start() {
+    schedule();
+    const observer = new MutationObserver(mutations => {
+      // Ignore the classes and inline widths written by this patch;
+      // react to the game changing its menu state instead.
+      if (mutations.some(m => m.type === 'childList' ||
+          (m.type === 'attributes' && m.target !== document.documentElement &&
+           !m.target.classList?.contains('chicken-layout-toolbar') &&
+           m.attributeName !== 'data-chicken-hidden-by-patch'))) schedule();
+    });
+    observer.observe(document.body, {
+      subtree: true, childList: true, attributes: true,
+      attributeFilter: ['style', 'hidden', 'class']
+    });
+    window.addEventListener('resize', schedule, { passive: true });
+    window.addEventListener('pageshow', schedule);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
+})();
+</script>

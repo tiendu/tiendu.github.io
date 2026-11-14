@@ -107,12 +107,21 @@ for (const [slug, component, mount] of [
   ["mines", "MinesGame", "mountMines"],
   ["number", "NumberGame", "mountNumberGames"],
 ]) {
-  const page = await readFile(new URL(`../src/pages/games/${slug}.astro`, import.meta.url), "utf8");
+  const route = slug === "chicken" ? "chicken-classic" : slug;
+  const page = await readFile(new URL(`../src/pages/games/${route}.astro`, import.meta.url), "utf8");
   if (!page.includes(`<${component} />`) || !page.includes(`${mount}()`))
     failures.push(`/games/${slug}/ must render and mount its game`);
   if (homePage.includes(`href="/games/${slug}/"`))
     failures.push(`homepage unexpectedly shows the ${slug} game link`);
 }
+
+// New game is intentionally independent of the legacy room transport.
+const neonPage = await readFile(new URL('../src/pages/games/chicken.astro', import.meta.url), 'utf8');
+const menuPage = await readFile(new URL('../src/pages/games/index.astro', import.meta.url), 'utf8');
+if (!neonPage.includes('id="neon-canvas"') || !neonPage.includes('id="neon-jump"') || !neonPage.includes('/games/chicken-neon/app.mjs'))
+  failures.push('/games/chicken/ must mount the Neon Wilds game with one jump control');
+if (!menuPage.includes('href: "/games/chicken/"'))
+  failures.push('The games menu must include Chicken Run');
 
 if (failures.length > 0) {
   console.error("Game architecture check failed:");

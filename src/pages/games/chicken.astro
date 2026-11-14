@@ -1,212 +1,81 @@
 ---
-import GameLayout from "../../layouts/GameLayout.astro";
-import ChickenRunGame from "../../components/games/ChickenRunGame.astro";
-import "../../styles/chicken-run-layout.css";
+import GameLayout from '../../layouts/GameLayout.astro';
+import '../../styles/components/chicken-neon.css';
 ---
-<GameLayout title="Chicken Run" description="Outrun the fox solo or race to the coop with friends.">
-  <ChickenRunGame />
+<GameLayout title="Chicken Run — Neon Wilds" description="An endless one-button neon survival runner. Collect corn, dodge predators and outlast the collapsing grid.">
+  <section class="neon-chicken" id="neon-chicken" aria-label="Chicken Run Neon Wilds">
+    <header class="neon-header">
+      <a class="neon-back" href="/games/">← GAMES</a>
+      <div class="neon-brand"><span class="neon-brand-mark">◈</span><strong>CHICKEN RUN</strong><small>NEON WILDS</small></div>
+      <button id="neon-sound" type="button" aria-pressed="false">SOUND OFF</button>
+    </header>
+    <div id="neon-menu" class="neon-menu">
+      <div class="neon-intro">
+        <p class="neon-eyebrow">SURVIVAL PROTOCOL / 01</p>
+        <h1>RUN <em>FOREVER.</em></h1>
+        <p>Five armored chickens. One jump button. An unstable world.<br />Collect corn to fuel your suit. Never let the predators catch you.</p>
+      </div>
+      <h2 class="neon-section-title">CHOOSE YOUR CHICKEN <span>5 PILOTS / UNIQUE ABILITIES</span></h2>
+      <div class="neon-roster" role="group" aria-label="Choose a chicken">
+        <button type="button" class="neon-pilot" data-bird="0" aria-pressed="false">
+          <canvas class="neon-avatar" data-bird-preview="0" width="100" height="90" aria-hidden="true"></canvas><strong>SUNRISE</strong><small>SPEED DEMON</small><span>FASTEST RUN · LOW JUMP</span>
+        </button>
+        <button type="button" class="neon-pilot" data-bird="1" aria-pressed="false">
+          <canvas class="neon-avatar" data-bird-preview="1" width="100" height="90" aria-hidden="true"></canvas><strong>PEPPER</strong><small>ALL-ROUNDER</small><span>BALANCED ABILITIES</span>
+        </button>
+        <button type="button" class="neon-pilot" data-bird="2" aria-pressed="true">
+          <canvas class="neon-avatar" data-bird-preview="2" width="100" height="90" aria-hidden="true"></canvas><strong>PEARL</strong><small>HIGH JUMPER</small><span>HIGHEST JUMP · SLOWEST</span>
+        </button>
+        <button type="button" class="neon-pilot" data-bird="3" aria-pressed="false">
+          <canvas class="neon-avatar" data-bird-preview="3" width="100" height="90" aria-hidden="true"></canvas><strong>MANGO</strong><small>SURVIVOR</small><span>BEST FUEL ECONOMY</span>
+        </button>
+        <button type="button" class="neon-pilot" data-bird="4" aria-pressed="false">
+          <canvas class="neon-avatar" data-bird-preview="4" width="100" height="90" aria-hidden="true"></canvas><strong>INDIGO</strong><small>JET ACE</small><span>LONGEST JET BOOST</span>
+        </button>
+      </div>
+      <div class="neon-launch">
+        <div class="neon-readout"><span>SELECTED</span><strong id="neon-selected">PEARL · HIGH JUMPER</strong><span>PERSONAL BEST</span><strong id="neon-best">00:00</strong></div>
+        <button id="neon-start" type="button" class="neon-primary">▶ START RUN</button>
+      </div>
+      <div class="neon-explainer">
+        <p><strong>ONE BUTTON.</strong> Tap to jump. Tap again midair for a corn-powered jetpack boost. Running is automatic.</p>
+        <p><strong>THREE PREDATORS.</strong> Foxes pursue, coyotes ambush, and eagles strike from above. Obstacles and void gaps are lethal.</p>
+        <p><strong>GRID INSTABILITY.</strong> After three minutes, EMP storms, falling plasma, broken tracks, and gravity surges begin. Disasters become more frequent the longer you survive.</p>
+      </div>
+      <p class="neon-classic-note">Want to play the previous online race? <a href="/games/chicken-classic/">OPEN CLASSIC MULTIPLAYER</a> <span>· Neon Wilds online survival is a separate upcoming migration.</span></p>
+    </div>
+    <section id="neon-run" class="neon-run" hidden aria-label="Neon Wilds endless runner">
+      <div class="neon-hud">
+        <div><small>SURVIVAL</small><strong id="neon-time">00:00</strong></div>
+        <div><small>RUNNER</small><strong id="neon-chicken-name">PEARL</strong></div>
+        <div><small>DISTANCE</small><strong id="neon-distance">0 m</strong></div>
+      </div>
+      <div class="neon-bars">
+        <div class="neon-meter"><div class="neon-meter-label"><span>CORN POWER</span><strong id="neon-fuel-value">82%</strong></div><div class="neon-meter-track"><div id="neon-fuel" class="neon-meter-fill"></div></div></div>
+        <div class="neon-meter neon-fox-meter"><div class="neon-meter-label"><span>FOX PROXIMITY</span><span>DANGER</span></div><div class="neon-meter-track"><div id="neon-fox" class="neon-meter-fill"></div></div></div>
+      </div>
+      <div class="neon-stage">
+        <canvas id="neon-canvas" width="1100" height="520" aria-label="Horizontal survival course with obstacles, corn, predators, and an armored running chicken. Tap to jump, tap again midair to fire the jetpack." tabindex="0"></canvas>
+        <div id="neon-end" class="neon-end" hidden role="status" aria-live="polite">
+          <span>SIGNAL LOST / RUN ENDED</span><strong id="neon-final">00:00</strong><p id="neon-death">CAUGHT</p>
+          <p id="neon-new-best" hidden>NEW PERSONAL BEST</p>
+          <button id="neon-retry" type="button" class="neon-primary">↻ TRY AGAIN</button>
+        </div>
+      </div>
+      <p id="neon-status" class="neon-status" role="status" aria-live="off">AUTO-RUN · TAP JUMP / TAP AGAIN TO BOOST</p>
+      <div class="neon-game-controls">
+        <div class="neon-control-links"><button id="neon-pause" type="button">PAUSE</button><button id="neon-menu-button" type="button">CHANGE CHICKEN</button></div>
+        <button id="neon-jump" class="neon-jump" type="button" aria-label="Jump, then activate jetpack in midair">↑ <span>JUMP</span></button>
+      </div>
+      <p class="neon-key-hint">SPACE / ↑ / W = JUMP · P = PAUSE · NO SPRINT · NO FORCED ROTATION</p>
+    </section>
+    <p id="neon-boot" class="neon-boot" role="status">INITIALIZING NEON WILDS…</p>
+  </section>
 </GameLayout>
-
-<script>
-  import "../../scripts/games/flock-client.mjs";
-  import { mountChickenRunGames } from "../../scripts/games/chicken-run";
-  import { GAME_EVENTS, dispatchGameCommand, type GameStatusDetail } from "../../scripts/games/shared/events";
-
-  mountChickenRunGames();
-  const events = GAME_EVENTS.chicken;
-  for (const action of ["pause", "restart"] as const) {
-    document.querySelector('[data-solo-' + action + ']')?.addEventListener("click", () => dispatchGameCommand(events.command, action));
-  }
-  const pause = document.querySelector<HTMLButtonElement>("[data-solo-pause]")!;
-  window.addEventListener(events.status, event => {
-    const state = (event as CustomEvent<GameStatusDetail>).detail;
-    pause.textContent = state.pauseLabel ?? "Pause";
-    pause.disabled = state.pauseDisabled ?? false;
+<script is:inline type="module">
+  import('/games/chicken-neon/app.mjs').catch(error=>{
+    console.error('Neon Wilds failed to load',error);
+    const note=document.getElementById('neon-boot');
+    if(note)note.textContent=`GAME COULD NOT START: ${error.message}`;
   });
-  window.addEventListener(events.exit, () => location.assign("/"));
-  window.dispatchEvent(new Event(events.start));
-  window.addEventListener("pageshow", event => {
-    if (event.persisted && document.querySelector<HTMLElement>("[data-chicken-game]")?.hidden)
-      window.dispatchEvent(new Event(events.start));
-  });
-</script>
-
-<script is:inline>
-/* tiendu:chicken-run-layout:v2 */
-(() => {
-  // Menu CSS is bundled by Astro from src/styles/chicken-run-layout.css.
-
-  const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
-  const clickable = () => [...document.querySelectorAll('button, a, [role="button"], input[type="button"]')];
-  const label = el => norm(el.tagName === 'INPUT' ? el.value : el.textContent);
-  const action = name => clickable().find(el => label(el) === name);
-  const homeControl = () => clickable().find(el => /^(?:←|⟵|<|‹|↩|⮌)?\s*home$/.test(label(el))) ||
-    clickable().find(el => /\bhome$/.test(label(el)) && !/chicken/.test(label(el)));
-  const soundControl = () => clickable().find(el => /^sound\s+(on|off)$/.test(label(el)));
-  const title = () => [...document.querySelectorAll('h1, h2, h3, [class*="title"], [class*="banner"]')]
-    .find(el => label(el) === 'chicken run' && el.children.length < 4);
-  const visible = el => {
-    if (!el || !el.isConnected) return false;
-    if (!el.getClientRects().length) return false;
-    let node = el;
-    while (node && node.nodeType === 1) {
-      const css = getComputedStyle(node);
-      if (node.hidden || css.display === 'none' || css.visibility === 'hidden') return false;
-      node = node.parentElement;
-    }
-    return true;
-  };
-  const common = (els) => {
-    if (!els.length || els.some(el => !el)) return null;
-    for (let a = els[0]; a && a !== document.body; a = a.parentElement) {
-      if (els.every(el => a.contains(el))) return a;
-    }
-    return null;
-  };
-  const cell = (ancestor, el) => {
-    let a = el;
-    while (a && a.parentElement !== ancestor) a = a.parentElement;
-    return a && a.parentElement === ancestor ? a : null;
-  };
-  const setClass = (el, name) => { if (el && !el.classList.contains(name)) el.classList.add(name); };
-  let current = null;
-  let toolbarCreated = false;
-  let busy = false;
-  let pending = false;
-
-  function layout() {
-    if (busy) return;
-    busy = true;
-    try {
-      const solo = action('solo');
-      const friends = action('play with friends');
-      const resume = action('continue solo');
-      if (!solo || !friends || !visible(solo) || !visible(friends)) {
-        document.documentElement.classList.remove('chicken-layout-menu-active');
-        return;
-      }
-      const home = homeControl();
-      const sound = soundControl();
-      const heading = title();
-      const entries = [solo, resume, friends].filter(Boolean);
-      const actions = common(entries);
-      if (!actions || actions === document.body || (heading && actions.contains(heading))) return;
-
-      // Drop the styles added by the previous patch, and let the grid flow
-      // naturally: Solo -> Continue solo (if available) -> Play with friends.
-      const cells = entries.map(el => cell(actions, el));
-      if (cells.some(el => !el) || new Set(cells).size !== cells.length) return;
-      for (const part of cells) {
-        setClass(part, 'chicken-layout-action');
-        if (part.style.gridColumn === '1 / -1' || part.style.justifySelf === 'center') {
-          part.style.removeProperty('grid-column');
-          part.style.removeProperty('justify-self');
-          part.style.removeProperty('width');
-        }
-      }
-      // Reorder only if needed: unconditional append causes an observer loop.
-      const currentOrder = [...actions.children].filter(part => cells.includes(part));
-      if (currentOrder.some((part, i) => part !== cells[i])) {
-        for (const part of cells) actions.appendChild(part);
-      }
-      if (resume) {
-        const cellResume = cell(actions, resume);
-        // Hidden resume should not reserve a grid column.
-        // Check whether the action itself was hidden by the game, excluding
-        // the wrapper that this patch may have hidden in the previous frame.
-        let gameHidResume = false;
-        for (let el = resume; el && el !== cellResume; el = el.parentElement) {
-          const css = getComputedStyle(el);
-          if (el.hidden || css.display === 'none' || css.visibility === 'hidden') {
-            gameHidResume = true;
-            break;
-          }
-        }
-        if (gameHidResume && cellResume !== resume) {
-          if (cellResume.dataset.chickenHiddenByPatch !== '1') {
-            cellResume.dataset.chickenPriorDisplay = cellResume.style.display;
-            cellResume.style.display = 'none';
-            cellResume.dataset.chickenHiddenByPatch = '1';
-          }
-        } else if (cellResume.dataset.chickenHiddenByPatch === '1') {
-          cellResume.style.display = cellResume.dataset.chickenPriorDisplay || '';
-          delete cellResume.dataset.chickenHiddenByPatch;
-          delete cellResume.dataset.chickenPriorDisplay;
-        }
-      }
-      setClass(actions, 'chicken-layout-actions');
-
-      const nodes = [solo, friends, home, sound, heading].filter(Boolean);
-      let frame = common(nodes);
-      if (!frame || frame === document.body || frame === document.documentElement) {
-        frame = common([solo, friends, heading].filter(Boolean));
-      }
-      if (!frame || frame === document.body) return;
-      setClass(frame, 'chicken-layout-frame');
-      current = frame;
-
-      // Center intermediate wrappers too (when Astro uses a page component
-      // between the main frame and the body).
-      for (let a = frame.parentElement; a && a !== document.body; a = a.parentElement) {
-        setClass(a, 'chicken-layout-ancestor');
-      }
-
-      if (home && sound) {
-        let toolbar = common([home, sound]);
-        // If no dedicated toolbar exists, create a row immediately before
-        // the banner. Moving DOM nodes preserves their click listeners.
-        if (!toolbar || toolbar === frame || toolbar.contains(actions) ||
-            (heading && toolbar.contains(heading))) {
-          if (!toolbarCreated) {
-            toolbar = document.createElement('div');
-            toolbar.className = 'chicken-layout-toolbar';
-            const before = heading ? cell(frame, heading) : cell(frame, actions);
-            if (before) frame.insertBefore(toolbar, before);
-            else frame.insertBefore(toolbar, frame.firstChild);
-            toolbar.append(home, sound);
-            toolbarCreated = true;
-          } else {
-            toolbar = frame.querySelector('.chicken-layout-toolbar');
-          }
-        }
-        if (toolbar && toolbar !== frame) {
-          setClass(toolbar, 'chicken-layout-toolbar');
-          for (const el of [home, sound]) {
-            const item = cell(toolbar, el);
-            if (item) setClass(item, 'chicken-layout-toolbar-item');
-          }
-        }
-      }
-      document.documentElement.classList.add('chicken-layout-menu-active');
-    } finally { busy = false; }
-  }
-
-  function schedule() {
-    if (pending) return;
-    pending = true;
-    requestAnimationFrame(() => {
-      pending = false;
-      layout();
-    });
-  }
-  function start() {
-    schedule();
-    const observer = new MutationObserver(mutations => {
-      // Ignore the classes and inline widths written by this patch;
-      // react to the game changing its menu state instead.
-      if (mutations.some(m => m.type === 'childList' ||
-          (m.type === 'attributes' && m.target !== document.documentElement &&
-           !m.target.classList?.contains('chicken-layout-toolbar') &&
-           m.attributeName !== 'data-chicken-hidden-by-patch'))) schedule();
-    });
-    observer.observe(document.body, {
-      subtree: true, childList: true, attributes: true,
-      attributeFilter: ['style', 'hidden', 'class']
-    });
-    window.addEventListener('resize', schedule, { passive: true });
-    window.addEventListener('pageshow', schedule);
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
-  else start();
-})();
 </script>
