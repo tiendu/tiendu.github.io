@@ -9,7 +9,7 @@
     "start": "astro dev",
     "check:styles": "node scripts/check-styles.mjs",
     "check:games": "node scripts/check-games.mjs",
-    "test:games": "node scripts/test-games.mjs",
+    "test:games": "node scripts/test-games.mjs && node --test scripts/test-number-rules.mjs multiplayer/test/mines.test.mjs multiplayer/test/mines-defeat.test.mjs multiplayer/test/mines-elevator.test.mjs multiplayer/test/mines-hats.test.mjs",
     "check:astro": "astro check",
     "check": "npm run check:styles && npm run check:games && npm run test:games && npm run check:astro",
     "build": "astro build && node scripts/fix-html-routes.mjs",
