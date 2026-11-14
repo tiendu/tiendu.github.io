@@ -242,3 +242,16 @@ test('one in-game header, consistent result placement, and accessible menu tabs'
   assert.match(app,/tabIndex=tab===name\?0:-1/);
   assert.match(css,/\.desktop-play-grid \.result \{ order:3/);
 });
+
+test('UNFOLD runtime DOM IDs all exist in the Astro page',async()=>{
+  const [page,app,rooms]=await Promise.all([
+    source('src/pages/games/unfold/index.astro'),
+    source('public/games/unfold/app.mjs'),
+    source('public/games/unfold/online/rooms.mjs')
+  ]);
+  const ids=new Set([...page.matchAll(/\bid="([\w-]+)"/g)].map(match=>match[1]));
+  for(const [name,code] of [['app.mjs',app],['rooms.mjs',rooms]]){
+    const references=new Set([...code.matchAll(/\$\(['"]([\w-]+)['"]\)/g)].map(match=>match[1]));
+    for(const id of references)assert(ids.has(id),`${name} references missing DOM element #${id}`);
+  }
+});
