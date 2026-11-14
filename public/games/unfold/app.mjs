@@ -11,6 +11,8 @@ import { makeRoomRequest } from './online/transport.mjs';
 import { saveSolo, loadSolo, saveRoom } from './ui/storage.mjs';
 import { installCamera } from './ui/camera.mjs';
 import { escapeText } from './ui/dom.mjs';
+import { actionAvailable, actionTargets, cannotUseReason } from './ui/actions.mjs';
+import { netThumbnail } from './ui/net-thumbnail.mjs';
 
 const $=id=>document.getElementById(id);
 const UNFOLD_VERSION='1.9.3';
@@ -170,21 +172,6 @@ try{const v=localStorage.getItem('unfold-animation-speed');if(Object.hasOwn(ANIM
 function animationSpeed(){return currentAnimationSpeed;}
 
 const gameAction=()=>game?.die?.action;
-function actionAvailable(){
-  if(!game||game.acted||game.winner)return false;
-  switch(gameAction()){
-    case 'reclaim': return [...game.obstacles,...game.cubes].some(o=>canReclaim(game,game.active,o.id));
-    case 'refold': return game.cubes.some(c=>refoldable(game,game.active,c.id));
-    // Players get the rolled cube/action even when there isn't a legal landing:
-    // A blocked fixed net may still have no legal contact. Skip stays available.
-    default: return true;
-  }
-}
-function cannotUseReason(){
-  if(gameAction()==='reclaim')return 'No adjacent obstacle or reclaimable cube. Skip this roll.';
-  if(gameAction()==='refold')return 'No removable rear cube. Skip this roll.';
-  return 'Nothing to use this turn. Skip this roll.';
-}
 const inPlacement=()=>selected&&['deploy','special','refold'].includes(gameAction())&&(gameAction()!=='refold'||sourceId!==null);
 const key=([x,y])=>`${x},${y}`;
 const rootOffset=()=>oriented(selectedNet,rotation,flipped)[0];
@@ -227,19 +214,9 @@ function nextFit(){
   if(count<2)return;
   fitIndex=(fitIndex+1)%count;setPose();render();
 }
-function netThumbnail(n){const cells=NETS[n],maxX=Math.max(...cells.map(c=>c[0])),maxY=Math.max(...cells.map(c=>c[1]));
-  const scale=16,offsetX=(96-(maxX+1)*scale)/2,offsetY=(80-(maxY+1)*scale)/2;
-  return `<svg viewBox="0 0 96 80" aria-hidden="true">${cells.map(([x,y],i)=>`<rect x="${offsetX+x*scale}" y="${offsetY+y*scale}" width="${scale-1}" height="${scale-1}" rx="0" fill="${i?'#70847c':'#d5ab63'}" stroke="#e1eff6" stroke-width="1"/>`).join('')}</svg>`;
-}
-// Use the same rules as tapTile(), and calculate them per object rather than per cell.
-function actionTargets(action){
-  if(action==='reclaim')return [...game.obstacles,...game.cubes].filter(o=>canReclaim(game,game.active,o.id));
-  if(action==='refold'&&sourceId===null)return game.cubes.filter(c=>refoldable(game,game.active,c.id));
-  return [];
-}
 function drawBoard(){const used=occupied(game),spots=new Set(busy?[]:validContacts().map(key)),preview=new Map();
   const action=selected&&!busy&&!rolling&&!game.acted&&!game.winner&&myTurn()?gameAction():null;
-  const targets=new Set(actionTargets(action).map(o=>o.id));
+  const targets=new Set(actionTargets(game,action,sourceId).map(o=>o.id));
   if(!busy&&inPlacement()&&anchor){const [x,y]=fromContact(anchor),valid=canAt(anchor),cells=placedCells(selectedNet,rotation,flipped,x,y);
     cells.forEach((c,i)=>{if(c[0]>=0&&c[1]>=0&&c[0]<game.size&&c[1]<game.size)preview.set(key(c),{valid,contact:i===0});});
   }
@@ -278,11 +255,11 @@ function showPicker(){
   if(!shown){
     const hint=$('board-hint');
     if(selected&&['reclaim','refold'].includes(action)&&!busy&&!rolling&&!game.acted&&myTurn()){
-      const count=actionTargets(action).length;
+      const count=actionTargets(game,action,sourceId).length;
       hint.textContent=`${count} ${action.toUpperCase()} ${count===1?'TARGET':'TARGETS'}`;
       hint.title=action==='reclaim'?'Tap an amber target to reclaim it':'Tap a green rear cube to refold it';
     }else{
-      hint.textContent=game.acted?'Action complete':!rolling&&action==='reclaim'&&!actionAvailable()?'NO RECLAIM TARGETS':!rolling&&action==='refold'&&!actionAvailable()?'NO REFOLD TARGETS':'Action ready';
+      hint.textContent=game.acted?'Action complete':!rolling&&action==='reclaim'&&!actionAvailable(game)?'NO RECLAIM TARGETS':!rolling&&action==='refold'&&!actionAvailable(game)?'NO REFOLD TARGETS':'Action ready';
       hint.title='';
     }
     return;
@@ -310,14 +287,14 @@ function render(){if(!game)return;
   $('mission-title').textContent=game.mode==='solo'?'Connect S to ★':game.mode==='coop'?'Connect all bases to ★':`${p.name} · conquer an opponent`;
   $('roll-count').textContent=`TURN ${game.turn} · REEL ${game.die.face}/6`;
   $('rolled-action').textContent=rolling?'ROLLING':LABELS[action].toUpperCase();
-  const available=actionAvailable();
+  const available=actionAvailable(game);
   updateTurnBanner();
   $('frame-skip').disabled=busy||rolling||Boolean(game.winner)||!myTurn()||Boolean(game.acted&&isRemote());
   $('frame-skip').textContent=game.acted?'LOCKED':'SKIP ↷';
   $('clock-box').hidden=game.mode==='solo';
   $('result').hidden=!game.winner;
   if(game.winner)$('result-title').textContent=game.announcement||'Route complete';
-  if(!selected&&!game.acted)announce(rolling?'The reel is spinning…':available?'Tap a marked landing spot, or skip this turn.':cannotUseReason());
+  if(!selected&&!game.acted)announce(rolling?'The reel is spinning…':available?'Tap a marked landing spot, or skip this turn.':cannotUseReason(gameAction()));
   if(game.acted)announce(game.announcement);
   if(selected&&!game.acted){
     if(action==='reclaim')announce('Tap a pulsing amber obstacle or cube to reclaim it.');
@@ -326,7 +303,7 @@ function render(){if(!game)return;
   }
   showPicker();drawBoard();positionContextTools();persist();
 }
-function activateAction(){if(!game||rolling||busy||game.acted||!actionAvailable())return;
+function activateAction(){if(!game||rolling||busy||game.acted||!actionAvailable(game))return;
   selected=true;selectedNet=game.die.net??0;rotation=0;flipped=false;anchor=null;sourceId=null;fitIndex=0;fitCache=null;
   if(gameAction()==='deploy'||gameAction()==='special')chooseSpot();
   render();
