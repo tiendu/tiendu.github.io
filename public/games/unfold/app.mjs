@@ -7,9 +7,11 @@ import { REEL_FACES, reelFace } from './ui/reel.mjs';
 import { createRoomController } from './online/rooms.mjs';
 import { saveSolo, loadSolo } from './ui/storage.mjs';
 import { installCamera } from './ui/camera.mjs';
+import { installDesktopPlacement } from './ui/desktop-layout.mjs';
 import { actionAvailable, actionTargets, cannotUseReason } from './ui/actions.mjs';
 import { netThumbnail } from './ui/net-thumbnail.mjs';
 import { renderBoardTiles } from './ui/board-tiles.mjs';
+import { gameIcon } from './ui/icons.mjs';
 import { circuitPulseCells } from './ui/circuit-pulse.mjs';
 
 const $=id=>document.getElementById(id);
@@ -61,6 +63,7 @@ const {createGrit,finishFoldVisual,moveClosedBox,animateFold,fastForwardAnimatio
   createFoldAnimator({$,getGame:()=>game,animationSpeed});
 
 const gameAction=()=>game?.die?.action;
+const ACTION_TIPS={deploy:'Place the assigned six-panel net on a mint socket.',special:'Choose any cube net, then place its six panels.',reclaim:'Select an amber target touching your connected road.',refold:'Choose an eligible rear module and reposition it.'};
 const inPlacement=()=>selected&&['deploy','special','refold'].includes(gameAction())&&(gameAction()!=='refold'||sourceId!==null);
 const key=([x,y])=>`${x},${y}`;
 const rootOffset=()=>oriented(selectedNet,rotation,flipped)[0];
@@ -172,6 +175,8 @@ function render(){if(!game)return;
   $('mission-title').textContent=game.mode==='solo'?'Connect S to ★':game.mode==='coop'?'Connect all bases to ★':`${p.name} · conquer an opponent`;
   $('roll-count').textContent=`TURN ${game.turn} · REEL ${game.die.face}/6`;
   $('rolled-action').textContent=rolling?'ROLLING':LABELS[action].toUpperCase();
+  $('action-tip').textContent=game.winner?'Round complete.':game.crisis?'Construction crisis: a teammate must restore a legal route.':ACTION_TIPS[action]||'Select your next move.';
+  $('current-action-icon').innerHTML=gameIcon(({deploy:'deploy',special:'super',reclaim:'reclaim',refold:'refold'})[action]||'deploy');
   const available=actionAvailable(game);
   $('board-note').classList.toggle('crisis',Boolean(game.crisis&&!game.winner));
   updateTurnBanner();
@@ -223,6 +228,7 @@ function tapTile(x,y){if(!selected||busy||rolling||game.acted||!myTurn())return;
 // within the viewport even when the player pans/zooms the table.
 function positionContextTools(){
   const tools=$('placement-tools');
+  if(tools.parentElement?.id==='desktop-placement-slot')return;
   if(tools.hidden||!anchor||!inPlacement()||busy)return;
   const viewport=$('board-viewport'),vr=viewport.getBoundingClientRect();
   const preview=[...$('board').querySelectorAll('.tile.preview-good,.tile.preview-bad')];
@@ -351,6 +357,8 @@ async function rollAnimation(){
   await timing(930);
   if(!game||token!==rollToken){housing?.classList.remove('spinning');return;}
   reelFace(game.die.face);
+  housing?.classList.remove('spinning','action-arrival');
+  if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){void housing?.offsetWidth;housing?.classList.add('action-arrival');}
   rolling=false;activateAction();render();startClock();
 }
 
@@ -403,6 +411,7 @@ $('room-mode').addEventListener('change',refreshModeHelp);
 refreshModeHelp();
 
 
+installDesktopPlacement($,positionContextTools);
 installCamera($,positionContextTools);
 $('board').addEventListener('click',e=>{const b=e.target.closest('[data-x]');if(b)tapTile(Number(b.dataset.x),Number(b.dataset.y));});
 $('shape-list').addEventListener('click',e=>{const b=e.target.closest('[data-net]');if(b)chooseNet(Number(b.dataset.net));});

@@ -53,7 +53,7 @@ button:disabled { opacity: .52; cursor: not-allowed; }
   margin:-1px !important; overflow:hidden !important; clip:rect(0,0,0,0) !important;
   white-space:nowrap !important; border:0 !important;
 }
-.shell { width: min(1120px, 100%); margin: 0 auto; padding: 0 clamp(12px, 3vw, 32px) 26px; }
+.shell { width: min(1550px, 100%); margin: 0 auto; padding: 0 clamp(12px, 3vw, 32px) 26px; }
 .masthead {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   min-height: 68px; border-bottom: 1px solid #273c52;

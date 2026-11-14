@@ -1,4 +1,5 @@
 // Pure board tile HTML. No DOM, game actions, storage, or timers.
+import { gameIcon } from './icons.mjs';
 const COLORS=['red','blue','green','gold'];
 const key=([x,y])=>`${x},${y}`;
 export function renderBoardTiles({size,mode,used,spots,preview,action,targets,anchor,placing,lockingCubeId,foldOriginId,gateMarks=new Map(),pulseCells=new Map()}){
@@ -20,11 +21,11 @@ export function renderBoardTiles({size,mode,used,spots,preview,action,targets,an
     if(available)classes.push(action==='reclaim'?'reclaim-target':'refold-target');
     const cubeNumber=cell?.kind==='cube'&&cell.contact?cell.number:null;
     let content=cubeNumber?`<span class="contact-label" aria-label="Cube ${cubeNumber}">${cubeNumber}</span>`:'';
-    if(cell?.kind==='base')content=`<strong>${mode==='solo'?'S':cell.id+1}</strong>`;
-    if(cell?.kind==='goal')content='<strong>★</strong>';
-    if(cell?.kind==='obstacle')content=cell.type==='gate'?'<span class="gate-shutter" aria-hidden="true">▥</span>':['ruin','permanent'].includes(cell.type)?'<span class="obstacle-mark scrap-mark" aria-hidden="true">✕</span>':'<span class="obstacle-mark crate-mark" aria-hidden="true"><span class="crate-x"></span></span>';
+    if(cell?.kind==='base')content=`${gameIcon('hub','game-symbol tile-symbol')}<strong class="tile-glyph-text">${mode==='solo'?'S':cell.id+1}</strong>`;
+    if(cell?.kind==='goal')content=`${gameIcon('goal','game-symbol tile-symbol')}<strong class="tile-glyph-text">★</strong>`;
+    if(cell?.kind==='obstacle')content=cell.type==='gate'?`<span class="gate-shutter">${gameIcon('gate')}</span>`:['ruin','permanent'].includes(cell.type)?`<span class="obstacle-mark scrap-mark">${gameIcon('wall')}</span>`:`<span class="obstacle-mark crate-mark">${gameIcon('crate')}</span>`;
     if(mark?.kind==='terminal')content+=`<span class="gate-terminal" aria-label="Electrical terminal ${mark.sign}">${mark.sign}</span>`;
-    if(mark?.kind==='gate'&&mark.open&&!cell)content+='<span class="gate-floor" aria-hidden="true">▤</span>';
+    if(mark?.kind==='gate'&&mark.open&&!cell)content+=`<span class="gate-floor">${gameIcon('gate-open')}</span>`;
     if(hasMark)content+='<span class="anchor-dot"></span>';
     tiles.push(`<button type="button" role="gridcell" class="${classes.join(' ')}" ${pulseCells.has(k)?`style="--pulse-delay:${pulseCells.get(k)}ms"`:''} ${cell?.kind==='cube'?`data-cube-id="${cell.id}"`:''} data-x="${x}" data-y="${y}" aria-label="${mark?.kind==='terminal'?`${mark.sign} electrical terminal ${mark.open?'powered':'unpowered'}`:mark?.kind==='gate'?`${mark.open?'Open':'Closed'} electric gate`:cell?.kind||'Empty'} square ${x+1},${y+1}${cubeNumber?`, cube ${cubeNumber} contact square`:''}${available?`, ${action.toUpperCase()} available`:''}" title="${cell?.kind||'Empty'} · ${x+1},${y+1}${available?` · ${action.toUpperCase()} available`:''}">${content}</button>`);
   }

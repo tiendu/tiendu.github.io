@@ -158,3 +158,29 @@ test('powered gates receive one finite path pulse, not ambient grid animation',a
   assert(pulse.get('2,1')>pulse.get('3,1'));
   assert.equal(circuitPulseCells(game,[gate],()=>new Set(['0,0'])).size,0);
 });
+
+
+test('desktop rail is responsive without changing game actions',async()=>{
+  const page=await source('src/pages/games/unfold/index.astro');
+  const app=await source('public/games/unfold/app.mjs');
+  const styles=await source('public/games/unfold/styles/operator.css');
+  assert.match(page,/class="desktop-play-grid"/);
+  assert.match(page,/class="command-rail"/);
+  assert.match(page,/id="desktop-placement-slot"/);
+  assert.match(app,/installDesktopPlacement\(\$,positionContextTools\)/);
+  assert.match(styles,/@media \(min-width: 1100px\)/);
+  assert.equal((page.match(/id="placement-tools"/g)||[]).length,1);
+});
+
+test('neon icons have static SVG geometry and accessible text remains present',async()=>{
+  const {gameIcon}=await import('../public/games/unfold/ui/icons.mjs');
+  for(const name of ['local','create','join','deploy','super','reclaim','refold','hub','goal','crate','wall','gate']){
+    assert.match(gameIcon(name),/viewBox="0 0 24 24"/);
+  }
+  const {renderBoardTiles}=await import('../public/games/unfold/ui/board-tiles.mjs');
+  const html=renderBoardTiles({size:2,mode:'solo',used:new Map([['0,0',{kind:'base',owner:0,id:0}],['1,0',{kind:'goal'}],['0,1',{kind:'obstacle',id:7,type:'rubble'}]]),spots:new Set(),preview:new Map(),action:null,targets:new Set(),placing:false});
+  assert.match(html,/game-symbol/);
+  assert.match(html,/base-red/);
+  assert.match(html,/aria-label="base square 1,1"/);
+  assert.match(html,/aria-label="goal square 2,1"/);
+});

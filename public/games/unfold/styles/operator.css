@@ -238,3 +238,161 @@
 }
 @keyframes circuit-arrival { 0%{opacity:0} 30%{opacity:1} 100%{opacity:0} }
 @media(prefers-reduced-motion:reduce) { .tile.circuit-pulse::after{animation:none!important} }
+
+/* Wide-screen tactical layout: board left, persistent command rail right.
+   On narrow screens the original menu and gameplay order is preserved. */
+@media (min-width: 1100px) {
+  .play-area { max-width:1480px; margin:8px auto 0; }
+  .board-note { padding:4px 1px 5px; gap:3px; }
+  .board-note-mission strong { font-size:21px; }
+  #instruction { margin:0 0 8px; min-height:0; font-size:13px; }
+  .table-rig { padding:10px 12px 12px; }
+  .frame-topbar { min-height:40px; margin-bottom:9px; }
+  .desktop-play-grid {
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,340px);
+    align-items:start; gap:18px;
+  }
+  .desktop-play-grid > .board-frame { min-width:0; width:100%; max-width:min(100%,max(520px,calc(100svh - 205px))); }
+  .command-rail {
+    display:flex; flex-direction:column; gap:11px; min-width:0;
+    position:sticky; top:12px; max-height:calc(100svh - 24px); overflow-y:auto;
+    scrollbar-color:#365975 #0c1829; padding:0 2px 4px 0;
+  }
+  .command-rail > * { flex-shrink:0; min-width:0; }
+  .command-rail .turn-banner { margin:0; }
+  .command-rail .frame-command { margin:0; }
+  .command-rail .frame-status {
+    display:grid; grid-template-columns:minmax(0,1fr); gap:10px; padding:13px;
+  }
+  .command-rail .frame-turn { grid-column:1; }
+  .command-rail .reel-scene { grid-column:1; width:100%; }
+  .command-rail .frame-skip { grid-column:1; justify-self:stretch; min-width:0; }
+  .command-rail .board-shape-slot { margin:0; }
+  .command-rail .game-options { margin:0; }
+  #desktop-placement-slot:not(:empty) { padding:0 12px 12px; }
+  #desktop-placement-slot .context-tools {
+    position:static; z-index:auto; width:100%; max-width:100%; box-shadow:none; padding:12px;
+    background:#102a38; border-color:var(--mint);
+  }
+  #desktop-placement-slot .context-toolbar-keys { display:grid; grid-template-columns:1fr; gap:8px; }
+  #desktop-placement-slot .context-toolbar-keys button { width:100%; min-height:49px; font-size:14px; }
+  #desktop-placement-slot .context-placement-info { font-size:12px; }
+  .command-rail .result { margin:0; }
+  .command-rail .cube-visual { flex-basis:88px; }
+  .command-rail .net-option { flex-basis:78px; }
+}
+/* The game controls' source order on mobile remains turn, reel, board, picker. */
+@media (max-width: 1099.98px) {
+  .desktop-play-grid { display:flex; flex-direction:column; min-width:0; }
+  .command-rail { display:contents; }
+  .desktop-play-grid .turn-banner { order:1; width:100%; }
+  .desktop-play-grid .frame-command { order:2; width:100%; }
+  .desktop-play-grid > .board-frame { order:3; width:100%; }
+  .desktop-play-grid .board-shape-slot { order:4; width:100%; }
+  .desktop-play-grid .result { order:5; width:100%; }
+  .desktop-play-grid .game-options { order:6; width:100%; }
+  #desktop-placement-slot:empty { display:none; }
+}
+
+/* Shared visual vocabulary: bold strokes, generous sizes, no ambient animation. */
+.game-symbol,.menu-card-icon,.unfold-back-arrow { display:block; flex-shrink:0; }
+.menu-card-icon { width:31px; height:31px; }
+.unfold-back-arrow { width:24px; height:24px; }
+.brand-mark .game-symbol { display:inline-block; width:25px; height:25px; vertical-align:middle; }
+.tile .tile-symbol {
+  position:relative; z-index:2; display:block; width:68%; height:68%; max-width:calc(100% - 3px);
+  max-height:calc(100% - 3px); stroke-width:2.5;
+}
+.tile[class*="base-"] .tile-symbol { color:var(--owner); width:72%; height:72%; }
+.tile.goal .tile-symbol { color:#ffe1a2; stroke-width:2.35; width:79%; height:79%; }
+.tile .tile-glyph-text { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.tile .crate-mark,.tile .scrap-mark,.tile .gate-shutter { display:grid; place-items:center; width:100%; height:100%; }
+.tile.rubble .crate-mark { display:grid; }
+.tile .obstacle-mark.tile-icon-container { display:grid; }
+.tile .crate-mark .game-symbol { color:#ffcb91; width:72%; height:72%; }
+.tile .scrap-mark .game-symbol { color:#a7bfd4; width:74%; height:74%; }
+.tile .gate-shutter .game-symbol { width:80%; height:80%; color:#ffb5c3; }
+.tile .gate-floor .game-symbol { width:78%; height:78%; color:#8be0ee; }
+.tile .gate-floor { display:grid; place-items:center; width:100%; height:100%; }
+.tile .gate-terminal {
+  min-width:clamp(12px,1.6vw,19px); min-height:clamp(12px,1.6vw,19px);
+  font-size:clamp(10px,1.25vw,15px); box-shadow:0 0 0 1px #07121e;
+}
+.tile .contact-label { z-index:6; }
+.current-action-icon { display:grid; place-items:center; width:47px; height:47px; flex:none; color:var(--cyan); }
+.current-action-icon .game-symbol { width:38px; height:38px; }
+.reel-scene { display:flex; align-items:center; gap:10px; padding:8px 11px; }
+.reel-window { flex:1; min-width:0; }
+.command-rail .reel-scene { min-height:75px; }
+.entry-tabs button { align-items:flex-start; }
+@media(max-width:680px) {
+  .menu-card-icon { width:25px; height:25px; }
+  .tile .tile-symbol { width:78%; height:78%; }
+  .tile .gate-terminal { min-width:11px; min-height:11px; font-size:10px; }
+  .current-action-icon { width:25px; height:32px; }
+  .current-action-icon .game-symbol { width:24px; height:24px; }
+  .reel-scene { gap:3px; padding:3px; }
+}
+
+/* Focus and balance: one active event, stable board states, large action targets. */
+:root { --rail-border:#33516c; --rail-soft:#102137; }
+.entry-tabs button { transition:background-color .15s ease,border-color .15s ease; }
+.entry-tabs button .menu-tab-name { letter-spacing:.01em; }
+.entry-tabs button.active { background:#17354a; }
+.entry-tabs button:focus-visible { outline-offset:4px; }
+.board-note-mission strong { line-height:1.25; }
+.board-frame { border-color:#466b87; background:#081625; }
+.tile[class*="road-"] { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--owner) 34%,transparent); }
+.tile[class*="base-"] { background:#10283b; box-shadow:inset 0 0 0 1px var(--owner); }
+.tile.goal { background:#453825; }
+.tile.reclaim-target,.tile.refold-target { outline-width:3px; outline-offset:-3px; }
+.tile.reclaim-target::after,.tile.refold-target::after { inset:13%; border-width:2px; }
+.tile.legal-anchor .anchor-dot { inset:25%; background:#102c2b; border-width:2px; }
+.tile.selected-anchor .anchor-dot { background:var(--focus); }
+.tile .gate-terminal { border-width:2px; }
+.tile.circuit-pulse::after { animation-duration:.46s; }
+.frame-skip { border-color:#45647f; color:#b9cee1; }
+#confirm.context-confirm { background:var(--mint); border-color:#bcffdf; color:#06221d; font-weight:850; }
+#next-fit.context-next { color:#e0f3ff; border-color:#608bab; }
+#zoom-fit { min-width:64px; }
+.action-tip { margin:0; padding:2px 12px 12px; color:#bed5e9; font:600 12px/1.45 system-ui,sans-serif; }
+.reel-scene.action-arrival { animation:action-attention .38s ease-out 1; }
+@keyframes action-attention {
+  0% { border-color:#b7ffeb; box-shadow:0 0 0 3px #80f0c133; }
+  100% { border-color:#3e677f; box-shadow:none; }
+}
+.grid-legend {
+  display:flex; flex-wrap:wrap; gap:7px 12px; align-items:center;
+  border:1px solid #29445d; border-radius:8px; padding:10px;
+  background:#0c1b2d; color:var(--muted); font:700 11px/1.35 system-ui,sans-serif;
+}
+.grid-legend > strong { flex-basis:100%; color:#deecfa; font-size:11px; letter-spacing:.03em; }
+.grid-legend .legend-pair { display:inline-flex; gap:5px; align-items:center; }
+.grid-legend .game-symbol { width:17px; height:17px; color:var(--cyan); }
+.grid-legend .legend-pair:nth-of-type(2) .game-symbol { color:var(--amber); }
+.grid-legend .legend-pair:nth-of-type(3) .game-symbol { color:#c1b5a5; }
+.grid-legend .legend-pair:nth-of-type(4) .game-symbol { color:var(--danger); }
+@media(min-width:1100px) {
+  .command-rail { gap:9px; }
+  .command-rail .frame-command { border-color:var(--rail-border); }
+  .command-rail .frame-status { gap:8px; }
+  .command-rail .frame-turn > strong { font-size:12px; }
+  .command-rail .frame-skip { min-height:45px; }
+  .command-rail .reel-window { height:48px; }
+  .command-rail .board-shape-slot .net-option { min-height:74px; }
+  .command-rail .context-toolbar-label { font-size:12px; }
+  .grid-legend { margin:0; }
+}
+@media(max-width:1099.98px) {
+  .grid-legend { order:5; width:100%; margin-top:7px; }
+  .desktop-play-grid .result { order:6; }
+  .desktop-play-grid .game-options { order:7; }
+}
+@media(max-width:680px) {
+  .grid-legend { padding:7px 9px; }
+  .action-tip { padding:2px 8px 8px; font-size:11px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .reel-scene.action-arrival { animation:none!important; }
+  .entry-tabs button { transition:none; }
+}
