@@ -1,7 +1,8 @@
 ---
-title: "An IPAM Proxy for Docker on Windows"
+title: "I Built an IPAM Proxy for Docker on Windows. Then I Found HNS."
 date: 2026-11-19
-description: "How a small Docker Engine API proxy can assign predictable IP addresses to Windows containers, and why IP allocation and network reachability are separate problems."
+updatedDate: 2026-11-21
+description: "I tried to control Windows container IPs with a Docker Engine proxy, then discovered that HNS could allocate them directly. Sometimes the simpler design is hiding one layer lower."
 topic: "Systems & Reliability"
 keywords:
   - "Windows"
@@ -9,154 +10,96 @@ keywords:
   - "HNS"
   - "l2bridge"
   - "IPAM"
+  - "IP subnets"
   - "named pipes"
-  - "networking"
   - "PowerShell"
+  - "container networking"
 urlSlug: "an-ipam-proxy-for-docker-on-windows"
 pinned: false
 ---
-Why Docker on Windows? Simple. Because Windows containers need Windows.
 
-A Windows container isn't just a Linux container with a different image. It depends on the Windows kernel, so I needed a Windows container host. That could be a physical machine or a Windows VM, but Linux alone wasn't going to run these containers.
+I spent time figuring out how to build an IP allocator around Docker. Then I found that Windows already had one.
 
-The task sounded straightforward: run several small services, give each one its own private IP address, and make those addresses reachable from another machine.
+The problem was simple enough. I wanted to run several Windows containers, give each one an IP address from a specific private range, and let another machine reach each service directly. I didn't want to publish a different host port for every container, and I didn't want the application creating a container to choose its IP address manually.
 
-Starting the containers was easy. Networking them was another story.
+My first solution was a small proxy in front of the Docker Engine API. It would choose an unused address and add it to the container creation request. That worked as an idea, but there was a lot more to maintain than I expected.
 
-The usual Docker approach is to publish ports on the host. That works well for many applications, but it was not what I wanted here. I wanted each service to look like a separate endpoint on the network, without assigning host ports by hand.
+Later, while investigating Host Networking Service (HNS), I found a simpler approach: create an `l2bridge` network through HNS, with a narrower `IpSubnets` range inside the parent subnet. Docker could then create containers normally, and HNS would assign the addresses.
 
-So I put a small proxy in front of the Docker Engine API. Instead of letting every client choose an IP, the proxy selects one from an allowed pool and inserts it into the request before Docker sees it.
+So the story changed. It went from *how I built an IPAM proxy* to *why I didn't need one for this particular job*.
 
-It is a fairly small idea. The surrounding details are where things get unpleasant.
+## The problem: one IP per service
 
-## Why bother with individual IP addresses?
+Imagine three services listening on port `8080`.
 
-Suppose three services expose the same port.
-
-With published ports, a client connects through different ports on the Windows host:
+With published Docker ports, clients connect to one host address with different port numbers:
 
 | Service | Client connects to |
 | --- | --- |
-| Service A | `172.30.10.5:18080` |
-| Service B | `172.30.10.5:18081` |
-| Service C | `172.30.10.5:18082` |
+| A | `172.30.10.5:18080` |
+| B | `172.30.10.5:18081` |
+| C | `172.30.10.5:18082` |
 
-With individually addressed containers, the port can stay the same:
+I wanted this instead:
 
 | Service | Client connects to |
 | --- | --- |
-| Service A | `172.30.40.20:8080` |
-| Service B | `172.30.40.21:8080` |
-| Service C | `172.30.40.22:8080` |
+| A | `172.30.40.20:8080` |
+| B | `172.30.40.21:8080` |
+| C | `172.30.40.22:8080` |
 
-Neither model is universally better. Published ports are usually simpler. Separate container addresses are useful when clients expect one address per service, when many services share the same port, or when the number of endpoints changes frequently.
+Published ports are usually easier. But separate IPs are useful when many services listen on the same port or a client expects a different network endpoint for each service.
 
-The requirement is not merely "give every container an IP." Docker already does that. I needed to **control which IPs it assigned**, and I wanted that rule to apply to clients using the normal Docker API.
+Docker already knows how to give containers IP addresses. The missing piece was selecting them from **a specific, smaller pool** without putting allocation logic into every client.
 
-## What is different about Docker networking on Windows?
+There is an important distinction here: *any free IP from an allowed range* is not the same as *a permanent IP for a particular service*. I only needed the first. Persistent service identities would require another layer of state.
 
-Docker on Windows uses the **Host Networking Service (HNS)** to manage container networks and endpoints. Depending on the network driver, Hyper-V networking is also involved.
+## Why the normal Docker interface wasn't enough
 
-A useful option is `l2bridge`. It lets containers have their own IP addresses while sharing a host-side network interface. It also rewrites MAC addresses as part of its normal operation.
+On Windows, Docker delegates container networking to **Host Networking Service (HNS)**. One useful network driver is `l2bridge`. Containers can have separate IP addresses, while the networking stack performs MAC address rewriting so they share the host's MAC address on the external network.
 
-Windows does not support every Docker networking option familiar from Linux. Microsoft's Windows container networking documentation lists `--ip-range` and `--ipam-driver` among the unsupported `docker network create` options.
+On Linux, I might have reached for `docker network create --ip-range`. But Microsoft's [Windows container networking documentation](https://learn.microsoft.com/en-us/virtualization/windowscontainers/container-networking/architecture) lists `--ip-range` and `--ipam-driver` among the unsupported `docker network create` options on Windows.
 
-That ruled out an easy way to plug in a custom allocator at network-creation time.
+I could specify a broader subnet through the Docker interface, but I couldn't express the smaller allocation range in the way I wanted.
 
-There is another interface, though. The Docker Engine API accepts an explicit address for a container's network endpoint through `IPAMConfig.IPv4Address`.
+At first, I treated this as an IP allocation problem to solve outside Docker. What I missed was that **a limitation in Docker's Windows interface is not necessarily a limitation in HNS**.
 
-So rather than replacing Docker's IPAM implementation, I decided to supply the address just before the request reached Docker.
+## First attempt: a proxy in front of Docker Engine
 
-## The idea: proxy the Docker Engine API
-
-On Windows, local Docker clients can communicate with the Engine over a **named pipe**. A proxy can listen on one named pipe and forward requests to the Engine on another.
+Docker clients speak HTTP to the Docker Engine. On Windows, local communication commonly uses a named pipe. That made a proxy tempting: listen on one pipe, change the occasional request, and forward it to the real Engine pipe.
 
 ```mermaid
 flowchart TB
-    accTitle: An IPAM proxy between Docker clients and Docker Engine
-    accDescr: A Docker client sends an API request to a named-pipe proxy. The proxy selects an address for managed networks and forwards the request to Docker Engine, which works with HNS to create the endpoint.
-
-    Client["Docker client"]
-    Proxy["Named-pipe API proxy"]
-    Pool["Allowed IP pool"]
-    Engine["Docker Engine"]
-    HNS["Windows HNS / l2bridge"]
-    A["Service A"]
-    B["Service B"]
-    C["Service C"]
-
-    Client -->|"Docker Engine API"| Proxy
-    Proxy <-->|"Select and reserve address"| Pool
-    Proxy -->|"Forward API request"| Engine
-    Engine --> HNS
-    HNS --> A
-    HNS --> B
-    HNS --> C
+    accTitle: First design using a Docker Engine API proxy
+    accDescr: The proxy chooses and reserves an address, modifies a Docker API request, and forwards it to Docker Engine; Docker Engine and HNS manage the endpoint.
+    Client["Docker client"] --> Proxy["Named-pipe IPAM proxy"]
+    Pool["Address pool and reservations"] <--> Proxy
+    Proxy --> Engine["Docker Engine"]
+    Engine --> HNS["Windows HNS / l2bridge"]
+    HNS --> Containers["Service containers"]
 ```
 
-The proxy only needs to understand requests that create or attach network endpoints. Everything else should pass through unchanged.
+This was **an Engine API proxy, not a Docker IPAM plugin**. I wasn't replacing Docker's container management or Windows networking. I was only choosing an IP before Docker handled the request.
 
-This is **not a Docker IPAM plugin**. It is an HTTP API proxy with a small address-allocation policy. Docker still owns the containers, and HNS still owns the network endpoints.
-
-The division of responsibility is simple:
-
-- Docker clients ask for containers.
-- The proxy chooses addresses for networks it manages.
-- Docker Engine and HNS create the actual endpoints.
-
-## A small IPAM proxy demo
-
-Imagine a Docker client creates **Service A** on a network named `service_net`. The client does not request a particular address.
-
-The proxy sees the create request, finds an unused IP in the allowed pool, adds it to the endpoint configuration, and forwards the request.
-
-```mermaid
-sequenceDiagram
-    accTitle: Assigning an IP when a container is created
-    accDescr: A client sends a container create request without an IP. The proxy reserves an address, adds it to the request, forwards it to Docker, and returns Docker's response.
-
-    participant Client as Docker client
-    participant Proxy as IPAM proxy
-    participant Pool as Address pool
-    participant Engine as Docker Engine
-    participant HNS as Windows HNS
-
-    Client->>Proxy: POST /containers/create (service_net)
-    Proxy->>Pool: Find and reserve an available IP
-    Pool-->>Proxy: 172.30.40.20 (pending)
-    Proxy->>Engine: Create with IPAMConfig.IPv4Address
-    Engine->>HNS: Handle network endpoint
-    HNS-->>Engine: Endpoint result
-    Engine-->>Proxy: Docker API response
-    alt Docker accepts the request
-        Proxy->>Pool: Commit reservation
-    else Docker rejects the request
-        Proxy->>Pool: Release reservation
-    end
-    Proxy-->>Client: Forward Docker API response
-```
-
-The interesting part is the request rewrite, not a new command for the user to remember.
-
-The relevant portion of the incoming JSON might look like this:
+For a container created on `service-net`, an incoming networking configuration might contain:
 
 ```json
 {
   "NetworkingConfig": {
     "EndpointsConfig": {
-      "service_net": {}
+      "service-net": {}
     }
   }
 }
 ```
 
-The proxy forwards a request containing:
+The proxy would insert an explicit address:
 
 ```json
 {
   "NetworkingConfig": {
     "EndpointsConfig": {
-      "service_net": {
+      "service-net": {
         "IPAMConfig": {
           "IPv4Address": "172.30.40.20"
         }
@@ -166,135 +109,189 @@ The proxy forwards a request containing:
 }
 ```
 
-These are only the networking fields, not complete container-create requests.
+Those are excerpts from the API request, not complete create requests. Docker Engine's endpoint settings support this field, `IPAMConfig.IPv4Address`.
 
-If Docker accepts the configuration, inspecting the container should show the selected address under that network. The next service can receive `172.30.40.21`, then `172.30.40.22`, and so on.
+The proxy would also need to handle `POST /networks/{id}/connect`: a client can create a container first and connect it to the managed network later. It would need to leave unrelated networks alone and decide what to do when a client requests a specific address.
 
-The client does not need to know the pool, and the proxy does not need to create the container itself.
+The request rewrite was easy. The rest wasn't.
 
-There is one more operation to handle: `POST /networks/{id}/connect`. A container can be created first and attached to another network later. If that attachment bypasses the allocator, the address policy is inconsistent.
+### Concurrency makes a small allocator complicated
 
-The proxy also needs to leave unrelated networks alone and handle explicit client-requested addresses according to a clear policy.
+Suppose two requests arrive together. Both query Docker for occupied addresses. Both see the same free IP. Both choose it. A lock only around the lookup does not solve the race if the lock is released before the Engine has accepted the request.
 
-## Selecting an address is not the difficult part
+An allocator needs something closer to **reserve → forward → reconcile**:
 
-The obvious allocator is:
+1. Reserve an available address while holding a lock.
+2. Treat the reservation as occupied while Docker processes the request.
+3. Record what Docker accepted and what HNS actually attached.
+4. Release or repair failed reservations only after checking the resulting container and endpoint state.
+5. Recover those reservations after the proxy or Docker restarts.
 
-1. Read the allowed address ranges and reservations.
-2. Check which addresses are already in use.
-3. Choose an available address.
-4. Add it to the Docker request.
+That last detail matters. A successful container-create response does not necessarily mean the later start and network attachment will succeed. A container can remain in `Created` after a failed start.
 
-It works for one request at a time.
+And the allocator isn't the only problem. A general-purpose Engine API proxy has to forward streaming logs, events, chunked HTTP responses, and bidirectional interactive sessions. A prototype that works for `docker inspect` can still break `docker logs -f` or `docker exec -it`.
 
-Now suppose two clients create containers simultaneously. Both check Docker before either container exists. Both see `172.30.40.20` as available. Both select it.
+PowerShell and .NET named-pipe streams made a convenient experiment. They did not make a transparent, production-quality proxy free.
 
-A lock around the lookup helps, but only if the address remains reserved after the lookup ends. Releasing a mutex before Docker has accepted the request still leaves a race.
+I was building a service to compensate for a network option I couldn't express through Docker. That was the part worth reconsidering.
 
-The safer model is **reserve → forward → commit or release**. Addresses awaiting an Engine response count as occupied. After a proxy restart, the allocator must reconcile its state with the endpoints Docker actually knows about.
+## The discovery: HNS already understands IP subnets
 
-It also needs to reserve gateway and infrastructure addresses and refuse allocations outside the managed network.
+HNS exposes a network definition with a parent subnet and a nested `IpSubnets` allocation range. Microsoft documents this in [multiple-subnet support](https://learn.microsoft.com/en-us/virtualization/windowscontainers/container-networking/multi-subnet).
 
-At a few containers, inspecting Docker every time is inexpensive. At hundreds of containers with concurrent creates, a small inventory plus reconciliation can be more efficient.
+The key part looks like this:
 
-A successful one-container demo proves the request rewrite works. It does not prove the allocator is safe under concurrency or that its recovery behavior is correct.
+```json
+{
+  "Name": "service-net",
+  "Type": "l2bridge",
+  "Subnets": [
+    {
+      "AddressPrefix": "172.30.40.0/24",
+      "GatewayAddress": "172.30.40.1",
+      "IpSubnets": [
+        { "IpAddressPrefix": "172.30.40.16/28" }
+      ]
+    }
+  ]
+}
+```
 
-## HTTP forwarding is where the simple idea gets ugly
+The `/24` describes the parent network. The nested `/28` is the narrower block from which endpoints can receive addresses. It does **not** create sixteen additional network interfaces or sixteen different Docker networks.
 
-I chose PowerShell and .NET named-pipe streams for the experiment. Those APIs are already available on Windows, and it kept the prototype self-contained.
+On the Windows host, I submitted this shape directly to HNS using the PowerShell helper. Here is a simplified version of the setup:
 
-But writing a transparent proxy is much harder than changing a JSON field.
+```powershell
+# Run in an elevated PowerShell session with an HNS helper installed.
+# Replace these examples with your own network and adapter settings.
+$nic = 'Ethernet' # Verify with Get-NetAdapter
 
-Docker Engine speaks HTTP over the pipe. Some requests and responses have a `Content-Length`; others use chunked transfer encoding. Logs and events may stream for a long time. Interactive sessions can upgrade the connection and exchange raw bytes in both directions.
+$definition = @{
+    Name = 'service-net'
+    Type = 'l2bridge'
+    NetworkAdapterName = $nic
+    Subnets = @(
+        @{
+            AddressPrefix = '172.30.40.0/24'
+            GatewayAddress = '172.30.40.1'
+            IpSubnets = @(
+                @{ IpAddressPrefix = '172.30.40.16/28' }
+            )
+        }
+    )
+}
 
-If the proxy buffers every response as text, `docker inspect` may work while `docker logs -f` or an interactive session fails.
+$json = $definition | ConvertTo-Json -Depth 10
+Invoke-HnsRequest -Method POST -Type networks -Data $json
+```
 
-The useful rule is to **parse only what needs changing**:
+`Invoke-HnsRequest` comes from an HNS PowerShell helper, not standard PowerShell on every Windows machine. Microsoft's documentation also shows the `New-HnsNetwork` helper. Use the interface actually connected to the intended network; don't assume `Ethernet` is its name. Creating or rebinding an external container network can interrupt host networking, so this isn't a command to run casually on a remote production machine.
 
-- For managed container creation and network attachment, read and validate the request body, with a size limit.
-- Rewrite only the relevant endpoint configuration.
-- Forward unrelated requests and response bodies as byte streams.
-- Preserve status codes, headers, error bodies, and connection behavior.
-- Support chunked transfer and bidirectional upgraded streams.
-- Bound concurrency and clean up both ends when a client disconnects.
+The parent address, gateway, and narrower range must match the real network. In a cloud environment, the addresses also have to be assigned or routed to the host; HNS cannot make an arbitrary block reachable just by listing it in JSON.
 
-PowerShell is convenient for a Windows prototype, but I would not assume it is the best language for a high-throughput, general-purpose API proxy.
-
-## An assigned IP is not necessarily a reachable IP
-
-The proxy deals with the **control plane**: which IP a container requests. It is not in the **data plane**: the packets that travel between a running service and another machine.
+With the HNS network in place and visible to Docker, the flow became:
 
 ```mermaid
 flowchart TB
-    accTitle: IP allocation versus packet delivery
-    accDescr: Container creation flows through the IPAM proxy and Docker Engine. Application traffic uses network routing and Windows HNS instead of passing through the API proxy.
-
-    subgraph Control["Control plane"]
-        C["Docker client"] --> P["IPAM proxy"]
-        P --> D["Docker Engine"]
-    end
-
-    D --> H["HNS endpoint configuration"]
-
-    subgraph Data["Data plane"]
-        R["Remote machine"] --> N["Network and routing"]
-        N --> W["Windows host interface"]
-        W --> S["HNS / container switch"]
-        S --> App["Service container"]
-    end
-
-    H -.->|"Configures"| S
+    accTitle: Simpler setup using HNS address allocation
+    accDescr: PowerShell defines the network and its nested IP subnet through HNS. Docker clients create containers normally, and HNS assigns endpoint addresses from the configured range.
+    Setup["PowerShell: HNS network definition"] --> HNS["Windows HNS: l2bridge + IpSubnets"]
+    Client["Docker client"] --> Engine["Docker Engine"]
+    Engine --> HNS
+    HNS --> Containers["Container endpoints with allocated IPs"]
 ```
 
-This separation matters because an address can look correct in `docker inspect` while a connection from another machine still times out.
+No address-rewriting proxy in the creation path. No IP reservation database of my own. I also didn't need to manually create a host endpoint just to get **this particular setup** running, although other `l2bridge` designs with routed custom subnets may need a host gateway endpoint and routes.
 
-The host may be able to reach a container while a remote client cannot. Possible causes include network routes, return-path selection, firewall rules, or how the physical network handles the container addresses.
+This doesn't mean an HNS-created network is automatically usable by Docker in every environment. I verified the network was recognized and containers could be attached on this host. Discovery, routing, and connectivity have to be checked separately.
 
-A few useful commands on Windows are:
+## What actually happened in the tests
+
+The most useful test was simple: start several Windows containers at once on the same `l2bridge` network and compare their assigned IPs with HNS endpoint records.
+
+Most started successfully. Each successful container had a different address from the configured pool. But one start failed during network attachment. That distinction matters: **unique IP allocation is not the same as reliable container startup**.
+
+After refreshing the Docker inspection data, the running containers' IPs matched the visible HNS endpoint records. The failed start did not leave an additional endpoint visible in that snapshot.
+
+One trap was a stale variable in my own PowerShell session. It made a few endpoints look as though Docker had lost track of them. Refreshing the comparison data made that mismatch disappear. Sometimes the thing being debugged is the debugging script.
+
+The failed container was a different story. Docker returned a generic compute-system creation error, while the Windows HNS event log pointed more specifically to endpoint attachment and IP configuration. The logs were more informative than Docker's one-line message, but they still did not establish a root cause.
+
+Some event fields looked inconsistent with the valid addresses on running containers. I could not tell whether the failed operation received invalid settings or whether the event provider reported them incorrectly. I would not treat suspicious log output as proof of either explanation.
+
+The failed start did **not** leave an extra endpoint visible in the snapshot captured before retrying it. That is evidence against a persistent, visible orphan in that observation. It is not proof that every failure rolls back perfectly or that hidden allocation state can never remain.
+
+Most importantly, **no duplicate addresses were observed, but container startup was not fully reliable**. Those are different results. I would not declare the setup production-ready just because the successful containers received unique IPs.
+
+### What still needs testing
+
+The next useful experiment would compare sequential startup with different levels of concurrency, plus a control using `--network none`. That would help separate network attachment from general container startup pressure. I have not established whether concurrency, resource pressure, or network configuration caused the failure.
+
+A serious validation would also check endpoint cleanup after failures, repeated create/delete cycles, restart behavior, and connectivity from an actual remote client. The working allocator doesn't make the attachment error harmless.
+
+## IP allocation is not connectivity
+
+There's another distinction I don't want to lose: HNS assigning an IP and another machine reaching that IP are not the same thing.
+
+```mermaid
+flowchart TB
+    accTitle: Container control plane versus application traffic
+    accDescr: Docker and HNS configure endpoint addresses, but application packets travel through the actual host and external networking, not an IPAM proxy.
+    subgraph Control["Control plane"]
+        Client["Docker client"] --> Engine["Docker Engine"]
+        Engine --> HNS["HNS endpoint configuration"]
+    end
+    subgraph Traffic["Data plane"]
+        Remote["Remote client"] --> Routing["External network / routes / firewalls"]
+        Routing --> Host["Windows host and virtual switch"]
+        Host --> Service["Container service"]
+    end
+    HNS -.->|"Configures"| Host
+```
+
+A container can have a valid address in `docker inspect` but still be unreachable from another machine. The external network must know how to deliver packets to that address, and replies must find their way back. Address ownership, routes, firewall rules, and the service listener all matter.
+
+A small set of useful Windows checks:
 
 ```powershell
-Get-NetAdapter | Format-Table Name, ifIndex, MacAddress, Status
-Get-NetRoute -AddressFamily IPv4 -IncludeAllCompartments
-Get-NetNeighbor -AddressFamily IPv4
+Get-NetAdapter | Format-Table Name, ifIndex, Status
+Get-HnsNetwork | Where-Object Name -eq 'service-net' |
+    ConvertTo-Json -Depth 20
 
-docker network inspect service_net
+$net = Get-HnsNetwork | Where-Object Name -eq 'service-net'
+Get-HnsEndpoint | Where-Object VirtualNetwork -eq $net.ID |
+    Select-Object ID, IPAddress, PrefixLength, GatewayAddress, State
+
+docker network inspect service-net
 ```
 
-For tougher problems, `pktmon` can trace packets across Windows networking components. A changed MAC address is not automatically a fault: `l2bridge` performs MAC rewriting by design. What matters is whether the final packet follows the correct path.
+For attachment failures, the HNS Admin event log can be more informative than repeatedly reading Docker's one-line error:
 
-**Docker assigning an address and another machine reaching that address are two separate tests.**
+```powershell
+Get-WinEvent -FilterHashtable @{
+    LogName = 'Microsoft-Windows-Host-Network-Service-Admin'
+    StartTime = (Get-Date).AddHours(-2)
+} -ErrorAction SilentlyContinue |
+    Select-Object TimeCreated, Id, Message |
+    Format-List
+```
 
-## One endpoint or hundreds?
+These commands inspect the network and recent errors; they don't change anything. If an incident happened more than two hours ago, widen the event window.
 
-The proxy can enforce the same allocation rule whether there are three services or three hundred. It doesn't need a physical NIC for every container.
+## Does the IPAM proxy still have a use?
 
-That does not mean that hundreds of containers will automatically be reachable from the rest of a network. The network still needs an address plan and a valid delivery path. A single host interface can carry traffic for many container addresses if routing and HNS are set up accordingly.
+Yes, but it needs a requirement that HNS's normal allocation doesn't already satisfy.
 
-There is also a difference between an *available IP from a pool* and a *stable IP belonging to a service*. If a service must keep its address after it is deleted and recreated, the allocator needs a persistent service-to-address mapping.
+A proxy or a separate controller might make sense if service A must always get the same address after replacement, if addresses need to be reserved for particular tenants, or if every client must follow a policy that HNS doesn't express. Even then, a full transparent proxy for the entire Docker API is a fairly expensive way to implement a narrow policy.
 
-And address capacity is not compute capacity. Memory, CPU, startup time, and Windows container overhead need separate measurements.
+For **pick any unused address from this allowed IP subnet**, the HNS setup removed the extra component. Docker creates the containers. HNS assigns the addresses. Neither needs me to reinvent a basic IP allocator.
 
-## What I would test before relying on it
-
-I would test the Docker API proxy and the actual network separately.
-
-For the proxy: create without an IP, create with an explicit IP, attach to a network later, create many containers at once, retry failed requests, restart the proxy during allocation, and exercise logs, events, and interactive sessions.
-
-For the network: verify local connectivity, then connect to a real listening service from a different machine. Test replies, not just incoming packets. Reboot the Windows host and repeat.
-
-The direct Docker Engine pipe also needs to be protected. Docker API access is highly privileged, and a client that bypasses the proxy bypasses the address policy. A broken proxy can make Docker appear unavailable even when the Engine is fine, so the two should be monitored separately.
-
-## Keep it boring
-
-The whole reason for the proxy is to avoid teaching every Docker client a special address-allocation workflow. Its job is narrow: **choose a permitted address, include it in the right Engine API request, and get out of the way**.
-
-It should not become a replacement for Docker, HNS, or a network router. It should not rewrite requests that do not need rewriting. And it should not pretend that a correctly allocated IP guarantees connectivity.
-
-Windows container networking has enough moving parts already. One small, predictable layer is useful. Another mysterious one is not.
+There are still limitations: network and endpoint lifecycles can fail, Docker/HNS integration varies by environment, and an allocated address isn't automatically reachable. Simpler architecture doesn't mean an automatically reliable deployment.
 
 ## References
 
-- [Windows container networking architecture](https://learn.microsoft.com/en-us/virtualization/windowscontainers/container-networking/architecture)
-- [Windows container network drivers and topologies](https://learn.microsoft.com/en-us/virtualization/windowscontainers/container-networking/network-drivers-topologies)
-- [Advanced Windows container networking](https://learn.microsoft.com/en-us/virtualization/windowscontainers/container-networking/advanced)
-- [Docker Engine API reference](https://docs.docker.com/reference/api/engine/)
+- [Windows container networking architecture — Microsoft Learn](https://learn.microsoft.com/en-us/virtualization/windowscontainers/container-networking/architecture)
+- [Windows container network drivers and IPAM — Microsoft Learn](https://learn.microsoft.com/en-us/virtualization/windowscontainers/container-networking/network-drivers-topologies)
+- [Multiple subnet support in HNS — Microsoft Learn](https://learn.microsoft.com/en-us/virtualization/windowscontainers/container-networking/multi-subnet)
+- [Advanced Windows container networking — Microsoft Learn](https://learn.microsoft.com/en-us/virtualization/windowscontainers/container-networking/advanced)
+- [Docker Engine API reference — Docker Docs](https://docs.docker.com/reference/api/engine/)
