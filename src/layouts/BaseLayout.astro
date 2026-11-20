@@ -1,0 +1,174 @@
+---
+import { SITE } from "../config/site";
+import "@fontsource-variable/figtree";
+import "@fontsource-variable/figtree/wght-italic.css";
+import "@fontsource-variable/nunito";
+import "@fontsource-variable/nunito/wght-italic.css";
+import "@fontsource-variable/source-code-pro";
+import "@fontsource-variable/source-code-pro/wght-italic.css";
+import "@fontsource/vt323";
+import "@fontsource/barlow-condensed";
+import "@fontsource/barlow-condensed/500.css";
+import "@fontsource/barlow-condensed/600.css";
+import "@fontsource/barlow-condensed/700.css";
+import "../styles/tokens.css";
+import "../styles/global.css";
+
+type StructuredData = Record<string, unknown>;
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  socialTitle?: string;
+  socialDescription?: string;
+  article?: boolean;
+  system?: boolean;
+  structuredData?: StructuredData | StructuredData[];
+}
+
+const {
+  title,
+  description = SITE.description,
+  image,
+  imageAlt,
+  imageWidth,
+  imageHeight,
+  socialTitle,
+  socialDescription,
+  article = false,
+  system = false,
+  structuredData = [],
+} = Astro.props;
+
+const pageTitle = title
+  ? article
+    ? title
+    : `${title} · ${SITE.shortTitle}`
+  : SITE.title;
+const siteBase = Astro.site ?? new URL(SITE.url);
+const canonicalPath = Astro.url.pathname.replace(/\.html\/$/, ".html");
+const canonical = new URL(canonicalPath, siteBase);
+const socialImage = image ? new URL(image, siteBase) : undefined;
+const resolvedSocialTitle = socialTitle ?? pageTitle;
+const resolvedSocialDescription = socialDescription ?? description;
+const resolvedImageAlt =
+  imageAlt ?? (title ? `${title} — ${SITE.title}` : SITE.title);
+const usesSystemChrome = system || article;
+const additionalStructuredData = Array.isArray(structuredData)
+  ? structuredData
+  : [structuredData];
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": `${SITE.url}/#person`,
+      name: SITE.author,
+      url: SITE.url,
+      jobTitle: SITE.role,
+      sameAs: [SITE.github, SITE.linkedin],
+      knowsAbout: [
+        "Platform operations",
+        "Site reliability engineering",
+        "Cloud infrastructure",
+        "Software engineering",
+        "Bioinformatics",
+        "Scientific computing",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE.url}/#website`,
+      url: SITE.url,
+      name: SITE.title,
+      alternateName: SITE.shortTitle,
+      description: SITE.description,
+      inLanguage: SITE.language,
+      publisher: { "@id": `${SITE.url}/#person` },
+    },
+    ...additionalStructuredData,
+  ],
+};
+const serializedJsonLd = JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
+---
+
+<!doctype html>
+<html lang={SITE.language}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="author" content={SITE.author} />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content={usesSystemChrome ? "#050301" : "#f3efe5"} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta property="og:type" content={article ? "article" : "website"} />
+    <meta property="og:site_name" content={SITE.shortTitle} />
+    <meta property="og:title" content={resolvedSocialTitle} />
+    <meta property="og:description" content={resolvedSocialDescription} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="en_US" />
+    {
+      socialImage && (
+        <>
+          <meta property="og:image" content={socialImage} />
+          <meta property="og:image:alt" content={resolvedImageAlt} />
+          {imageWidth && <meta property="og:image:width" content={String(imageWidth)} />}
+          {imageHeight && <meta property="og:image:height" content={String(imageHeight)} />}
+        </>
+      )
+    }
+
+    <meta
+      name="twitter:card"
+      content={socialImage ? "summary_large_image" : "summary"}
+    />
+    <meta name="twitter:title" content={resolvedSocialTitle} />
+    <meta name="twitter:description" content={resolvedSocialDescription} />
+    {
+      socialImage && (
+        <>
+          <meta name="twitter:image" content={socialImage} />
+          <meta name="twitter:image:alt" content={resolvedImageAlt} />
+        </>
+      )
+    }
+
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={SITE.title}
+      href="/feed.xml"
+    />
+    <script is:inline type="application/ld+json" set:html={serializedJsonLd}></script>
+    <slot name="head" />
+    <title>{pageTitle}</title>
+  </head>
+  <body
+    class:list={{
+      "system-interface": usesSystemChrome,
+      "article-interface": article,
+    }}
+  >
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <main
+      class:list={[
+        "page-content",
+        {
+          "system-page-content": usesSystemChrome,
+        },
+      ]}
+      id="main-content"
+    >
+      <slot />
+    </main>
+  </body>
+</html>

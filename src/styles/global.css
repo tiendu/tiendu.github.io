@@ -1,0 +1,138 @@
+/* Browser defaults, global accessibility, and layout primitives. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.65;
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-ui);
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+img,
+svg,
+video {
+  height: auto;
+  max-width: 100%;
+}
+
+.page-content {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.wrapper {
+  margin-inline: auto;
+  max-width: 1120px;
+  padding-inline: 26px;
+  width: 100%;
+}
+
+.skip-link {
+  background: var(--paper-light);
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  left: 1rem;
+  padding: 0.5rem 0.75rem;
+  position: fixed;
+  top: 1rem;
+  transform: translateY(-220%);
+  z-index: 1000;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+:focus-visible {
+  outline: 2px solid rgb(167 96 47 / 58%);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: #ded1aa;
+  color: #1d1d18;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+  font-feature-settings: "zero" 1;
+  font-variant-numeric: slashed-zero;
+}
+
+/*
+ * Source Code Pro exposes its slashed zero through the OpenType `zero`
+ * feature. System screens inherit it; long-form article prose
+ * resets to normal numerals in article.css.
+ */
+.system-interface {
+  font-feature-settings: "zero" 1;
+  font-variant-numeric: slashed-zero;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .wrapper {
+    padding-inline: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.sr-only {
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}

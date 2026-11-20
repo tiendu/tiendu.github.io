@@ -1,0 +1,8 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import "../styles/pages/game.css";
+interface Props { title: string; description: string }
+---
+<BaseLayout {...Astro.props}>
+  <div class="game-page"><slot /></div>
+</BaseLayout>

@@ -1,0 +1,99 @@
+/* Archive pagination ----------------------------------------------------- */
+
+.archive-pagination {
+  align-items: center;
+  border-top: 1px solid var(--system-line-strong);
+  display: grid;
+  font-family: var(--font-panel);
+  font-size: 0.8rem;
+  gap: 1rem;
+  grid-template-columns: minmax(6.5rem, 1fr) auto minmax(6.5rem, 1fr);
+  letter-spacing: 0.06em;
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+}
+
+.archive-pagination a,
+.archive-pagination a:visited {
+  color: var(--system-text);
+  text-decoration: none;
+}
+
+.archive-pagination a:hover,
+.archive-pagination a:focus-visible {
+  color: var(--system-bright);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+
+.pagination-edge a,
+.pagination-edge a:visited {
+  align-items: center;
+  display: inline-flex;
+  min-height: 36px;
+}
+
+.pagination-edge span {
+  color: rgb(233 161 74 / 28%);
+}
+
+.pagination-edge-next {
+  text-align: right;
+}
+
+.pagination-pages {
+  display: flex;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pagination-pages a,
+.pagination-pages span {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 36px;
+  min-width: 2.2rem;
+  padding: 0.3rem 0.4rem;
+  text-align: center;
+}
+
+.pagination-pages span[aria-current="page"] {
+  color: var(--system-bright);
+  text-shadow: var(--system-glow-soft);
+}
+
+.pagination-pages span[aria-current="page"]::before {
+  content: "[";
+  margin-right: 0.12em;
+}
+
+.pagination-pages span[aria-current="page"]::after {
+  content: "]";
+  margin-left: 0.12em;
+}
+
+@media (min-width: 761px) {
+  .archive-pagination {
+    font-size: 0.74rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .archive-pagination {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pagination-pages {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-content: center;
+  }
+
+  .pagination-edge {
+    grid-row: 2;
+  }
+}

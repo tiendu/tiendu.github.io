@@ -1,0 +1,33 @@
+<button class="back-to-top" type="button" aria-label="Back to top" title="Back to top" hidden>
+  <span aria-hidden="true">↑</span>
+</button>
+
+<script>
+  const button = document.querySelector<HTMLButtonElement>(".back-to-top");
+
+  if (button) {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let ticking = false;
+
+    const updateVisibility = () => {
+      button.hidden = window.scrollY < 600;
+      ticking = false;
+    };
+
+    const requestVisibilityUpdate = () => {
+      if (ticking) return;
+      window.requestAnimationFrame(updateVisibility);
+      ticking = true;
+    };
+
+    button.addEventListener("click", () => {
+      window.scrollTo({
+        top: 0,
+        behavior: reducedMotion.matches ? "auto" : "smooth",
+      });
+    });
+
+    window.addEventListener("scroll", requestVisibilityUpdate, { passive: true });
+    updateVisibility();
+  }
+</script>

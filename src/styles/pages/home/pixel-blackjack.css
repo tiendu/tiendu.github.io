@@ -1,0 +1,455 @@
+.pixel-bj-page {
+  --bj-bg: #040b12;
+  --bj-border: #bcae8a;
+  --bj-bubble-bg: rgb(13 27 36 / 93%);
+  --bj-bubble-ink: #d8dcd9;
+  --bj-bubble-line: rgb(160 182 181 / 26%);
+  --bj-card-w: clamp(92px, 8.2vw, 134px);
+  --bj-card-h: calc(var(--bj-card-w) * 1.5625);
+  background:
+    radial-gradient(circle at 50% 25%, rgb(35 73 96 / 15%), transparent 36%),
+    linear-gradient(180deg, #050d16 0%, #031017 100%);
+  min-height: 100svh;
+  color: #f3ecd9;
+}
+
+.pixel-bj-page .system-topbar {
+  background: rgb(4 11 18 / 94%);
+  border-color: #192732;
+  box-shadow: none;
+}
+
+.pixel-bj-stage {
+  position: relative;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.8rem, 1.8vh, 1.25rem);
+  justify-content: center;
+  min-height: calc(100svh - 72px);
+  overflow: hidden;
+  padding: clamp(0.5rem, 1.6vw, 1rem) clamp(0.8rem, 2vw, 1.5rem) clamp(1rem, 2vw, 1.4rem);
+}
+
+.pixel-bj-toprow {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  width: min(100%, 980px);
+}
+
+.pixel-bj-hand {
+  align-items: flex-end;
+  display: flex;
+  justify-content: center;
+  min-height: var(--bj-card-h);
+  width: min(100%, 980px);
+}
+
+.pixel-bj-card-shell {
+  flex: 0 0 auto;
+  margin-left: calc(var(--bj-card-w) * -0.16);
+  padding-top: var(--card-lift, 0px);
+  transform: rotate(var(--card-tilt, 0deg));
+  transform-origin: center bottom;
+}
+
+.pixel-bj-card-shell:first-child {
+  margin-left: 0;
+}
+
+.pixel-bj-card {
+  background-color: transparent;
+  background-image: var(--card-image);
+  background-position: calc(var(--card-col, 0) * var(--bj-card-w) * -1) calc(var(--card-row, 0) * var(--bj-card-h) * -1);
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  background-size: calc(var(--bj-card-w) * 13) calc(var(--bj-card-h) * 4);
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 25%);
+  display: block;
+  height: var(--bj-card-h);
+  width: var(--bj-card-w);
+}
+
+.pixel-bj-card--back {
+  background: #071621 url("/cards/pixel-card-back.png") center / 100% 100% no-repeat;
+  border: 0;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 25%);
+}
+
+/* The deck is the artwork. Keep the dialogue deliberately quiet. */
+.pixel-bj-bubble {
+  align-items: center;
+  background: var(--bj-bubble-bg);
+  border: 1px solid var(--bj-bubble-line);
+  border-radius: 13px;
+  box-shadow: 0 5px 20px rgb(0 0 0 / 13%);
+  color: var(--bj-bubble-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 0.23rem;
+  justify-content: center;
+  max-width: min(90vw, 445px);
+  min-width: min(238px, 86vw);
+  padding: 0.67rem 1.15rem 0.55rem;
+  position: relative;
+  width: fit-content;
+}
+
+/* No comic tail: this is a whisper between hands, not a sticker. */
+.pixel-bj-bubble::before,
+.pixel-bj-bubble::after {
+  content: none;
+}
+
+.pixel-bj-message {
+  color: var(--bj-bubble-ink);
+  font-family: var(--font-mono), monospace;
+  font-size: clamp(0.86rem, 1.05vw, 0.96rem);
+  font-weight: 500;
+  line-height: 1.46;
+  margin: 0;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.pixel-bj-message[data-outcome="win"],
+.pixel-bj-message[data-outcome="dealer-bust"],
+.pixel-bj-message[data-outcome="blackjack"] {
+  color: #cfc4a1;
+}
+
+.pixel-bj-message[data-outcome="lose"],
+.pixel-bj-message[data-outcome="dealer-blackjack"],
+.pixel-bj-message[data-outcome="bust"] {
+  color: #d5a1a6;
+}
+
+.pixel-bj-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.pixel-bj-action {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  color: #95a9a9;
+  cursor: pointer;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.2rem 0.35rem;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.pixel-bj-action:hover,
+.pixel-bj-action:focus-visible {
+  border-bottom-color: #b6c4bd;
+  color: #f1eee3;
+}
+
+.pixel-bj-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Without a visible deck, mobile can keep the table fully centered. */
+@media (max-width: 820px) {
+  .pixel-bj-page {
+    --bj-card-w: clamp(76px, min(24vw, 16svh), 110px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pixel-bj-page .system-topbar {
+    flex: 0 0 auto;
+  }
+
+  .pixel-bj-stage {
+  position: relative;
+    flex: 1 0 auto;
+    gap: clamp(0.45rem, 1.8svh, 0.8rem);
+    justify-content: center;
+    min-height: 0;
+    overflow: visible;
+    padding: 0.5rem 0.5rem max(0.85rem, env(safe-area-inset-bottom));
+  }
+
+  .pixel-bj-toprow {
+    min-height: calc(var(--bj-card-h) + 6px);
+    width: 100%;
+  }
+
+  .pixel-bj-hand {
+    min-width: 0;
+    min-height: var(--bj-card-h);
+    width: 100%;
+  }
+
+  .pixel-bj-hand--dealer {
+    position: relative;
+    z-index: 1;
+  }
+
+  .pixel-bj-card-shell {
+    margin-left: calc(var(--bj-card-w) * -0.23);
+  }
+
+  .pixel-bj-hand:has(> .pixel-bj-card-shell:nth-child(4)) .pixel-bj-card-shell {
+    margin-left: calc(var(--bj-card-w) * -0.34);
+  }
+
+  .pixel-bj-hand:has(> .pixel-bj-card-shell:nth-child(5)) .pixel-bj-card-shell {
+    margin-left: calc(var(--bj-card-w) * -0.50);
+  }
+
+  .pixel-bj-bubble {
+    max-width: min(91vw, 425px);
+    padding: 0.58rem 0.9rem 0.48rem;
+  }
+}
+
+@media (max-width: 460px) {
+  .pixel-bj-page {
+    --bj-card-w: clamp(76px, min(25vw, 16svh), 106px);
+  }
+
+  .pixel-bj-bubble {
+    border-radius: 11px;
+    max-width: min(93vw, 350px);
+  }
+
+  .pixel-bj-actions { gap: 0.7rem; }
+  .pixel-bj-action { font-size: 0.79rem; }
+}
+
+/* Movement is event-driven: the table stays completely still between turns. */
+.pixel-bj-card {
+  position: relative;
+  transform-origin: center center;
+  backface-visibility: hidden;
+}
+
+.pixel-bj-actions {
+  transition: opacity 120ms ease;
+}
+
+.pixel-bj-stage[data-busy="true"] .pixel-bj-actions {
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-bj-actions {
+    transition: none;
+  }
+}
+
+
+.pixel-bj-particles {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  z-index: 4;
+}
+
+.pixel-bj-particle {
+  border-radius: var(--particle-radius, 1px);
+  image-rendering: pixelated;
+  opacity: 0;
+  position: absolute;
+  will-change: transform, opacity;
+}
+
+.pixel-bj-particle--spades {
+  box-shadow: 0 0 0 1px rgb(232 244 248 / 14%);
+}
+
+.pixel-bj-particle--hearts {
+  transform: rotate(45deg);
+}
+
+.pixel-bj-particle--clubs {
+  box-shadow: 0 0 0 1px rgb(132 177 115 / 16%);
+}
+
+.pixel-bj-particle--diamonds {
+  transform: rotate(45deg);
+}
+
+.pixel-bj-card {
+  will-change: transform, filter, opacity;
+}
+
+.pixel-bj-hand {
+  position: relative;
+  z-index: 2;
+}
+
+.pixel-bj-bubble {
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-bj-particles {
+    display: none;
+  }
+}
+
+/* A quiet, hand-drawn score: four strokes crossed by a fifth, up to 25. */
+.pixel-bj-toprow,
+.pixel-bj-bottomrow {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.15rem, 0.6vh, 0.4rem);
+  width: min(100%, 980px);
+}
+
+.pixel-bj-tally {
+  --tally-ink: #a1b5bc;
+  --tally-slash: #d4c5a1;
+  align-items: center;
+  color: var(--tally-ink);
+  display: flex;
+  font-family: var(--font-mono), monospace;
+  gap: 0.5rem;
+  justify-content: center;
+  min-height: 30px;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.pixel-bj-tally--player {
+  --tally-ink: #d4c5a1;
+  --tally-slash: #e4ce92;
+}
+
+.pixel-bj-tally-marks {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  min-height: 30px;
+  min-width: 156px;
+}
+
+.pixel-bj-tally-group {
+  color: var(--tally-ink);
+  flex: 0 0 28px;
+  height: 30px;
+  overflow: visible;
+  width: 28px;
+}
+
+.pixel-bj-tally-stroke,
+.pixel-bj-tally-slash {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pixel-bj-tally-stroke {
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.pixel-bj-tally-slash {
+  stroke: var(--tally-slash);
+  stroke-width: 2.25;
+}
+
+.pixel-bj-tally-total {
+  color: var(--tally-ink);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+  text-align: right;
+}
+
+.pixel-bj-tally-total[hidden] {
+  display: none;
+}
+
+.pixel-bj-tally-stroke.pixel-bj-tally-new {
+  animation: pixel-bj-tally-appear 160ms ease-out both;
+}
+
+.pixel-bj-tally-slash.pixel-bj-tally-new {
+  animation: pixel-bj-tally-draw 240ms ease-out both;
+  stroke-dasharray: 30;
+}
+
+@keyframes pixel-bj-tally-appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pixel-bj-tally-draw {
+  from { stroke-dashoffset: 30; }
+  to { stroke-dashoffset: 0; }
+}
+
+@media (max-width: 460px) {
+  .pixel-bj-tally { gap: 0.32rem; }
+  .pixel-bj-tally-marks { gap: 3px; min-width: 142px; }
+  .pixel-bj-tally-group { flex-basis: 26px; width: 26px; height: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-bj-tally-new { animation: none !important; }
+}
+
+/* A quick peek at the hand value, not a permanent number on the artwork. */
+.pixel-bj-hand[role="button"] .pixel-bj-card-shell {
+  cursor: pointer;
+}
+
+.pixel-bj-hand[aria-disabled="true"] .pixel-bj-card-shell {
+  cursor: default;
+}
+
+.pixel-bj-hand[role="button"]:focus-visible {
+  outline: none;
+}
+
+.pixel-bj-hand[role="button"]:focus-visible .pixel-bj-card-shell:last-child .pixel-bj-card {
+  box-shadow: 0 0 0 2px #d4c5a1, 0 8px 18px rgb(0 0 0 / 25%);
+}
+
+.pixel-bj-hand[data-hand-total]::after {
+  background: rgb(9 24 32 / 94%);
+  border: 1px solid rgb(145 167 169 / 42%);
+  border-radius: 4px;
+  color: #ddcfaf;
+  content: attr(data-hand-total);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  left: var(--hand-total-left, calc(50% + var(--bj-card-w) * 0.98));
+  line-height: 1.4;
+  min-width: 2ch;
+  padding: 0.2rem 0.4rem;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.pixel-bj-hand--dealer[data-hand-total]::after {
+  color: #b0c8d2;
+}

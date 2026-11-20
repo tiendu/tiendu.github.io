@@ -1,0 +1,250 @@
+/* Top-down hats overlay the minefield without intercepting clicks. */
+.mines #tiles { position: relative; }
+.mines .miners {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.mines .miner-hat {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: start end;
+  box-sizing: border-box;
+  padding: 2px;
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 2px 1px #070d0a);
+}
+.mines .miner-hat svg { display: block; width: 16px; height: 16px; }
+/* Make buried fuse legible on covered (including disabled) tiles. */
+.mines .buried-fuse {
+  background: #563a27;
+  border-color: #ffcf84 #a55e38 #a55e38 #ffcf84;
+  box-shadow: inset 0 0 0 2px #e79755;
+}
+.mines .buried-fuse small { font-weight: 700; text-shadow: 0 1px #1d120c; }
+.mines .buried-fuse::after {
+  inset: auto 7px 6px;
+  height: 11px;
+  border-inline-width: 4px;
+}
+.mines .buried-fuse:disabled { opacity: 1; }
+
+/* Bricks, excavation and clue banners. Retain the 44px hitboxes and grid gap. */
+.mines .tile:not(.open):not(.buried-fuse) {
+  background-color: #36483c;
+  background-image:
+    linear-gradient(90deg, transparent 45%, #18281f 45% 53%, transparent 53%),
+    linear-gradient(90deg, #18281f 0 5%, transparent 5% 95%, #18281f 95%),
+    repeating-linear-gradient(0deg, #485e4d 0 17px, #1c2921 17px 21px);
+  background-size: 100% 21px, 100% 21px, 100% 100%;
+  background-position: 0 0, 0 21px, 0 0;
+  background-repeat: no-repeat, no-repeat, repeat;
+  border-color: #73816b #1b251e #1b251e #73816b;
+}
+.mines .tile.edge:not(.open) {
+  box-shadow: inset 0 0 0 2px #9ba967;
+  filter: brightness(1.13);
+}
+.mines .tile.open {
+  background: radial-gradient(ellipse at center, #202e26, #111a16 78%);
+  border-color: #283b30;
+  box-shadow: inset 0 1px 5px #080f0b;
+}
+.mines .tile.open:disabled { opacity: 1; }
+.mines .tile.open .clue-banner {
+  position: absolute;
+  z-index: 1;
+  left: 7px;
+  top: 9px;
+  width: 28px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  box-sizing: border-box;
+  color: var(--clue-ink, #b8e2ff);
+  background: #14241e;
+  border: 2px solid var(--clue-ink, #b8e2ff);
+  box-shadow: 2px 2px 0 #070e0a, inset 0 -3px #273b2e;
+  clip-path: polygon(0 0, 100% 0, 100% 79%, 50% 100%, 0 79%);
+  font: 700 19px/1 var(--font-terminal), monospace;
+  text-shadow: 1px 1px #080e0b;
+}
+.mines .clue-banner[data-clue="1"] { --clue-ink: #9bd4ff; }
+.mines .clue-banner[data-clue="2"] { --clue-ink: #a8e8a9; }
+.mines .clue-banner[data-clue="3"] { --clue-ink: #ffc380; }
+.mines .clue-banner[data-clue="4"] { --clue-ink: #d5b6ff; }
+.mines .clue-banner[data-clue="5"] { --clue-ink: #ff99a3; }
+.mines .clue-banner[data-clue="6"] { --clue-ink: #86e7da; }
+.mines .clue-banner[data-clue="7"] { --clue-ink: #ffe89a; }
+.mines .clue-banner[data-clue="8"] { --clue-ink: #f3ecdf; }
+/* The tile stays accessible; its number is repeated on an occupying miner. */
+.mines .tile.has-miner .clue-banner { visibility: hidden; }
+/* Hats stay above the masonry shards during a dig. */
+.mines .miners { z-index: 5; }
+/* Undo the old corner-hat fix. The clue now lives on the hat. */
+.mines .miner-hat { place-items: center; padding: 0; }
+.mines .miner-hat svg { width: 34px; height: 34px; }
+.mines .miner-hat-clue {
+  position: absolute;
+  z-index: 2;
+  top: 15px;
+  left: 10px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 19px;
+  color: #fff4c6;
+  background: #16251d;
+  border: 2px solid #e8c67b;
+  box-shadow: 0 2px #060c09;
+  font: 700 15px/1 var(--font-terminal), monospace;
+  text-shadow: 1px 1px #08120d;
+}
+.mines .miner-hat-clue[hidden] { display: none; }
+.mines .miner-in-flight .miner-hat-clue { visibility: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .mines .tile.mines-breaking::before,
+  .mines .tile.mines-breaking::after {
+    content: "";
+    position: absolute;
+    z-index: 4;
+    pointer-events: none;
+    top: 2px;
+    bottom: 2px;
+    width: 48%;
+    background:
+      repeating-linear-gradient(0deg, #516a55 0 15px, #202f24 15px 18px),
+      #455b4b;
+    box-shadow: inset 0 0 0 2px #22382b;
+    animation-duration: 340ms;
+    animation-delay: var(--impact-delay, 0ms);
+    animation-fill-mode: both;
+    animation-timing-function: steps(5, end);
+  }
+  .mines .tile.mines-breaking::before {
+    left: 2px;
+    transform-origin: bottom right;
+    animation-name: mines-brick-left;
+  }
+  .mines .tile.mines-breaking::after {
+    right: 2px;
+    transform-origin: bottom left;
+    animation-name: mines-brick-right;
+  }
+  .mines .tile.mines-breaking .clue-banner {
+    animation: mines-clue-rise 220ms steps(4, end) both;
+    animation-delay: calc(var(--impact-delay, 0ms) + 200ms);
+  }
+}
+@keyframes mines-brick-left {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate(-13px, 14px) rotate(-18deg); }
+}
+@keyframes mines-brick-right {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate(13px, 14px) rotate(18deg); }
+}
+@keyframes mines-clue-rise {
+  0% { opacity: 0; transform: translateY(7px) scale(0.8); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Bomb hit: compact, tile-local blast. No full-screen shake or image assets. */
+.mines .tile.crater {
+  background: radial-gradient(circle at 50% 52%, #592c1e 0 5px, #26231b 12px, #111914 85%);
+  border-color: #9b4930 #402519 #402519 #9b4930;
+  color: #ff9d6f;
+  box-shadow: inset 0 0 0 2px #281f19, inset 0 0 10px #070b08;
+}
+.mines .miner-hat .miner-hat-skull {
+  position: absolute;
+  z-index: 6;
+  inset: 8px;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(.7);
+  filter: drop-shadow(0 1px 1px #0a110c);
+}
+.mines .miner-hat .miner-hat-skull svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+.mines .miner-hat.miner-bombed::before,
+.mines .miner-hat.miner-bombed::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+}
+.mines .miner-hat.miner-bombed::before {
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 3px solid #ffb759;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.mines .miner-hat.miner-bombed::after {
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: #ffe0a0;
+  box-shadow:
+    -15px -15px #ff9e51, 15px -14px #ffcd74,
+    -21px 2px #f77d55, 20px 4px #ffc86c,
+    -12px 18px #ff8850, 13px 18px #f5b24c;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mines .miner-hat.miner-bombed > svg {
+    animation: mines-hat-jolt 420ms steps(5, end) var(--blast-delay, 0ms) both;
+  }
+  .mines .miner-hat.miner-bombed::before {
+    animation: mines-hit-ring 580ms steps(6, end) var(--blast-delay, 0ms) both;
+  }
+  .mines .miner-hat.miner-bombed::after {
+    animation: mines-hit-sparks 530ms steps(5, end) var(--blast-delay, 0ms) both;
+  }
+  .mines .miner-hat.miner-bombed .miner-hat-skull {
+    animation: mines-skull-flash 1450ms steps(4, end) var(--blast-delay, 0ms) both;
+  }
+  /* A final bomb leaves the skull as the round's death marker. */
+  .mines .miner-hat.miner-bombed.miner-fatal .miner-hat-skull {
+    animation: mines-skull-stay 320ms steps(4, end) var(--blast-delay, 0ms) both;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mines .miner-hat.miner-bombed .miner-hat-skull {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes mines-hat-jolt {
+  0% { transform: translate(0, 0) rotate(0); filter: brightness(1); }
+  20% { transform: translate(-3px, -2px) rotate(-14deg); filter: brightness(2); }
+  40% { transform: translate(3px, 2px) rotate(11deg); }
+  65% { transform: translate(-1px, 1px) rotate(-7deg); }
+  100% { transform: translate(0, 0) rotate(0); filter: brightness(.72); }
+}
+@keyframes mines-hit-ring {
+  0% { opacity: 0; transform: scale(.1); }
+  18% { opacity: 1; transform: scale(.55); }
+  100% { opacity: 0; transform: scale(1.65); }
+}
+@keyframes mines-hit-sparks {
+  0% { opacity: 0; transform: scale(.4); }
+  15% { opacity: 1; transform: scale(.8); }
+  100% { opacity: 0; transform: scale(1.6) rotate(13deg); }
+}

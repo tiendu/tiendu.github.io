@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "unfold-multiplayer",
+  "main": "src/unfold-worker.mjs",
+  "compatibility_date": "2026-11-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [{ "name": "UNFOLD_ROOMS", "class_name": "UnfoldRooms" }]
+  },
+  "migrations": [
+    { "tag": "v1-unfold-rooms", "new_sqlite_classes": ["UnfoldRooms"] }
+  ],
+  "vars": {
+    "UNFOLD_ALLOWED_ORIGINS": "https://tiendu.github.io,http://localhost:4321,http://127.0.0.1:4321"
+  },
+  "observability": { "enabled": true }
+}

@@ -1,0 +1,156 @@
+/* Desktop reading comfort ----------------------------------------------- */
+
+@media (min-width: 721px) {
+  .article-back,
+  .article-topic,
+  .post-meta {
+    font-size: 0.78rem;
+  }
+
+
+  .post-content {
+    font-size: clamp(1.1rem, 0.35vw + 1.03rem, 1.2rem);
+  }
+
+  .post-content figcaption {
+    font-size: 0.84rem;
+  }
+
+  .post-content pre {
+    font-size: 0.88rem;
+  }
+
+  .post-content table {
+    font-size: 0.92rem;
+  }
+
+  .post-content th {
+    font-size: 0.74rem;
+  }
+
+}
+
+@media (min-width: 961px) {
+  .toc-desktop {
+    font-size: 0.78rem;
+  }
+
+  .toc-header strong {
+    font-size: 0.74rem;
+  }
+}
+
+@media (max-width: 960px) {
+  .post-layout {
+    display: block;
+  }
+
+  .toc-desktop {
+    display: none;
+  }
+
+  .article-sheet {
+    margin-inline: auto;
+    max-width: 860px;
+  }
+}
+
+@media (max-width: 720px) {
+  .article-title {
+    font-size: clamp(2.15rem, 10vw, 3.4rem);
+    max-width: none;
+  }
+
+  .article-sheet {
+    padding: 0;
+  }
+
+  .post-meta {
+    gap: 0.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .article-console {
+    padding-inline: max(0.9rem, env(safe-area-inset-left));
+  }
+
+  .article-sheet {
+    margin-inline: 0;
+    width: 100%;
+  }
+
+  .article-back,
+  .article-topic,
+  .post-meta {
+    font-size: 0.74rem;
+  }
+
+
+  .post-content {
+    font-size: 1.1rem;
+    line-height: 1.76;
+  }
+
+  .post-content pre {
+    font-size: 0.86rem;
+  }
+
+  .post-content table {
+    font-size: 0.9rem;
+  }
+
+  .post-content th {
+    font-size: 0.72rem;
+  }
+
+
+  .back-to-top {
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    right: max(0.75rem, env(safe-area-inset-right));
+  }
+}
+
+@media print {
+  body.article-interface {
+    background: white;
+    color: black;
+  }
+
+  .system-topbar,
+  .toc-desktop,
+  .toc-mobile,
+  .back-to-top {
+    display: none !important;
+  }
+
+  .article-console {
+    max-width: none;
+    padding: 0;
+  }
+
+  .article-system-header {
+    border-bottom-color: #999;
+    color: black;
+    margin-bottom: 1rem;
+  }
+
+  .article-title,
+  .article-back,
+  .article-topic,
+  .post-meta {
+    color: black;
+  }
+
+  .post-layout,
+  .post-layout.no-toc {
+    display: block;
+  }
+
+  .article-sheet {
+    background: white;
+    border: 0;
+    max-width: none;
+    padding: 0;
+  }
+}

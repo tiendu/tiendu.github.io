@@ -1,0 +1,96 @@
+---
+import { CONTACT_LINKS } from "../config/site";
+import SystemPageLayout from "../layouts/SystemPageLayout.astro";
+---
+
+<SystemPageLayout
+  title="About"
+  moduleCode=""
+  description="Background, interests, and the route that led me toward systems engineering."
+  showDescription={false}
+>
+  <div class="operator-record">
+    <aside class="operator-panel" aria-label="Profile summary">
+      <div class="operator-identity">
+        <h2>TIEN DU</h2>
+        <p>Vietnam · Platform / Systems Engineering</p>
+      </div>
+      <p class="operator-focus">Linux · Cloud · Reliability · Automation</p>
+      <nav class="operator-links" aria-label="Profile and contact links">
+        {
+          CONTACT_LINKS.map(({ href, label, external }) => (
+            <a
+              href={href}
+              target={external ? "_blank" : undefined}
+              rel={external ? "noopener noreferrer" : undefined}
+            >
+              <span>{label}</span>
+              <span class="operator-link-mark" aria-hidden="true">&#x2197;&#xFE0E;</span>
+            </a>
+          ))
+        }
+      </nav>
+    </aside>
+
+    <div class="about-copy">
+      <section aria-labelledby="route-heading">
+        <p class="system-section-code">01 / ROUTE</p>
+        <h2 id="route-heading">Biotechnology → Bioinformatics → Systems</h2>
+
+        <div class="timeline" aria-label="Education and career timeline">
+          <div class="timeline-row">
+            <span>2017</span>
+            <p>BSc Biotechnology · Singapore</p>
+          </div>
+          <div class="timeline-row">
+            <span>2019</span>
+            <p>MSc Bioinformatics &amp; Computational Biology · Ireland</p>
+          </div>
+          <div class="timeline-row">
+            <span>2023</span>
+            <p>Left academia</p>
+          </div>
+          <div class="timeline-row">
+            <span>NOW</span>
+            <p>Systems · reliability · tooling</p>
+          </div>
+        </div>
+
+        <p>
+          I started with biological data and computational workflows, but became
+          more interested in the systems underneath them: why things fail, how
+          they recover, and how to make them easier to operate.
+        </p>
+      </section>
+
+      <section aria-labelledby="work-heading">
+        <p class="system-section-code">02 / WORK</p>
+        <h2 id="work-heading">The questions underneath the system</h2>
+
+        <ul class="question-list">
+          <li><span aria-hidden="true">—</span> Why did this job fail after two days?</li>
+          <li><span aria-hidden="true">—</span> Where did the storage go?</li>
+          <li><span aria-hidden="true">—</span> Why is this still retrying?</li>
+        </ul>
+
+        <p class="about-stack">
+          Linux · Cloud · Distributed systems · Automation · Observability · Reliability
+        </p>
+        <p class="about-principle">
+          Reliability doesn't mean nothing fails. Failures should be visible,
+          understandable, and recoverable.
+        </p>
+      </section>
+
+      <section aria-labelledby="outside-heading">
+        <p class="system-section-code">03 / OUTSIDE</p>
+        <h2 id="outside-heading">Outside work</h2>
+
+        <p>Coffee. Photography. Cars. Watches. Mechanical things. Quiet places.</p>
+        <p>
+          I particularly like <em>komorebi</em> — sunlight passing through leaves.
+        </p>
+      </section>
+    </div>
+  </div>
+</SystemPageLayout>

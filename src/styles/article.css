@@ -1,0 +1,11 @@
+/*
+ * Article stylesheet manifest.
+ *
+ * The import order is intentional: reader base, desktop adjustments, related
+ * content, then progressive-enhancement UX.
+ */
+
+@import "./article/reader.css";
+@import "./article/desktop.css";
+@import "./article/discovery.css";
+@import "./article/ux.css";

@@ -1,0 +1,87 @@
+---
+import { SITE } from "../config/site";
+import SystemPageLayout from "../layouts/SystemPageLayout.astro";
+import {
+  formatCompactDate,
+  getPostRoute,
+  getTopicRoute,
+  readingTime,
+  sortPosts,
+  type BlogPost,
+} from "../utils/posts";
+
+interface Props {
+  name: string;
+  posts: BlogPost[];
+}
+
+const { name, posts } = Astro.props;
+const sortedPosts = sortPosts(posts);
+const route = getTopicRoute(name);
+const pageUrl = new URL(route, Astro.site ?? new URL(SITE.url)).href;
+const structuredData = [
+  {
+    "@type": "CollectionPage",
+    "@id": `${pageUrl}#collection`,
+    name: `${name} topic`,
+    url: pageUrl,
+    inLanguage: SITE.language,
+    isPartOf: { "@id": `${SITE.url}/#website` },
+    about: name,
+  },
+  {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: SITE.url,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Topics",
+        item: `${SITE.url}/topics/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name,
+        item: pageUrl,
+      },
+    ],
+  },
+];
+---
+
+<SystemPageLayout
+  title={name}
+  moduleCode=""
+  structuredData={structuredData}
+  active="posts"
+>
+  <section class="taxonomy-archive" aria-label={`${name} notes`}>
+    <div class="taxonomy-archive-toolbar">
+      <a class="taxonomy-back" href="/topics/">← TOPICS</a>
+      <span class="taxonomy-archive-count">{sortedPosts.length} NOTES</span>
+    </div>
+
+    <ol class="topic-log-list">
+      {sortedPosts.map((post) => (
+        <li class="topic-log-entry">
+          <a href={getPostRoute(post)} aria-label={`Open ${post.data.title}`}>
+            <time datetime={post.data.date.toISOString()}>
+              {formatCompactDate(post.data.date)}
+            </time>
+            <span class="topic-log-title">{post.data.title}</span>
+            <span class="topic-log-read">
+              {readingTime(post.body ?? "")} min
+            </span>
+            <span class="topic-log-selector" aria-hidden="true">&gt;</span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </section>
+</SystemPageLayout>

@@ -1,0 +1,37 @@
+{
+  "name": "tiendu-github-io",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "dev:host": "astro dev --host",
+    "start": "astro dev",
+    "check:styles": "node scripts/check-styles.mjs",
+    "check:games": "node scripts/check-games.mjs",
+    "test:games": "node --test src/games/number/tests/local-rules.test.mjs src/games/blackjack/tests/tally.test.mjs src/games/mines/tests/mines.test.mjs src/games/mines/tests/mines-defeat.test.mjs src/games/mines/tests/mines-elevator.test.mjs src/games/mines/tests/mines-hats.test.mjs src/games/mines/tests/cardinal-neighbors.test.mjs",
+    "check:astro": "astro check",
+    "check": "npm run check:styles && npm run check:games && npm run test:games && npm run check:astro",
+    "build": "astro build && node scripts/fix-html-routes.mjs",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.3",
+    "@fontsource-variable/figtree": "5.2.7",
+    "@fontsource-variable/nunito": "5.2.7",
+    "@fontsource-variable/source-code-pro": "5.2.7",
+    "@fontsource/barlow-condensed": "5.2.8",
+    "@fontsource/vt323": "5.2.7",
+    "astro": "^7.4.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "overrides": {
+    "yaml": "2.9.0"
+  }
+}

@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/.wrangler
+**/.astro
+dist
+.cache
+.env*
+.dev.vars*
+*.sqlite*
+draft
+public
+src/content

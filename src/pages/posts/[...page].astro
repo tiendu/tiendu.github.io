@@ -1,0 +1,182 @@
+---
+import { getCollection } from "astro:content";
+import type { GetStaticPaths } from "astro";
+import PostSearch from "../../components/PostSearch.astro";
+import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
+import {
+  formatCompactDate,
+  getPostRoute,
+  getTopicRoute,
+  readingTime,
+  sortPosts,
+  type BlogPost,
+} from "../../utils/posts";
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  totalPosts: number;
+  totalNormalPosts: number;
+  pinned: BlogPost[];
+  posts: BlogPost[];
+  searchPosts: BlogPost[];
+  firstRecordNumber: number;
+}
+export const getStaticPaths: GetStaticPaths = async () => {
+  const pageSize = 12;
+  const allPosts = sortPosts(
+    await getCollection("blog", ({ data }) => !data.draft),
+  );
+  const pinned = allPosts.filter(({ data }) => data.pinned);
+  const normalPosts = allPosts.filter(({ data }) => !data.pinned);
+  const totalPages = Math.max(1, Math.ceil(normalPosts.length / pageSize));
+  return Array.from({ length: totalPages }, (_, index) => {
+    const currentPage = index + 1;
+    const start = index * pageSize;
+    return {
+      params: { page: currentPage === 1 ? undefined : String(currentPage) },
+      props: {
+        currentPage,
+        totalPages,
+        totalPosts: allPosts.length,
+        totalNormalPosts: normalPosts.length,
+        pinned,
+        posts: normalPosts.slice(start, start + pageSize),
+        searchPosts: allPosts,
+        firstRecordNumber: start + 1,
+      },
+    };
+  });
+};
+const {
+  currentPage,
+  totalPages,
+  pinned,
+  posts,
+  searchPosts,
+} = Astro.props;
+
+const pageTitle = currentPage === 1 ? "Posts" : `Posts — Page ${currentPage}`;
+const pageDescription =
+  currentPage === 1
+    ? "Field notes, engineering references, and lessons from systems that failed."
+    : `Page ${currentPage} of the complete notes archive.`;
+const pageRoute = (page: number) => (page === 1 ? "/posts/" : `/posts/${page}/`);
+---
+<SystemPageLayout
+  title={pageTitle}
+  moduleCode=""
+  description={pageDescription}
+  showDescription={false}
+>
+  <PostSearch posts={searchPosts} />
+  {
+    currentPage === 1 && pinned.length > 0 && (
+      <section class="archive-section priority" aria-labelledby="pinned-title">
+        <header class="archive-section-header">
+          <h2 id="pinned-title">PINNED</h2>
+        </header>
+
+        <ol class="log-list">
+          {pinned.map((post) => {
+            const postRoute = getPostRoute(post);
+            return (
+              <li class="log-entry">
+                <time class="log-date" datetime={post.data.date.toISOString()}>
+                  {formatCompactDate(post.data.date)}
+                </time>
+                <div class="log-main">
+                  <h3><a class="log-post-link" href={postRoute}>{post.data.title}</a></h3>
+                </div>
+                <p class="log-subline">
+                  <a class="log-topic-link" href={getTopicRoute(post.data.topic)}>
+                    {post.data.topic}
+                  </a>
+                  <span> · {readingTime(post.body ?? "")} min</span>
+                </p>
+                <span class="log-entry-selector" aria-hidden="true">&gt;</span>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    )
+  }
+  <section class="archive-section" aria-labelledby="complete-title">
+    <header class="archive-section-header">
+      <h2 id="complete-title">ALL NOTES</h2>
+    </header>
+    {
+      posts.length > 0 ? (
+        <ol class="log-list">
+          {posts.map((post) => {
+            const postRoute = getPostRoute(post);
+            return (
+              <li class="log-entry">
+                <time class="log-date" datetime={post.data.date.toISOString()}>
+                  {formatCompactDate(post.data.date)}
+                </time>
+                <div class="log-main">
+                  <h3><a class="log-post-link" href={postRoute}>{post.data.title}</a></h3>
+                </div>
+                <p class="log-subline">
+                  <a class="log-topic-link" href={getTopicRoute(post.data.topic)}>
+                    {post.data.topic}
+                  </a>
+                  <span> · {readingTime(post.body ?? "")} min</span>
+                </p>
+                <span class="log-entry-selector" aria-hidden="true">&gt;</span>
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <p class="system-empty-state">NO NOTES FOUND.</p>
+      )
+    }
+    {
+      totalPages > 1 && (
+        <nav class="archive-pagination" aria-label="Posts pagination">
+          <div class="pagination-edge pagination-edge-previous">
+            {currentPage > 1 ? (
+              <a href={pageRoute(currentPage - 1)} rel="prev">
+                ← PREVIOUS
+              </a>
+            ) : (
+              <span aria-hidden="true">← PREVIOUS</span>
+            )}
+          </div>
+          <ol class="pagination-pages">
+            {Array.from({ length: totalPages }, (_, index) => {
+              const pageNumber = index + 1;
+              return (
+                <li>
+                  {pageNumber === currentPage ? (
+                    <span aria-current="page">
+                      {String(pageNumber).padStart(2, "0")}
+                    </span>
+                  ) : (
+                    <a
+                      href={pageRoute(pageNumber)}
+                      aria-label={`Go to posts page ${pageNumber}`}
+                    >
+                      {String(pageNumber).padStart(2, "0")}
+                    </a>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+          <div class="pagination-edge pagination-edge-next">
+            {currentPage < totalPages ? (
+              <a href={pageRoute(currentPage + 1)} rel="next">
+                NEXT →
+              </a>
+            ) : (
+              <span aria-hidden="true">NEXT →</span>
+            )}
+          </div>
+        </nav>
+      )
+    }
+  </section>
+</SystemPageLayout>

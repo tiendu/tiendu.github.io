@@ -1,0 +1,43 @@
+---
+import { PROJECTS } from "../../data/projects";
+import SystemPageLayout from "../../layouts/SystemPageLayout.astro";
+---
+<SystemPageLayout
+  title="Projects"
+  moduleCode=""
+  description="Small tools built to solve real problems."
+  showDescription={false}
+>
+  <ol class="project-list">
+    {
+      PROJECTS.map((project, index) => (
+        <li class="project-row">
+          <span class="project-number" aria-hidden="true">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+
+          <article class="project-content">
+            <h2>
+              <a
+                href={project.repo}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${project.name} source repository (opens in a new tab)`}
+              >
+                {project.name}
+                <span class="external-mark" aria-hidden="true">&#x2197;&#xFE0E;</span>
+              </a>
+            </h2>
+
+            <p class="project-summary">{project.summary}</p>
+            <p class="project-tech">{project.tech}</p>
+            <details class="project-details-panel">
+              <summary>DETAILS</summary>
+              <p class="project-details">{project.details}</p>
+            </details>
+          </article>
+        </li>
+      ))
+    }
+  </ol>
+</SystemPageLayout>

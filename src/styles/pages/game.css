@@ -1,0 +1,13 @@
+.game-page {
+  --terminal-green: #e9a14a;
+  --terminal-green-bright: #ffd27a;
+  --terminal-green-dim: #c39768;
+  background: #090b0b;
+  color: #f1ecdf;
+  font-family: var(--font-terminal);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  min-height: 100svh;
+  padding: clamp(8px, 2vw, 24px);
+}

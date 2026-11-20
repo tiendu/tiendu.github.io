@@ -1,0 +1,56 @@
+---
+import SystemHeader from "../components/SystemHeader.astro";
+import "../styles/system.css";
+import BaseLayout from "./BaseLayout.astro";
+import type { NavigationKey } from "../config/site";
+
+type StructuredData = Record<string, unknown>;
+
+interface Props {
+  title: string;
+  description?: string;
+  moduleCode?: string;
+  counter?: string;
+  active?: NavigationKey;
+  structuredData?: StructuredData | StructuredData[];
+  showDescription?: boolean;
+}
+const {
+  title,
+  description,
+  moduleCode = title.toUpperCase().replace(/[^A-Z0-9]+/g, "-"),
+  counter,
+  active,
+  structuredData,
+  showDescription = true,
+} = Astro.props;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  structuredData={structuredData}
+  system
+>
+  <div class="system-page-shell">
+    <SystemHeader active={active} />
+    <section class="system-console" aria-labelledby="system-page-title">
+      <header class="system-page-header">
+        {moduleCode && <p class="system-module-code">{moduleCode}</p>}
+        <h1 id="system-page-title">{title}</h1>
+        {showDescription && description && <p class="system-description">{description}</p>}
+      </header>
+
+      <div class="system-document-body">
+        <slot />
+      </div>
+      <footer class="system-module-footer">
+        {counter && <span>{counter}</span>}
+        <nav aria-label="Site resources">
+          <a href="/feed.xml">RSS</a>
+          <a href="/">HOME</a>
+        </nav>
+      </footer>
+    </section>
+  </div>
+</BaseLayout>

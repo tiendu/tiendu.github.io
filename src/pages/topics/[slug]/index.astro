@@ -1,0 +1,22 @@
+---
+import { getCollection } from "astro:content";
+import TopicArchive from "../../../components/TopicArchive.astro";
+import { getTopicSummaries, slugifyLabel } from "../../../utils/posts";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog", ({ data }) => !data.draft);
+  const topics = getTopicSummaries(posts);
+
+  return topics.map(({ name: topic }) => ({
+    params: { slug: slugifyLabel(topic) },
+    props: {
+      topic,
+      posts: posts.filter((post) => post.data.topic === topic),
+    },
+  }));
+}
+
+const { topic, posts } = Astro.props;
+---
+
+<TopicArchive name={topic} posts={posts} />

@@ -1,0 +1,46 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SystemHeader from "../components/SystemHeader.astro";
+import "../styles/system.css";
+import "../styles/pages/home.css";
+---
+
+<BaseLayout system>
+  <div class="pixel-bj-page">
+    <SystemHeader active="home" />
+
+    <main class="pixel-bj-stage" data-blackjack>
+      <h1 class="sr-only">Play Your Cards</h1>
+
+      <section class="pixel-bj-toprow" aria-label="Dealer side">
+        <div class="pixel-bj-tally pixel-bj-tally--dealer" data-tally="dealer" role="group" aria-label="Dealer: 0 wins">
+          <span class="pixel-bj-tally-marks" data-tally-marks aria-hidden="true"></span>
+          <span class="pixel-bj-tally-total" data-tally-total hidden aria-hidden="true"></span>
+        </div>
+        <div class="pixel-bj-hand pixel-bj-hand--dealer" data-dealer-cards aria-label="Dealer cards"></div>
+      </section>
+
+      <section class="pixel-bj-bubble" aria-label="Round message and controls">
+        <p class="pixel-bj-message" data-result data-outcome="playing" role="status" aria-live="polite">Hit or stand?</p>
+        <div class="pixel-bj-actions">
+          <button type="button" class="pixel-bj-action" data-action="hit">Hit</button>
+          <button type="button" class="pixel-bj-action" data-action="stand">Stand</button>
+          <button type="button" class="pixel-bj-action" data-action="deal" hidden>Again</button>
+        </div>
+      </section>
+
+      <div class="pixel-bj-bottomrow">
+        <section class="pixel-bj-hand pixel-bj-hand--player" data-player-cards aria-label="Your cards"></section>
+        <div class="pixel-bj-tally pixel-bj-tally--player" data-tally="player" role="group" aria-label="You: 0 wins">
+          <span class="pixel-bj-tally-marks" data-tally-marks aria-hidden="true"></span>
+          <span class="pixel-bj-tally-total" data-tally-total hidden aria-hidden="true"></span>
+        </div>
+      </div>
+    </main>
+  </div>
+</BaseLayout>
+
+<script>
+  import { mountBlackjack } from "../games/blackjack/ui.mjs";
+  mountBlackjack();
+</script>
