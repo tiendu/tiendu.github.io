@@ -1,10 +1,8 @@
 import { SUITS, createDeck, shuffleDeck, beginRound, hit, stand, handValue } from "./rules.mjs";
 import { loadTallies, saveTallies, winnerForResult, advanceTallies, visibleTallyMarks } from "./tally.mjs";
 
-// Cache-bust the normalized 52-card sprite after deployment.
-const SPRITESHEET_URL = "/cards/pixel-fronts-spritesheet.png?v=rank-inset-1";
-const SUIT_ROWS = Object.freeze({ spades: 0, hearts: 1, clubs: 2, diamonds: 3 });
-const RANK_COLS = Object.freeze({ A: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, J: 10, Q: 11, K: 12 });
+// The browser renders one crisp SVG per card; no sprite offsets required.
+const CARD_ASSET_DIR = "/cards/stained-glass";
 const OUTCOME_TEXT = Object.freeze({
   playing: "Hit or stand?",
   win: "You played your cards well.",
@@ -43,9 +41,7 @@ function cardLabel(card) {
 function showFace(node, card) {
   node.classList.remove("pixel-bj-card--back");
   node.setAttribute("aria-label", cardLabel(card));
-  node.style.setProperty("--card-image", `url('${SPRITESHEET_URL}')`);
-  node.style.setProperty("--card-col", RANK_COLS[card.rank]);
-  node.style.setProperty("--card-row", SUIT_ROWS[card.suit]);
+  node.style.setProperty("--card-image", `url("${CARD_ASSET_DIR}/${card.rank}-${card.suit}.svg")`);
 }
 
 function buildCard(card, hidden = false) {
