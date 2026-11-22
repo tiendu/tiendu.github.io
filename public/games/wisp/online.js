@@ -47,7 +47,7 @@
   function update(s){
     snapshot=s;
     emit('wisp:online-state',s);
-    if(s.state==='lobby')status(`${s.players.length}/4 wisps. Invite a friend, then the host starts.`);
+    if(s.state==='lobby')status(`${s.players.length}/5 wisps. Invite a friend, then the host starts.`);
     else if(s.state==='running'){
       const countdown=Math.max(0,Math.ceil((s.startAt-s.serverNow)/1000));
       if(!matchStarted&&countdown)status(`Race starts in ${countdown}…`);
@@ -119,6 +119,13 @@
     if(session!==expected||generation!==epoch)return null;
     update(result);return result;
   }
+  async function rematch(){
+    if(!session)throw new Error('Join a room first.');
+    const expected=session,epoch=generation;
+    const result=await request('rematch',expected);
+    if(session!==expected||generation!==epoch)return null;
+    update(result);return result;
+  }
   async function invite(){
     if(!session)throw new Error('Join a room first.');
     const url=location.protocol==='file:'?new URL(location.href):new URL('/games/wisp/',location.origin);
@@ -140,12 +147,12 @@
 
   window.WispOnline={
     snapshot:()=>snapshot,create:options=>enter('create',options),
-    join:options=>enter('join',options),start,leave,invite,
+    join:options=>enter('join',options),start,rematch,leave,invite,
     isSpectating(){return Boolean(session&&snapshot?.state==='running'&&game.current.status==='caught');},
     camera(_g,solo){
       if(!this.isSpectating())return solo;
       const live=snapshot.players.filter(p=>p.alive).sort((a,b)=>b.distance-a.distance);
-      return live.length?Math.max(0,live[0].x-210):solo;
+      return live.length?game.cameraForX(live[0].x):solo;
     },
     draw(ctx,_g,camera){
       if(!matchStarted||!snapshot)return;

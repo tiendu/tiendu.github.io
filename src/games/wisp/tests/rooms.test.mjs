@@ -20,12 +20,47 @@ test('lobby admission, authorization, host start and shared seed',()=>{
   assert.equal(r.state({code,token:guest.token}).seed,started.seed);
   assert.throws(()=>r.join({code,name:'Late',wisp:'Dew'}),/already started/);
 });
-test('room limit and illegal character rejected',()=>{
+test('five unique characters occupy all five seats; duplicate claims are rejected',()=>{
   const {r}=setup();
   assert.throws(()=>r.create({name:'X',wisp:'Ghost'}),/five wisps/);
-  const a=r.create({name:'A',wisp:'Moss'}),code=a.snapshot.code;
-  for(let i=0;i<3;i++)r.join({code,name:String(i),wisp:'Dew'});
-  assert.throws(()=>r.join({code,name:'Too many',wisp:'Gale'}),/full/);
+  const host=r.create({name:'',wisp:'Moss'}),code=host.snapshot.code;
+  assert.equal(host.snapshot.players[0].name,'Moss','empty display name uses selected Wisp');
+  assert.throws(()=>r.join({code,name:'Copy',wisp:'Moss'}),/already taken/);
+  for(const spirit of ['Ember','Dew','Gale','Dusk']){
+    const joined=r.join({code,name:'',wisp:spirit});
+    assert.equal(joined.snapshot.players.at(-1).name,spirit);
+  }
+  assert.equal(r.state({code,token:host.token}).players.length,5);
+  assert.throws(()=>r.join({code,name:'Sixth',wisp:'Moss'}),/full/);
+});
+
+test('host-only rematch preserves occupied spirits, resets the race and allows another start',()=>{
+  const {r,tick}=setup();
+  const host=r.create({name:'',wisp:'Moss'}),code=host.snapshot.code;
+  const guest=r.join({code,name:'',wisp:'Dew'});
+  r.start({code,token:host.token});tick(3200);
+  r.sync({code,token:guest.token,sequence:0,x:195,y:380,energy:50,eliminated:true,reason:'Cutter'});
+  assert.equal(r.state({code,token:host.token}).state,'finished');
+  assert.throws(()=>r.rematch({code,token:guest.token}),/Only the host/);
+  const lobby=r.rematch({code,token:host.token});
+  assert.equal(lobby.state,'lobby');assert.equal(lobby.seed,null);
+  assert.equal(lobby.players.length,2);
+  assert.deepEqual(lobby.players.map(p=>p.wisp),['Moss','Dew']);
+  assert.ok(lobby.players.every(p=>p.alive&&p.energy===100&&p.distance===0));
+  assert.throws(()=>r.rematch({code,token:host.token}),/not finished/);
+  assert.equal(r.start({code,token:host.token}).state,'running');
+});
+
+test('leaving a finished room frees the seat for the next rematch',()=>{
+  const {r,tick}=setup();
+  const host=r.create({wisp:'Moss'}),code=host.snapshot.code;
+  const guest=r.join({code,wisp:'Dew'});
+  r.start({code,token:host.token});tick(3200);
+  r.sync({code,token:guest.token,sequence:0,x:185,y:380,energy:25,eliminated:true});
+  r.leave({code,token:guest.token});
+  const lobby=r.rematch({code,token:host.token});
+  assert.equal(lobby.players.length,1);
+  assert.equal(r.join({code,wisp:'Dew'}).snapshot.players.length,2);
 });
 test('sequence, speed cap, energy zero, elimination and winner',()=>{
   const {r,tick}=setup();

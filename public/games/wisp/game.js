@@ -201,10 +201,10 @@
   let accumulator = 0;
   let reducedMotion = false;
   let paused = false;
-  let cameraLead = 210; // Keep the wisp still while the chase framing eases into place.
   let onlineRoom = false;
   let onlineRace = false;
   let soloChoice = 'Moss';
+  let resultAnnounced = false;
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { alpha: false });
   const el = (id) => document.getElementById(id);
@@ -1287,11 +1287,10 @@
     ctx.globalAlpha=1;
   }
 
-  function easeCameraLead(current,fireActive,dt){
-    const target=fireActive?420:210;
-    const elapsed=Math.max(0,Math.min(dt,.08));
-    return current+(target-current)*(1-Math.exp(-elapsed/.85));
-  }
+  // Horizontal camera is a world-space translation, not a chase indicator.
+  // Let it go negative at the beginning of a run, otherwise the first 325
+  // world units would pin the Wisp to the left edge instead of the center.
+  const cameraForX = worldX => worldX - VIEW.width / 2;
 
   function drawGapRescue(g,camera){
     const r=g.gapRescue;
@@ -1341,7 +1340,7 @@
     const s=fit*pixelRatio;
     ctx.setTransform(s,0,0,s,(dw-VIEW.width*s)/2,(dh-VIEW.height*s)/2);
     sceneryGame=g;
-    const soloCamera = Math.max(0,g.x-cameraLead);
+    const soloCamera = cameraForX(g.x);
     const camera = window.WispOnline?.camera?.(g,soloCamera) ?? soloCamera;
     drawBg(camera,g);
     drawProceduralCourse(g,camera);
@@ -1354,29 +1353,17 @@
     drawWeather(g);
     sceneryGame=null;
     updateCutterOverlay(g,camera);
-    if(g.status !== 'running' && g.status !== 'dying' && !window.WispOnline?.isSpectating?.()) {
-      ctx.fillStyle='rgba(6,17,20,.77)';ctx.fillRect(255,126,450,162);
-      ctx.strokeStyle=g.status==='passed'?'#94d18f':'#d79a76';ctx.lineWidth=2;ctx.strokeRect(255,126,450,162);
-      ctx.textAlign='center';ctx.fillStyle='#f2f5eb';ctx.font='bold 27px system-ui';
-      ctx.fillText(g.status==='passed'?g.name.toUpperCase()+' PASSED!':g.status==='dying'?'DISINTEGRATING…':g.status==='caught'?(g.deathCause==='wildfire'?'ENGULFED BY WILDFIRE!':'CAUGHT BY THE CUTTER!'):'TRY AGAIN',480,183);
-      ctx.font='15px system-ui';ctx.fillText(g.reason,480,217);
-      ctx.fillStyle='#bcd0c7';ctx.fillText(g.status==='dying'?'The wisp shatters into translucent shards.':onlineRoom?'Watching the other racers':'Choose TRY AGAIN or MENU',480,251);
-    }
+
   }
 
+  // Only resource and distance are exposed. Pursuer distance is deliberately
+  // absent: fire and Cutter artwork convey danger without a numeric hint.
   function updateHud(g) {
     el('distance').textContent=String(Math.round(g.distance));
-    const c=g.cutter, dist=Math.max(0,Math.round(g.x-c.x));
-    const ff=g.fire, fireActive=ff.active, fireGap=Math.round(g.x-ff.x);
-    el('chaseDistance').textContent=fireActive?`${Math.max(0,fireGap)}`:['rest','warning'].includes(c.state)?'—':`${dist}`;
-    const proximity=fireActive?Math.max(0,Math.min(100,(1-fireGap/380)*100)):['rest','warning'].includes(c.state)?0:Math.max(0,Math.min(100,(1-dist/380)*100));
-    el('chaseThreat').style.width=`${proximity}%`;
-    el('chaseThreat').parentElement.setAttribute('aria-valuenow', String(Math.round(proximity)));
-    el('chaseThreat').style.background=fireActive?'linear-gradient(90deg,#ff9c32,#df2a1d)':c.state==='frenzy'?'linear-gradient(90deg,#ed7147,#ff3434)':'linear-gradient(90deg,#e9ad53,#e26947)';
     el('energyText').textContent=`${g.energy.toFixed(0)}%`;
     el('energyFill').style.width=`${g.energy}%`;
+    el('energyFill').parentElement.setAttribute('aria-valuenow',String(Math.round(g.energy)));
     el('energyFill').style.background=g.energy>45?'#9bd477':g.energy>22?'#efbd6f':'#f17b67';
-    el('restart').hidden=onlineRoom || !['caught','failed','passed'].includes(g.status);
   }
 
   function beginAction() {
@@ -1400,8 +1387,8 @@
     activeKeys.clear();
     activePointerId=null;
     game=createGame(name,energy,{auto,noPickups,chase:!auto,seed});
+    game.isOnlineRun=false;resultAnnounced=false;
     lastCutterAnimation=null;
-    cameraLead=210; // A new run starts with normal framing.
     updateHud(game);
   }
 
@@ -1417,6 +1404,7 @@
     if(!onlineRoom || onlineRace || !Object.prototype.hasOwnProperty.call(CHARACTERS,name) ||
         !Number.isSafeInteger(seed) || seed<0)return false;
     reset(name,100,false,false,seed);
+    game.isOnlineRun=true;
     onlineRace=true;
     paused=false;
     return true;
@@ -1448,8 +1436,17 @@
       if(paused && !fireSvg.animationsPaused())fireSvg.pauseAnimations();
       if(!paused && fireSvg.animationsPaused())fireSvg.unpauseAnimations();
     }
-    if(!paused)cameraLead=easeCameraLead(cameraLead,game.fire.active,delta);
     paint(game);updateHud(game);
+    if(game.status==='running')resultAnnounced=false;
+    else if(!resultAnnounced && !onlineRoom && !game.isOnlineRun &&
+      ['caught','failed','passed'].includes(game.status)){
+      resultAnnounced=true;
+      window.dispatchEvent(new CustomEvent('wisp:solo-finished',{detail:{
+        name:game.name,status:game.status,reason:game.reason,deathCause:game.deathCause,
+        distance:Math.round(game.distance),seconds:game.time,
+        cycles:game.forest?.completed||0
+      }}));
+    }
     requestAnimationFrame(frame);
   }
 
@@ -1457,10 +1454,6 @@
     loadImages();
     game=createGame();
     if(window.WispCutter){cutterMotion=window.WispCutter.setup(el('cutter-svg'));}
-    el('restart').addEventListener('click',()=>{
-      // Retry is only available after a solo run finishes.
-      if(!onlineRoom && game.status!=='running' && game.status!=='dying')startSolo(soloChoice);
-    });
     const jumpButton = el('jump');
     jumpButton.addEventListener('pointerdown', e => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -1515,7 +1508,7 @@
   window.WispGame={
     get current(){return game;},
     get onlineRoom(){return onlineRoom;},
-    startSolo,startOnline,setOnlineRoom,finishOnline,
+    startSolo,startOnline,setOnlineRoom,finishOnline,cameraForX,
     setPaused(value){paused=Boolean(value);if(paused)releaseAction();}
   };
   // Maintain the original physics harness for local development and automated
@@ -1523,10 +1516,9 @@
   if(['localhost','127.0.0.1',''].includes(location.hostname)){
     // Physics inspection is local-only; browser UI and Cloudflare never use this.
     window.WISP_TEST={createGame,step,jump,courseNear,
-      procGapAt,procObstacleRects,stageAt,visualStageAt,treeMixAt,easeCameraLead,speedFor,CHARACTERS,
+      procGapAt,procObstacleRects,stageAt,visualStageAt,treeMixAt,cameraForX,speedFor,CHARACTERS,
       traceGapOpening,maskGroundGaps,ridgeHeight,smoothNoise,sceneryTreeAt,
       updateFire,updateForest,epochAt,stageAtFor,rainIntensity,FIRE_SURVIVAL,
-      get cameraLead(){return cameraLead;},
       get current(){return game;}};
   }
   setup();

@@ -1,11 +1,11 @@
 // WISP multiplayer room state. Room membership and race results are held here;
 // client physics remains a beta trust boundary until full server simulation lands.
 export const WISPS = Object.freeze(['Ember', 'Moss', 'Dew', 'Gale', 'Dusk']);
-export const MAX_PLAYERS = 4;
+export const MAX_PLAYERS = 5;
 export const ROOM_TTL_MS = 45 * 60_000;
 const CODE = /^\d{6}$/;
 const TOKEN = /^[a-zA-Z0-9-]{20,100}$/;
-const clean = (name) => String(name ?? '').trim().replace(/[\u0000-\u001F\u007F<>]/g, '').slice(0, 18) || 'Wisp';
+const clean = (name) => String(name ?? '').trim().replace(/[\u0000-\u001F\u007F<>]/g, '').slice(0, 18);
 const error = (reason, status = 400) => Object.assign(new Error(reason), { status });
 const int = (v, lo, hi) => Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : lo;
 
@@ -42,7 +42,7 @@ export class WispRegistry {
   }
   newPlayer(name, wisp, host = false) {
     if (!WISPS.includes(wisp)) throw error('Choose one of the five wisps');
-    return { id: this.token(), token: this.token(), name: clean(name), wisp, host,
+    return { id: this.token(), token: this.token(), name: clean(name) || wisp, wisp, host,
       connected: true, alive: true, distance: 0, x: 155, y: 380, energy: 100,
       submittedAt: 0, lastSeen: this.now(), lastEnergyGainX: 155, lastReportedEnergy: 100, sequence: -1, reason: null };
   }
@@ -71,6 +71,7 @@ export class WispRegistry {
     const room = this.require(String(code));
     if (room.state !== 'lobby') throw error('This race has already started', 409);
     if (room.players.length >= MAX_PLAYERS) throw error('Room is full', 409);
+    if (room.players.some(p => p.wisp === wisp)) throw error('That Wisp is already taken. Choose another.', 409);
     const p = this.newPlayer(name, wisp);
     room.players.push(p); this.touch(room);
     return {token:p.token, snapshot:this.snapshot(room, p)};
@@ -96,6 +97,23 @@ export class WispRegistry {
         submittedAt:0,lastEnergyGainX:155,lastReportedEnergy:100,sequence:-1,reason:null,lastSeen:this.now()});
     }
     this.touch(room);return this.snapshot(room,p);
+  }
+  // A rematch returns the same players to a lobby, retaining each claimed
+  // Wisp. Only the host can request it after the previous race finishes.
+  rematch({code,token}={}) {
+    const room=this.require(String(code));
+    const p=this.player(room,token);
+    if(!p.host)throw error('Only the host can request a rematch',403);
+    if(room.state!=='finished')throw error('The race has not finished',409);
+    room.players=room.players.filter(player=>player.reason!=='Left race');
+    room.state='lobby';room.seed=null;room.startAt=null;room.winnerId=null;
+    for(const player of room.players) {
+      Object.assign(player,{alive:true,connected:true,distance:0,x:155,y:380,energy:100,
+        submittedAt:0,lastEnergyGainX:155,lastReportedEnergy:100,sequence:-1,
+        reason:null,lastSeen:this.now()});
+    }
+    this.touch(room);
+    return this.snapshot(room,p);
   }
   sync({code, token, sequence, x, y, energy, eliminated=false, reason=null}={}) {
     const room = this.require(String(code));
@@ -163,7 +181,13 @@ export class WispRegistry {
       if (!room.players.length) this.rooms.delete(room.code);
       else {if (p.host) room.players[0].host=true;this.touch(room);}
     } else if (room.state==='running') {
-      p.alive=false;p.connected=false;p.reason='Left race';this.evaluate(room);this.touch(room);
+      p.alive=false;p.connected=false;p.reason='Left race';
+      if(p.host){p.host=false;const successor=room.players.find(x=>x!==p&&x.reason!=='Left race');if(successor)successor.host=true;}
+      this.evaluate(room);this.touch(room);
+    } else if (room.state==='finished') {
+      room.players=room.players.filter(x=>x!==p);
+      if(!room.players.length)this.rooms.delete(room.code);
+      else {if(p.host)room.players[0].host=true;this.touch(room);}
     }
     return {ok:true};
   }

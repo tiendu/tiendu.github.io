@@ -1,5 +1,5 @@
 /* WISP menu — faceted woodland, intentionally independent of the game physics. */
-#wisp-menu[hidden],#wisp-menu-trigger[hidden],#wisp-exit-room[hidden]{display:none!important}
+#wisp-menu[hidden],#wisp-menu-trigger[hidden],#wisp-exit-room[hidden],#wisp-result[hidden]{display:none!important}
 #wisp-menu{position:fixed;inset:0;z-index:100;overflow:auto;overscroll-behavior:contain;background:#071719f5;color:#eff8ed;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 #wisp-menu *,#wisp-menu *::before,#wisp-menu *::after{box-sizing:border-box}
 #wisp-menu .wm-scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:radial-gradient(circle at 75% 24%,#31584a 0%,#15352e 36%,#09171d 85%)}
@@ -41,8 +41,13 @@
 #wisp-menu .wm-field input{width:100%;min-width:0;border:1px solid #628875;background:#0f302e;color:#f3fff2;min-height:44px;padding:10px 12px;font-size:15px;border-radius:2px;letter-spacing:normal;text-transform:none}
 #wisp-menu .wm-room{border:1px solid #466c5b;background:#12342c88;padding:16px;margin:12px 0}
 #wisp-menu .wm-code{color:#e8e3ad;font-size:clamp(27px,5vw,40px);letter-spacing:.19em;font-weight:900}
-#wisp-menu .wm-roster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
-#wisp-menu .wm-seat{background:#224538;padding:11px 13px;border-left:4px solid #9fbd79;font-size:12px;overflow:hidden;text-overflow:ellipsis}
+#wisp-menu .wm-roster{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:12px 0}
+#wisp-menu .wm-seat{background:#224538;padding:10px 6px;border:1px solid #446b58;min-width:0;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;overflow:hidden}
+#wisp-menu .wm-seat img{width:min(100%,65px);height:65px;object-fit:contain}
+#wisp-menu .wm-seat strong{font-size:12px;color:#e8f7dd}
+#wisp-menu .wm-seat span{font-size:10px;max-width:100%;overflow-wrap:anywhere;color:#b8d6c0}
+#wisp-menu .wm-seat.open{opacity:.48;background:#102d28;border-style:dashed}
+#wisp-menu .wm-seat.mine{border-color:#cde8a1;background:#315747}
 #wisp-menu .wm-seat.out{opacity:.55}
 #wisp-menu .wm-room-meta{color:#bbd8bc;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
 #wisp-menu .wm-notice{color:#f0d999;font-size:13px;min-height:21px;line-height:1.5}
@@ -54,5 +59,26 @@
 #wisp-menu .wm-online-controls{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 #wisp-menu .wm-tab{border:1px solid #4b7662;background:#163e33;color:#ebf8e7;padding:10px 15px;font-size:12px;min-height:42px}
 #wisp-menu .wm-tab[aria-pressed="true"]{background:#b9df95;color:#18332a}
-@media(max-width:650px){#wisp-menu .wm-shell{margin:0 auto 24px;padding:12px}#wisp-menu .wm-brand{font-size:56px}#wisp-menu .wm-badge{display:none}#wisp-menu .wm-board{padding:17px 12px 20px}#wisp-menu .wm-list{gap:4px}#wisp-menu .wm-wisp{padding:7px 2px 9px;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}#wisp-menu .wm-wisp img{width:58px;max-width:100%}#wisp-menu .wm-name{font-size:11px}#wisp-menu .wm-trait{font-size:8px}#wisp-menu .wm-mode strong{font-size:14px}#wisp-menu .wm-mode{padding:10px}#wisp-menu .wm-roster{grid-template-columns:1fr}#wisp-menu .wm-online-form{grid-template-columns:1fr}#wisp-menu .wm-cta{width:100%}#wisp-menu .wm-header{margin-bottom:13px}}
+@media(max-width:650px){#wisp-menu .wm-shell{margin:0 auto 24px;padding:12px}#wisp-menu .wm-brand{font-size:56px}#wisp-menu .wm-badge{display:none}#wisp-menu .wm-board{padding:17px 12px 20px}#wisp-menu .wm-list{gap:4px}#wisp-menu .wm-wisp{padding:7px 2px 9px;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}#wisp-menu .wm-wisp img{width:58px;max-width:100%}#wisp-menu .wm-name{font-size:11px}#wisp-menu .wm-trait{font-size:8px}#wisp-menu .wm-mode strong{font-size:14px}#wisp-menu .wm-mode{padding:10px}#wisp-menu .wm-roster{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}#wisp-menu .wm-seat{padding:6px 2px}#wisp-menu .wm-seat img{height:38px}#wisp-menu .wm-seat strong{font-size:9px}#wisp-menu .wm-seat span{font-size:8px}#wisp-menu .wm-online-form{grid-template-columns:1fr}#wisp-menu .wm-cta{width:100%}#wisp-menu .wm-header{margin-bottom:13px}}
 @media(prefers-reduced-motion:reduce){#wisp-menu .wm-wisp{transition:none}}
+
+/* Finish states share one accessible overlay. Mobile gets full-screen space,
+   rather than squeezing buttons into a 2:1 game viewport. */
+#wisp-result{position:absolute;inset:0;z-index:25;display:grid;place-items:center;padding:14px;background:#061719d9;color:#edf7e9;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:auto}
+#wisp-result *{box-sizing:border-box}
+#wisp-result .wm-result-card{width:min(100%,540px);max-height:100%;overflow:auto;padding:clamp(15px,2.4vw,25px);background:#0f302eea;border:1px solid #79a383;box-shadow:0 18px 60px #000b;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+#wisp-result .wm-result-eyebrow{color:#a5d48b;font-size:10px;font-weight:850;letter-spacing:.17em;margin:0 0 7px}
+#wisp-result h2{font-size:clamp(20px,3vw,29px);line-height:1.16;margin:0 0 10px;color:#eaf6e0}
+#wisp-result .wm-result-reason{font-size:12px;color:#c6d7c9;line-height:1.5;margin:0 0 14px}
+#wisp-result .wm-result-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:15px;max-height:125px;overflow:auto}
+#wisp-result .wm-result-stat{min-width:0;padding:9px 6px;border:1px solid #416b56;background:#163c35;text-align:center}
+#wisp-result .wm-result-stat strong{display:block;color:#ebf6e3;font-variant-numeric:tabular-nums;font-size:15px;overflow-wrap:anywhere}
+#wisp-result .wm-result-stat span{display:block;margin-top:3px;color:#afccb7;font-size:9px;overflow-wrap:anywhere}
+#wisp-result .wm-result-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#wisp-result button{min-height:45px;font:inherit;font-size:12px;font-weight:850;letter-spacing:.07em;cursor:pointer;touch-action:manipulation}
+#wisp-result .wm-cta{background:#c3e49d;color:#132d25;border:0}
+#wisp-result .wm-secondary{background:#25493d;color:#ebf8e7;border:1px solid #678b74}
+#wisp-result button:disabled{opacity:.4;cursor:not-allowed}
+#wisp-result button:focus-visible{outline:3px solid #d6f0a4;outline-offset:3px}
+@media(max-width:720px){#wisp-result{position:fixed;inset:0;z-index:110;padding:clamp(10px,4vw,20px)}#wisp-result .wm-result-card{max-height:calc(100dvh - 24px)}#wisp-result .wm-result-stat strong{font-size:13px}}
+@media(prefers-reduced-motion:reduce){#wisp-result *{transition:none!important}}

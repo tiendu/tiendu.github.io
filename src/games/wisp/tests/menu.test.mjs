@@ -27,9 +27,14 @@ test('published WISP page contains only player controls, no development panel',a
   const page=await file('public/games/wisp/play.html');
   const runner=await file('public/games/wisp/game.js');
   const online=await file('public/games/wisp/online.js');
-  assert.match(page,/class="run-dashboard"/);
+  const menu=await file('public/games/wisp/menu.js');
+  assert.match(page,/id="wisp-hud"/);
+  assert.doesNotMatch(page,/class="run-dashboard"|id="chaseThreat"|id="chaseDistance"/);
   assert.match(page,/id="jump"/);
-  assert.match(page,/id="restart"[^>]*hidden/);
+  assert.doesNotMatch(page,/id="restart"/);
+  assert.match(menu,/id='wisp-result'/);
+  assert.match(menu,/wisp:solo-finished/);
+  assert.match(menu,/wm-result-replay/);
   for(const id of ['watchMoss','autoplay','hitboxes','orbSmall','orbLarge',
     'forceWarning','forceFrenzy','forceRetreat','previewFire','previewDeath',
     'demoClimb','stageInspect','startEnergy','courseSeed','dropTimber']) {
@@ -53,7 +58,7 @@ test('published WISP does not show forest transition status or alert messages',a
   }
   assert.match(page,/id="energyFill"/);
   assert.match(page,/id="distance"/);
-  assert.match(page,/id="chaseThreat"/);
+  assert.doesNotMatch(page,/id="chaseThreat"/);
   assert.match(page,/id="jump"/);
   assert.match(runner,/function stageAt\(/,'terrain progression still exists');
   assert.match(runner,/function dynamicUpdate\(/,'aerial hazard timing still exists');

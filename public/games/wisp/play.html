@@ -20,33 +20,34 @@
   #cutter-layer { z-index:2 }
   #wildfire-svg { position:absolute; display:none; max-width:none; max-height:none; pointer-events:none; overflow:visible; will-change:left,top }
   #cutter-svg { position:absolute; display:none; pointer-events:none; overflow:visible; will-change:left,top,transform; filter:drop-shadow(0 3px 2px #0006) }
-  .run-dashboard { display:grid; grid-template-columns:minmax(150px,1.15fr) minmax(90px,.65fr) minmax(200px,1.35fr); gap:9px; margin:11px 0 0 }
-  .run-panel { min-width:0; padding:10px 12px; border:1px solid #35574d; background:#112b2d; clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px)) }
-  .run-label { display:block; font-size:10px; color:#99b7aa; letter-spacing:.1em; text-transform:uppercase }
-  .run-value { display:block; font-size:17px; font-variant-numeric:tabular-nums; font-weight:750; color:#f0f8e9 }
-  .run-value.small { font-size:12px; color:#f4c99f }
-  .run-metric-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px }
-  .meter,.threat-track { height:8px; background:#2c4840; overflow:hidden; margin-top:5px }
+  /* DOM HUD lives inside the canvas frame, not beneath the runner. */
+  #wisp-hud { position:absolute; z-index:8; top:clamp(7px,1.2vw,14px); left:clamp(7px,1.2vw,14px); right:clamp(7px,1.2vw,14px); display:flex; align-items:flex-start; justify-content:space-between; gap:12px; pointer-events:none; font-variant-numeric:tabular-nums }
+  .wisp-hud-card { min-width:108px; padding:7px 11px; border:1px solid #65846c88; background:#092724d4; box-shadow:0 2px 15px #0005; backdrop-filter:blur(3px); color:#dbeed7; clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px)) }
+  .wisp-hud-energy { width:clamp(105px,24%,190px) }
+  .wisp-hud-head { display:flex; justify-content:space-between; gap:6px; align-items:center }
+  .wisp-hud-card span { display:block; color:#b9d7bc; font-size:9px; font-weight:800; letter-spacing:.09em }
+  .wisp-hud-card strong { display:block; font-size:15px; line-height:1.15; font-weight:850 }
+  .wisp-hud-distance { text-align:right }
+  .meter { height:6px; overflow:hidden; margin-top:7px; background:#2c4840 }
   #energyFill { width:100%; height:100%; background:#9bd477; transition:width .08s linear }
-  #chaseThreat { width:0%; height:100%; background:linear-gradient(90deg,#e9ad53,#e26947); transition:width .1s linear }
   .game-actions { display:flex; align-items:stretch; gap:8px; margin-top:10px }
   button { font:inherit; touch-action:manipulation; cursor:pointer; border:1px solid #709b75; background:#234c3c; color:#eef7e8; padding:12px 17px; font-size:14px; font-weight:700 }
   button:active,button.down { transform:translateY(1px); background:#3b6c50 }
   button:focus-visible { outline:2px solid #dcf5bc; outline-offset:3px }
   #jump { flex:1; min-height:64px; background:#a6d585; border-color:#dcffb9; color:#112d24; letter-spacing:.08em; user-select:none; -webkit-tap-highlight-color:transparent }
-  #restart { min-height:64px; background:#3c5643; color:#f6f9ed }
   [hidden] { display:none!important }
   @media(max-width:720px) {
     body { padding-bottom:calc(88px + env(safe-area-inset-bottom)) }
     .wrap { padding:10px }
     .game-header h1 { font-size:20px }
     .game-header p { display:none }
-    .run-dashboard { grid-template-columns:1fr 1fr; gap:5px; margin-top:7px }
-    .run-panel { padding:8px 10px }
-    .run-panel.threat { grid-column:1 / -1; }
-    .run-value { font-size:15px }
+    #wisp-hud { top:6px; left:6px; right:6px; gap:6px }
+    .wisp-hud-card { min-width:85px; padding:5px 7px }
+    .wisp-hud-card span { font-size:8px }
+    .wisp-hud-card strong { font-size:12px }
+    .wisp-hud-energy { width:38%; max-width:145px }
     .game-actions { position:fixed; z-index:50; bottom:0; left:0; right:0; padding:8px 10px max(10px,env(safe-area-inset-bottom)); margin:0; background:#092027f2; border-top:1px solid #365b4b; }
-    #jump,#restart { min-height:62px; font-size:14px }
+    #jump { min-height:62px; font-size:14px }
   }
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
 </style>
@@ -2757,21 +2758,16 @@
 </g>
 </g>
 </svg></div>
-  </section>
-  <section class="run-dashboard" aria-label="Race meters">
-    <div class="run-panel">
-      <div class="run-metric-head"><span class="run-label">ESSENCE</span><strong class="run-value" id="energyText">100%</strong></div>
-      <div class="meter" role="meter" aria-label="Energy level"><div id="energyFill"></div></div>
-    </div>
-    <div class="run-panel"><span class="run-label">DISTANCE</span><strong class="run-value" id="distance">0</strong></div>
-    <div class="run-panel threat">
-      <div class="run-metric-head"><span class="run-label">PURSUIT</span><span class="run-value small" id="chaseDistance">—</span></div>
-      <div class="threat-track" role="progressbar" aria-label="Pursuer proximity" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="chaseThreat"></div></div>
+    <div id="wisp-hud" aria-label="Race information">
+      <div class="wisp-hud-card wisp-hud-energy">
+        <div class="wisp-hud-head"><span>ENERGY</span><strong id="energyText">100%</strong></div>
+        <div class="meter" role="meter" aria-label="Energy level" aria-valuemin="0" aria-valuemax="100"><div id="energyFill"></div></div>
+      </div>
+      <div class="wisp-hud-card wisp-hud-distance"><span>DISTANCE</span><strong id="distance">0</strong></div>
     </div>
   </section>
   <div class="game-actions">
     <button id="jump" aria-label="Jump. Tap again to double-jump. Hold while falling to glide." type="button">↑ JUMP · DOUBLE-TAP · HOLD</button>
-    <button id="restart" type="button" hidden>↻ TRY AGAIN</button>
   </div>
 </main>
 

@@ -52,21 +52,16 @@ test('parallax trees use a stable anchor independent of camera and have no hard 
   }
 });
 
-test('wildfire camera change is eased per-frame instead of teleporting the wisp',()=>{
-  const {easeCameraLead}=load();
-  let lead=210;
-  for(let frame=0;frame<240;frame++){
-    const next=easeCameraLead(lead,true,1/60);
-    assert.ok(next>=lead,'focus must move forward');
-    assert.ok(next-lead<8,'wisp must not jump visibly between frames');
-    lead=next;
+test('camera keeps the Wisp horizontally centered from the first frame through every forest cycle',()=>{
+  const {cameraForX}=load();
+  const center=480; // Half of the 960-unit logical viewport.
+  for(const x of [155,160,300,480,1200,2200,4400,6600,8000,12000,24000,48000]){
+    const camera=cameraForX(x);
+    assert.equal(x-camera,center,`Wisp not centered at world position ${x}`);
   }
-  assert.ok(Math.abs(lead-420)<3,'fire framing should settle');
-  for(let frame=0;frame<240;frame++){
-    const next=easeCameraLead(lead,false,1/60);
-    assert.ok(next<=lead,'focus must return smoothly');
-    assert.ok(lead-next<8,'return framing must not jump');
-    lead=next;
-  }
-  assert.ok(Math.abs(lead-210)<3);
+  assert.equal(cameraForX(155),-325,'negative camera is required at the starting line');
+  // The multiplayer spectator should center the racer being followed too.
+  const online=readFileSync(new URL('../../../../public/games/wisp/online.js',import.meta.url),'utf8');
+  assert.match(online,/game\.cameraForX\(live\[0\]\.x\)/);
+  assert.doesNotMatch(online,/Math\.max\(0,live\[0\]\.x-210\)/);
 });

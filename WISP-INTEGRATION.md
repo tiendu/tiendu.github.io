@@ -13,9 +13,9 @@ including the grounded wildfire, one-button jump/double-jump/hold-to-glide, Cutt
 
 ## Multiplayer
 
-Rooms support 2–4 players with a shared generated course seed, synchronized start,
-live positions, individual character selection, independent collectible pickups,
-elimination, and last-survivor standings. The DO validates membership and impossible
+Rooms support 2–5 players (one of each Wisp) with a shared generated course seed, synchronized start,
+live positions, optional nicknames (defaulting to the chosen Wisp), independent collectible pickups,
+elimination, last-survivor standings and host-authorized rematches. The DO validates membership and impossible
 travel jumps. It **does not yet authoritatively simulate the full Cutter, wildfire,
 terrain collisions or orb economy**: browser physics is authoritative for an
 individual player's survival in this beta. This must be hardened before prizes or

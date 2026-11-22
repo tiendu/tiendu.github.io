@@ -2,7 +2,7 @@
 // as UNFOLD, without modifying any existing game's backend.
 import { WispRegistry } from './room-core.mjs';
 const BASE='/api/wisp/';
-const OPS=new Set(['create','join','state','start','sync','leave']);
+const OPS=new Set(['create','join','state','start','rematch','sync','leave']);
 const MAX_BYTES=2048;
 const ORIGINS=['https://tiendu.github.io','http://localhost:4321','http://127.0.0.1:4321'];
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
