@@ -9,7 +9,7 @@
     [{type:'root',weight:4},{type:'short-log',weight:4},{type:'mossy-trunk',weight:3}],
     [{type:'stump',weight:2},{type:'forked-trunk',weight:4},{type:'falling-tree',weight:3},{type:'falling-timber',weight:3}],
     [{type:'timber-stack',weight:3},{type:'rolling-log',weight:3},{type:'erosion-gap',weight:3},{type:'falling-timber',weight:2}],
-    [{type:'burning-log',weight:3},{type:'ash-patch',weight:3},{type:'charred-tree',weight:3},{type:'erosion-gap',weight:3}]
+    [{type:'burning-log',weight:3},{type:'ash-patch',weight:3},{type:'charred-tree',weight:3},{type:'erosion-gap',weight:3},{type:'falling-timber',weight:2}]
   ];
   const NAMES = ['Living','Disturbed','Logged','Burnt'];
   const hash = (seed,index,salt) => {

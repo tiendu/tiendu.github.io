@@ -22,6 +22,8 @@ function loadRunner(){
     console,Math,Set,Map});
   vm.runInContext(source('procedural.js'),context,{filename:'procedural.js'});
   context.WispCourse=window.WispCourse;
+  vm.runInContext(source('projectile.js'),context,{filename:'projectile.js'});
+  context.WispProjectiles=window.WispProjectiles;
   vm.runInContext(benchmarkCode,context,{filename:'benchmark-controller.js'});
   vm.runInContext(source('game.js'),context,{filename:'game.js'});
   assert.ok(window.WISP_TEST);

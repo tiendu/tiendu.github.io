@@ -420,13 +420,25 @@
     return g.hazardStates.get(h.id);
   }
   function dynamicUpdate(g,dt) {
-    const nearby=courseNear(g,g.x,450,900);
+    const nearby=courseNear(g,g.x,850,900);
     for(const h of nearby) {
       if(!['falling-tree','charred-tree','falling-timber','rolling-log'].includes(h.type))continue;
+      if(h.type==='falling-timber'){
+        let d=g.hazardStates.get(h.id);
+        if(!d){
+          d=WispProjectiles.newLog(g.seed,h,speedFor(g),VIEW.ground,WispCourse.hash);
+          g.hazardStates.set(h.id,d);
+        }
+        if(d.phase==='waiting' && g.x>=d.triggerX){
+          d.phase='flight';
+          g.events.push({x:g.x,kind:'timber-launch',id:h.id});
+        }
+        WispProjectiles.advance(d,dt,VIEW.ground);
+        continue;
+      }
       const d=dynamicFor(g,h);
       if(d.phase==='waiting' && g.x>=h.x-(h.type==='rolling-log'?245:760)){
         d.phase='warning';d.timer=0;
-        if(h.type==='falling-timber')notify(g,'warning','Falling timber overhead — watch the shadow!');
         if(h.type==='falling-tree'||h.type==='charred-tree')notify(g,'warning','A tree creaks and begins to fall!');
       }
       if(d.phase==='waiting')continue;
@@ -435,8 +447,7 @@
         d.phase='rolling';d.travel=Math.min(55,d.travel+dt*34);d.x=h.x-d.travel;
         continue;
       }
-      const warning=h.type==='falling-timber'?1.8:2.05;
-      const fallDur=h.type==='falling-timber'?.5:.58;
+      const warning=2.05,fallDur=.58;
       if(d.timer<warning){d.phase='warning';}
       else if(d.timer<warning+fallDur){
         d.phase='falling';const q=(d.timer-warning)/fallDur;
@@ -454,15 +465,17 @@
     if(h.type==='forked-trunk'||h.type==='mossy-trunk')return h.branches.map(b=>({x1:b.x1,x2:b.x2,top:b.top,bottom:b.bottom,kind:b.kind}));
     let x=h.x,w=h.width,top=VIEW.ground-h.height;
     if(h.type==='rolling-log'){const d=g.hazardStates.get(h.id);if(d&&d.phase==='rolling')x=d.x;}
-    if(['falling-tree','charred-tree','falling-timber'].includes(h.type)){
+    if(h.type==='falling-timber'){
+      const hit=WispProjectiles.collider(g.hazardStates.get(h.id));
+      return hit?[hit]:[];
+    }
+    if(h.type==='falling-tree'||h.type==='charred-tree'){
       const d=g.hazardStates.get(h.id);
       if(!d || d.phase==='waiting' || d.phase==='warning')return [];
       if(d.phase==='falling'){
-        // Descending timber is dangerous in the air. A falling tree sweeps over a wide area.
-        return [{x1:x+10,x2:x+(h.type==='falling-timber'?w:Math.min(w,145)),top:d.y-24,bottom:d.y+19,kind:h.type}];
+        return [{x1:x+10,x2:x+Math.min(w,145),top:d.y-24,bottom:d.y+19,kind:h.type}];
       }
-      if(h.type==='falling-tree'||h.type==='charred-tree')return []; // solid, landable trunk platform; side collision handled separately
-      top=VIEW.ground-h.height;
+      return []; // solid, landable trunk platform; side collision handled separately
     }
     return [{x1:x,x2:x+w,top,bottom:VIEW.ground+3,kind:h.type}];
   }
@@ -478,9 +491,10 @@
     const kind=g.procPlanType;
     const needGlide=kind && (
       (kind==='forked-trunk' && g.procPlanStep===4) ||
-      (['erosion-gap','timber-stack','ash-patch','falling-timber'].includes(kind) && g.procPlanStep===2)
+      (['erosion-gap','timber-stack','ash-patch'].includes(kind) && g.procPlanStep===2)
     );
-    g.glide=!!input.glide || (g.auto && needGlide && !g.grounded);
+    const plannedGlide=g.auto && g._projectilePlan?.hold && g._projectilePlan.index>0;
+    g.glide=!!input.glide || (g.auto && (needGlide || plannedGlide) && !g.grounded);
     g.time+=dt;
     g.impactCooldown=Math.max(0,g.impactCooldown-dt);
     g.staggerRemaining=Math.max(0,g.staggerRemaining-dt);
@@ -510,7 +524,8 @@
       }
     }
     dynamicUpdate(g,dt);
-    const obstacles=courseNear(g,g.x,120,100);
+    // Projectile spawn points can be behind us while the airborne log is still nearby.
+    const obstacles=courseNear(g,g.x,850,350);
     for(const h of obstacles){
       if((h.type==='forked-trunk'||h.type==='mossy-trunk') && g.x+13>h.x && oldX+13<=h.x && g.y>339+4)impact(g,'trunk side');
       if((h.type==='falling-tree'||h.type==='charred-tree') && g.hazardStates.get(h.id)?.phase==='landed' &&
@@ -784,13 +799,19 @@
         ctx.restore();
       }else if(h.type==='falling-timber'){
         const d=g.hazardStates.get(h.id);
-        if(d&&d.phase==='warning'){
-          ctx.strokeStyle='#ffce88';ctx.lineWidth=2.6;ctx.setLineDash([7,6]);ctx.beginPath();ctx.moveTo(sx+h.width/2,VIEW.ground-138);ctx.lineTo(sx+h.width/2,VIEW.ground-12);ctx.stroke();ctx.setLineDash([]);
-          ctx.fillStyle='rgba(253,180,98,.29)';ctx.beginPath();ctx.ellipse(sx+h.width/2,VIEW.ground-3,56,9,0,0,Math.PI*2);ctx.fill();
+        if(d && d.phase!=='waiting'){
+          const px=x(d.x),py=d.y;
+          ctx.save();ctx.translate(px,py);ctx.rotate(d.angle);
+          drawImage(biomeSprite(stage,'Timber'),-d.width/2-7,-d.height/2-8,d.width+14,d.height+16);
+          ctx.restore();
+          // Contact sparks/dirt only AFTER a bounce, never a landing predictor.
+          if(d.impactAge<.16){
+            ctx.globalAlpha=Math.max(0,1-d.impactAge/.16)*.54;
+            ctx.fillStyle=stage>=3?'#db723e':'#b39c77';
+            for(let j=0;j<4;j++)ctx.fillRect(px-13+j*9,VIEW.ground-2-(j%2)*5,3,3);
+            ctx.globalAlpha=1;
+          }
         }
-        if(d && (d.phase==='falling'||d.phase==='landed')){
-          drawImage(biomeSprite(stage,'Timber'),sx-8,d.y-30,h.width+16,59);
-        }else drawImage(biomeSprite(stage,'Timber'),sx-8,52,h.width+16,59,.24);
       }else{
         // Natural log, freshly cut timber, or smoldering log: same collider, biome-specific SVG.
         drawImage(biomeSprite(stage,'Log'),sx-12,VIEW.ground-(h.height+18),h.width+24,h.height+20);
