@@ -18,7 +18,11 @@
     "test:node": "NUMBER_TEST_BACKEND=node node --test ../src/games/number/tests/integration.test.mjs ../src/games/number/tests/node.test.mjs",
     "check:unfold": "node --test ../src/games/unfold/tests/*.mjs",
     "deploy:unfold": "wrangler deploy --config wrangler.unfold.jsonc",
-    "dev:unfold": "wrangler dev --config wrangler.unfold.jsonc"
+    "dev:unfold": "wrangler dev --config wrangler.unfold.jsonc",
+    "dev:wisp": "wrangler dev --config wrangler.wisp.jsonc",
+    "deploy:wisp": "wrangler deploy --config wrangler.wisp.jsonc",
+    "test:wisp": "node --test ../src/games/wisp/tests/*.test.mjs",
+    "check:wisp": "npm run test:wisp && wrangler deploy --config wrangler.wisp.jsonc --dry-run"
   },
   "devDependencies": {
     "wrangler": "^4.156.0"

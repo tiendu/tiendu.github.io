@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">WISP Greater Essence Orb</title>
+  <desc id="desc">A larger rare low-poly golden forest energy orb with a bright aura and star-like spark motes.</desc>
+  <defs>
+    <radialGradient id="rareGlow" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#fff6c6" stop-opacity="0.46"/>
+      <stop offset="58%" stop-color="#ffd86a" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#ffb83f" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="rareSoftGlow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g id="orb-root">
+    <circle cx="128" cy="128" r="96" fill="url(#rareGlow)">
+      <animate attributeName="r" values="94;99;94" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.92;1;0.92" dur="3s" repeatCount="indefinite"/>
+    </circle>
+
+    <g id="spark-rays" stroke="#ffe8aa" stroke-width="4" stroke-linecap="round" opacity="0.95">
+      <path d="M128 16 L128 30"><animate attributeName="opacity" values="0.8;1;0.8" dur="2.8s" repeatCount="indefinite"/></path>
+      <path d="M128 226 L128 240"><animate attributeName="opacity" values="1;0.8;1" dur="2.8s" repeatCount="indefinite"/></path>
+      <path d="M16 128 L30 128"><animate attributeName="opacity" values="0.8;1;0.8" dur="2.4s" repeatCount="indefinite"/></path>
+      <path d="M226 128 L240 128"><animate attributeName="opacity" values="1;0.8;1" dur="2.4s" repeatCount="indefinite"/></path>
+      <path d="M49 49 L59 59"/>
+      <path d="M197 49 L187 59"/>
+      <path d="M49 207 L59 197"/>
+      <path d="M207 207 L197 197"/>
+    </g>
+
+    <g id="motes" fill="#fff2c9" opacity="0.96">
+      <circle cx="57" cy="78" r="3.6"><animate attributeName="cy" values="78;71;78" dur="2.8s" repeatCount="indefinite"/></circle>
+      <circle cx="196" cy="74" r="4.2"><animate attributeName="cy" values="74;66;74" dur="3.1s" repeatCount="indefinite"/></circle>
+      <circle cx="208" cy="156" r="2.9"><animate attributeName="cy" values="156;149;156" dur="2.5s" repeatCount="indefinite"/></circle>
+      <circle cx="62" cy="176" r="3.1"><animate attributeName="cy" values="176;168;176" dur="2.9s" repeatCount="indefinite"/></circle>
+    </g>
+
+    <g id="orb" filter="url(#rareSoftGlow)">
+      <animateTransform attributeName="transform" type="translate" values="0 0; 0 -5; 0 0" dur="3s" repeatCount="indefinite"/>
+      <polygon points="128,26 168,49 195,83 201,127 183,171 153,205 128,217 103,205 73,171 55,127 61,83 88,49" fill="#e8ba58"/>
+      <polygon points="128,26 168,49 128,63 88,49" fill="#fff0b2"/>
+      <polygon points="168,49 195,83 162,97 128,63" fill="#ffd973"/>
+      <polygon points="195,83 201,127 168,134 162,97" fill="#f2c55f"/>
+      <polygon points="201,127 183,171 153,159 168,134" fill="#ebb655"/>
+      <polygon points="183,171 153,205 140,179 153,159" fill="#f1ca71"/>
+      <polygon points="153,205 128,217 128,182 140,179" fill="#f8db8e"/>
+      <polygon points="128,217 103,205 116,179 128,182" fill="#efbe67"/>
+      <polygon points="103,205 73,171 103,159 116,179" fill="#e1ad52"/>
+      <polygon points="73,171 55,127 88,134 103,159" fill="#d99e43"/>
+      <polygon points="55,127 61,83 94,97 88,134" fill="#e7b050"/>
+      <polygon points="61,83 88,49 128,63 94,97" fill="#f3ca69"/>
+
+      <polygon points="128,58 160,84 165,126 146,166 128,188 110,166 91,126 96,84" fill="#fff0ba" opacity="0.95"/>
+      <polygon points="128,58 160,84 128,94 96,84" fill="#fffbe4"/>
+      <polygon points="160,84 165,126 141,133 128,94" fill="#ffefbf"/>
+      <polygon points="165,126 146,166 128,149 141,133" fill="#f7d98d"/>
+      <polygon points="146,166 128,188 128,149" fill="#f0c56b"/>
+      <polygon points="128,188 110,166 128,149" fill="#ebb95c"/>
+      <polygon points="110,166 91,126 115,133 128,149" fill="#e5ac55"/>
+      <polygon points="91,126 96,84 128,94 115,133" fill="#f5cf76"/>
+
+      <polygon points="128,76 141,98 128,128 115,98" fill="#ffffff" opacity="0.95"/>
+      <polygon points="128,128 144,154 128,178 112,154" fill="#fff3cd" opacity="0.8"/>
+    </g>
+  </g>
+</svg>

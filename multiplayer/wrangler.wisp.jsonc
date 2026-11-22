@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wisp-multiplayer",
+  "main": "src/wisp-worker.mjs",
+  "compatibility_date": "2026-11-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [{ "name": "WISP_ROOMS", "class_name": "WispRooms" }]
+  },
+  "migrations": [
+    { "tag": "v1-wisp-rooms", "new_sqlite_classes": ["WispRooms"] }
+  ],
+  "vars": {
+    "WISP_ALLOWED_ORIGINS": "https://tiendu.github.io,http://localhost:4321,http://127.0.0.1:4321"
+  },
+  "observability": { "enabled": true }
+}
