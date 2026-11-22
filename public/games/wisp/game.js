@@ -97,7 +97,8 @@
   const STAGE_NAMES=['Living Forest','Disturbed Forest','Logged Forest','Burnt Forest'];
   const STAGE_KEYS=['living','disturbed','logged','burnt'];
   const STAGE_LENGTH=2200;
-  const STAGE_BLEND=800;
+  const STAGE_BLEND=800; // Hazard selection and pursuit pacing: unchanged.
+  const VISUAL_STAGE_BLEND=1200; // Longer visual-only overlap between forests.
   const STAGE_COLORS={
     living:{sky:'#10363c',haze:'#2b554c',soil:'#46372e',mountain:'#254b48'},
     disturbed:{sky:'#303934',haze:'#585246',soil:'#665142',mountain:'#394344'},
@@ -113,16 +114,21 @@
   const stageKey=(i)=>STAGE_KEYS[Math.max(0,Math.min(3,i))];
   const hash01=(n,salt=0)=>{let v=Math.imul((n|0)^Math.imul(salt+1,0x9e3779b1),0x85ebca6b);v^=v>>>13;v=Math.imul(v,0xc2b2ae35);v^=v>>>16;return (v>>>0)/4294967296;};
   const smoothstep=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
-  function stageAt(x){
+  function stageAt(x, blend=STAGE_BLEND){
     const section=Math.max(0,Math.floor(Math.max(0,x)/STAGE_LENGTH));
     const a=Math.min(3,section),b=Math.min(3,a+1);
     const local=Math.max(0,x)-section*STAGE_LENGTH;
-    const t=a>=3?0:smoothstep((local-(STAGE_LENGTH-STAGE_BLEND))/STAGE_BLEND);
+    const t=a>=3?0:smoothstep((local-(STAGE_LENGTH-blend))/blend);
     return {a,b,t,stage:a, name:STAGE_NAMES[a], next:STAGE_NAMES[b]};
   }
-  function stageSample(x,salt=0){
-    const s=stageAt(x),h=hash01(Math.floor(x/103)+salt,salt+27);
-    return h<s.t?s.b:s.a;
+  const visualStageAt=x=>stageAt(x,VISUAL_STAGE_BLEND);
+  // Visual selection is anchored to a scenery object's world coordinate, never
+  // its current screen position, so a parallax tree cannot change form mid-run.
+  function treeMixAt(anchor,index,layer){
+    const mix=visualStageAt(anchor);
+    const switchAt=.23+hash01(index,31+layer)*.54;
+    const t=smoothstep((mix.t-switchAt)/.25+.5);
+    return {...mix, weight:t};
   }
   // Stage difficulty changes smoothly with the world, rather than at abrupt mile markers.
   // Surviving a frenzy earns additional quiet time. This is Cutter-free recovery,
@@ -159,6 +165,7 @@
   let accumulator = 0;
   let reducedMotion = false;
   let paused = false;
+  let cameraLead = 210; // Keep the wisp still while the chase framing eases into place.
   let onlineRoom = false;
   let onlineRace = false;
   let soloChoice = 'Moss';
@@ -671,88 +678,123 @@
     }
   }
 
+  // Crop native-size SVG ground tiles into narrow world-space slices; this
+  // avoids visible stage jumps at every 256px tile boundary.
+  function drawGroundSlice(name,srcX,screenX,y,width,height,alpha=1){
+    const img=imageAssets[name];
+    if(alpha<=.001 || !img || !img.complete || !img.naturalWidth)return;
+    ctx.globalAlpha=alpha;
+    ctx.drawImage(img,srcX,0,width,height,screenX,y,width,height);
+    ctx.globalAlpha=1;
+  }
+
   function drawBg(camera,g) {
-    const center=stageAt(g.x);
-    const a=STAGE_COLORS[stageKey(center.a)],b=STAGE_COLORS[stageKey(center.b)];
-    const sky=blendHex(a.sky,b.sky,center.t);
-    const haze=blendHex(a.haze,b.haze,center.t);
-    const grad=ctx.createLinearGradient(0,0,0,VIEW.ground);
-    grad.addColorStop(0,sky);grad.addColorStop(1,haze);
-    ctx.fillStyle=grad;ctx.fillRect(0,0,VIEW.width,VIEW.ground);
-    // Low contrast parallax mountain silhouette and occasional distant burnt haze.
+    // Sky and soil are sampled in WORLD space across the whole viewport; the
+    // whole screen no longer changes palette when the player crosses a border.
+    const SKY_STEP=24;
+    const soilBands=[];
+    for(let sx=0;sx<VIEW.width;sx+=SKY_STEP){
+      const width=Math.min(SKY_STEP,VIEW.width-sx);
+      const mix=visualStageAt(camera+sx+width/2);
+      const a=STAGE_COLORS[stageKey(mix.a)],b=STAGE_COLORS[stageKey(mix.b)];
+      const grad=ctx.createLinearGradient(0,0,0,VIEW.ground);
+      grad.addColorStop(0,blendHex(a.sky,b.sky,mix.t));
+      grad.addColorStop(1,blendHex(a.haze,b.haze,mix.t));
+      ctx.fillStyle=grad;ctx.fillRect(sx,0,width+.5,VIEW.ground);
+      soilBands.push({x:sx,width:width+.5,color:blendHex(a.soil,b.soil,mix.t)});
+    }
+
+    // Stable parallax mountains: the stage depends on each ridge's world
+    // anchor, not the player's position. No entire-layer palette swap.
     for(let layer=0;layer<2;layer++){
-      const base=layer===0?0.14:0.29;
+      const speed=layer===0?.14:.29;
       const spacing=layer===0?330:265;
-      const off=(camera*base)%spacing;
-      ctx.fillStyle=blendHex(a.mountain,b.mountain,center.t);
+      const first=Math.floor(camera*speed/spacing);
       ctx.globalAlpha=layer===0?.34:.28;
       for(let i=-2;i<6;i++){
-        const sx=i*spacing-off;
+        const world=(first+i)*spacing;
+        const sx=world-camera*speed;
+        const mix=visualStageAt(world/speed);
+        const a=STAGE_COLORS[stageKey(mix.a)],b=STAGE_COLORS[stageKey(mix.b)];
+        ctx.fillStyle=blendHex(a.mountain,b.mountain,mix.t);
         ctx.beginPath();ctx.moveTo(sx-120,VIEW.ground);ctx.lineTo(sx+65,VIEW.ground-140-layer*42);
         ctx.lineTo(sx+240,VIEW.ground);ctx.closePath();ctx.fill();
       }
       ctx.globalAlpha=1;
     }
-    // Fixed world coordinates: stages visibly overlap in the transition zone.
-    // Trees are sampled by world position, not frame time; no popping/flicker.
+
+    // An individual tree never changes its biome as the camera moves. Each
+    // tree has a fixed world anchor and a deterministic, slightly offset
+    // crossfade so forest damage spreads unevenly instead of popping en masse.
     const layerSpecs=[{speed:.12,step:232,w:153,h:270,alpha:.15},{speed:.30,step:240,w:168,h:306,alpha:.23},{speed:.52,step:270,w:185,h:340,alpha:.38}];
+    const densities=[.96,.74,.35,.49];
     layerSpecs.forEach((layer,l)=>{
       const first=Math.floor(camera*layer.speed/layer.step)-2;
       const last=Math.floor((camera*layer.speed+VIEW.width)/layer.step)+2;
       for(let i=first;i<=last;i++){
-        const world=i*layer.step + l*33;
-        const centerWorld=(world-camera*layer.speed)+camera;
-        const stage=stageSample(centerWorld,31+l);
-        // Logging removes trees; Burnt has skeletons, but fewer than Living.
-        const density=[.96,.74,.35,.49][stage];
+        const world=i*layer.step+l*33;
+        const mix=treeMixAt(world/layer.speed,i,l);
+        const density=densities[mix.a]*(1-mix.t)+densities[mix.b]*mix.t;
         if(hash01(i,l*5+8)>density)continue;
         const x=world-camera*layer.speed;
         const type=['Broadleaf','Conifer','Ancient'][Math.floor(hash01(i,l+40)*3)];
-        drawImage(biomeSprite(stage,type),x,VIEW.ground-layer.h+12,layer.w,layer.h,layer.alpha);
+        if(mix.weight<.999)drawImage(biomeSprite(mix.a,type),x,VIEW.ground-layer.h+12,layer.w,layer.h,layer.alpha*(1-mix.weight));
+        if(mix.weight>.001)drawImage(biomeSprite(mix.b,type),x,VIEW.ground-layer.h+12,layer.w,layer.h,layer.alpha*mix.weight);
       }
     });
-    // Shared dirt mass under the individually rendered SVG facets: no seams from opacity mix.
-    ctx.fillStyle=blendHex(a.soil,b.soil,center.t);
-    ctx.fillRect(0,VIEW.ground,VIEW.width,VIEW.height-VIEW.ground);
-    const tile=256;
+
+    // The earth face sits IN FRONT of distant tree roots, as in the original
+    // painter order; don't reveal submerged roots beneath translucent tiles.
+    for(const band of soilBands){
+      ctx.fillStyle=band.color;
+      ctx.fillRect(band.x,VIEW.ground,band.width,VIEW.height-VIEW.ground);
+    }
+
+    // The ground tiles are genuine SVG facets. Mix neighboring biome sprites
+    // every 32 world pixels, not once per tile; preserve the unchanged geometry.
+    const tile=256, slice=32;
     const first=Math.floor(camera/tile)-1,last=Math.floor((camera+VIEW.width)/tile)+1;
     for(let i=first;i<=last;i++){
-      const worldX=i*tile;
-      const mix=stageAt(worldX+tile*.5);
-      const firstBiome=mix.a,secondBiome=mix.b;
-      const suffix=i%2===0?'A':'B';
-      const sx=worldX-camera;
-      drawImage(groundSprite(firstBiome,'Face'+suffix),sx,VIEW.ground+26,256,160,1-mix.t);
-      drawImage(groundSprite(firstBiome,'Top'+suffix),sx,VIEW.ground-22,256,60,1-mix.t);
-      if(mix.t>.001){
-        drawImage(groundSprite(secondBiome,'Face'+suffix),sx,VIEW.ground+26,256,160,mix.t);
-        drawImage(groundSprite(secondBiome,'Top'+suffix),sx,VIEW.ground-22,256,60,mix.t);
+      const worldX=i*tile, suffix=i%2===0?'A':'B';
+      for(let dx=0;dx<tile;dx+=slice){
+        const width=Math.min(slice,tile-dx),mix=visualStageAt(worldX+dx+width/2);
+        const screenX=worldX+dx-camera;
+        drawGroundSlice(groundSprite(mix.a,'Face'+suffix),dx,screenX,VIEW.ground+26,width,160,1-mix.t);
+        drawGroundSlice(groundSprite(mix.a,'Top'+suffix),dx,screenX,VIEW.ground-22,width,60,1-mix.t);
+        if(mix.t>.001){
+          drawGroundSlice(groundSprite(mix.b,'Face'+suffix),dx,screenX,VIEW.ground+26,width,160,mix.t);
+          drawGroundSlice(groundSprite(mix.b,'Top'+suffix),dx,screenX,VIEW.ground-22,width,60,mix.t);
+        }
       }
     }
-    // Tiny surface details are sampled from the two neighboring stages.
-    // Cluster selection avoids a checkerboard pattern: stage proportions change gradually.
+
+    // Ground decoration is discrete by nature; choose deterministic clusters
+    // from the same longer visual progression. No disappearing on camera scroll.
     const firstD=Math.floor(camera/89)-2,lastD=Math.floor((camera+VIEW.width)/89)+2;
     for(let i=firstD;i<=lastD;i++){
       const world=i*89+19+hash01(i,39)*43;
       if(g.chaseEnabled && (procGapAt(g,world)||procGapAt(g,world+18)||procGapAt(g,world-18)))continue;
-      const stage=stageSample(world,42);
+      const mix=visualStageAt(world);
+      const switchAt=.18+hash01(i,42)*.64;
+      const stage=mix.t>=switchAt?mix.b:mix.a;
       const variants=STAGE_DECOR[stageKey(stage)];
       const slot=Math.floor(hash01(i,43)*variants.length);
       const label=variants[slot];
       const w=label.startsWith('Grass')||label.startsWith('Weed')||label.startsWith('Dry')?30:43;
       drawImage(groundSprite(stage,label),world-camera,VIEW.ground-(label==='SmokeWisp'?43:21),w,label==='SmokeWisp'?43:22,.82);
     }
-    // Ambient ash appears gradually during Logged → Burnt.
-    if(center.a>=2){
-      const alpha=center.a===2?center.t*.43:.43;
-      ctx.fillStyle=`rgba(206,162,137,${alpha})`;
-      for(let i=0;i<19;i++){
-        const wx=i*121+hash01(i,84)*87;
-        const x=((wx-camera*.29)%(VIEW.width+80)+(VIEW.width+80))%(VIEW.width+80)-40;
-        const y=135+hash01(i,31)*215;
-        ctx.fillRect(x,y,1.5,2.5);
-      }
+
+    // World-space ash gradually appears only where the logged forest burns.
+    for(let i=Math.floor((camera-60)/121);i<=Math.ceil((camera+VIEW.width+60)/121);i++){
+      const world=i*121+hash01(i,84)*87;
+      const mix=visualStageAt(world);
+      const intensity=mix.a>=3?1:mix.a===2?mix.t:0;
+      if(intensity<=.001)continue;
+      ctx.globalAlpha=intensity*.42;
+      ctx.fillStyle='#cea289';
+      ctx.fillRect(world-camera,135+hash01(i,31)*215,2,3);
     }
+    ctx.globalAlpha=1;
   }
 
   function drawProceduralCourse(g,camera){
@@ -762,7 +804,7 @@
       const sx=x(h.x),stage=h.stage;
       if(h.type==='erosion-gap'){
         ctx.fillStyle='#091b22';ctx.fillRect(sx,VIEW.ground,h.width,VIEW.height-VIEW.ground);
-        const left=stageAt(h.x),right=stageAt(h.x+h.width);
+        const left=visualStageAt(h.x),right=visualStageAt(h.x+h.width);
         const cap=(side,s,px)=>{
           drawImage(groundSprite(s.a,side),px,VIEW.ground-22,96,186,1-s.t);
           if(s.t>.001)drawImage(groundSprite(s.b,side),px,VIEW.ground-22,96,186,s.t);
@@ -900,6 +942,12 @@
     ctx.globalAlpha=1;
   }
 
+  function easeCameraLead(current,fireActive,dt){
+    const target=fireActive?420:210;
+    const elapsed=Math.max(0,Math.min(dt,.08));
+    return current+(target-current)*(1-Math.exp(-elapsed/.85));
+  }
+
   function drawWisp(g,camera) {
     const screenX=g.x-camera;
     ctx.fillStyle='rgba(7,23,27,.31)';ctx.beginPath();ctx.ellipse(screenX,VIEW.ground+2,26,5,0,0,Math.PI*2);ctx.fill();
@@ -924,7 +972,7 @@
     ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#091e24';ctx.fillRect(0,0,dw,dh);
     const s=fit*pixelRatio;
     ctx.setTransform(s,0,0,s,(dw-VIEW.width*s)/2,(dh-VIEW.height*s)/2);
-    const soloCamera = Math.max(0,g.x - (g.fire.active ? (g.fire.preview ? 600 : 420) : 210));
+    const soloCamera = Math.max(0,g.x-cameraLead);
     const camera = window.WispOnline?.camera?.(g,soloCamera) ?? soloCamera;
     drawBg(camera,g);
     drawProceduralCourse(g,camera);
@@ -981,6 +1029,7 @@
     activePointerId=null;
     game=createGame(name,energy,{auto,noPickups,chase:!auto,seed});
     lastCutterAnimation=null;
+    cameraLead=210; // A new run starts with normal framing.
     updateHud(game);
   }
 
@@ -1027,6 +1076,7 @@
       if(paused && !fireSvg.animationsPaused())fireSvg.pauseAnimations();
       if(!paused && fireSvg.animationsPaused())fireSvg.unpauseAnimations();
     }
+    if(!paused)cameraLead=easeCameraLead(cameraLead,game.fire.active,delta);
     paint(game);updateHud(game);
     requestAnimationFrame(frame);
   }
@@ -1101,7 +1151,8 @@
   if(['localhost','127.0.0.1',''].includes(location.hostname)){
     // Physics inspection is local-only; browser UI and Cloudflare never use this.
     window.WISP_TEST={createGame,step,jump,courseNear,
-      procGapAt,procObstacleRects,stageAt,speedFor,CHARACTERS,
+      procGapAt,procObstacleRects,stageAt,visualStageAt,treeMixAt,easeCameraLead,speedFor,CHARACTERS,
+      get cameraLead(){return cameraLead;},
       get current(){return game;}};
   }
   setup();
