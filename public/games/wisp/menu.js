@@ -77,7 +77,7 @@
   names.forEach((name,i)=>{
     const button=document.createElement('button');button.type='button';button.className='wm-wisp';button.dataset.wisp=name;
     button.setAttribute('aria-pressed',String(name===selected));
-    const img=document.createElement('img');img.src=window.WISP_VECTOR_ASSETS?.[name.toLowerCase()+'.svg']||'./assets/'+name.toLowerCase()+'.svg';img.alt='';img.decoding='async';
+    const img=document.createElement('img');img.src='./assets/'+name.toLowerCase()+'.svg';img.alt='';img.decoding='async';
     const title=document.createElement('span');title.className='wm-name';title.textContent=name.toUpperCase();
     const trait=document.createElement('span');trait.className='wm-trait';trait.textContent=traits[i];
     button.append(img,title,trait);button.addEventListener('click',()=>pick(name));cards.append(button);
@@ -201,7 +201,7 @@
       item.className='wm-seat'+(p?' occupied':' open')+(p&&!p.alive&&s.state==='running'?' out':'');
       if(p?.id===s.me)item.classList.add('mine');
       const icon=document.createElement('img');
-      icon.src=window.WISP_VECTOR_ASSETS?.[spirit.toLowerCase()+'.svg']||'./assets/'+spirit.toLowerCase()+'.svg';
+      icon.src='./assets/'+spirit.toLowerCase()+'.svg';
       icon.alt='';icon.decoding='async';
       const name=document.createElement('strong');name.textContent=spirit.toUpperCase();
       const detail=document.createElement('span');

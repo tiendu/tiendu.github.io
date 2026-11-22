@@ -12,7 +12,7 @@
   const sessionKey='wisp-room-session-v1';
   const localImages=Object.fromEntries(['Ember','Moss','Dew','Gale','Dusk'].map(name=>{
     const img=new Image(),file=name.toLowerCase()+'.svg';
-    img.src=window.WISP_VECTOR_ASSETS?.[file]||'./assets/'+file;
+    img.src='./assets/'+file;
     return [name,img];
   }));
 

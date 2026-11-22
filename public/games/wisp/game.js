@@ -14,10 +14,7 @@
   };
   const SPRITE_FILES = {
     Moss: 'moss.svg', Ember: 'ember.svg', Dew: 'dew.svg', Gale: 'gale.svg', Dusk: 'dusk.svg',
-    trunk: 'forked-trunk.svg', log: 'small-log.svg',
-    broadleaf: 'living-broadleaf.svg', conifer: 'living-conifer.svg',
-    damaged: 'disturbed-broadleaf.svg', thinning: 'disturbed-conifer.svg',
-    orb: 'forest-essence.svg', greater: 'greater-essence.svg', timber: 'falling-timber.svg',
+    orb: 'forest-essence.svg', greater: 'greater-essence.svg',
     groundBurntAshFlakes:'burnt-ash-flakes.svg',
     groundBurntCharcoalFragments:'burnt-charcoal-fragments.svg',
     groundBurntEmberFissure:'burnt-ember-fissure.svg',
@@ -92,7 +89,6 @@
     stageLoggedTrunk:'logged-collision-matched-trunk.svg',
     hazardRoot:'hazard-root.svg',hazardStump:'hazard-stump.svg',hazardStack:'hazard-stack.svg',
     hazardAsh:'hazard-ash.svg',hazardTree:'hazard-falling-tree.svg',hazardChar:'hazard-falling-char.svg',
-    wildfireLog:'wildfire-burning-log.svg',
     stageLivingUnderstory:'living-understory.svg',
     stageDisturbedUnderstory:'disturbed-understory.svg',
     stageLoggedUnderstory:'logged-understory.svg',
@@ -781,12 +777,9 @@
     if(g.status==='running')stepProcedural(g,dt,input);
   }
 
-  // Images are hydrated from HTML so the same test can run as a standalone file on iOS.
   function loadImages() {
-    const blobs = window.WISP_VECTOR_ASSETS || {};
     for (const [key,filename] of Object.entries(SPRITE_FILES)) {
-      const src = blobs[filename] || `assets/${filename}`;
-      const img = new Image(); img.decoding='async'; img.src=src; imageAssets[key]=img;
+      const img = new Image(); img.decoding='async'; img.src=`assets/${filename}`; imageAssets[key]=img;
     }
   }
 
@@ -1036,7 +1029,7 @@
     }
     ctx.stroke();
     // A few shallow ripples make the rain meet the terrain. Never paint a
-    // puddle across the geometric openings carved in Phase 1.
+    // puddle across gaps in the ground.
     const gaps=courseNear(g,camera,100,VIEW.width+120).filter(h=>h.type==='erosion-gap');
     for(let i=Math.floor(camera/155)-1;i<Math.ceil((camera+VIEW.width)/155)+1;i++){
       const world=i*155+hash01(i,751)*90;

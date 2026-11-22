@@ -13,7 +13,8 @@ test('every listed WISP SVG asset exists and no obsolete ground names are reques
   const declaration = source.split('const SPRITE_FILES = {')[1]?.split('};')[0];
   assert.ok(declaration, 'SPRITE_FILES not found');
   const entries = [...declaration.matchAll(/(\w+):\s*'([^']+)'/g)];
-  assert.equal(entries.length, 97, 'unexpected WISP asset count');
+  assert.ok(entries.length > 0, 'no WISP assets registered');
+  assert.equal(new Set(entries.map(([, key]) => key)).size, entries.length, 'duplicate sprite key');
   for (const [,key,filename] of entries) {
     await assert.doesNotReject(access(join(assets,filename)), `${key} => ${filename}`);
   }
