@@ -183,7 +183,7 @@
       collected: new Set(), noPickups: opts.noPickups === true,
       auto: !!opts.auto, lastJumpX: null, events: [],
       glide: false, death: null, fire: makeFire(), deathCause:null, seed:Number.isFinite(+opts.seed)?(Number(opts.seed)|0):2026,
-      hazardStates:new Map(),
+      hazardStates:new Map(), gapRescue:null,
       procPlan:null, procPlanStep:0, procPlanX:0, procCleared:new Set(),
     };
   }
@@ -286,7 +286,7 @@
   }
 
   function jump(g) {
-    if (g.status !== 'running' || g.jumps >= 2) return false;
+    if (g.status !== 'running' || g.gapRescue || g.jumps >= 2) return false;
     if (g.grounded) {
       g.vy = -Math.sqrt(2 * G * 70 * g.stats.jump);
       g.jumps = 1;
@@ -486,7 +486,39 @@
     }
     return [{x1:x,x2:x+w,top,bottom:VIEW.ground+3,kind:h.type}];
   }
+  // A missed jump disperses the wisp into essence and carries it to the bank.
+  // The world position advances smoothly; pursuits keep running throughout.
+  function beginGapRescue(g,gap){
+    g.gapRescue={elapsed:0,duration:.72,startX:g.x,
+      endX:Math.max(g.x,gap.x+gap.width+36),gapId:gap.id};
+    g.rescues++;
+    g.energy=Math.max(0,g.energy-28);
+    g.staggerTotal=1.1;g.staggerRemaining=1.1;
+    g.vy=0;g.grounded=false;g.surface=null;g.jumps=2;
+    notify(g,'impact','Gap rescue: -28 energy and slowdown.');
+  }
+  function advanceGapRescue(g,dt){
+    const r=g.gapRescue;
+    r.elapsed=Math.min(r.duration,r.elapsed+dt);
+    const t=smoothstep(r.elapsed/r.duration);
+    g.x=r.startX+(r.endX-r.startX)*t;
+    g.distance=Math.max(g.distance,g.x-155);
+    if(r.elapsed>=r.duration){
+      g.x=r.endX;g.y=VIEW.ground;g.vy=0;
+      g.grounded=true;g.surface='ground';g.jumps=0;
+      g.gapRescue=null;
+    }
+  }
   function stepProcedural(g,dt,input={}) {
+    if(g.gapRescue){
+      g.time+=dt;
+      g.impactCooldown=Math.max(0,g.impactCooldown-dt);
+      g.staggerRemaining=Math.max(0,g.staggerRemaining-dt);
+      advanceGapRescue(g,dt);
+      updateFire(g,dt);
+      if(g.chaseEnabled && !g.fire.active && g.status==='running')proceduralCutter(g,dt);
+      return;
+    }
     if(g.auto){
       if(!window.WispBenchmark)throw new Error('Test-only benchmark controller was not loaded');
       window.WispBenchmark.control(g,{speedFor,courseNear,jump,G,ground:VIEW.ground});
@@ -551,11 +583,7 @@
     }
     if(g.y>VIEW.ground+150){
       const gap=procGapAt(g,g.x)||courseNear(g,g.x,200,120).find(h=>h.type==='erosion-gap'&&Math.abs(h.x-g.x)<200);
-      if(gap){
-        g.x=Math.max(g.x,gap.x+gap.width+36);g.y=VIEW.ground;g.vy=0;g.grounded=true;g.surface='ground';g.jumps=0;
-        g.rescues++;g.energy=Math.max(0,g.energy-28);g.staggerTotal=1.1;g.staggerRemaining=1.1;
-        notify(g,'impact','Gap rescue: -28 energy and slowdown.');
-      }
+      if(gap)beginGapRescue(g,gap);
     }
     updateFire(g,dt);
     if(g.chaseEnabled && !g.fire.active && g.status==='running') proceduralCutter(g,dt);
@@ -688,6 +716,68 @@
     ctx.globalAlpha=1;
   }
 
+  // Exact wall contours from the existing gap SVGs; gameplay collision remains
+  // the flat interval [h.x,h.x + h.width] at the terrain surface.
+  const GAP_LEFT_EDGE=[[0,0],[-5,10],[-8,28],[-17,42],[-11,58],[-26,77],
+    [-13,96],[-19,112],[-31,138],[-27,164]];
+  const GAP_RIGHT_EDGE=[[0,0],[5,17],[11,31],[17,52],[11,74],[23,94],
+    [18,121],[28,147],[26,164]];
+  function traceGapOpening(path,left,width){
+    path.moveTo(left,VIEW.ground-24);
+    path.lineTo(left+width,VIEW.ground-24);
+    for(const [dx,dy] of GAP_RIGHT_EDGE)path.lineTo(left+width+dx,VIEW.ground+dy);
+    path.lineTo(left+26,VIEW.height+16);
+    path.lineTo(left-27,VIEW.height+16);
+    for(let i=GAP_LEFT_EDGE.length-1;i>=0;i--){
+      const [dx,dy]=GAP_LEFT_EDGE[i];
+      path.lineTo(left+dx,VIEW.ground+dy);
+    }
+    path.closePath();
+  }
+  function maskGroundGaps(path,gaps,camera){
+    path.beginPath();
+    path.rect(-2,VIEW.ground-24,VIEW.width+4,VIEW.height-VIEW.ground+40);
+    for(const h of gaps)traceGapOpening(path,h.x-camera,h.width);
+    path.clip('evenodd');
+  }
+  function drawGapDepth(h,camera){
+    const left=h.x-camera,w=h.width;
+    ctx.save();
+    ctx.beginPath();traceGapOpening(ctx,left,w);ctx.clip();
+    const depth=ctx.createLinearGradient(0,VIEW.ground,0,VIEW.height);
+    depth.addColorStop(0,'#17292a');
+    depth.addColorStop(.40,'#0d2025');
+    depth.addColorStop(1,'#071218');
+    ctx.fillStyle=depth;
+    ctx.fillRect(left-40,VIEW.ground-4,w+80,VIEW.height-VIEW.ground+24);
+    // Directional crevice shadows along the uneven walls, not a black box.
+    const shadeLeft=ctx.createLinearGradient(left-32,0,left+26,0);
+    shadeLeft.addColorStop(0,'rgba(0,0,0,.62)');
+    shadeLeft.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=shadeLeft;ctx.fillRect(left-33,VIEW.ground,60,VIEW.height-VIEW.ground+16);
+    const shadeRight=ctx.createLinearGradient(left+w-24,0,left+w+33,0);
+    shadeRight.addColorStop(0,'rgba(0,0,0,0)');
+    shadeRight.addColorStop(1,'rgba(0,0,0,.62)');
+    ctx.fillStyle=shadeRight;ctx.fillRect(left+w-25,VIEW.ground,60,VIEW.height-VIEW.ground+16);
+    for(let i=0;i<4;i++){
+      const y=VIEW.ground+23+i*25+hash01(h.index,i+81)*6;
+      const reach=6+hash01(h.index,i+97)*17;
+      ctx.fillStyle=i%2?'rgba(88,84,72,.22)':'rgba(102,95,80,.18)';
+      ctx.beginPath();
+      if(i%2){
+        ctx.moveTo(left+w+24,y-6);
+        ctx.lineTo(left+w-reach,y+5);
+        ctx.lineTo(left+w+18,y+11);
+      }else{
+        ctx.moveTo(left-25,y-5);
+        ctx.lineTo(left+reach,y+4);
+        ctx.lineTo(left-22,y+12);
+      }
+      ctx.closePath();ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawBg(camera,g) {
     // Sky and soil are sampled in WORLD space across the whole viewport; the
     // whole screen no longer changes palette when the player crosses a border.
@@ -743,6 +833,10 @@
       }
     });
 
+    // Clip the full ground layer, including its turf and decorations. A pit
+    // is an actual opening rather than an overlay covering intact ground.
+    const visibleGaps=courseNear(g,camera,180,VIEW.width+180).filter(h=>h.type==='erosion-gap');
+    ctx.save();maskGroundGaps(ctx,visibleGaps,camera);
     // The earth face sits IN FRONT of distant tree roots, as in the original
     // painter order; don't reveal submerged roots beneath translucent tiles.
     for(const band of soilBands){
@@ -784,6 +878,7 @@
       drawImage(groundSprite(stage,label),world-camera,VIEW.ground-(label==='SmokeWisp'?43:21),w,label==='SmokeWisp'?43:22,.82);
     }
 
+    ctx.restore(); // Ash particles belong in the air, outside the dirt clip.
     // World-space ash gradually appears only where the logged forest burns.
     for(let i=Math.floor((camera-60)/121);i<=Math.ceil((camera+VIEW.width+60)/121);i++){
       const world=i*121+hash01(i,84)*87;
@@ -803,7 +898,7 @@
     for(const h of visible){
       const sx=x(h.x),stage=h.stage;
       if(h.type==='erosion-gap'){
-        ctx.fillStyle='#091b22';ctx.fillRect(sx,VIEW.ground,h.width,VIEW.height-VIEW.ground);
+        drawGapDepth(h,camera);
         const left=visualStageAt(h.x),right=visualStageAt(h.x+h.width);
         const cap=(side,s,px)=>{
           drawImage(groundSprite(s.a,side),px,VIEW.ground-22,96,186,1-s.t);
@@ -948,6 +1043,29 @@
     return current+(target-current)*(1-Math.exp(-elapsed/.85));
   }
 
+  function drawGapRescue(g,camera){
+    const r=g.gapRescue;
+    const progress=r.elapsed/r.duration;
+    const travel=smoothstep(progress);
+    const startX=r.startX-camera,endX=r.endX-camera;
+    ctx.save();
+    for(let i=0;i<13;i++){
+      const u=travel-i*.045;
+      if(u<=0||u>1)continue;
+      const px=startX+(endX-startX)*u;
+      const py=VIEW.ground-43-34*Math.sin(Math.PI*u);
+      ctx.globalAlpha=(1-i/13)*.70;
+      ctx.fillStyle=g.stats.color;
+      ctx.beginPath();ctx.arc(px,py,2.3+(1-u)*2,0,Math.PI*2);ctx.fill();
+    }
+    if(progress>.64){
+      ctx.globalAlpha=clamp((progress-.64)/.36,0,1);
+      ctx.translate(g.x-camera,VIEW.ground-30-15*(1-travel));
+      drawImage(g.name,-39,-40,78,78);
+    }
+    ctx.restore();
+  }
+
   function drawWisp(g,camera) {
     const screenX=g.x-camera;
     ctx.fillStyle='rgba(7,23,27,.31)';ctx.beginPath();ctx.ellipse(screenX,VIEW.ground+2,26,5,0,0,Math.PI*2);ctx.fill();
@@ -979,6 +1097,7 @@
     drawCutterShadow(g,camera);
     drawWildfire(g,camera);
     if(g.status==='dying' || (g.status==='caught' && g.death)) drawDeath(g,camera);
+    else if(g.gapRescue) drawGapRescue(g,camera);
     else drawWisp(g,camera);
     window.WispOnline?.draw?.(ctx,g,camera);
     updateCutterOverlay(g,camera);
@@ -1152,6 +1271,7 @@
     // Physics inspection is local-only; browser UI and Cloudflare never use this.
     window.WISP_TEST={createGame,step,jump,courseNear,
       procGapAt,procObstacleRects,stageAt,visualStageAt,treeMixAt,easeCameraLead,speedFor,CHARACTERS,
+      traceGapOpening,maskGroundGaps,
       get cameraLead(){return cameraLead;},
       get current(){return game;}};
   }
