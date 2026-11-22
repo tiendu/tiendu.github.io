@@ -1,4 +1,6 @@
 ---
+import '../../../styles/pages/wisp.css';
+
 // The SVG-heavy browser game stays independent of Astro's build pipeline.
 // This matches the existing static-game pattern without affecting other games.
 // This is the same Cloudflare account subdomain as the site's UNFOLD worker.
@@ -13,7 +15,6 @@ const gameURL=`/games/wisp/play.html${workerURL?'?api='+encodeURIComponent(worke
   <meta name="theme-color" content="#081c23" />
   <meta name="description" content="WISP: a polygonal endless forest survival race. Run, jump, glide and escape the wildfire, solo or with friends." />
   <title>WISP · Forest Survival</title>
-  <style>html,body{margin:0;background:#081c23;height:100%;overflow:hidden} iframe{display:block;width:100%;height:100dvh;border:0}</style>
 </head><body>
   <iframe id="wisp-game" src={gameURL} title="WISP — forest survival game" allow="fullscreen"></iframe>
   <script is:inline>

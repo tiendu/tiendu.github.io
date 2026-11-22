@@ -93,6 +93,10 @@
     hazardRoot:'hazard-root.svg',hazardStump:'hazard-stump.svg',hazardStack:'hazard-stack.svg',
     hazardAsh:'hazard-ash.svg',hazardTree:'hazard-falling-tree.svg',hazardChar:'hazard-falling-char.svg',
     wildfireLog:'wildfire-burning-log.svg',
+    stageLivingUnderstory:'living-understory.svg',
+    stageDisturbedUnderstory:'disturbed-understory.svg',
+    stageLoggedUnderstory:'logged-understory.svg',
+    stageBurntUnderstory:'burnt-understory.svg',
   };
   const STAGE_NAMES=['Living Forest','Disturbed Forest','Logged Forest','Burnt Forest'];
   const STAGE_KEYS=['living','disturbed','logged','burnt'];
@@ -100,10 +104,10 @@
   const STAGE_BLEND=800; // Hazard selection and pursuit pacing: unchanged.
   const VISUAL_STAGE_BLEND=1200; // Longer visual-only overlap between forests.
   const STAGE_COLORS={
-    living:{sky:'#10363c',haze:'#2b554c',soil:'#46372e',mountain:'#254b48'},
-    disturbed:{sky:'#303934',haze:'#585246',soil:'#665142',mountain:'#394344'},
-    logged:{sky:'#353335',haze:'#66544b',soil:'#6b5543',mountain:'#343b3c'},
-    burnt:{sky:'#22252e',haze:'#403336',soil:'#2d2b30',mountain:'#272d32'}
+    living:{sky:'#153f44',haze:'#345a4d',soil:'#46372e',mountain:'#31574d'},
+    disturbed:{sky:'#333f3b',haze:'#645b4c',soil:'#665142',mountain:'#48554b'},
+    logged:{sky:'#464043',haze:'#67564a',soil:'#6b5543',mountain:'#4c4541'},
+    burnt:{sky:'#25242e',haze:'#493a3a',soil:'#2d2b30',mountain:'#373039'}
   };
   const STAGE_DECOR={
     living:['GrassTuftA','GrassTuftB','MossPatch','LeafLitter'],
@@ -778,6 +782,133 @@
     ctx.restore();
   }
 
+  // Stable ridges sampled in parallax-world coordinates, not repeated triangles.
+  // Smooth multi-octave noise produces broad hills and smaller natural shoulders.
+  function smoothNoise(world,period,salt){
+    const position=world/period,cell=Math.floor(position);
+    const t=smoothstep(position-cell);
+    return hash01(cell,salt)*(1-t)+hash01(cell+1,salt)*t;
+  }
+  function ridgeHeight(world,layer){
+    const far=layer===0;
+    const wide=smoothNoise(world,far?470:350,far?181:199);
+    const small=smoothNoise(world,far?147:103,far?211:229);
+    return (far?211:263)-(wide-.5)*(far?63:79)-(small-.5)*(far?22:35);
+  }
+  function sceneryTreeAt(i,l,layer){
+    const jitter=(hash01(i,301+l*11)-.5)*layer.step*.62;
+    const world=i*layer.step+l*33+jitter;
+    const scale=.79+hash01(i,331+l*7)*.41;
+    const kind=hash01(i,349+l*13);
+    return {world,width:layer.w*scale,height:layer.h*scale,
+      type:kind<.50?'Broadleaf':kind<.88?'Conifer':'Ancient',
+      roll:hash01(i,371+l*17),
+      patch:.69+.48*smoothNoise(world,layer.step*3.8,391+l*7),
+      alpha:layer.alpha*(.78+.23*hash01(i,403+l*13))};
+  }
+  function drawRidges(camera){
+    const step=24;
+    for(let layer=0;layer<2;layer++){
+      const speed=layer===0?.14:.29;
+      const offset=camera*speed;
+      ctx.globalAlpha=layer===0?.35:.29;
+      for(let sx=-step;sx<VIEW.width+step;sx+=step){
+        const wx=offset+sx;
+        const mix=visualStageAt((wx+step*.5)/speed);
+        const a=STAGE_COLORS[stageKey(mix.a)],b=STAGE_COLORS[stageKey(mix.b)];
+        ctx.fillStyle=blendHex(a.mountain,b.mountain,mix.t);
+        ctx.beginPath();
+        ctx.moveTo(sx,VIEW.ground);
+        ctx.lineTo(sx,ridgeHeight(wx,layer));
+        ctx.lineTo(sx+step+1,ridgeHeight(wx+step+1,layer));
+        ctx.lineTo(sx+step+1,VIEW.ground);
+        ctx.closePath();ctx.fill();
+      }
+      ctx.globalAlpha=1;
+    }
+  }
+  function drawLightShafts(camera){
+    const speed=.19,period=540;
+    const first=Math.floor(camera*speed/period)-2;
+    const last=Math.ceil((camera*speed+VIEW.width)/period)+2;
+    for(let i=first;i<=last;i++){
+      const world=i*period+hash01(i,421)*170;
+      const mix=visualStageAt(world/speed);
+      const living=(mix.a===0?1-mix.t:0)+(mix.b===0?mix.t:0);
+      if(living<=.01)continue;
+      const x=world-camera*speed;
+      ctx.globalAlpha=living*(.065+.03*hash01(i,423));
+      ctx.fillStyle='#cfdfb4';ctx.beginPath();
+      ctx.moveTo(x-19,0);ctx.lineTo(x+22,0);
+      ctx.lineTo(x+132,VIEW.ground);ctx.lineTo(x+65,VIEW.ground);
+      ctx.closePath();ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+  function drawMist(camera){
+    const speed=.22,period=345;
+    const first=Math.floor(camera*speed/period)-2;
+    const last=Math.ceil((camera*speed+VIEW.width)/period)+2;
+    for(let i=first;i<=last;i++){
+      const world=i*period+hash01(i,449)*73;
+      const mix=visualStageAt(world/speed);
+      // Rain/smoke belong to later phases. Here, living fog gives way to dusty air.
+      const tone=['rgba(159,194,171,','rgba(174,163,135,',
+        'rgba(173,148,132,','rgba(149,140,149,'];
+      const stage=hash01(i,451)<mix.t?mix.b:mix.a;
+      const sx=world-camera*speed;
+      const opacity=.06+.035*hash01(i,457);
+      const fog=ctx.createLinearGradient(sx-210,0,sx+300,0);
+      fog.addColorStop(0,tone[stage]+'0)');
+      fog.addColorStop(.45,tone[stage]+opacity.toFixed(3)+')');
+      fog.addColorStop(1,tone[stage]+'0)');
+      ctx.fillStyle=fog;
+      ctx.fillRect(sx-210,254+hash01(i,463)*44,510,35);
+    }
+  }
+  function drawUnderstory(camera,g,gaps){
+    const spacing=125;
+    const first=Math.floor(camera/spacing)-2;
+    const last=Math.ceil((camera+VIEW.width)/spacing)+2;
+    const density=[.81,.58,.34,.48];
+    for(let i=first;i<=last;i++){
+      const world=i*spacing+hash01(i,481)*67;
+      const mix=treeMixAt(world,i,4);
+      const chance=(density[mix.a]*(1-mix.t)+density[mix.b]*mix.t);
+      if(hash01(i,487)>chance)continue;
+      const size=51+hash01(i,491)*18;
+      const width=size*1.37;
+      // Do not draw foliage over a pit, even in chase-disabled practice runs.
+      if(gaps.some(h=>world+width>h.x&&world-7<h.x+h.width))continue;
+      const sx=world-camera;
+      const alpha=.70+.18*hash01(i,499);
+      if(mix.weight<.999)drawImage(biomeSprite(mix.a,'Understory'),sx,VIEW.ground-size+5,width,size,alpha*(1-mix.weight));
+      if(mix.weight>.001)drawImage(biomeSprite(mix.b,'Understory'),sx,VIEW.ground-size+5,width,size,alpha*mix.weight);
+    }
+  }
+  function drawAirDetails(camera,g){
+    // World-space particles: camera motion cannot create new random patterns.
+    const spacing=88;
+    const first=Math.floor(camera/spacing)-2;
+    const last=Math.ceil((camera+VIEW.width)/spacing)+2;
+    const colors=['#c6d89a','#beb49a','#c8ad9b','#d6a28c'];
+    const densities=[.68,.38,.44,.82];
+    for(let i=first;i<=last;i++){
+      const world=i*spacing+hash01(i,521)*spacing*.75;
+      const mix=visualStageAt(world);
+      const stage=hash01(i,523)<mix.t?mix.b:mix.a;
+      if(hash01(i,527)>densities[stage])continue;
+      const drift=reducedMotion?0:Math.sin(g.time*(.35+.27*hash01(i,533))+i*2.3)*5;
+      const x=world-camera+drift;
+      const y=98+hash01(i,541)*242+(reducedMotion?0:Math.cos(g.time*.40+i)*3);
+      const r=.9+hash01(i,547)*1.25;
+      ctx.globalAlpha=(stage===3?.38:.22)*(.65+.35*hash01(i,551));
+      ctx.fillStyle=colors[stage];
+      ctx.fillRect(x,y,r,r*(stage===3?1.4:.75));
+    }
+    ctx.globalAlpha=1;
+  }
+
   function drawBg(camera,g) {
     // Sky and soil are sampled in WORLD space across the whole viewport; the
     // whole screen no longer changes palette when the player crosses a border.
@@ -794,42 +925,30 @@
       soilBands.push({x:sx,width:width+.5,color:blendHex(a.soil,b.soil,mix.t)});
     }
 
-    // Stable parallax mountains: the stage depends on each ridge's world
-    // anchor, not the player's position. No entire-layer palette swap.
-    for(let layer=0;layer<2;layer++){
-      const speed=layer===0?.14:.29;
-      const spacing=layer===0?330:265;
-      const first=Math.floor(camera*speed/spacing);
-      ctx.globalAlpha=layer===0?.34:.28;
-      for(let i=-2;i<6;i++){
-        const world=(first+i)*spacing;
-        const sx=world-camera*speed;
-        const mix=visualStageAt(world/speed);
-        const a=STAGE_COLORS[stageKey(mix.a)],b=STAGE_COLORS[stageKey(mix.b)];
-        ctx.fillStyle=blendHex(a.mountain,b.mountain,mix.t);
-        ctx.beginPath();ctx.moveTo(sx-120,VIEW.ground);ctx.lineTo(sx+65,VIEW.ground-140-layer*42);
-        ctx.lineTo(sx+240,VIEW.ground);ctx.closePath();ctx.fill();
-      }
-      ctx.globalAlpha=1;
-    }
+    drawLightShafts(camera);
+    drawRidges(camera);
+    drawMist(camera);
 
     // An individual tree never changes its biome as the camera moves. Each
     // tree has a fixed world anchor and a deterministic, slightly offset
     // crossfade so forest damage spreads unevenly instead of popping en masse.
-    const layerSpecs=[{speed:.12,step:232,w:153,h:270,alpha:.15},{speed:.30,step:240,w:168,h:306,alpha:.23},{speed:.52,step:270,w:185,h:340,alpha:.38}];
-    const densities=[.96,.74,.35,.49];
+    const layerSpecs=[{speed:.12,step:198,w:153,h:278,alpha:.17},
+      {speed:.30,step:208,w:168,h:310,alpha:.26},
+      {speed:.52,step:236,w:185,h:340,alpha:.39}];
+    const densities=[.99,.77,.41,.56];
     layerSpecs.forEach((layer,l)=>{
-      const first=Math.floor(camera*layer.speed/layer.step)-2;
-      const last=Math.floor((camera*layer.speed+VIEW.width)/layer.step)+2;
+      // Add margins for the deterministic offsets and the widest ancient trees.
+      const first=Math.floor(camera*layer.speed/layer.step)-3;
+      const last=Math.floor((camera*layer.speed+VIEW.width)/layer.step)+3;
       for(let i=first;i<=last;i++){
-        const world=i*layer.step+l*33;
-        const mix=treeMixAt(world/layer.speed,i,l);
-        const density=densities[mix.a]*(1-mix.t)+densities[mix.b]*mix.t;
-        if(hash01(i,l*5+8)>density)continue;
-        const x=world-camera*layer.speed;
-        const type=['Broadleaf','Conifer','Ancient'][Math.floor(hash01(i,l+40)*3)];
-        if(mix.weight<.999)drawImage(biomeSprite(mix.a,type),x,VIEW.ground-layer.h+12,layer.w,layer.h,layer.alpha*(1-mix.weight));
-        if(mix.weight>.001)drawImage(biomeSprite(mix.b,type),x,VIEW.ground-layer.h+12,layer.w,layer.h,layer.alpha*mix.weight);
+        const tree=sceneryTreeAt(i,l,layer);
+        const mix=treeMixAt(tree.world/layer.speed,i,l);
+        const density=(densities[mix.a]*(1-mix.t)+densities[mix.b]*mix.t)*tree.patch;
+        if(tree.roll>Math.min(1,density))continue;
+        const x=tree.world-camera*layer.speed;
+        const y=VIEW.ground-tree.height+12;
+        if(mix.weight<.999)drawImage(biomeSprite(mix.a,tree.type),x,y,tree.width,tree.height,tree.alpha*(1-mix.weight));
+        if(mix.weight>.001)drawImage(biomeSprite(mix.b,tree.type),x,y,tree.width,tree.height,tree.alpha*mix.weight);
       }
     });
 
@@ -862,12 +981,13 @@
       }
     }
 
+    ctx.restore(); // Ground finished. Decorations must not be clipped to dirt y>=356.
     // Ground decoration is discrete by nature; choose deterministic clusters
     // from the same longer visual progression. No disappearing on camera scroll.
     const firstD=Math.floor(camera/89)-2,lastD=Math.floor((camera+VIEW.width)/89)+2;
     for(let i=firstD;i<=lastD;i++){
       const world=i*89+19+hash01(i,39)*43;
-      if(g.chaseEnabled && (procGapAt(g,world)||procGapAt(g,world+18)||procGapAt(g,world-18)))continue;
+      if(visibleGaps.some(h=>world+44>h.x&&world-4<h.x+h.width))continue;
       const mix=visualStageAt(world);
       const switchAt=.18+hash01(i,42)*.64;
       const stage=mix.t>=switchAt?mix.b:mix.a;
@@ -878,18 +998,8 @@
       drawImage(groundSprite(stage,label),world-camera,VIEW.ground-(label==='SmokeWisp'?43:21),w,label==='SmokeWisp'?43:22,.82);
     }
 
-    ctx.restore(); // Ash particles belong in the air, outside the dirt clip.
-    // World-space ash gradually appears only where the logged forest burns.
-    for(let i=Math.floor((camera-60)/121);i<=Math.ceil((camera+VIEW.width+60)/121);i++){
-      const world=i*121+hash01(i,84)*87;
-      const mix=visualStageAt(world);
-      const intensity=mix.a>=3?1:mix.a===2?mix.t:0;
-      if(intensity<=.001)continue;
-      ctx.globalAlpha=intensity*.42;
-      ctx.fillStyle='#cea289';
-      ctx.fillRect(world-camera,135+hash01(i,31)*215,2,3);
-    }
-    ctx.globalAlpha=1;
+    drawUnderstory(camera,g,visibleGaps);
+    drawAirDetails(camera,g);
   }
 
   function drawProceduralCourse(g,camera){
@@ -1271,7 +1381,7 @@
     // Physics inspection is local-only; browser UI and Cloudflare never use this.
     window.WISP_TEST={createGame,step,jump,courseNear,
       procGapAt,procObstacleRects,stageAt,visualStageAt,treeMixAt,easeCameraLead,speedFor,CHARACTERS,
-      traceGapOpening,maskGroundGaps,
+      traceGapOpening,maskGroundGaps,ridgeHeight,smoothNoise,sceneryTreeAt,
       get cameraLead(){return cameraLead;},
       get current(){return game;}};
   }
