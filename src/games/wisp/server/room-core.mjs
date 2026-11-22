@@ -5,7 +5,6 @@ export const MAX_PLAYERS = 4;
 export const ROOM_TTL_MS = 45 * 60_000;
 const CODE = /^\d{6}$/;
 const TOKEN = /^[a-zA-Z0-9-]{20,100}$/;
-const EPOCH_MIN = 1_000_000_000_000;
 const clean = (name) => String(name ?? '').trim().replace(/[\u0000-\u001F\u007F<>]/g, '').slice(0, 18) || 'Wisp';
 const error = (reason, status = 400) => Object.assign(new Error(reason), { status });
 const int = (v, lo, hi) => Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : lo;

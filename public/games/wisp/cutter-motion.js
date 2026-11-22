@@ -50,7 +50,7 @@
       l.b.setAttribute('transform',`translate(0 72) rotate(${(lo-u).toFixed(2)})`);
       l.foot.setAttribute('transform',`translate(0 73) rotate(${(foot-lo).toFixed(2)})`);
     }
-    function ik(dx,y,side){
+    function ik(dx,y,_side){
       const L1=72,L2=73;
       const distance=clamp(Math.hypot(dx,y),1,L1+L2-0.7);
       const fx=dx*distance/Math.max(.0001,Math.hypot(dx,y));
@@ -64,7 +64,7 @@
       const lower=Math.atan2(-(fx-kx),fy-ky)*180/Math.PI;
       return [upper,lower,0];
     }
-    function gait(p,side,rate){
+    function gait(p,side,_rate){
       p=((p%1)+1)%1;
       let x,y,foot=0;
       if(p<.61){

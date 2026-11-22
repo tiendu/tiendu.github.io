@@ -46,7 +46,7 @@ test('sequence, speed cap, energy zero, elimination and winner',()=>{
 test('disconnect timeout is elimination, expired rooms pruned',()=>{
   const {r,tick}=setup();
   const h=r.create({name:'A',wisp:'Moss'}),code=h.snapshot.code;
-  const g=r.join({code,name:'B',wisp:'Gale'});r.start({code,token:h.token});tick(4000);
+  r.join({code,name:'B',wisp:'Gale'});r.start({code,token:h.token});tick(4000);
   r.sync({code,token:h.token,sequence:0,x:200,y:380,energy:100});
   tick(36_000);
   r.state({code,token:h.token});

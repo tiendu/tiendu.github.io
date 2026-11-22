@@ -142,12 +142,12 @@
     snapshot:()=>snapshot,create:options=>enter('create',options),
     join:options=>enter('join',options),start,leave,invite,
     isSpectating(){return Boolean(session&&snapshot?.state==='running'&&game.current.status==='caught');},
-    camera(g,solo){
+    camera(_g,solo){
       if(!this.isSpectating())return solo;
       const live=snapshot.players.filter(p=>p.alive).sort((a,b)=>b.distance-a.distance);
       return live.length?Math.max(0,live[0].x-210):solo;
     },
-    draw(ctx,g,camera){
+    draw(ctx,_g,camera){
       if(!matchStarted||!snapshot)return;
       for(const p of snapshot.players){
         if(p.id===snapshot.me||!p.alive)continue;

@@ -99,7 +99,7 @@ async function flyIn(shell, from) {
   ], { duration: MOTION.deal, easing: "cubic-bezier(.2,.65,.3,1)" });
 }
 
-function nudgeExisting(root, previous) {
+function nudgeExisting(_root, previous) {
   for (const [shell, before] of previous) {
     const after = center(shell.getBoundingClientRect());
     const dx = before.x - after.x;

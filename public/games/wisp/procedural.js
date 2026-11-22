@@ -9,9 +9,10 @@
     [{type:'root',weight:4},{type:'short-log',weight:4},{type:'mossy-trunk',weight:3}],
     [{type:'stump',weight:2},{type:'forked-trunk',weight:4},{type:'falling-tree',weight:3},{type:'falling-timber',weight:3}],
     [{type:'timber-stack',weight:3},{type:'rolling-log',weight:3},{type:'erosion-gap',weight:3},{type:'falling-timber',weight:2}],
-    [{type:'burning-log',weight:3},{type:'ash-patch',weight:3},{type:'charred-tree',weight:3},{type:'erosion-gap',weight:3},{type:'falling-timber',weight:2}]
+    [{type:'burning-log',weight:3},{type:'ash-patch',weight:3},{type:'charred-tree',weight:3},{type:'erosion-gap',weight:3},{type:'falling-timber',weight:2}],
+    [{type:'root',weight:4},{type:'short-log',weight:3},{type:'mossy-trunk',weight:2}]
   ];
-  const NAMES = ['Living','Disturbed','Logged','Burnt'];
+  const NAMES = ['Living','Disturbed','Logged','Burnt','Regrowth'];
   const hash = (seed,index,salt) => {
     let h = (seed|0) ^ Math.imul(index+719,0x9e3779b1) ^ Math.imul(salt+61,0x85ebca6b);
     h = Math.imul(h ^ (h>>>16),0x7feb352d);h = Math.imul(h ^ (h>>>15),0x846ca68b);
@@ -32,15 +33,16 @@
     2: {'timber-stack':['rolling-log','short-log'], 'rolling-log':['timber-stack','short-log'],
         'falling-timber':['rolling-log','timber-stack'], 'erosion-gap':['short-log']},
     3: {'burning-log':['ash-patch','short-log'], 'ash-patch':['burning-log','short-log'],
-        'erosion-gap':['burning-log'], 'charred-tree':['ash-patch']}
+        'erosion-gap':['burning-log'], 'charred-tree':['ash-patch']},
+    4: {'root':['short-log'], 'short-log':['root']}
   };
   function intensity(index,stage){
     // Four-stage ramp with a gentle late-game increase, bounded for fairness.
-    const biome=[.10,.34,.53,.65][stage];
+    const biome=[.10,.34,.53,.65,.16][stage];
     const progress=Math.min(.15,Math.max(0,index-3)*.009);
     return Math.min(.78,biome+progress);
   }
-  const SPACING=[380,375,420,390];
+  const SPACING=[380,375,420,390,385];
   function combined(seed,index,primary){
     if(index===0 || index%7===6 || !SECONDARY[primary.stage][primary.type])return null;
     if(hash(seed,index,13)>=intensity(index,primary.stage))return null;
@@ -63,10 +65,10 @@
   }
 
   function make(seed,index,stageAt){
-    const cacheKey=`${seed|0}:${index}`;
-    if(CACHE.has(cacheKey))return CACHE.get(cacheKey);
     const base=index*CHUNK;
     const s=stageAt(base+420);
+    const cacheKey=`${seed|0}:${index}:${s.a}:${s.b}:${Math.round(s.t*1000)}`;
+    if(CACHE.has(cacheKey))return CACHE.get(cacheKey);
     const stage=hash(seed,index,1)<s.t?s.b:s.a;
     const type=choose(POOLS[stage],hash(seed,index,2));
     const drift=(hash(seed,index,3)-.5)*42;
@@ -93,7 +95,7 @@
     // A perfect player needs the occasional high, risky Greater Essence to
     // compensate for skipped common pickups and environmental mistakes.
     const orbs=[];
-    const commonChance=[.82,.76,.70,.65][stage];
+    const commonChance=[.82,.76,.70,.65,.84][stage];
     if(hash(seed,index,6)<commonChance){
       // Place the baseline +10 pickup on a reliably reachable safe section.
       orbs.push({id:`${index}:common`,x:base+147+hash(seed,index,31)*36,

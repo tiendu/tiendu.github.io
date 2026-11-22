@@ -98,8 +98,8 @@
     stageLoggedUnderstory:'logged-understory.svg',
     stageBurntUnderstory:'burnt-understory.svg',
   };
-  const STAGE_NAMES=['Living Forest','Disturbed Forest','Logged Forest','Burnt Forest'];
-  const STAGE_KEYS=['living','disturbed','logged','burnt'];
+  const STAGE_NAMES=['Living Forest','Disturbed Forest','Logged Forest','Burnt Forest','Regrowth'];
+  const STAGE_KEYS=['living','disturbed','logged','burnt','regrowth'];
   const STAGE_LENGTH=2200;
   const STAGE_BLEND=800; // Hazard selection and pursuit pacing: unchanged.
   const VISUAL_STAGE_BLEND=1200; // Longer visual-only overlap between forests.
@@ -107,15 +107,17 @@
     living:{sky:'#153f44',haze:'#345a4d',soil:'#46372e',mountain:'#31574d'},
     disturbed:{sky:'#333f3b',haze:'#645b4c',soil:'#665142',mountain:'#48554b'},
     logged:{sky:'#464043',haze:'#67564a',soil:'#6b5543',mountain:'#4c4541'},
-    burnt:{sky:'#25242e',haze:'#493a3a',soil:'#2d2b30',mountain:'#373039'}
+    burnt:{sky:'#25242e',haze:'#493a3a',soil:'#2d2b30',mountain:'#373039'},
+    regrowth:{sky:'#355858',haze:'#6b8970',soil:'#4b4940',mountain:'#4c7463'}
   };
   const STAGE_DECOR={
     living:['GrassTuftA','GrassTuftB','MossPatch','LeafLitter'],
     disturbed:['GrassSparse','WeedClump','DirtScar','BrokenTwigs'],
     logged:['DryWeeds','Sawdust','BarkChips','SmallStones'],
-    burnt:['AshFlakes','EmberFissure','CharcoalFragments','SmokeWisp']
+    burnt:['AshFlakes','EmberFissure','CharcoalFragments','SmokeWisp'],
+    regrowth:['GrassTuftA','GrassTuftB','MossPatch','LeafLitter']
   };
-  const stageKey=(i)=>STAGE_KEYS[Math.max(0,Math.min(3,i))];
+  const stageKey=(i)=>STAGE_KEYS[Math.max(0,Math.min(4,i))];
   const hash01=(n,salt=0)=>{let v=Math.imul((n|0)^Math.imul(salt+1,0x9e3779b1),0x85ebca6b);v^=v>>>13;v=Math.imul(v,0xc2b2ae35);v^=v>>>16;return (v>>>0)/4294967296;};
   const smoothstep=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
   function stageAt(x, blend=STAGE_BLEND){
@@ -125,7 +127,35 @@
     const t=a>=3?0:smoothstep((local-(STAGE_LENGTH-blend))/blend);
     return {a,b,t,stage:a, name:STAGE_NAMES[a], next:STAGE_NAMES[b]};
   }
-  const visualStageAt=x=>stageAt(x,VISUAL_STAGE_BLEND);
+  // Milestones are scheduled well ahead of the current collision window.
+  // Both the renderer and procedural generator sample the same world biome.
+  function epochAt(g,x){
+    if(!g?.forest)return 0;
+    let count=0;
+    for(const m of g.forest.milestones){
+      if(x<m.nextCycleStart)break;
+      count++;
+    }
+    return count;
+  }
+  function stageAtFor(g,x,blend=STAGE_BLEND){
+    if(!g?.forest?.milestones?.length)return stageAt(x,blend);
+    for(let i=g.forest.milestones.length-1;i>=0;i--){
+      const m=g.forest.milestones[i];
+      if(x>=m.nextCycleStart)return stageAt(x-m.nextCycleStart,blend);
+      if(x>=m.regrowthStart){
+        const t=smoothstep((x-(m.nextCycleStart-blend))/blend);
+        return {a:4,b:0,t,stage:4,name:'Regrowth',next:'Living Forest'};
+      }
+      if(x>=m.regrowthStart-blend){
+        const t=smoothstep((x-(m.regrowthStart-blend))/blend);
+        return {a:3,b:4,t,stage:3,name:'Burnt Forest',next:'Regrowth'};
+      }
+    }
+    return stageAt(x,blend);
+  }
+  let sceneryGame=null;
+  const visualStageAt=x=>stageAtFor(sceneryGame,x,VISUAL_STAGE_BLEND);
   // Visual selection is anchored to a scenery object's world coordinate, never
   // its current screen position, so a parallax tree cannot change form mid-run.
   function treeMixAt(anchor,index,layer){
@@ -138,7 +168,7 @@
   // Surviving a frenzy earns additional quiet time. This is Cutter-free recovery,
   // not protection from logs, falling timber, or gaps.
   function quietWindow(g){
-    const s=stageAt(g.x),times=[15,13,11,9];
+    const s=stageAtFor(g,g.x),times=[15,13,11,9,12];
     const mean=times[s.a]*(1-s.t)+times[s.b]*s.t;
     const variation=(hash01(g.cutter.wave,117)-.5)*2;
     return mean+variation+(g.cutter.frenzyUsed?3.5:0);
@@ -150,8 +180,10 @@
     const bb=Math.round((v1&255)*(1-t)+(v2&255)*t);
     return `rgb(${r},${g},${bb})`;
   }
-  function biomeSprite(stage,label){return 'stage'+stageKey(stage).charAt(0).toUpperCase()+stageKey(stage).slice(1)+label;}
-  function groundSprite(stage,label){return 'ground'+stageKey(stage).charAt(0).toUpperCase()+stageKey(stage).slice(1)+label;}
+  // Young growth reuses the healthy biome's SVG shapes, mixed against the
+  // charred forest through the visual-stage blend. No absent asset keys.
+  function biomeSprite(stage,label){const key=stageKey(stage===4?0:stage);return 'stage'+key.charAt(0).toUpperCase()+key.slice(1)+label;}
+  function groundSprite(stage,label){const key=stageKey(stage===4?0:stage);return 'ground'+key.charAt(0).toUpperCase()+key.slice(1)+label;}
 
   const imageAssets = {};
   let game;
@@ -188,62 +220,117 @@
       auto: !!opts.auto, lastJumpX: null, events: [],
       glide: false, death: null, fire: makeFire(), deathCause:null, seed:Number.isFinite(+opts.seed)?(Number(opts.seed)|0):2026,
       hazardStates:new Map(), gapRescue:null,
+      forest:{cycle:0,milestones:[],weather:'clear',weatherElapsed:0,completed:0},
       procPlan:null, procPlanStep:0, procPlanX:0, procCleared:new Set(),
     };
   }
 
 
 
-  // One hazard at a time: Stage 4 replaces the lumberjack with a moving firefront.
-  // The fire is not a timer on the energy meter. Contact, not 0 energy, causes death.
+  // Wildfire is a finite endurance challenge, not a permanent chase.
+  // Timed rain begins after 52 seconds of *active pursuit* (warning excluded).
+  const FIRE_SURVIVAL=52;
+  const STORM_QUENCH=5;
   function makeFire(){
-    return {phase:'dormant',x:-9999,elapsed:0,cycle:0,surgeCount:0,warningDuration:2.3,active:false};
+    return {phase:'dormant',x:-9999,elapsed:0,chaseElapsed:0,surgeCount:0,
+      warningDuration:2.3,active:false,lastEpoch:-1};
   }
   function activateFire(g,preview=false){
     if(g.fire.active || !g.chaseEnabled || g.auto)return false;
     const f=g.fire;
-    f.active=true;
-    f.preview=!!preview;
+    f.active=true;f.preview=!!preview;
     f.phase=preview?'advance':'warning';
-    f.elapsed=0;f.cycle=0;
-    f.x=g.x-(preview?210:360);
-    // The Cutter retreats when the inferno takes over, including mid-frenzy.
+    f.elapsed=0;f.chaseElapsed=0;f.surgeCount=0;
+    f.x=g.x-(preview?210:410);
+    f.lastEpoch=epochAt(g,g.x);
     const c=g.cutter;c.state='rest';c.wait=999999;c.elapsed=0;c.x=g.x-900;c.y=0;c.onTrunk=false;
-    notify(g,'warning',preview?'Wildfire preview: stay ahead of the advancing front!':'The air turns orange. The forest is catching fire!');
+    notify(g,'warning',preview?'Wildfire preview: stay ahead of the front!':'The air turns orange. The forest is catching fire!');
     return true;
   }
+  function rainIntensity(g){
+    const w=g.forest;
+    if(w.weather==='storm')return smoothstep(w.weatherElapsed/3);
+    if(w.weather==='rain')return 1;
+    if(w.weather==='clearing')return 1-smoothstep(w.weatherElapsed/10);
+    return 0;
+  }
+  function updateForest(g,dt){
+    const w=g.forest;
+    if(w.weather!=='clear'){
+      w.weatherElapsed+=dt;
+      if(w.weather==='rain'&&w.weatherElapsed>=6){w.weather='clearing';w.weatherElapsed=0;}
+      else if(w.weather==='clearing'&&w.weatherElapsed>=10){w.weather='clear';w.weatherElapsed=0;}
+    }
+    const epoch=epochAt(g,g.x);
+    if(epoch>w.cycle){
+      w.cycle=epoch;
+      const c=g.cutter;c.state='rest';c.wait=7;c.elapsed=0;c.x=g.x-650;c.y=0;c.onTrunk=false;
+      notify(g,'quiet','A new forest takes root. The journey continues.');
+    }
+  }
   function updateFire(g,dt){
-    if(!g.fire.active && g.x>=3*STAGE_LENGTH && g.chaseEnabled && !g.auto){activateFire(g);}
     const f=g.fire;
+    const epoch=epochAt(g,g.x);
+    // Activation is gated by epoch, not only distance: quenching cannot
+    // immediately restart the same wildfire in the still-blackened region.
+    const burnStart=epoch===0?3*STAGE_LENGTH:
+      g.forest.milestones[epoch-1].nextCycleStart+3*STAGE_LENGTH;
+    if(!f.active && g.x>=burnStart && epoch>f.lastEpoch && g.chaseEnabled && !g.auto)activateFire(g);
     if(!f.active || g.status!=='running')return;
     f.elapsed+=dt;
     if(f.phase==='warning'){
       if(f.elapsed>=f.warningDuration){f.phase='advance';f.elapsed=0;notify(g,'warning','WILDFIRE ADVANCING! Keep moving!');}
       return;
     }
-    if(f.phase==='advance' && f.elapsed>=9.6){
+    if(f.phase==='storm'){
+      // The incoming rain steadily pushes back the flames. No instant pop.
+      f.x-=155*dt;
+      if(f.elapsed>=STORM_QUENCH){
+        f.active=false;f.phase='quenched';
+        g.forest.completed++;
+        g.forest.weather='rain';g.forest.weatherElapsed=0;
+        // Every racer shares the same seeded geometry. Rain is triggered by
+        // survival time, but the next biome boundary is anchored to this
+        // cycle's burn start, never to an individual wisp's current distance.
+        // Even the fastest wisp should not reach the new biome before quench.
+        const future=burnStart+(FIRE_SURVIVAL+STORM_QUENCH)*235+2400;
+        const regrowthStart=Math.ceil(future/WispCourse.CHUNK)*WispCourse.CHUNK;
+        g.forest.milestones.push({regrowthStart,nextCycleStart:regrowthStart+2600});
+        notify(g,'quiet','The rain extinguishes the wildfire. New growth will follow.');
+      }
+      return;
+    }
+    f.chaseElapsed+=dt;
+    if(f.chaseElapsed>=FIRE_SURVIVAL){
+      f.phase='storm';f.elapsed=0;
+      g.forest.weather='storm';g.forest.weatherElapsed=0;
+      notify(g,'quiet','Thunder rolls overhead. Rain is coming!');
+      return;
+    }
+    if(f.phase==='advance' && f.elapsed>=10.4){
       f.phase='surge-warning';f.elapsed=0;
       notify(g,'warning','Hot wind! Flames are about to surge!');
       return;
     }
-    if(f.phase==='surge-warning'&&f.elapsed>=1.45){
+    if(f.phase==='surge-warning'&&f.elapsed>=1.75){
       f.phase='surge';f.elapsed=0;f.surgeCount++;
-      notify(g,'warning','FIRE SURGE! The front is accelerating!');
+      notify(g,'warning','FIRE SURGE! Keep moving!');
       return;
     }
-    if(f.phase==='surge'&&f.elapsed>=2.35){
+    if(f.phase==='surge'&&f.elapsed>=2.0){
       f.phase='advance';f.elapsed=0;
-      notify(g,'quiet','The firefront slows. Keep collecting Essence.');
+      notify(g,'quiet','The flames slow. Keep collecting Essence.');
       return;
     }
-    const ramp=Math.min(30,Math.max(0,g.x-6600)/8000*30);
-    const speed= (f.phase==='surge'?279:204)+ramp;
+    // Scale pursuit with each character's natural cruising speed so Moss isn't
+    // inherently doomed. Energy still matters because exhaustion slows the wisp.
+    const base=235*g.stats.speed;
+    const ramp=Math.min(10,f.chaseElapsed*.19);
+    const speed=base*(f.phase==='surge'?1.10:.83)+ramp;
     f.x+=speed*dt;
-    // Contact region is independent from the visual flame SVG. Jumping over a
-    // 300px-high wildfire wall is impossible; outpace it or recover essence.
     if(f.x>=g.x-10){
       g.deathCause='wildfire';
-      startDeath(g, `${g.name} was engulfed by the wildfire.`);
+      startDeath(g,`${g.name} was engulfed by the wildfire.`);
     }
   }
 
@@ -411,7 +498,7 @@
 
   // One source of truth for procedural hazards and their collision geometry.
   function courseNear(g,x,behind=50,ahead=1200) {
-    return WispCourse.nearby(g.seed,x,stageAt,behind,ahead);
+    return WispCourse.nearby(g.seed,x,world=>stageAtFor(g,world),behind,ahead);
   }
   function procGapAt(g,x) {
     return courseNear(g,x,180,180).find(h=>h.type==='erosion-gap'&&x>h.x&&x<h.x+h.width)||null;
@@ -520,6 +607,7 @@
       g.staggerRemaining=Math.max(0,g.staggerRemaining-dt);
       advanceGapRescue(g,dt);
       updateFire(g,dt);
+      updateForest(g,dt);
       if(g.chaseEnabled && !g.fire.active && g.status==='running')proceduralCutter(g,dt);
       return;
     }
@@ -590,6 +678,7 @@
       if(gap)beginGapRescue(g,gap);
     }
     updateFire(g,dt);
+    updateForest(g,dt);
     if(g.chaseEnabled && !g.fire.active && g.status==='running') proceduralCutter(g,dt);
     if(g.auto)window.WispBenchmark.finish(g);
   }
@@ -834,7 +923,7 @@
     for(let i=first;i<=last;i++){
       const world=i*period+hash01(i,421)*170;
       const mix=visualStageAt(world/speed);
-      const living=(mix.a===0?1-mix.t:0)+(mix.b===0?mix.t:0);
+      const living=([0,4].includes(mix.a)?1-mix.t:0)+([0,4].includes(mix.b)?mix.t:0);
       if(living<=.01)continue;
       const x=world-camera*speed;
       ctx.globalAlpha=living*(.065+.03*hash01(i,423));
@@ -854,7 +943,7 @@
       const mix=visualStageAt(world/speed);
       // Rain/smoke belong to later phases. Here, living fog gives way to dusty air.
       const tone=['rgba(159,194,171,','rgba(174,163,135,',
-        'rgba(173,148,132,','rgba(149,140,149,'];
+        'rgba(173,148,132,','rgba(149,140,149,','rgba(166,201,174,'];
       const stage=hash01(i,451)<mix.t?mix.b:mix.a;
       const sx=world-camera*speed;
       const opacity=.06+.035*hash01(i,457);
@@ -866,11 +955,11 @@
       ctx.fillRect(sx-210,254+hash01(i,463)*44,510,35);
     }
   }
-  function drawUnderstory(camera,g,gaps){
+  function drawUnderstory(camera,_g,gaps){
     const spacing=125;
     const first=Math.floor(camera/spacing)-2;
     const last=Math.ceil((camera+VIEW.width)/spacing)+2;
-    const density=[.81,.58,.34,.48];
+    const density=[.81,.58,.34,.48,.92];
     for(let i=first;i<=last;i++){
       const world=i*spacing+hash01(i,481)*67;
       const mix=treeMixAt(world,i,4);
@@ -891,8 +980,8 @@
     const spacing=88;
     const first=Math.floor(camera/spacing)-2;
     const last=Math.ceil((camera+VIEW.width)/spacing)+2;
-    const colors=['#c6d89a','#beb49a','#c8ad9b','#d6a28c'];
-    const densities=[.68,.38,.44,.82];
+    const colors=['#c6d89a','#beb49a','#c8ad9b','#d6a28c','#c7dfad'];
+    const densities=[.68,.38,.44,.82,.72];
     for(let i=first;i<=last;i++){
       const world=i*spacing+hash01(i,521)*spacing*.75;
       const mix=visualStageAt(world);
@@ -907,6 +996,57 @@
       ctx.fillRect(x,y,r,r*(stage===3?1.4:.75));
     }
     ctx.globalAlpha=1;
+  }
+
+  // Rain sits above the game world but below UI. Droplets are screen-spaced,
+  // time-animated and reproducible without Math.random or per-frame sprites.
+  function drawWeather(g,camera){
+    const rain=rainIntensity(g);
+    if(rain<=.001)return;
+    ctx.save();
+    const cloud=ctx.createLinearGradient(0,0,0,235);
+    cloud.addColorStop(0,`rgba(12,20,30,${(.43*rain).toFixed(3)})`);
+    cloud.addColorStop(1,'rgba(12,20,30,0)');
+    ctx.fillStyle=cloud;ctx.fillRect(0,0,VIEW.width,VIEW.ground);
+    // Broad cloud banks scroll slowly above the ridges, without harsh edges.
+    ctx.globalAlpha=rain*.13;ctx.fillStyle='#071b28';
+    const bankShift=reducedMotion?0:g.time*2;
+    for(let i=-1;i<=3;i++){
+      const x=i*330+(hash01(i,731)-.5)*80-bankShift%330;
+      ctx.beginPath();ctx.moveTo(x-90,0);
+      ctx.lineTo(x+290,0);
+      ctx.bezierCurveTo(x+260,55,x+220,37,x+166,45);
+      ctx.bezierCurveTo(x+118,69,x+45,33,x-90,70);
+      ctx.closePath();ctx.fill();
+    }
+    if(g.forest.weather==='storm' && !reducedMotion){
+      const t=g.forest.weatherElapsed;
+      if((t>2.2&&t<2.30)||(t>4.04&&t<4.12)){
+        ctx.globalAlpha=.16*rain;ctx.fillStyle='#d9e9ec';
+        ctx.fillRect(0,0,VIEW.width,VIEW.ground);
+      }
+    }
+    const count=reducedMotion?55:Math.round(125*rain);
+    ctx.globalAlpha=Math.min(.5,rain*.46);
+    ctx.strokeStyle='#a8d2de';ctx.lineWidth=1.15;ctx.beginPath();
+    for(let i=0;i<count;i++){
+      const x=(hash01(i,711)*VIEW.width+(reducedMotion?0:g.time*195))%VIEW.width;
+      const y=(hash01(i,719)*VIEW.ground+(reducedMotion?0:g.time*510))%VIEW.ground;
+      ctx.moveTo(x,y);ctx.lineTo(x-8,y+18);
+    }
+    ctx.stroke();
+    // A few shallow ripples make the rain meet the terrain. Never paint a
+    // puddle across the geometric openings carved in Phase 1.
+    const gaps=courseNear(g,camera,100,VIEW.width+120).filter(h=>h.type==='erosion-gap');
+    for(let i=Math.floor(camera/155)-1;i<Math.ceil((camera+VIEW.width)/155)+1;i++){
+      const world=i*155+hash01(i,751)*90;
+      if(gaps.some(h=>world+25>h.x&&world-25<h.x+h.width))continue;
+      const age=(reducedMotion?.5:(g.time*1.7+hash01(i,757))%1);
+      ctx.strokeStyle=`rgba(183,216,205,${(rain*(1-age)*.26).toFixed(3)})`;
+      ctx.lineWidth=1;
+      ctx.beginPath();ctx.ellipse(world-camera,VIEW.ground+1,4+15*age,1.6+2*age,0,0,Math.PI*2);ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function drawBg(camera,g) {
@@ -935,7 +1075,7 @@
     const layerSpecs=[{speed:.12,step:198,w:153,h:278,alpha:.17},
       {speed:.30,step:208,w:168,h:310,alpha:.26},
       {speed:.52,step:236,w:185,h:340,alpha:.39}];
-    const densities=[.99,.77,.41,.56];
+    const densities=[.99,.77,.41,.56,.96];
     layerSpecs.forEach((layer,l)=>{
       // Add margins for the deterministic offsets and the widest ancient trees.
       const first=Math.floor(camera*layer.speed/layer.step)-3;
@@ -1112,7 +1252,7 @@
     svg.style.height=`${(530*size*ratio).toFixed(2)}px`;
     svg.style.left=`${((front-leadingEdgeX*size)*ratio).toFixed(2)}px`;
     svg.style.top=`${((VIEW.ground-groundAnchorY*size)*ratio).toFixed(2)}px`;
-    svg.style.opacity=f.phase==='warning'?.68:1;
+    svg.style.opacity=f.phase==='warning'?.68:f.phase==='storm'?Math.max(0,1-f.elapsed/STORM_QUENCH):1;
     svg.style.display='block';
     svg.setAttribute('data-fire-phase',f.phase);
     // Treat the wall as artwork, NOT as hundreds of separate collisions.
@@ -1200,6 +1340,7 @@
     ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#091e24';ctx.fillRect(0,0,dw,dh);
     const s=fit*pixelRatio;
     ctx.setTransform(s,0,0,s,(dw-VIEW.width*s)/2,(dh-VIEW.height*s)/2);
+    sceneryGame=g;
     const soloCamera = Math.max(0,g.x-cameraLead);
     const camera = window.WispOnline?.camera?.(g,soloCamera) ?? soloCamera;
     drawBg(camera,g);
@@ -1210,6 +1351,8 @@
     else if(g.gapRescue) drawGapRescue(g,camera);
     else drawWisp(g,camera);
     window.WispOnline?.draw?.(ctx,g,camera);
+    drawWeather(g);
+    sceneryGame=null;
     updateCutterOverlay(g,camera);
     if(g.status !== 'running' && g.status !== 'dying' && !window.WispOnline?.isSpectating?.()) {
       ctx.fillStyle='rgba(6,17,20,.77)';ctx.fillRect(255,126,450,162);
@@ -1382,6 +1525,7 @@
     window.WISP_TEST={createGame,step,jump,courseNear,
       procGapAt,procObstacleRects,stageAt,visualStageAt,treeMixAt,easeCameraLead,speedFor,CHARACTERS,
       traceGapOpening,maskGroundGaps,ridgeHeight,smoothNoise,sceneryTreeAt,
+      updateFire,updateForest,epochAt,stageAtFor,rainIntensity,FIRE_SURVIVAL,
       get cameraLead(){return cameraLead;},
       get current(){return game;}};
   }
