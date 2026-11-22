@@ -42,3 +42,19 @@ test('published WISP page contains only player controls, no development panel',a
   assert.doesNotMatch(runner,/const LAYOUT =|function runScenario\(|function drawCourse\(|function inspectStage\(/);
   assert.match(runner,/function stepProcedural\(/);
 });
+
+
+test('published WISP does not show forest transition status or alert messages',async()=>{
+  const page=await file('public/games/wisp/play.html');
+  const runner=await file('public/games/wisp/game.js');
+  for(const id of ['stageValue','stageBlendFill','chaseState','chaseInfo','message']){
+    assert.doesNotMatch(page,new RegExp('id="'+id+'"'),`obsolete HUD element ${id}`);
+    assert.doesNotMatch(runner,new RegExp("el\\('"+id+"'\\)"),`obsolete HUD update ${id}`);
+  }
+  assert.match(page,/id="energyFill"/);
+  assert.match(page,/id="distance"/);
+  assert.match(page,/id="chaseThreat"/);
+  assert.match(page,/id="jump"/);
+  assert.match(runner,/function stageAt\(/,'terrain progression still exists');
+  assert.match(runner,/function dynamicUpdate\(/,'aerial hazard timing still exists');
+});

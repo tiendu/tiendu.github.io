@@ -172,7 +172,7 @@
       x: 155, y: VIEW.ground, vy: 0, grounded: true, surface: 'ground', jumps: 0,
       energy: energy, distance: 0, time: 0, impacts: 0, pickups: 0,
       chaseEnabled: opts.chase !== false && !opts.auto, cutter: makeCutter(), rescues: 0,
-      status: 'running', reason: '', impactCooldown: 0, staggerRemaining:0, staggerTotal:0, messages: [],
+      status: 'running', reason: '', impactCooldown: 0, staggerRemaining:0, staggerTotal:0,
       collected: new Set(), noPickups: opts.noPickups === true,
       auto: !!opts.auto, lastJumpX: null, events: [],
       glide: false, death: null, fire: makeFire(), deathCause:null, seed:Number.isFinite(+opts.seed)?(Number(opts.seed)|0):2026,
@@ -297,8 +297,6 @@
   function notify(g, kind, message) {
     const event={x:g.x,kind,detail:message,time:g.time};
     g.events.push(event);
-    g.messages.unshift(event);
-    if (g.messages.length > 5) g.messages.pop();
   }
 
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
@@ -926,29 +924,17 @@
   }
 
   function updateHud(g) {
-    const s=stageAt(g.x), title=s.t>.02 && s.t<.98
-      ?`${STAGE_NAMES[s.a]} → ${STAGE_NAMES[s.b]}`
-      :STAGE_NAMES[s.t>=.98?s.b:s.a];
-    el('stageValue').textContent=title;
-    el('stageBlendFill').style.width=`${s.t*100}%`;
     el('distance').textContent=String(Math.round(g.distance));
     const c=g.cutter, dist=Math.max(0,Math.round(g.x-c.x));
-    const titles={rest:'FOREST QUIET',warning:'CHAINSAW WARNING',approach:'CUTTER APPROACHING',hunt:'THE CUTTER HUNTS',frenzy:'FRENZY — RUN!',jump:'CUTTER JUMPS',retreat:'CUTTER RETREATS',fall:'CUTTER FALLS!'};
     const ff=g.fire, fireActive=ff.active, fireGap=Math.round(g.x-ff.x);
-    el('chaseState').textContent=g.status==='dying'?'WISP DISINTEGRATING':fireActive?({'warning':'WILDFIRE WARNING','advance':'WILDFIRE APPROACHING','surge-warning':'FIRE SURGE COMING!','surge':'FIRE SURGE!'}[ff.phase]||'WILDFIRE'):g.status==='caught'?'ELIMINATED':(titles[c.state]||c.state);
-    el('chaseInfo').textContent=fireActive?(ff.phase==='warning'?'Smoke rises. The fire is coming.':ff.phase==='surge'?'The flames surge forward!':'Stay ahead of the flames.'):c.state==='rest'?`Recovery · ${Math.max(0,Math.ceil(c.wait-c.elapsed))}s`:c.state==='warning'?'Listen for the chainsaw.':c.state==='frenzy'?'Speed burst — keep your lead':c.state==='retreat'?'A moment of peace':'One touch means elimination';
     el('chaseDistance').textContent=fireActive?`${Math.max(0,fireGap)}`:['rest','warning'].includes(c.state)?'—':`${dist}`;
-    el('chaseThreat').style.width=fireActive?`${Math.max(0,Math.min(100,(1-fireGap/380)*100))}%`:['rest','warning'].includes(c.state)?'0%':`${Math.max(0,Math.min(100,(1-dist/380)*100))}%`;
+    const proximity=fireActive?Math.max(0,Math.min(100,(1-fireGap/380)*100)):['rest','warning'].includes(c.state)?0:Math.max(0,Math.min(100,(1-dist/380)*100));
+    el('chaseThreat').style.width=`${proximity}%`;
+    el('chaseThreat').parentElement.setAttribute('aria-valuenow', String(Math.round(proximity)));
     el('chaseThreat').style.background=fireActive?'linear-gradient(90deg,#ff9c32,#df2a1d)':c.state==='frenzy'?'linear-gradient(90deg,#ed7147,#ff3434)':'linear-gradient(90deg,#e9ad53,#e26947)';
     el('energyText').textContent=`${g.energy.toFixed(0)}%`;
     el('energyFill').style.width=`${g.energy}%`;
     el('energyFill').style.background=g.energy>45?'#9bd477':g.energy>22?'#efbd6f':'#f17b67';
-    const event=g.messages[0];
-    const note=g.status==='caught'?(g.reason||'Eliminated'):
-      g.status==='dying'?'Your wisp dissolves into translucent polygons.':
-      event&&g.time-event.time<3?event.detail:
-      g.energy<=0?'Exhausted — look for essence to recover speed.':'';
-    el('message').textContent=note;
     el('restart').hidden=onlineRoom || !['caught','failed','passed'].includes(g.status);
   }
 
