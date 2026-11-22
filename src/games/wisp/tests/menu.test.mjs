@@ -16,7 +16,9 @@ test('WISP polygon menu and multiplayer bridge load in order',async()=>{
   assert.match(menu,/wisp:online-race-start/);
   assert.match(online,/wisp:online-state/);
   assert.match(online,/wisp:online-race-start/);
-  assert.match(online,/create\(\{name,wisp\}\)/);
+  assert.match(online,/create:options=>enter\('create',options\)/);
+  assert.doesNotMatch(online,/createElement\('section'\)|wisp-online-entry|id=\"wisp-name\"/);
+  assert.match(online,/generation!==epoch/);
   for(const filename of ['menu.css','menu.js',...['moss','ember','dew','gale','dusk'].map(x=>'assets/'+x+'.svg')])
     await access(join(root,'public/games/wisp',filename));
 });
@@ -37,4 +39,6 @@ test('published WISP page contains only player controls, no development panel',a
   assert.match(runner,/if\(\['localhost','127\.0\.0\.1',''\]\.includes\(location\.hostname\)\)/);
   assert.match(online,/game\.startOnline/);
   assert.doesNotMatch(online,/window\.WISP_TEST/);
+  assert.doesNotMatch(runner,/const LAYOUT =|function runScenario\(|function drawCourse\(|function inspectStage\(/);
+  assert.match(runner,/function stepProcedural\(/);
 });

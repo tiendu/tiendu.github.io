@@ -5,29 +5,12 @@
   const VIEW = { width: 960, height: 480, ground: 380 };
   const FIXED = 1 / 120;
   const G = 980;
-  const CYCLE = 2200;
-  // One original test course per lap; gaps vary to exercise jump / brake / fall.
-  const GAP_START = 1780;
-  const WIDE_GAP = 172;
-  const NARROW_GAP = 82;
   const CHARACTERS = {
     Moss:  { speed: .96, jump: .94, drain: 8,  impact: 11, color: '#96ce71' },
     Ember: { speed: 1.06, jump: 1, drain: 12, impact: 18, color: '#ffa14d' },
     Dew:   { speed: 1, jump: 1, drain: 10, impact: 16, color: '#75d9de' },
     Gale:  { speed: 1.04, jump: 1.10, drain: 12, impact: 22, color: '#75aff9' },
     Dusk:  { speed: .98, jump: 1.05, drain: 9,  impact: 15, color: '#c1a7ff' },
-  };
-  const LAYOUT = {
-    log: { x1: 351, x2: 391, top: 360, bottom: 380 },
-    trunk: { x1: 741, x2: 1381, top: 339 },
-    shortBranch: { x1: 940, x2: 959, top: 298, bottom: 339 },
-    tallFork: { x1: 1180, x2: 1213, top: 267, bottom: 339 },
-    finishX: 1520,
-    collectibles: [
-      { x: 560, y: 335, type: 'common', amount: 10 },
-      { x: 813, y: 296, type: 'common', amount: 10 },
-      { x: 1140, y: 222, type: 'greater', amount: 25 },
-    ],
   };
   const SPRITE_FILES = {
     Moss: 'moss.svg', Ember: 'ember.svg', Dew: 'dew.svg', Gale: 'gale.svg', Dusk: 'dusk.svg',
@@ -164,8 +147,6 @@
   let game;
   let cutterMotion = null;
   let lastCutterAnimation = null;
-  let autoPlay = false;
-  let showHitboxes = false;
   let gliding = false;
   // One-action input: every new press jumps; holding the press requests glide.
   // Glide only affects the falling half of the jump (see physics below).
@@ -181,7 +162,6 @@
   let onlineRoom = false;
   let onlineRace = false;
   let soloChoice = 'Moss';
-  let demoCameraFocus = false; // Optional developer-only view of the Cutter climbing.
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { alpha: false });
   const el = (id) => document.getElementById(id);
@@ -192,12 +172,11 @@
       x: 155, y: VIEW.ground, vy: 0, grounded: true, surface: 'ground', jumps: 0,
       energy: energy, distance: 0, time: 0, impacts: 0, pickups: 0,
       chaseEnabled: opts.chase !== false && !opts.auto, cutter: makeCutter(), rescues: 0,
-      status: 'running', reason: '', impactCooldown: 0, staggerRemaining:0, staggerTotal:0, timber:null, timberHits:0, messages: [],
-      collected: new Set(), noPickups: opts.noPickups === true, singleOnly: opts.singleOnly === true,
-      auto: !!opts.auto, autoStep: 0, secondStartX: 0, lastJumpX: null,
-      events: [], checkpoints: { platform: false, short: false, tall: false, landed: false },
+      status: 'running', reason: '', impactCooldown: 0, staggerRemaining:0, staggerTotal:0, messages: [],
+      collected: new Set(), noPickups: opts.noPickups === true,
+      auto: !!opts.auto, lastJumpX: null, events: [],
       glide: false, death: null, fire: makeFire(), deathCause:null, seed:Number.isFinite(+opts.seed)?(Number(opts.seed)|0):2026,
-      procedural:opts.procedural===true || (!opts.auto && opts.procedural!==false), hazardStates:new Map(),
+      hazardStates:new Map(),
       procPlan:null, procPlanStep:0, procPlanX:0, procCleared:new Set(),
     };
   }
@@ -210,7 +189,7 @@
     return {phase:'dormant',x:-9999,elapsed:0,cycle:0,surgeCount:0,warningDuration:2.3,active:false};
   }
   function activateFire(g,preview=false){
-    if(g.fire.active || !g.chaseEnabled || g.auto || !g.procedural)return false;
+    if(g.fire.active || !g.chaseEnabled || g.auto)return false;
     const f=g.fire;
     f.active=true;
     f.preview=!!preview;
@@ -223,7 +202,7 @@
     return true;
   }
   function updateFire(g,dt){
-    if(!g.fire.active && g.x>=3*STAGE_LENGTH && g.chaseEnabled && !g.auto && g.procedural){activateFire(g);}
+    if(!g.fire.active && g.x>=3*STAGE_LENGTH && g.chaseEnabled && !g.auto){activateFire(g);}
     const f=g.fire;
     if(!f.active || g.status!=='running')return;
     f.elapsed+=dt;
@@ -262,44 +241,6 @@
       frenzyUsed:false, totalHunt:0, gapJumpTime:0, gapStartX:0, eventSent:false, postState:'hunt', cutTarget:null, cleared:new Set(), onTrunk:false, trunkLap:-1, actionStartX:0, climbDuration:.72, descendDuration:.54};
   }
 
-  function gapForLap(lap) {
-    if(lap<0) return null;
-    const start=lap*CYCLE+GAP_START;
-    const width=lap%2===0 ? WIDE_GAP : NARROW_GAP;
-    return {x1:start,x2:start+width,kind:width===WIDE_GAP?'wide':'short',lap};
-  }
-  function gapAt(x) {
-    const lap=Math.floor(x/CYCLE);
-    const gap=gapForLap(lap);
-    return gap && x>gap.x1 && x<gap.x2?gap:null;
-  }
-  function imminentGap(x,reach=65) {
-    const lap=Math.floor(x/CYCLE);
-    for(let i=lap;i<=lap+1;i++) {
-      const gap=gapForLap(i);
-      if(gap && gap.x1-x> -15 && gap.x1-x < reach) return gap;
-    }
-    return null;
-  }
-  function cutterObstacleAhead(g) {
-    const c=g.cutter;
-    const lap=Math.max(0,Math.floor(c.x/CYCLE));
-    const base=lap*CYCLE;
-    const options=[
-      {key:`${lap}:shortBranch`, name:'short branch', x1:LAYOUT.shortBranch.x1+base, x2:LAYOUT.shortBranch.x2+base, duration:.82},
-      {key:`${lap}:tallFork`, name:'tall fork', x1:LAYOUT.tallFork.x1+base, x2:LAYOUT.tallFork.x2+base, duration:1.05},
-    ];
-    if(g.timber && g.timber.phase!=='warning') {
-      options.push({key:`timber:${Math.round(g.timber.x)}`, name:'falling timber', x1:g.timber.x-42, x2:g.timber.x+42, duration:.9});
-    }
-    for(const o of options){
-      if(o.key.indexOf('timber:')!==0 && !c.onTrunk) continue;
-      if(c.cleared.has(o.key)) continue;
-      const dx=o.x1-c.x;
-      if(dx>=-10 && dx<=38) return o;
-    }
-    return null;
-  }
   function enterCut(g,target,returnState) {
     const c=g.cutter;
     c.cutTarget=target;
@@ -316,20 +257,6 @@
     if(state==='rest' || state==='warning'){c.onTrunk=false;c.trunkLap=-1;c.y=0;}
     if(detail) notify(g,state==='frenzy'?'warning':'quiet',detail);
   }
-  function startClimb(g,lap) {
-    const c=g.cutter;
-    c.postState=c.state; c.actionStartX=c.x; c.trunkLap=lap;
-    c.climbDuration=c.state==='frenzy'?.51:.72;
-    c.state='climb'; c.elapsed=0; c.onTrunk=false;
-    notify(g,'quiet','The Cutter climbs onto the fallen trunk.');
-  }
-  function startDescend(g) {
-    const c=g.cutter;
-    c.postState=c.state; c.actionStartX=c.x;
-    c.descendDuration=c.state==='frenzy'?.38:.54;
-    c.state='descend';c.elapsed=0;
-    notify(g,'quiet','The Cutter climbs down from the trunk.');
-  }
   function checkCutterContact(g) {
     const c=g.cutter;
     // A hit is based on the visible character and saw; a jumping wisp can still
@@ -342,144 +269,6 @@
       startDeath(g, `The Cutter caught ${g.name}. One touch is enough.`);
     }
   }
-  function callCutter(g) {
-    if(!g.chaseEnabled || g.status!=='running') return false;
-    if(['approach','hunt','frenzy','jump','warning','climb','descend','cut'].includes(g.cutter.state))return false;
-    g.cutter.wait=0;
-    enterCutter(g,'warning','Chainsaw heard in the distance — The Cutter is coming!');
-    return true;
-  }
-  function forceFrenzy(g) {
-    if(!g.chaseEnabled || g.status!=='running')return false;
-    const c=g.cutter;
-    if(!['approach','hunt','frenzy','climb','descend','cut'].includes(c.state)){
-      c.x=g.x-155;
-    }
-    c.frenzyUsed=true;
-    enterCutter(g,'frenzy','FRENZY! The Cutter accelerates.');
-    return true;
-  }
-  function forceRetreat(g){
-    if(!g.chaseEnabled || g.status!=='running')return false;
-    const c=g.cutter;
-    // Test button: retreat directly even if part-way across a trunk.
-    if(c.onTrunk){c.onTrunk=false;c.trunkLap=-1;c.y=0;}
-    enterCutter(g,'retreat','The Cutter gives up the chase.');
-    return true;
-  }
-  function updateCutter(g,dt){
-    const c=g.cutter;if(!g.chaseEnabled || g.status!=='running')return;
-    if(g.procedural)return proceduralCutter(g,dt);
-    c.elapsed+=dt;
-    if(c.state==='rest'){
-      if(c.elapsed>=c.wait){enterCutter(g,'warning','A distant chainsaw starts revving…');}
-      return;
-    }
-    if(c.state==='warning'){
-      if(c.elapsed>=1.65){c.x=g.x-195;c.wave++;c.frenzyUsed=false;enterCutter(g,'approach','The Cutter emerges from behind!');}
-      return;
-    }
-    if(c.state==='retreat'){
-      c.x-=150*dt;
-      if(c.elapsed>=2.1){enterCutter(g,'rest','The forest falls quiet again.');c.wait=quietWindow(g);}
-      return;
-    }
-    if(c.state==='fall'){
-      c.x+=35*dt;
-      c.y+=120*dt+150*c.elapsed*dt;
-      if(c.elapsed>=1.6){c.y=0;enterCutter(g,'rest','The Cutter fell into the gap. Quiet returns.');c.wait=quietWindow(g);}
-      return;
-    }
-    if(c.state==='climb'){
-      const duration=c.climbDuration;
-      const u=Math.min(1,c.elapsed/duration);
-      const t=u*u*(3-2*u);
-      const start=c.trunkLap*CYCLE+LAYOUT.trunk.x1;
-      c.x=c.actionStartX+(start+28-c.actionStartX)*t;
-      c.y=(LAYOUT.trunk.top-VIEW.ground)*t;
-      checkCutterContact(g);
-      if(u>=1){
-        c.onTrunk=true;
-        enterCutter(g,c.postState,null,true);
-      }
-      return;
-    }
-    if(c.state==='descend'){
-      const u=Math.min(1,c.elapsed/c.descendDuration);
-      const t=u*u*(3-2*u);
-      const end=c.trunkLap*CYCLE+LAYOUT.trunk.x2;
-      c.x=c.actionStartX+(end+25-c.actionStartX)*t;
-      c.y=(LAYOUT.trunk.top-VIEW.ground)*(1-t);
-      checkCutterContact(g);
-      if(u>=1){
-        c.onTrunk=false; c.trunkLap=-1; c.y=0;
-        enterCutter(g,c.postState,null,true);
-      }
-      return;
-    }
-    if(c.state==='cut'){
-      if(c.elapsed>=((c.cutTarget&&c.cutTarget.duration)||1.0)){
-        if(c.cutTarget){
-          c.cleared.add(c.cutTarget.key);
-          if(c.cutTarget.key.startsWith('timber:') && g.timber) g.timber=null;
-        }
-        const next=c.postState||'hunt';
-        notify(g,'quiet','The Cutter breaks through and resumes the chase.');
-        enterCutter(g,next,null,true);
-      }
-      checkCutterContact(g);
-      return;
-    }
-    // Approach the near edge of a trunk on the ground. Unlike the wisp, the
-    // heavy lumberjack has no magical double jump; he plants a boot and climbs.
-    if(!c.onTrunk && ['approach','hunt','frenzy'].includes(c.state)){
-      const lap=Math.max(0,Math.floor(c.x/CYCLE));
-      const left=lap*CYCLE+LAYOUT.trunk.x1;
-      if(left-c.x>=-5 && left-c.x<=32){startClimb(g,lap);return;}
-    }
-    if(c.onTrunk && ['approach','hunt','frenzy'].includes(c.state)){
-      const end=c.trunkLap*CYCLE+LAYOUT.trunk.x2;
-      if(c.x>=end-29){startDescend(g);return;}
-    }
-    const obstacle=cutterObstacleAhead(g);
-    if(obstacle && ['approach','hunt','frenzy'].includes(c.state)){
-      enterCut(g,obstacle,c.state);
-      return;
-    }
-    const modes={approach:198,hunt:248,frenzy:312,jump:228};
-    c.x+=(modes[c.state]||214)*dt;
-    if(c.state==='jump'){
-      if(c.elapsed>=.9){c.y=0;enterCutter(g,c.gapOutcome==='frenzy'?'frenzy':'hunt');}
-      else c.y=-42*Math.sin(Math.PI*(c.elapsed/.9));
-    }else{
-      const gap=imminentGap(c.x,22);
-      if(gap){
-        if(gap.kind==='wide'){
-          c.gapOutcome=c.state==='frenzy'?'fall':'retreat';
-          if(c.gapOutcome==='fall'){
-            enterCutter(g,'fall','Too fast! The Cutter tumbles into the ravine.');
-          }else{
-            enterCutter(g,'retreat','The Cutter brakes at the wide gap and retreats.');
-          }
-          return;
-        }
-        c.gapOutcome=c.state;
-        enterCutter(g,'jump','The Cutter jumps the narrow gap.');
-        // Move across the near edge while the animation carries him up.
-      }
-    }
-    if(c.state==='approach' && c.elapsed>=2.15)enterCutter(g,'hunt','The Cutter is hunting!');
-    else if(c.state==='hunt'){
-      c.totalHunt+=dt;
-      if(!c.frenzyUsed && c.totalHunt>=3.25){c.frenzyUsed=true;enterCutter(g,'frenzy','FRENZY! The chainsaw roars and he sprints.');}
-      else if(c.totalHunt>=9.0 && !c.onTrunk)enterCutter(g,'retreat','The Cutter retreats into the trees.');
-    }else if(c.state==='frenzy' && c.elapsed>=2.5){
-      enterCutter(g,'hunt','He slows to his normal pursuit pace.');
-      c.totalHunt=6.5;
-    }
-    checkCutterContact(g);
-  }
-
   function speedFor(g) {
     const e = g.energy;
     // At >=50%, full running speed. At 0%, 55%. Movement never stops outright.
@@ -490,7 +279,7 @@
   }
 
   function jump(g) {
-    if (g.status !== 'running' || g.jumps >= 2 || (g.singleOnly && g.jumps >= 1)) return false;
+    if (g.status !== 'running' || g.jumps >= 2) return false;
     if (g.grounded) {
       g.vy = -Math.sqrt(2 * G * 70 * g.stats.jump);
       g.jumps = 1;
@@ -503,33 +292,6 @@
     g.lastJumpX = g.x;
     g.events.push({x: g.x, kind: g.jumps === 2 ? 'double' : 'jump'});
     return true;
-  }
-
-  function autoControl(g) {
-    // A distance/speed-adaptive demonstration. It uses the *same jump() and physics* as manual play.
-    if (g.status !== 'running') return;
-    const v = speedFor(g);
-    const A = [
-      { x: LAYOUT.log.x1 - 14 - v * Math.max(.08,Math.min(.27,(.735 - 66/v)/2)), label: 'small log' },
-      { x: LAYOUT.trunk.x1 - 14 - v * .38, label: 'platform' },
-      { x: LAYOUT.shortBranch.x1 - 14 - v * .19, label: 'small branch' },
-      { x: LAYOUT.tallFork.x1 - 14 - v * .45, label: 'tall fork takeoff' },
-    ];
-    if (g.autoStep < 4) {
-      const a = A[g.autoStep];
-      if (g.x >= a.x && g.grounded) {
-        if (jump(g)) {
-          if (g.autoStep === 3) g.secondStartX = g.x;
-          g.events.push({x:g.x,kind:'auto',detail:a.label});
-          g.autoStep++;
-        }
-      }
-    } else if (g.autoStep === 4 && !g.grounded && g.jumps === 1) {
-      if (g.x - g.secondStartX >= v * .22) {
-        jump(g);
-        g.autoStep++;
-      }
-    }
   }
 
   function notify(g, kind, message) {
@@ -620,7 +382,6 @@
   function impact(g, kind) {
     if (g.impactCooldown > 0 || g.status !== 'running') return false;
     g.impacts++;
-    if(kind==='falling timber')g.timberHits++;
     const loss=Math.min(g.energy,g.stats.impact);
     g.energy = Math.max(0, g.energy - g.stats.impact);
     g.impactCooldown = 1.1; // temporary protection against repeat hits
@@ -639,38 +400,7 @@
     return true;
   }
 
-  function spawnTimber(g) {
-    if (g.status !== 'running' || g.timber) return false;
-    // A real temporary object, with warning, descending hitbox and limited lifetime.
-    g.timber={x:g.x+280,y:115,phase:'warning',timer:0,hit:false};
-    notify(g,'warning','Timber falling ahead! Watch the marked landing zone.');
-    return true;
-  }
-
-  function updateTimber(g,dt) {
-    const t=g.timber;
-    if(!t)return;
-    t.timer+=dt;
-    if(t.phase==='warning' && t.timer >= .75){t.phase='falling';t.timer=0;}
-    else if(t.phase==='falling'){
-      const q=Math.min(1,t.timer/.55);
-      t.y=115+(VIEW.ground-24-115)*q*q;
-      if(t.timer>=.55){t.phase='landed';t.timer=0;t.y=VIEW.ground-24;}
-    }else if(t.phase==='landed' && t.timer>1.65){g.timber=null;return;}
-    // Collision is in world space. The timber has a broad but forgiving body collider.
-    if(t.phase!=='warning' && !t.hit && g.x+13>t.x-46 && g.x-13<t.x+46 &&
-       g.y>t.y-18 && g.y-32<t.y+18){
-      t.hit=true;
-      impact(g,'falling timber');
-    }
-  }
-
-  function rectHit(g, r) {
-    return g.x + 13 > r.x1 && g.x - 13 < r.x2 && g.y > r.top + 0.1 && g.y - 32 < r.bottom;
-  }
-
-  // Procedural survival mode uses the SAME one-button jump(), gravity, energy and hit code.
-  // The original fixed course is retained only for legacy regression tests.
+  // One source of truth for procedural hazards and their collision geometry.
   function courseNear(g,x,behind=50,ahead=1200) {
     return WispCourse.nearby(g.seed,x,stageAt,behind,ahead);
   }
@@ -738,55 +468,11 @@
     }
     return [{x1:x,x2:x+w,top,bottom:VIEW.ground+3,kind:h.type}];
   }
-  function procAutoControl(g){
-    const v=speedFor(g);
-    const candidates=courseNear(g,g.x,50,900);
-    const h=candidates.find(h=>h.x+h.width>=g.x-14 && h.x>g.x-780);
-    if(!h)return;
-    if(g.procPlan!==h.id){g.procPlan=h.id;g.procPlanType=h.type;g.procPlanStep=0;g.procPlanX=0;}
-    const takeoff=(when)=>{if(g.grounded && g.x>=when && g.x<=when+32){if(jump(g)){g.procPlanStep++;g.procPlanX=g.x;return true;}}return false;};
-    if(h.type==='forked-trunk'||h.type==='mossy-trunk'){
-      if(g.procPlanStep===0){takeoff(h.x-14-v*.38);return;}
-      if(g.procPlanStep===1){takeoff(h.x+199-14-v*.19);return;}
-      if(g.procPlanStep===2){takeoff(h.x+439-14-v*(h.type==='mossy-trunk'?.19:.45));return;}
-      if(h.type==='forked-trunk' && g.procPlanStep===3 && !g.grounded && g.jumps===1 && g.x-g.procPlanX>=v*.22){if(jump(g))g.procPlanStep=4;}
-      return;
-    }
-    if(h.type==='erosion-gap'){
-      const threshold=h.x-18-v*.095;
-      if(g.procPlanStep===0){takeoff(threshold);return;}
-      if(g.procPlanStep===1 && !g.grounded && g.jumps===1 && g.x-g.procPlanX>=v*.18){if(jump(g))g.procPlanStep=2;}
-      return;
-    }
-    if(h.type==='falling-timber'||h.type==='falling-tree'||h.type==='charred-tree'){
-      const d=g.hazardStates.get(h.id);
-      if(!d || d.phase==='waiting' || d.phase==='warning')return; // do not jump INTO airborne timber
-      if(d.phase==='falling'&&d.y<VIEW.ground-60)return;
-      // A fallen tree persists as a long, landable trunk, not an oversized short-log hitbox.
-      if((h.type==='falling-tree'||h.type==='charred-tree') && d.phase==='landed'){
-        if(g.procPlanStep===0)takeoff(h.x+18-14-v*.38);
-        return;
-      }
-    }
-    const actualX=h.type==='rolling-log'?(g.hazardStates.get(h.id)?.x??h.x):h.x;
-    const width=h.width;
-    // Analytically center the first jump's clearance window around the hazard.
-    // This uses Moss's actual jump impulse and current energy-dependent speed.
-    const relV=h.type==='rolling-log'?v+34:v;
-    const hgt=Math.min(65,h.height+3);
-    const impulse=Math.sqrt(2*G*70*g.stats.jump);
-    const disc=Math.sqrt(Math.max(0,impulse*impulse-2*G*hgt));
-    const enter=(impulse-disc)/G + .018;
-    const exit=(impulse+disc)/G - .018;
-    const earliest=actualX+width+13-relV*exit;
-    const latest=actualX-13-relV*enter;
-    const takeoffX=(earliest+latest)/2;
-    const before=h.type==='timber-stack'?Math.max(78,v*.57) : h.type==='falling-timber'?64 : h.type==='ash-patch'?56 : actualX-takeoffX;
-    if(g.procPlanStep===0){takeoff(actualX-before);return;}
-    if((h.type==='timber-stack'||h.type==='falling-timber'||h.type==='ash-patch')&&g.procPlanStep===1 && !g.grounded && g.jumps===1 && g.x-g.procPlanX>=v*.23){if(jump(g))g.procPlanStep=2;}
-  }
   function stepProcedural(g,dt,input={}) {
-    if(g.auto)procAutoControl(g);
+    if(g.auto){
+      if(!window.WispBenchmark)throw new Error('Test-only benchmark controller was not loaded');
+      window.WispBenchmark.control(g,{speedFor,courseNear,jump,G,ground:VIEW.ground});
+    }
     if(input.jump)jump(g);
     // Do not glide after the small branch: at high energy the extra airtime
     // makes a fast wisp land inside the NEXT fork. Reserve glide for long
@@ -852,12 +538,8 @@
       }
     }
     updateFire(g,dt);
-    if(g.chaseEnabled && !g.fire.active && g.status==='running') updateCutter(g,dt);
-    // Benchmark mode can finish an entire four-stage traversal without waiting for the Cutter.
-    if(g.auto&&g.procEndX&&g.x>=g.procEndX){
-      g.status=(g.impacts===0&&g.rescues===0)?'passed':'failed';
-      g.reason=g.status==='passed'?'Moss cleared procedural course with zero hits.':'Benchmark detected collision or gap rescue.';
-    }
+    if(g.chaseEnabled && !g.fire.active && g.status==='running') proceduralCutter(g,dt);
+    if(g.auto)window.WispBenchmark.finish(g);
   }
 
   function proceduralCutter(g,dt){
@@ -953,113 +635,9 @@
     checkCutterContact(g);
   }
 
-  function step(g, dt, input={}) {
-    if (g.status === 'dying') { updateDeath(g,dt); return; }
-    if (g.status !== 'running') return;
-    if(g.procedural) return stepProcedural(g,dt,input);
-    if (g.auto) autoControl(g);
-    if (input.jump) jump(g);
-    g.glide = !!input.glide;
-    g.time += dt;
-    g.impactCooldown = Math.max(0, g.impactCooldown - dt);
-    g.staggerRemaining = Math.max(0,g.staggerRemaining-dt);
-    const vx = speedFor(g);
-    const oldX = g.x;
-    const oldY = g.y;
-    g.x += vx * dt;
-    if(g.chaseEnabled && g.grounded && g.surface==='ground' && gapAt(g.x)){
-      g.grounded=false;g.surface=null;g.vy=0;
-      notify(g,'warning','Missed the gap — falling!');
-    }
-    g.distance = Math.max(0, g.x - 155);
-    // Stats are energy units per 1000 world pixels, not seconds.
-    g.energy = Math.max(0, g.energy - vx * dt * g.stats.drain / 1000);
-
-    if (g.grounded) {
-      const base = g.chaseEnabled ? Math.floor(g.x/CYCLE)*CYCLE : 0;
-      const tStart=LAYOUT.trunk.x1 + base, tEnd=LAYOUT.trunk.x2+base;
-      if (g.surface === 'trunk' && (g.x + 8 < tStart || g.x - 8 > tEnd)) {
-        g.grounded = false;
-        g.surface = null;
-        g.jumps = 0;
-      }
-    }
-
-    if (!g.grounded) {
-      const gravity = g.glide && g.vy > 0 ? G * .29 : G;
-      g.vy = Math.min(g.vy + gravity * dt, g.glide && g.vy > 0 ? 165 : 720);
-      g.y += g.vy * dt;
-    }
-
-    // Landing on trunk / ground restores two jumps. Top only: gameplay collider is separate from artwork.
-    const lap = g.chaseEnabled ? Math.floor(g.x / CYCLE) : 0;
-    const segment = lap*CYCLE;
-    if (!g.grounded && g.vy >= 0 && oldY <= LAYOUT.trunk.top + 1 && g.y >= LAYOUT.trunk.top &&
-        g.x + 8 > LAYOUT.trunk.x1+segment && g.x - 8 < LAYOUT.trunk.x2+segment) {
-      g.y = LAYOUT.trunk.top;
-      g.vy = 0; g.grounded = true; g.surface = 'trunk'; g.jumps = 0;
-      g.checkpoints.platform = true;
-      g.events.push({x:g.x,kind:'land-trunk'});
-    }
-    if (!g.grounded && g.y >= VIEW.ground && oldY <= VIEW.ground + 1 && (!g.chaseEnabled || !gapAt(g.x))) {
-      g.y = VIEW.ground;
-      g.vy = 0; g.grounded = true; g.surface = 'ground'; g.jumps = 0;
-      if (g.checkpoints.tall) g.checkpoints.landed = true;
-    }
-
-    // A trunk cannot be phased through from the side; a jump is required.
-    const shifted = (r) => ({x1:r.x1+segment,x2:r.x2+segment,top:r.top,bottom:r.bottom});
-    const start=LAYOUT.trunk.x1+segment;
-    if (g.x + 13 > start && oldX + 13 <= start && g.y > LAYOUT.trunk.top + 4) impact(g,'trunk side');
-    if (rectHit(g, shifted(LAYOUT.log))) impact(g,'short log');
-    if (rectHit(g, shifted(LAYOUT.shortBranch))) impact(g,'short branch');
-    if (rectHit(g, shifted(LAYOUT.tallFork))) impact(g,'tall fork');
-    updateTimber(g,dt);
-    if(g.chaseEnabled && g.y>VIEW.ground+150){
-      const pit=gapAt(g.x) || gapForLap(Math.max(0,Math.floor(g.x/CYCLE)));
-      g.x=Math.max(g.x, pit.x2+35);g.y=VIEW.ground;g.vy=0;g.grounded=true;g.surface='ground';g.jumps=0;
-      g.rescues++;g.energy=Math.max(0,g.energy-28);g.staggerTotal=1.1;g.staggerRemaining=1.1;
-      notify(g,'impact','Ravine rescue: −28 energy and a major slowdown.');
-    }
-
-    // Original clean-run checkpoint semantics are preserved for automated tests.
-    if (g.x - 13 > LAYOUT.shortBranch.x2 && g.checkpoints.platform) g.checkpoints.short = true;
-    if (g.x - 13 > LAYOUT.tallFork.x2 && g.checkpoints.short) g.checkpoints.tall = true;
-
-    if(!g.noPickups){
-      const pickOrbs = LAYOUT.collectibles.concat(g.chaseEnabled ? [
-        {x:1650,y:325,type:'common',amount:10},
-        {x:2010,y:326,type:'greater',amount:25},
-      ]:[]);
-      for(let j=0;j<= (g.chaseEnabled?1:0);j++){
-        const lapBase=(Math.floor(g.x/CYCLE)+j-1)*CYCLE;
-        if(lapBase<0)continue;
-        pickOrbs.forEach((orb,i)=>{
-          const key=`${lapBase}:${i}`;
-          if(g.collected.has(key))return;
-          if(Math.hypot(g.x-orb.x-lapBase,g.y-23-orb.y)<32){g.collected.add(key);collectEnergy(g,orb.amount,orb.type);}
-        });
-      }
-    }
-
-    if(!g.chaseEnabled && g.x>=LAYOUT.finishX){
-      g.status=g.checkpoints.platform&&g.checkpoints.short&&g.checkpoints.tall?'passed':'failed';
-      g.reason=g.status==='passed'?(g.impacts?`Survived with ${g.impacts} impacts.`:'Clean run: cleared log, platform and both branches.'):'Missed a checkpoint.';
-    }
-    if(!g.chaseEnabled && g.time>38){g.status='failed';g.reason='Timed out on this course.';}
-    if(g.chaseEnabled)updateCutter(g,dt);
-  }
-
-  function runScenario({ name='Moss', energy=100, noPickups=true, singleOnly=false }={}) {
-    const g = createGame(name,energy,{auto:true,noPickups,singleOnly});
-    let i=0;
-    while (g.status === 'running' && i++ < 6000) step(g,FIXED,{});
-    return {
-      name, startEnergy:energy, noPickups, singleOnly, status:g.status, reason:g.reason,
-      impacts:g.impacts, time:+g.time.toFixed(2), endEnergy:+g.energy.toFixed(1),
-      distance:+g.distance.toFixed(1), checkpoints:g.checkpoints,
-      events:g.events.filter(e=>e.kind!=='pickup').map(e=>({kind:e.kind,x:Math.round(e.x),detail:e.detail})),
-    };
+  function step(g,dt,input={}) {
+    if(g.status==='dying'){updateDeath(g,dt);return;}
+    if(g.status==='running')stepProcedural(g,dt,input);
   }
 
   // Images are hydrated from HTML so the same test can run as a standalone file on iOS.
@@ -1143,7 +721,7 @@
     const firstD=Math.floor(camera/89)-2,lastD=Math.floor((camera+VIEW.width)/89)+2;
     for(let i=firstD;i<=lastD;i++){
       const world=i*89+19+hash01(i,39)*43;
-      if(g.chaseEnabled && (g.procedural? (procGapAt(g,world)||procGapAt(g,world+18)||procGapAt(g,world-18)) : (gapAt(world)||gapAt(world+18)||gapAt(world-18))))continue;
+      if(g.chaseEnabled && (procGapAt(g,world)||procGapAt(g,world+18)||procGapAt(g,world-18)))continue;
       const stage=stageSample(world,42);
       const variants=STAGE_DECOR[stageKey(stage)];
       const slot=Math.floor(hash01(i,43)*variants.length);
@@ -1177,7 +755,6 @@
           if(s.t>.001)drawImage(groundSprite(s.b,side),px,VIEW.ground-22,96,186,s.t);
         };
         cap('GapLeft',left,sx-96);cap('GapRight',right,sx+h.width);
-        if(showHitboxes){ctx.strokeStyle='#ffa85b';ctx.strokeRect(sx,VIEW.ground,h.width,100);}
       }else if(h.type==='mossy-trunk'||h.type==='forked-trunk'){
         drawImage(biomeSprite(stage,'Trunk'),sx-36,202,730,203);
       }else if(h.type==='root'){
@@ -1220,91 +797,13 @@
         // Natural log, freshly cut timber, or smoldering log: same collider, biome-specific SVG.
         drawImage(biomeSprite(stage,'Log'),sx-12,VIEW.ground-(h.height+18),h.width+24,h.height+20);
       }
-      if(showHitboxes){
-        for(const rect of procObstacleRects(g,h)){
-          ctx.strokeStyle='#fa8875';ctx.lineWidth=2;ctx.strokeRect(x(rect.x1),rect.top,rect.x2-rect.x1,rect.bottom-rect.top);
-        }
-        if(h.type==='forked-trunk'||h.type==='mossy-trunk'){
-          ctx.strokeStyle='#91edb3';ctx.beginPath();ctx.moveTo(sx,339);ctx.lineTo(sx+h.width,339);ctx.stroke();
-        }
-      }
       for(const o of h.orbs){
         if(g.collected.has(o.id))continue;
         const size=o.kind==='greater'?43:30;
         drawImage(o.kind==='greater'?'greater':'orb',x(o.x)-size/2,o.y-size/2+Math.sin(g.time*2.6+h.index)*3,size,size);
       }
     }
-    if(g.timber){
-      const t=g.timber;if(t.phase==='warning'){
-        ctx.fillStyle='rgba(254,196,109,.28)';ctx.beginPath();ctx.ellipse(x(t.x),VIEW.ground,62,11,0,0,Math.PI*2);ctx.fill();
-      }else drawImage(biomeSprite(stageSample(t.x,13),'Timber'),x(t.x)-70,t.y-32,140,65);
-    }
-  }
 
-  function drawCourse(g,camera) {
-    if(g.procedural)return drawProceduralCourse(g,camera);
-    const x=world=>world-camera;
-    const low=g.chaseEnabled?Math.max(0,Math.floor(camera/CYCLE)-1):0;
-    const high=g.chaseEnabled?Math.floor((camera+VIEW.width)/CYCLE)+1:0;
-    for(let lap=low;lap<=high;lap++){
-      const base=lap*CYCLE;
-      const logStage=stageSample(337+base,79);
-      const trunkStage=stageSample(1120+base,80);
-      drawImage(biomeSprite(logStage,'Log'),x(337+base),331,85,51);
-      // All stage trunk SVGs keep the exact approved silhouette and collider profile.
-      drawImage(biomeSprite(trunkStage,'Trunk'),x(705+base),202,730,203);
-      if(showHitboxes){
-        for(const r of [LAYOUT.log,LAYOUT.shortBranch,LAYOUT.tallFork]){
-          ctx.fillStyle='rgba(254,110,91,.24)';ctx.fillRect(x(r.x1+base),r.top,r.x2-r.x1,r.bottom-r.top);
-          ctx.strokeStyle='#fc846d';ctx.lineWidth=1.5;ctx.strokeRect(x(r.x1+base),r.top,r.x2-r.x1,r.bottom-r.top);
-        }
-        ctx.fillStyle='rgba(106,246,153,.20)';ctx.fillRect(x(LAYOUT.trunk.x1+base),LAYOUT.trunk.top,LAYOUT.trunk.x2-LAYOUT.trunk.x1,4);
-      }
-      const extra=g.chaseEnabled?[{x:1650,y:325,type:'common'},{x:2010,y:326,type:'greater'}]:[];
-      LAYOUT.collectibles.concat(extra).forEach((orb,i)=>{
-        if(g.collected.has(`${base}:${i}`))return;
-        const s=orb.type==='greater'?45:29;
-        const bob=Math.sin(g.time*2.6+i*2)*3;
-        drawImage(orb.type==='greater'?'greater':'orb',x(orb.x+base)-s/2,orb.y-s/2+bob,s,s);
-      });
-      if(g.chaseEnabled){
-        const gap=gapForLap(lap);
-        // Clear the existing ground in world-space, then expose the dark ravine.
-        ctx.fillStyle='#091b22';ctx.fillRect(x(gap.x1),VIEW.ground,gap.x2-gap.x1,VIEW.height-VIEW.ground);
-        // Stage 1 cliffs: exposed roots + fractured earth + uneven grassy overhang.
-        // Caps are visual only; the existing gap collision bounds stay unchanged.
-        const leftStage=stageAt(gap.x1),rightStage=stageAt(gap.x2);
-        const cap=(where,s,px)=>{
-          drawImage(groundSprite(s.a,where),px,VIEW.ground-22,96,186,1-s.t);
-          if(s.t>.001)drawImage(groundSprite(s.b,where),px,VIEW.ground-22,96,186,s.t);
-        };
-        cap('GapLeft',leftStage,x(gap.x1-96));
-        cap('GapRight',rightStage,x(gap.x2));
-        if(gap.kind==='wide'){
-          ctx.fillStyle='rgba(248,214,153,.65)';ctx.font='12px system-ui';ctx.textAlign='center';
-          ctx.fillText('WIDE GAP',x((gap.x1+gap.x2)/2),VIEW.ground+40);
-        }
-      }
-    }
-    if(g.timber){
-      const t=g.timber;const sx=x(t.x);
-      ctx.save();
-      if(t.phase==='warning'){
-        ctx.fillStyle=`rgba(255,180,106,${.13+.13*Math.sin(t.timer*19)**2})`;
-        ctx.beginPath();ctx.ellipse(sx,VIEW.ground-1,57,10,0,0,Math.PI*2);ctx.fill();
-        ctx.strokeStyle='#ffd390';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(sx,140);ctx.lineTo(sx,199);ctx.stroke();
-        ctx.beginPath();ctx.moveTo(sx-8,190);ctx.lineTo(sx,202);ctx.lineTo(sx+8,190);ctx.stroke();
-        ctx.fillStyle='#f9d9a0';ctx.font='bold 14px system-ui';ctx.textAlign='center';ctx.fillText('FALLING TIMBER',sx,126);
-      }else{
-        drawImage(biomeSprite(stageSample(t.x,97),'Timber'),sx-70,t.y-32,140,65,t.hit?.6:1);
-        if(showHitboxes){ctx.strokeStyle='#ffb26b';ctx.strokeRect(sx-46,t.y-18,92,36);}
-      }
-      ctx.restore();
-    }
-    if(!g.chaseEnabled){
-      const fx=x(LAYOUT.finishX);
-      if(fx>-60 && fx<VIEW.width+60){ctx.strokeStyle='#dcf5c0';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(fx,VIEW.ground);ctx.lineTo(fx,240);ctx.stroke();ctx.fillStyle='#c9e8a4';ctx.beginPath();ctx.moveTo(fx,240);ctx.lineTo(fx+35,254);ctx.lineTo(fx,268);ctx.fill();}
-    }
   }
 
   function drawCutterShadow(g,camera){
@@ -1352,10 +851,6 @@
     svg.setAttribute('data-fire-phase',f.phase);
     // Treat the wall as artwork, NOT as hundreds of separate collisions.
     // This marked contact line follows the world-space gameplay front f.x.
-    if(showHitboxes){
-      ctx.strokeStyle='#ffdc88';ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(front,65);ctx.lineTo(front,VIEW.ground);ctx.stroke();
-    }
     // Warm front lighting belongs behind sprites and does not affect physics.
     const glow=ctx.createLinearGradient(front-190,0,front+85,0);
     glow.addColorStop(0,'rgba(255,97,37,0)');
@@ -1394,9 +889,6 @@
     ctx.save();ctx.translate(screenX,g.y-30+bob);ctx.rotate(tilt);
     drawImage(g.name,-39,-40,78,78);
     ctx.restore();
-    if(showHitboxes) {
-      ctx.strokeStyle='#aaf3fc';ctx.strokeRect(screenX-13,g.y-32,26,32);
-    }
     if(g.impactCooldown>0) {
       ctx.strokeStyle=`rgba(255,189,128,${.2+.3*Math.sin(g.time*18)**2})`;
       ctx.lineWidth=2;ctx.beginPath();ctx.arc(screenX,g.y-25,27,0,Math.PI*2);ctx.stroke();
@@ -1413,10 +905,10 @@
     ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#091e24';ctx.fillRect(0,0,dw,dh);
     const s=fit*pixelRatio;
     ctx.setTransform(s,0,0,s,(dw-VIEW.width*s)/2,(dh-VIEW.height*s)/2);
-    const soloCamera = Math.max(0,(demoCameraFocus ? g.cutter.x : g.x) - (g.fire.active ? (g.fire.preview ? 600 : 420) : 210));
+    const soloCamera = Math.max(0,g.x - (g.fire.active ? (g.fire.preview ? 600 : 420) : 210));
     const camera = window.WispOnline?.camera?.(g,soloCamera) ?? soloCamera;
     drawBg(camera,g);
-    drawCourse(g,camera);
+    drawProceduralCourse(g,camera);
     drawCutterShadow(g,camera);
     drawWildfire(g,camera);
     if(g.status==='dying' || (g.status==='caught' && g.death)) drawDeath(g,camera);
@@ -1478,12 +970,10 @@
   function reset(name,energy,auto=false,noPickups=false,seed=2026) {
     // Internal reset, never directly wired to a public control during an online match.
     releaseAction();
-    demoCameraFocus=false;
     activeKeys.clear();
     activePointerId=null;
     game=createGame(name,energy,{auto,noPickups,chase:!auto,seed});
     lastCutterAnimation=null;
-    autoPlay=auto;
     updateHud(game);
   }
 
@@ -1532,29 +1022,6 @@
     }
     paint(game);updateHud(game);
     requestAnimationFrame(frame);
-  }
-
-  function inspectStage(which){
-    const points=[155,1780,2400,4050,4620,6260,7000];
-    const n=Math.max(0,Math.min(points.length-1,Number(which)||0));
-    const name=soloChoice;
-    reset(name,100,false,false);
-    game.x=points[n];game.distance=game.x-155;
-    game.procPlan=null;game.hazardStates.clear();
-    game.y=VIEW.ground;game.grounded=true;game.surface='ground';
-    game.cutter.state='rest';game.cutter.elapsed=0;game.cutter.wait=18;
-    el('message').textContent='Biome inspection: stage art and collisions are separate. Press Jump to run normally.';
-    updateHud(game);
-  }
-
-  function benchmarkMoss(seed=2026,endX=10360){
-    const g=createGame('Moss',0,{auto:true,procedural:true,chase:false,noPickups:true,seed});
-    g.procEndX=endX;
-    let steps=0;
-    while(g.status==='running'&&steps++<Math.max(22000,Math.ceil(endX/110*120)+1800))step(g,FIXED,{});
-    const eventCount=g.events.filter(e=>e.kind==='jump'||e.kind==='double').length;
-    return {seed,startEnergy:0,status:g.status,reason:g.reason,impacts:g.impacts,rescues:g.rescues,
-      endX:Math.round(g.x),energy:Math.round(g.energy),jumps:eventCount,seconds:+g.time.toFixed(1),steps};
   }
 
   function setup() {
@@ -1625,13 +1092,10 @@
   // Maintain the original physics harness for local development and automated
   // regression runs, but do not publish its mutating shortcuts on the live site.
   if(['localhost','127.0.0.1',''].includes(location.hostname)){
-    window.WISP_TEST={makeFire,activateFire,updateFire,createGame,step,jump,runScenario,
-      benchmarkMoss,courseNear,procGapAt,procObstacleRects,dynamicUpdate,
-      drawProceduralCourse,CHARACTERS,LAYOUT,stageAt,stageSample,inspectStage,
-      speedFor,impact,collectEnergy,spawnTimber,get current(){return game;},
-      get controls(){return {held:actionHeld,gliding,downAt:actionDownAt,pointer:activePointerId,holdMs:HOLD_TO_GLIDE_MS};},
-      callCutter,forceFrenzy,forceRetreat,updateCutter,gapAt,gapForLap,
-      reset:(name,energy,auto=false,noPickups=false)=>{if(!onlineRoom)reset(name,energy,auto,noPickups);}};
+    // Physics inspection is local-only; browser UI and Cloudflare never use this.
+    window.WISP_TEST={createGame,step,jump,courseNear,
+      procGapAt,procObstacleRects,stageAt,speedFor,CHARACTERS,
+      get current(){return game;}};
   }
   setup();
 })();

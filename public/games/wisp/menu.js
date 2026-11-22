@@ -80,7 +80,7 @@
   function show(){
     if(raceRunning)return; // No pause/escape advantage during a live multiplayer race.
     engine.setPaused(true);menu.hidden=false;menuBtn.hidden=true;
-    $('wm-online-tab').focus({preventScroll:true});
+    (mode==='online'?$('wm-online-tab'):$('wm-solo-tab')).focus({preventScroll:true});
   }
   function hide(){menu.hidden=true;menuBtn.hidden=raceRunning;}
   function startSolo(){
@@ -112,12 +112,12 @@
   $('wm-join').addEventListener('click',()=>submit('join'));
   $('wm-begin').addEventListener('click',async()=>{try{await online.start();}catch(error){note(error.message);}});
   $('wm-invite').addEventListener('click',async()=>{try{await online.invite();}catch(error){note(error.message);}});
-  $('wm-leave').addEventListener('click',async()=>{try{await online.leave();}catch(error){note(error.message);}room=null;raceRunning=false;renderRoom(null);});
+  $('wm-leave').addEventListener('click',async()=>{try{await online.leave();}catch(error){note(error.message);}});
   function renderRoom(s){
     room=s;
     $('wm-online-entry').hidden=!!s;
     $('wm-lobby').hidden=!s;
-    if(!s)return;
+    if(!s){$('wm-online-entry').hidden=false;return;}
     tab('online');$('wm-room-code').textContent=s.code;
     const roster=$('wm-roster');roster.replaceChildren();
     for(const p of s.players){
