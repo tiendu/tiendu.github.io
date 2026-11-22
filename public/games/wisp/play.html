@@ -6,88 +6,72 @@
 <meta name="theme-color" content="#081c23">
 <title>WISP · Forest Survival</title>
 <style>
-  :root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eef8f1;background:#081b22}
-  *{box-sizing:border-box}
-  body{margin:0;background:radial-gradient(circle at 45% -20%,#193e40 0%,#081a22 63%);min-height:100dvh;line-height:1.43}
-  .wrap{width:min(1280px,100%);margin:0 auto;padding:clamp(12px,2.5vw,28px)}
-  header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:15px}
-  h1{font-size:clamp(23px,3vw,35px);font-weight:780;letter-spacing:.01em;line-height:1.1;margin:0}
-  .sub{margin:5px 0 0;color:#a4c5bb;font-size:14px}
-  .chip{background:#173c37;border:1px solid #396c54;border-radius:999px;padding:7px 12px;font-size:12px;color:#c7ebd1;font-weight:650;letter-spacing:.035em}
-  .game-frame{position:relative;width:100%;border-radius:18px;overflow:hidden;background:#0a252b;border:1px solid #31594d;box-shadow:0 16px 55px #03101480,0 0 0 1px #31594d30;}
-  canvas{width:100%;height:auto;aspect-ratio:2 / 1;display:block;touch-action:none;}
-  #cutter-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none} #cutter-svg{position:absolute;display:none;pointer-events:none;overflow:visible;will-change:left,top,transform;filter:drop-shadow(0 3px 2px rgba(0,0,0,.36))} .game-caption{position:absolute;bottom:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;gap:16px}
-  .game-caption span{background:#07161cc2;color:#c3dad0;border-radius:8px;padding:5px 9px;font-size:11px;backdrop-filter:blur(4px)}
-  .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:13px}
-  .metric{border:1px solid #254b49;background:#102a30cc;border-radius:12px;padding:12px 14px;min-height:77px}
-  .label{font-size:10px;text-transform:uppercase;letter-spacing:.10em;color:#8caaa6;font-weight:700}
-  .value{font-size:19px;line-height:1.6;font-weight:750;font-variant-numeric:tabular-nums;color:#ecf7f1}
-  .meter{height:7px;width:100%;margin-top:3px;border-radius:12px;background:#2a4441;overflow:hidden}
-  #energyFill{height:100%;width:100%;background:#9bd477;border-radius:12px;transition:width .08s linear,background .2s linear}
-  .chase-bar{display:grid;grid-template-columns:minmax(145px,1fr) minmax(120px,2fr) 84px;align-items:center;gap:12px;margin-top:12px;border:1px solid #6e533c;background:#1b2829;border-radius:14px;padding:12px 16px}.chase-bar strong{display:block;color:#f6dba4;font-size:12px;letter-spacing:.06em}.chase-bar small{display:block;color:#a8c0b6;font-size:11px;margin-top:2px}.threat-track{height:13px;border-radius:10px;background:#263c3b;border:1px solid #55705f;overflow:hidden}.threat-track div{height:100%;width:0;background:linear-gradient(90deg,#e9ad53,#e26947);transition:width .1s linear}.chase-distance{text-align:right;color:#f6c296;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}.lower{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.85fr);gap:15px;margin-top:15px}
-  .box{border-radius:15px;background:#0e2930;border:1px solid #274c48;padding:17px 20px}
-  h2{font-size:16px;margin:0 0 12px;color:#e6f6ee;font-weight:730}
-  .control-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-  label{font-size:12px;color:#a9c4bc;display:flex;flex-direction:column;gap:5px}
-  input[type=number]{width:105px;color:#e8f5f0;background:#1d3c40;border:1px solid #416361;border-radius:9px;padding:10px;font:inherit;font-size:14px}
-  select{color:#e8f5f0;background:#1d3c40;border:1px solid #416361;border-radius:9px;padding:10px 12px;font:inherit;font-size:14px;min-width:125px}
-  input[type="range"]{width:160px;accent-color:#a5d788;height:30px;cursor:pointer}
-  .slider-label{display:flex;align-items:center;gap:8px}
-  #startEnergyValue{font-size:13px;color:#cce9bb;min-width:35px}
-  button{font:inherit;cursor:pointer;color:#ebf9ed;border:1px solid #4a7566;background:#1f4946;border-radius:11px;padding:11px 15px;font-weight:680;font-size:13px;transition:transform .08s,border-color .1s,background .1s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-  button:active,button.down{transform:translateY(1px) scale(.99);background:#316d5a}
-  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #b8e5b4;outline-offset:2px}
-  .primary{background:#a7d989;color:#0d2b28;border-color:#d6ffb7}
-  .primary:active,.primary.down{background:#c3edaa;color:#0d2b28}
-  .buttons{display:flex;gap:9px;flex-wrap:wrap}
-  .hint{color:#9fb9af;font-size:12px;margin:10px 0 0}
-  .state{display:inline-block;background:#193e40;border-radius:8px;color:#cde6df;font-weight:650;font-size:12px;padding:6px 10px}
-  .state.pass{background:#234b32;color:#b6efb8}
-  .state.fail{background:#51382f;color:#ffcbac}
-  #message{color:#b5cbc1;font-size:13px;min-height:42px;margin:9px 0}
-  .howto{font-size:13px;color:#b7cfc4;margin:0 0 12px}
-  .input-buttons{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
-  .input-buttons button{min-height:72px;font-size:18px;letter-spacing:.015em;border-radius:14px;touch-action:none;user-select:none;-webkit-user-select:none}
-  .kbd{display:inline-block;border:1px solid #567268;border-bottom-width:2px;border-radius:5px;padding:1px 5px;color:#d4e9dd;font-size:11px}
-  .check{flex-direction:row;align-items:center;gap:7px;cursor:pointer}
-  .check input{accent-color:#8ccd83;width:16px;height:16px}
-  .small-stat{font-size:11px;color:#9bbdaf;display:block;margin-top:-3px;font-variant-numeric:tabular-nums}
-  .lab-actions{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:7px;margin:12px 0 8px}
-  .lab-actions button{font-size:12px;min-height:43px;padding:8px 7px;background:#1d3d36}
-  #dropTimber{background:#563d33;border-color:#8d6550}
-  .event-feed{min-height:60px;max-height:116px;overflow:auto;border:1px solid #274f47;border-radius:10px;background:#0b2026;padding:8px 10px;margin:8px 0 11px}
-  .event{font-size:12px;color:#d1ead8;padding:3px 0}
-  .event span{color:#85a9a6;font-variant-numeric:tabular-nums;margin-right:6px}
-  .event.impact{color:#f4ad97}.event.warning{color:#f4d295}.event.pickup{color:#abefad}.event.quiet{color:#93ada6}
-  footer{color:#74968d;font-size:12px;margin:17px 0 5px}
-  @media(max-width:720px){body{padding-bottom:115px}.input-buttons{position:fixed;bottom:0;left:0;right:0;z-index:50;padding:10px 12px max(10px,env(safe-area-inset-bottom));margin:0;background:#092027f2;border-top:1px solid #42675b;box-shadow:0 -8px 24px #04161c88;grid-template-columns:1fr;gap:10px}.input-buttons button{min-height:64px;font-size:15px}.wrap{padding:9px}header{margin:8px 4px 12px} .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.chase-bar{grid-template-columns:1fr auto;gap:8px;padding:10px}.chase-bar .threat-track{grid-row:2;grid-column:span 2}.metric{min-height:64px;padding:9px 11px}.value{font-size:17px}.lower{grid-template-columns:1fr;gap:9px}.box{padding:13px} .game-frame{border-radius:10px}.game-caption span{font-size:9px}.lab-actions{grid-template-columns:1fr 1fr}.lab-actions #dropTimber{grid-column:span 2} .input-buttons button{min-height:76px}.chip{display:none} .sub{font-size:12px}}
-  .biome-strip{border:1px solid #356157;background:#102c2c;border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;gap:15px;align-items:center}
-  .biome-strip strong{display:block;color:#d7f2c9;font-size:15px;margin-top:3px}
-  .biome-track{height:8px;width:30%;max-width:250px;background:#344f48;border-radius:999px;overflow:hidden}
-  .biome-track div{height:100%;background:linear-gradient(90deg,#8cb876,#d8b073);width:0%;border-radius:999px}
-  @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
-
-  #wildfire-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
-  #wildfire-svg{position:absolute;display:none;pointer-events:none;max-width:none;max-height:none;overflow:visible;will-change:left,top}
-  #cutter-layer{z-index:2}
-  .game-caption{z-index:3}
-
+  :root { color-scheme:dark; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#ecf7ef; background:#081b22 }
+  * { box-sizing:border-box }
+  body { margin:0; min-height:100dvh; background:radial-gradient(circle at 45% -20%,#153b3a,#081b22 65%); line-height:1.4; padding-bottom:24px }
+  .wrap { max-width:1200px; margin:auto; padding:clamp(10px,2.1vw,24px) }
+  .game-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:2px 0 12px }
+  .game-header h1 { margin:0; font-size:24px; letter-spacing:.16em }
+  .game-header p { margin:0 88px 0 0; font-size:11px; letter-spacing:.13em; color:#a4c8b5; text-transform:uppercase }
+  .biome-strip { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; padding:9px 14px; background:#102b2a; border:1px solid #366052; clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px)) }
+  .biome-strip strong { font-size:13px; color:#ddf4d0; text-transform:uppercase; letter-spacing:.045em }
+  .biome-track { height:7px; flex:1; max-width:230px; background:#345149; overflow:hidden }
+  .biome-track > div { height:100%; width:0%; background:linear-gradient(90deg,#83b876,#d5a26e) }
+  .game-frame { position:relative; width:100%; background:#0a252b; overflow:hidden; border:1px solid #31594d; box-shadow:0 20px 55px #03101480 }
+  canvas { width:100%; height:auto; aspect-ratio:2 / 1; display:block; touch-action:none }
+  #wildfire-layer,#cutter-layer { position:absolute; inset:0; overflow:hidden; pointer-events:none }
+  #wildfire-layer { z-index:1 }
+  #cutter-layer { z-index:2 }
+  #wildfire-svg { position:absolute; display:none; max-width:none; max-height:none; pointer-events:none; overflow:visible; will-change:left,top }
+  #cutter-svg { position:absolute; display:none; pointer-events:none; overflow:visible; will-change:left,top,transform; filter:drop-shadow(0 3px 2px #0006) }
+  .game-caption { position:absolute; z-index:3; left:12px; bottom:10px; font-size:10px; letter-spacing:.1em; color:#cadcce; background:#07161cb3; padding:4px 8px; pointer-events:none }
+  .run-dashboard { display:grid; grid-template-columns:minmax(150px,1.15fr) minmax(90px,.65fr) minmax(200px,1.35fr); gap:9px; margin:11px 0 0 }
+  .run-panel { min-width:0; padding:10px 12px; border:1px solid #35574d; background:#112b2d; clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px)) }
+  .run-label { display:block; font-size:10px; color:#99b7aa; letter-spacing:.1em; text-transform:uppercase }
+  .run-value { display:block; font-size:17px; font-variant-numeric:tabular-nums; font-weight:750; color:#f0f8e9 }
+  .run-value.small { font-size:12px; color:#f4c99f }
+  .run-metric-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px }
+  .meter,.threat-track { height:8px; background:#2c4840; overflow:hidden; margin-top:5px }
+  #energyFill { width:100%; height:100%; background:#9bd477; transition:width .08s linear }
+  #chaseThreat { width:0%; height:100%; background:linear-gradient(90deg,#e9ad53,#e26947); transition:width .1s linear }
+  #chaseInfo { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:10px; color:#a9c1b0; margin-top:4px }
+  #message { color:#b7d1be; min-height:18px; font-size:12px; margin:8px 3px }
+  #message:empty { display:none }
+  .game-actions { display:flex; align-items:stretch; gap:8px; margin-top:10px }
+  button { font:inherit; touch-action:manipulation; cursor:pointer; border:1px solid #709b75; background:#234c3c; color:#eef7e8; padding:12px 17px; font-size:14px; font-weight:700 }
+  button:active,button.down { transform:translateY(1px); background:#3b6c50 }
+  button:focus-visible { outline:2px solid #dcf5bc; outline-offset:3px }
+  #jump { flex:1; min-height:64px; background:#a6d585; border-color:#dcffb9; color:#112d24; letter-spacing:.08em; user-select:none; -webkit-tap-highlight-color:transparent }
+  #restart { min-height:64px; background:#3c5643; color:#f6f9ed }
+  [hidden] { display:none!important }
+  @media(max-width:720px) {
+    body { padding-bottom:calc(88px + env(safe-area-inset-bottom)) }
+    .wrap { padding:10px }
+    .game-header h1 { font-size:20px }
+    .game-header p { display:none }
+    .biome-track { max-width:105px }
+    .run-dashboard { grid-template-columns:1fr 1fr; gap:5px; margin-top:7px }
+    .run-panel { padding:8px 10px }
+    .run-panel.threat { grid-column:1 / -1; }
+    #chaseInfo { display:none }
+    .run-value { font-size:15px }
+    .game-actions { position:fixed; z-index:50; bottom:0; left:0; right:0; padding:8px 10px max(10px,env(safe-area-inset-bottom)); margin:0; background:#092027f2; border-top:1px solid #365b4b; }
+    #jump,#restart { min-height:62px; font-size:14px }
+  }
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
 </style>
 <link rel="stylesheet" href="menu.css">
 </head>
 <body>
 <div class="wrap">
-<header>
-  <div><h1>WISP <span style="color:#B2DC8C">/ FOREST RUN</span></h1><p class="sub">Living → Disturbed → Logged → Burnt · Seeded hazards and mixed-stage terrain · One-button survival.</p></div>
-  <span class="chip">FOREST SURVIVAL · BETA</span>
-</header>
+<header class="game-header"><h1>WISP</h1><p>Run while the forest disappears</p></header>
 <main>
   <div class="biome-strip" aria-label="Current forest stage">
-    <div><span class="label">FOREST PROGRESSION</span><strong id="stageValue">Living Forest</strong></div>
+    <strong id="stageValue">Living Forest</strong>
     <div class="biome-track"><div id="stageBlendFill"></div></div>
   </div>
-  <section class="game-frame" aria-label="Playable WISP movement test">
-    <canvas id="game" width="960" height="480">A browser that supports Canvas is required for this playable test.</canvas>
+  <section class="game-frame" aria-label="WISP survival race">
+    <canvas id="game" width="960" height="480">A browser that supports Canvas is required to play WISP.</canvas>
     <div id="wildfire-layer" aria-hidden="true">
 <svg id="wildfire-svg" xmlns="http://www.w3.org/2000/svg" width="1120" height="530" viewBox="0 0 1120 530" role="img" aria-labelledby="fire-title fire-desc">
 <title id="fire-title">WISP — Grounded Polygon Wildfire, V2</title>
@@ -2787,70 +2771,26 @@
 </g>
 </g>
 </svg></div>
-    <div class="game-caption"><span>SVG FOREST · THE CUTTER</span><span>Survive the chase · one-button</span></div>
+    <div class="game-caption">ESCAPE THE CUTTER · SURVIVE THE WILDFIRE</div>
   </section>
-  <section class="metrics" aria-label="Movement stats">
-    <div class="metric"><div class="label">Energy</div><div class="value" id="energyText">100%</div><div class="meter"><div id="energyFill"></div></div></div>
-    <div class="metric"><div class="label">Running speed</div><div class="value" id="speed">225 px/s</div></div>
-    <div class="metric"><div class="label">Distance / consumption</div><div class="value" id="distance">0 px</div><small id="drain" class="small-stat">8 / 1000 px</small></div>
-    <div class="metric"><div class="label">Impacts / pickups</div><div class="value"><span id="impacts">0</span> / <span id="pickups">0</span></div><small id="resilience" class="small-stat">−11 per hit</small></div>
+  <section class="run-dashboard" aria-label="Race status">
+    <div class="run-panel">
+      <div class="run-metric-head"><span class="run-label">ESSENCE</span><strong class="run-value" id="energyText">100%</strong></div>
+      <div class="meter" role="meter" aria-label="Energy level"><div id="energyFill"></div></div>
+    </div>
+    <div class="run-panel"><span class="run-label">DISTANCE</span><strong class="run-value" id="distance">0</strong></div>
+    <div class="run-panel threat" aria-live="off">
+      <div class="run-metric-head"><strong class="run-value small" id="chaseState">FOREST QUIET</strong><span class="run-value small" id="chaseDistance">—</span></div>
+      <div class="threat-track"><div id="chaseThreat"></div></div><small id="chaseInfo">Stay ahead</small>
+    </div>
   </section>
-  <section class="chase-bar" aria-label="Cutter chase status">
-    <div><strong id="chaseState">FOREST QUIET</strong><small id="chaseInfo">Preparing for the next chase</small></div>
-    <div class="threat-track"><div id="chaseThreat"></div></div>
-    <span id="chaseDistance" class="chase-distance">—</span>
-  </section>
-  <div class="lower">
-    <section class="box">
-      <h2>Survive The Cutter & Wildfire</h2>
-      <p class="howto">The Cutter retreats, warns, approaches, hunts, and sometimes <b>frenzies</b>. His touch is instant elimination. Keep your energy up with Forest Essence and dodge logs, branches, and timber. <b>One button:</b> tap to jump, tap again in midair to double-jump, hold to glide.</p>
-      <div class="control-row">
-        <label>Wisp<select id="character"><option>Moss</option><option>Ember</option><option>Dew</option><option>Gale</option><option>Dusk</option></select></label>
-        <label>Starting energy <span class="slider-label"><input id="startEnergy" type="range" min="0" max="100" value="100" step="5"><span id="startEnergyValue">100%</span></span></label>
-      </div>
-      <div class="buttons">
-        <label>Forest seed<input id="courseSeed" type="number" value="2026" step="1" min="0" max="99999" aria-label="Procedural forest seed"></label>
-        <button id="nextSeed" type="button">New seed ↻</button>
-        <label>Preview section<select id="stageInspect"><option value="0">01 · Living</option><option value="1">Living → Disturbed</option><option value="2">02 · Disturbed</option><option value="3">Disturbed → Logged</option><option value="4">03 · Logged</option><option value="5">Logged → Burnt</option><option value="6">04 · Burnt</option></select></label>
-    <button id="restart">↻ Restart</button>
-        <button id="watchMoss" class="primary" type="button">▶ Moss 0% benchmark</button>
-        <button id="autoplay" type="button">Legacy physics regression</button>
-        <label class="check"><input id="hitboxes" type="checkbox">Show hitboxes</label>
-      </div>
-      <div id="message" role="status">Every seed generates a different sequence. Later stages combine obstacles, but leave safe recovery stretches. Jump, double-jump or glide to survive.</div>
-      <p class="hint">Next hazard: <strong id="nextObstacle" style="color:#cfeab6">Open terrain</strong> · Difficulty: <strong id="difficultyValue" style="color:#e5c78b">Starting easy</strong></p>
-      <p class="hint">Generated combinations use safe spacing and occasional easy stretches. Moss benchmark: 0% energy, no pickups or Cutter.</p>
-      <span class="state" id="state">On ground</span> <span class="state" id="recovery">Ready</span>
-      <div class="lab-actions" aria-label="Energy and falling timber tests">
-        <button id="orbSmall" type="button">+10 Essence</button>
-        <button id="orbLarge" type="button">+25 Greater Essence</button>
-        <button id="dropTimber" type="button">↓ Drop timber ahead</button>
-      </div>
-      <div class="lab-actions" aria-label="Cutter chase test triggers">
-        <button id="forceWarning" type="button">⚠ Call Cutter</button>
-        <button id="forceFrenzy" type="button">⚡ Frenzy now</button>
-        <button id="forceRetreat" type="button">↶ Retreat</button>
-        <button id="demoClimb" type="button">🪵 Watch Cutter climb + cut</button>
-        <button id="previewFire" type="button">🔥 Preview grounded wildfire</button>
-        <button id="previewDeath" type="button">✦ Preview wisp death</button>
-      </div>
-      <div class="event-feed" id="events" aria-live="polite"><div class="event quiet">No collisions yet.</div></div>
-      <div class="input-buttons">
-        <button id="jump" class="primary" aria-label="Jump. Tap twice to double-jump. Hold to glide." type="button">↑ JUMP · DOUBLE-TAP · HOLD TO GLIDE</button>
-      </div>
-      <p class="hint">One-button controls: tap = jump · tap again midair = double-jump · hold = glide while falling. Desktop: <span class="kbd">Space</span> / <span class="kbd">↑</span> / <span class="kbd">W</span> · <span class="kbd">R</span> to restart</p>
-    </section>
-    <section class="box">
-      <h2>The Cutter / chase rules</h2>
-      <p class="howto"><b>Energy:</b> drains by distance. Slow wisps keep up by collecting essence and avoiding collisions. The Cutter will gain ground rapidly on exhausted wisps.</p>
-      <p class="howto"><b>Impact:</b> logs and timber drain energy with 1.1s protection. <b>The Cutter:</b> a single touch ends the run, regardless of resilience.</p>
-      <p class="howto"><b>Chase cycle:</b> quiet → warning → approach → hunting → occasional 2.5s frenzy → retreat. Wide erosion gaps can make him brake or tumble; short gaps trigger a jump.</p>
-      <p class="howto"><b>Testing:</b> change energy or wisp; press Call Cutter to enter a chase or Frenzy now for a speed burst. You can continue through seeded obstacle chunks and gaps. The <b>Moss 0% benchmark</b> tests connected obstacle combinations at exhausted speed with pickups and the Cutter disabled. <b>Watch Cutter climb + cut</b> follows him onto the log, through the two branches, and down. <b>Watch Moss pass</b> remains the original collision regression course, without a chase.</p>
-      <p class="hint">Single-player procedural survival prototype. Each generated obstacle has its own world-space collision geometry. Actual Chrome iOS/WebKit device behavior remains unverified.</p>
-    </section>
+  <p id="message" role="status" aria-live="polite">Tap to jump · tap again to double-jump · hold to glide.</p>
+  <div class="game-actions">
+    <button id="jump" aria-label="Jump. Tap again to double-jump. Hold while falling to glide." type="button">↑ JUMP · DOUBLE-TAP · HOLD</button>
+    <button id="restart" type="button" hidden>↻ TRY AGAIN</button>
   </div>
 </main>
-<footer>WISP Cutter chase lab · Existing editable SVG art · JS controls the inline SVG rig, with no scripts embedded in SVG assets.</footer>
+
 </div>
 <!-- PORTABLE_VECTOR_ASSETS -->
 <script src="cutter-motion.js"></script>

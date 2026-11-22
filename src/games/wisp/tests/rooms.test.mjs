@@ -55,3 +55,45 @@ test('disconnect timeout is elimination, expired rooms pruned',()=>{
   assert.equal(room.winnerId,room.players[0].id);
   tick(46*60_000);r.prune();assert.equal(r.rooms.size,0);
 });
+test('online race rejects implausible energy injections and repeated pickups',()=>{
+  const {r,tick}=setup();
+  const h=r.create({name:'Moss',wisp:'Moss'}),code=h.snapshot.code;
+  r.join({code,name:'Dew',wisp:'Dew'});
+  r.start({code,token:h.token});tick(3200);
+  let s=r.sync({code,token:h.token,sequence:0,x:180,y:380,energy:40});
+  assert.equal(s.players[0].energy,40);
+  tick(250);
+  assert.throws(()=>r.sync({code,token:h.token,sequence:1,x:220,y:360,energy:100}),/Invalid energy refill/);
+  s=r.sync({code,token:h.token,sequence:1,x:220,y:360,energy:60});
+  assert.equal(s.players[0].energy,60,'single realistic Greater Essence gain permitted');
+  tick(250);
+  assert.throws(()=>r.sync({code,token:h.token,sequence:2,x:220,y:360,energy:85}),/Invalid energy refill/);
+  s=r.sync({code,token:h.token,sequence:2,x:245,y:370,energy:55});
+  assert.equal(s.players[0].energy,55);
+  assert.equal(s.players[0].alive,true);
+});
+test('online speed bound holds across spammed small intervals',()=>{
+  const {r,tick}=setup();
+  const h=r.create({name:'Moss',wisp:'Moss'}),code=h.snapshot.code;
+  r.join({code,name:'Gale',wisp:'Gale'});r.start({code,token:h.token});tick(3020);
+  let s;
+  for(let i=0;i<80;i++){
+    tick(10);
+    s=r.sync({code,token:h.token,sequence:i,x:100000,y:380,energy:100});
+  }
+  // 0.82 s at 285 world units/s, with a small clock/packet tolerance.
+  assert.ok(s.players[0].x<500,`suspicious x=${s.players[0].x}`);
+  assert.equal(s.players[0].alive,true);
+});
+
+test('many tiny energy gains cannot refill a stationary racer',()=>{
+  const {r,tick}=setup();
+  const h=r.create({name:'Moss',wisp:'Moss'}),code=h.snapshot.code;
+  r.join({code,name:'Gale',wisp:'Gale'});r.start({code,token:h.token});tick(3100);
+  r.sync({code,token:h.token,sequence:0,x:181,y:380,energy:10});
+  tick(250);
+  r.sync({code,token:h.token,sequence:1,x:245,y:360,energy:10.25});
+  tick(250);
+  assert.throws(()=>r.sync({code,token:h.token,sequence:2,x:252,y:360,energy:10.50}),
+    /Invalid energy refill/);
+});

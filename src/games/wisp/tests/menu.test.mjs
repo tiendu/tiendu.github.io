@@ -11,7 +11,7 @@ test('WISP polygon menu and multiplayer bridge load in order',async()=>{
   const menu=await file('public/games/wisp/menu.js');
   assert.ok(page.includes('href="menu.css"'));
   assert.ok(page.indexOf('<script src="online.js"></script>')<page.indexOf('<script src="menu.js"></script>'));
-  assert.match(menu,/WISP_TEST/);
+  assert.match(menu,/WispGame/);
   assert.match(menu,/wm-wisps/);
   assert.match(menu,/wisp:online-race-start/);
   assert.match(online,/wisp:online-state/);
@@ -19,4 +19,22 @@ test('WISP polygon menu and multiplayer bridge load in order',async()=>{
   assert.match(online,/create\(\{name,wisp\}\)/);
   for(const filename of ['menu.css','menu.js',...['moss','ember','dew','gale','dusk'].map(x=>'assets/'+x+'.svg')])
     await access(join(root,'public/games/wisp',filename));
+});
+
+test('published WISP page contains only player controls, no development panel',async()=>{
+  const page=await file('public/games/wisp/play.html');
+  const runner=await file('public/games/wisp/game.js');
+  const online=await file('public/games/wisp/online.js');
+  assert.match(page,/class="run-dashboard"/);
+  assert.match(page,/id="jump"/);
+  assert.match(page,/id="restart"[^>]*hidden/);
+  for(const id of ['watchMoss','autoplay','hitboxes','orbSmall','orbLarge',
+    'forceWarning','forceFrenzy','forceRetreat','previewFire','previewDeath',
+    'demoClimb','stageInspect','startEnergy','courseSeed','dropTimber']) {
+    assert.equal(page.includes(`id="${id}"`),false,`Development control ${id} leaked`);
+  }
+  assert.match(runner,/window\.WispGame/);
+  assert.match(runner,/if\(\['localhost','127\.0\.0\.1',''\]\.includes\(location\.hostname\)\)/);
+  assert.match(online,/game\.startOnline/);
+  assert.doesNotMatch(online,/window\.WISP_TEST/);
 });

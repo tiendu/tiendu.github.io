@@ -7,7 +7,7 @@
   const defaultApi = qs.get('api') || window.WISP_ROOM_API || (location.hostname==='tiendu.github.io'?'https://wisp-multiplayer.tiendu107.workers.dev':(['localhost','127.0.0.1'].includes(location.hostname)?'http://127.0.0.1:8787':''));
   const sessionKey = 'wisp-room-session-v1';
   const frame = document.querySelector('.game-frame');
-  if (!frame || !window.WISP_TEST) return;
+  if (!frame || !window.WispGame) return;
   const panel = document.createElement('section');
   panel.className = 'wisp-online';
   panel.setAttribute('aria-label', 'WISP online multiplayer');
@@ -82,7 +82,7 @@
     else if(s.state==='running'){
       const seconds=Math.max(0,Math.ceil((s.startAt-s.serverNow)/1000));
       if(!matchStarted&&seconds>0)setStatus('Race starts in '+seconds+'…');
-      else setStatus(window.WISP_TEST.current.status==='caught'?'ELIMINATED · Spectating the remaining wisps.':'SURVIVE! One button: tap, tap again, hold to glide.');
+      else setStatus(window.WispGame.current.status==='caught'?'ELIMINATED · Spectating the remaining wisps.':'SURVIVE! One button: tap, tap again, hold to glide.');
     }else if(s.state==='finished'){
       const winner=s.players.find(p=>p.id===s.winnerId);
       setStatus(`${winner?winner.name+' wins!':'Race finished.'} · Last wisp standing`);
@@ -91,15 +91,11 @@
   }
   function launchRace(){
     if(!session||!snapshot||matchStarted)return;
-    matchStarted=true;
-    const game=window.WISP_TEST;
+    const game=window.WispGame;
     const own=snapshot.players.find(p=>p.id===snapshot.me);
-    const selector=document.querySelector('select#character');if(selector&&own)selector.value=own.wisp;
-    const seedInput=document.querySelector('#courseSeed');if(seedInput)seedInput.value=snapshot.seed;
-    game.reset(own?.wisp||'Moss',100,false,false);
-    game.current.seed=snapshot.seed;
-    game.setPaused(false);
+    if(!game.startOnline(own?.wisp||'Moss',snapshot.seed))return;
     sequence=0;
+    matchStarted=true;
     window.dispatchEvent(new Event('wisp:online-race-start'));
   }
   async function poll(){
@@ -110,13 +106,13 @@
       let result;
       if(matchStarted&&snapshot?.state==='running'&&now-lastSync>=175){
         lastSync=now;
-        const g=window.WISP_TEST.current;
+        const g=window.WispGame.current;
         result=await request('sync',{...session,sequence:++sequence,x:g.x,y:g.y,energy:g.energy,
           eliminated:g.status==='caught',reason:g.deathCause||g.reason||'Caught'});
       }else{result=await request('state',session);}
       showRoom(result);
       if(result.state==='running'&&!matchStarted&&result.serverNow>=result.startAt)launchRace();
-      if(result.state==='finished'&&matchStarted){window.WISP_TEST.setPaused(true);}
+      if(result.state==='finished'&&matchStarted){window.WispGame.finishOnline();}
       lastRevision=result.revision;
     }catch(err){setStatus('Connection: '+(err.name==='AbortError'?'timeout':err.message));}
     finally{busy=false;}
@@ -127,6 +123,7 @@
       const name=$('wisp-name').value.trim();const wisp=$('wisp-choice').value;
       const response=await request(op,{name,wisp,...(op==='join'?{code:$('wisp-code').value.trim()}:{})});
       session={code:response.snapshot.code,token:response.token};matchStarted=false;
+      window.WispGame.setOnlineRoom(true);
       persist();showRoom(response.snapshot);startPolling();
     }catch(err){setStatus(err.message);throw err;}
   }
@@ -136,8 +133,9 @@
   $('wisp-leave').onclick=async()=>{
     if(session)try{await request('leave',session);}catch{}
     session=null;snapshot=null;matchStarted=false;persist();if(timer)clearInterval(timer);
+    window.WispGame.setOnlineRoom(false);
     $('wisp-online-entry').hidden=false;$('wisp-online-room').hidden=true;
-    window.WISP_TEST.setPaused(true);setStatus('Left online room. Solo play is available.');
+    window.WispGame.setPaused(true);setStatus('Left online room. Solo play is available.');
     window.dispatchEvent(new CustomEvent('wisp:online-state',{detail:null}));
   };
   $('wisp-invite').onclick=async()=>{
@@ -150,7 +148,7 @@
   };
   try {const data=JSON.parse(sessionStorage.getItem(sessionKey)||'null');
     if(data&&/^\d{6}$/.test(data.code)&&data.token&&(!qs.get('room')||data.code===qs.get('room'))){
-      session=data;startPolling();
+      session=data;window.WispGame.setOnlineRoom(true);startPolling();
     }}catch{}
   window.WispOnline={
     snapshot(){return snapshot;},
@@ -159,7 +157,7 @@
     start:async()=>{if(!session)throw new Error('Join a room first.');const result=await request('start',session);showRoom(result);return result;},
     leave:()=>$('wisp-leave').onclick(),
     invite:async()=>{const url=await $('wisp-invite').onclick();return url;},
-    isSpectating(){return !!(session && matchStarted && snapshot?.state==='running' && window.WISP_TEST.current.status==='caught');},
+    isSpectating(){return !!(session && matchStarted && snapshot?.state==='running' && window.WispGame.current.status==='caught');},
     camera(g,solo){
       if(!this.isSpectating())return solo;
       const live=snapshot.players.filter(p=>p.alive).sort((a,b)=>b.distance-a.distance);

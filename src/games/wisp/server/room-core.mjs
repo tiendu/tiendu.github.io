@@ -45,7 +45,7 @@ export class WispRegistry {
     if (!WISPS.includes(wisp)) throw error('Choose one of the five wisps');
     return { id: this.token(), token: this.token(), name: clean(name), wisp, host,
       connected: true, alive: true, distance: 0, x: 155, y: 380, energy: 100,
-      submittedAt: 0, lastSeen: this.now(), sequence: -1, reason: null };
+      submittedAt: 0, lastSeen: this.now(), lastEnergyGainX: 155, lastReportedEnergy: 100, sequence: -1, reason: null };
   }
   snapshot(room, player = null) {
     return {
@@ -94,7 +94,7 @@ export class WispRegistry {
     room.seed = int(this.random()*2**31, 0, 2**31-1);
     for (const other of room.players) {
       Object.assign(other,{alive:true,connected:true,distance:0,x:155,y:380,energy:100,
-        submittedAt:0,sequence:-1,reason:null,lastSeen:this.now()});
+        submittedAt:0,lastEnergyGainX:155,lastReportedEnergy:100,sequence:-1,reason:null,lastSeen:this.now()});
     }
     this.touch(room);return this.snapshot(room,p);
   }
@@ -107,13 +107,32 @@ export class WispRegistry {
     if (now < room.startAt || !p.alive) return this.snapshot(room,p);
     if (!Number.isSafeInteger(sequence) || sequence <= p.sequence) return this.snapshot(room,p);
     if (!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(energy)) throw error('Invalid race state');
-    // Prevent impossible teleporting, backward distance or out-of-bounds state.
-    // This is not a substitute for eventual fully authoritative collision physics.
+    // Prevent teleporting by chaining tiny requests or submitting a fake huge x.
+    // The absolute race-time cap also limits cumulative speed across requests.
+    // This is NOT authoritative simulation: client-side collisions still need a
+    // trusted server implementation in a later milestone.
     const elapsed = p.submittedAt ? Math.min(2,(now-p.submittedAt)/1000) : Math.min(2,(now-room.startAt)/1000);
-    const allowance = 370*Math.max(.02,elapsed)+26;
-    p.x = Math.max(p.x,Math.min(Math.max(155,x),p.x+allowance));
-    p.y = int(y,-500,1200);
-    p.energy = int(energy,0,100);
+    const raceElapsed = Math.max(0,(now-room.startAt)/1000);
+    const allowance = 285*Math.max(0,elapsed)+16;
+    const raceLimit = 155+285*raceElapsed+45;
+    const nextX = Math.max(p.x,Math.min(Math.max(155,x),p.x+allowance,raceLimit));
+    if(energy<0 || energy>100)throw error('Invalid energy value');
+    // No button or browser request may grant arbitrary full energy. A normal
+    // pickup is +10; the risky Greater Essence is +25. Legitimate +25 gains
+    // require movement between pickups. This bounds abuse, but cannot prove
+    // the player actually touched an orb without server-side physics.
+    const gain=energy-(Number.isFinite(p.lastReportedEnergy)?p.lastReportedEnergy:p.energy);
+    if(gain>.05){
+      const moved=nextX-p.x;
+      const maxGain=25*Math.max(1,Math.ceil(moved/180))+1;
+      if(gain>maxGain || nextX-(p.lastEnergyGainX??155)<55)
+        throw error('Invalid energy refill');
+      p.lastEnergyGainX=nextX;
+    }
+    p.x=nextX;
+    p.y=int(y,-500,1200);
+    p.energy=int(energy,0,100);
+    p.lastReportedEnergy=energy;
     p.distance = Math.round(Math.max(0,p.x-155));
     p.sequence = sequence;p.submittedAt = now;
     if (eliminated) {p.alive=false;p.reason=String(reason ?? 'eliminated').slice(0,90);}

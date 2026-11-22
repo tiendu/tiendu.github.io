@@ -1,4 +1,4 @@
-/* WISP cutter-chase lab — same one-button physics, game-owned chase AI, DOM-driven SVG rig. */
+/* WISP — forest runner physics, procedural survival and the Cutter / wildfire. */
 (() => {
   'use strict';
 
@@ -178,6 +178,9 @@
   let accumulator = 0;
   let reducedMotion = false;
   let paused = false;
+  let onlineRoom = false;
+  let onlineRace = false;
+  let soloChoice = 'Moss';
   let demoCameraFocus = false; // Optional developer-only view of the Cutter climbing.
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -1426,50 +1429,39 @@
       ctx.textAlign='center';ctx.fillStyle='#f2f5eb';ctx.font='bold 27px system-ui';
       ctx.fillText(g.status==='passed'?g.name.toUpperCase()+' PASSED!':g.status==='dying'?'DISINTEGRATING…':g.status==='caught'?(g.deathCause==='wildfire'?'ENGULFED BY WILDFIRE!':'CAUGHT BY THE CUTTER!'):'TRY AGAIN',480,183);
       ctx.font='15px system-ui';ctx.fillText(g.reason,480,217);
-      ctx.fillStyle='#bcd0c7';ctx.fillText(g.status==='dying'?'The wisp shatters into translucent shards.':'Press Restart to run again',480,251);
+      ctx.fillStyle='#bcd0c7';ctx.fillText(g.status==='dying'?'The wisp shatters into translucent shards.':onlineRoom?'Watching the other racers':'Choose TRY AGAIN or MENU',480,251);
     }
   }
 
   function updateHud(g) {
-    const s=stageAt(g.x),title=s.t>.02 && s.t<.98
-      ?`${STAGE_NAMES[s.a]} → ${STAGE_NAMES[s.b]} · ${Math.round(s.t*100)}%`
+    const s=stageAt(g.x), title=s.t>.02 && s.t<.98
+      ?`${STAGE_NAMES[s.a]} → ${STAGE_NAMES[s.b]}`
       :STAGE_NAMES[s.t>=.98?s.b:s.a];
-    if(el('stageValue')) el('stageValue').textContent=title;
-    if(el('stageBlendFill'))el('stageBlendFill').style.width=`${s.t*100}%`;
-    el('distance').textContent=`${Math.round(g.distance)} px`;
-    const nextHazard=g.procedural?courseNear(g,g.x,20,1140).find(h=>h.x+h.width>g.x+20):null;
-    if(el('nextObstacle'))el('nextObstacle').textContent=nextHazard?`${nextHazard.type.replaceAll('-',' ')} · ${nextHazard.stageName}${nextHazard.combo?' · COMBO':''}`:'Open terrain';
-    if(el('difficultyValue')){
-      const intensity=WispCourse.intensity(Math.floor(g.x/WispCourse.CHUNK),stageSample(g.x,57));
-      el('difficultyValue').textContent=`${Math.round(intensity*100)}% combo chance · recovery chunk every 7`;
-    }
-    const c=g.cutter,dist=Math.max(0,Math.round(g.x-c.x));
-    const titles={rest:'FOREST QUIET',warning:'CHAINSAW WARNING',approach:'THE CUTTER APPROACHES',hunt:'THE CUTTER HUNTS',frenzy:'FRENZY — RUN!',jump:'CUTTER JUMPS GAP',retreat:'CUTTER RETREATS',fall:'CUTTER FALLS!'};
-    const ff=g.fire;
-    const fireActive=ff.active;
-    const fireGap=Math.round(g.x-ff.x);
-    el('chaseState').textContent = !g.chaseEnabled?'CLEAN-RUN TEST':g.status==='dying'?'WISP DISINTEGRATING':fireActive?({'warning':'WILDFIRE WARNING','advance':'WILDFIRE APPROACHING','surge-warning':'FIRE SURGE COMING!','surge':'FIRE SURGE!'}[ff.phase]||'WILDFIRE'):g.status==='caught'?'CAUGHT!':(titles[c.state]||c.state);
-    el('chaseInfo').textContent=fireActive?(ff.phase==='warning'?'Smoke rises. Fire starts moving after the warning.':ff.phase==='surge'?'Flames advancing rapidly!':'Run, recover energy and avoid obstacles.'):!g.chaseEnabled?'Chase disabled for geometry regression':c.state==='rest'?`Recover · ${Math.max(0,Math.ceil(c.wait-c.elapsed))}s until warning`:c.state==='warning'?'Look left!':c.state==='frenzy'?'Speed burst — keep your lead':c.state==='fall'?'The gap ended this chase':c.state==='retreat'?'Recovery window': 'One touch means elimination';
-    el('chaseDistance').textContent=fireActive?`${fireGap} px`:!g.chaseEnabled||['rest','warning'].includes(c.state)?'—':`${dist} px`;
-    el('chaseThreat').style.width=fireActive?`${Math.max(0,Math.min(100,(1-fireGap/380)*100))}%`:!g.chaseEnabled||['rest','warning'].includes(c.state)?'0%':`${Math.max(0,Math.min(100,(1-dist/380)*100))}%`;
+    el('stageValue').textContent=title;
+    el('stageBlendFill').style.width=`${s.t*100}%`;
+    el('distance').textContent=String(Math.round(g.distance));
+    const c=g.cutter, dist=Math.max(0,Math.round(g.x-c.x));
+    const titles={rest:'FOREST QUIET',warning:'CHAINSAW WARNING',approach:'CUTTER APPROACHING',hunt:'THE CUTTER HUNTS',frenzy:'FRENZY — RUN!',jump:'CUTTER JUMPS',retreat:'CUTTER RETREATS',fall:'CUTTER FALLS!'};
+    const ff=g.fire, fireActive=ff.active, fireGap=Math.round(g.x-ff.x);
+    el('chaseState').textContent=g.status==='dying'?'WISP DISINTEGRATING':fireActive?({'warning':'WILDFIRE WARNING','advance':'WILDFIRE APPROACHING','surge-warning':'FIRE SURGE COMING!','surge':'FIRE SURGE!'}[ff.phase]||'WILDFIRE'):g.status==='caught'?'ELIMINATED':(titles[c.state]||c.state);
+    el('chaseInfo').textContent=fireActive?(ff.phase==='warning'?'Smoke rises. The fire is coming.':ff.phase==='surge'?'The flames surge forward!':'Stay ahead of the flames.'):c.state==='rest'?`Recovery · ${Math.max(0,Math.ceil(c.wait-c.elapsed))}s`:c.state==='warning'?'Listen for the chainsaw.':c.state==='frenzy'?'Speed burst — keep your lead':c.state==='retreat'?'A moment of peace':'One touch means elimination';
+    el('chaseDistance').textContent=fireActive?`${Math.max(0,fireGap)}`:['rest','warning'].includes(c.state)?'—':`${dist}`;
+    el('chaseThreat').style.width=fireActive?`${Math.max(0,Math.min(100,(1-fireGap/380)*100))}%`:['rest','warning'].includes(c.state)?'0%':`${Math.max(0,Math.min(100,(1-dist/380)*100))}%`;
     el('chaseThreat').style.background=fireActive?'linear-gradient(90deg,#ff9c32,#df2a1d)':c.state==='frenzy'?'linear-gradient(90deg,#ed7147,#ff3434)':'linear-gradient(90deg,#e9ad53,#e26947)';
     el('energyText').textContent=`${g.energy.toFixed(0)}%`;
     el('energyFill').style.width=`${g.energy}%`;
     el('energyFill').style.background=g.energy>45?'#9bd477':g.energy>22?'#efbd6f':'#f17b67';
-    el('speed').textContent=`${Math.round(speedFor(g))} px/s`;
-    el('impacts').textContent=String(g.impacts);
-    el('pickups').textContent=String(g.pickups);
-    el('state').textContent=g.status==='running' ? (g.auto?'Auto-test running':g.grounded?'On '+g.surface:g.glide?'Gliding':g.jumps===2?'Double-jumping':'Airborne') : (g.status==='passed'?'Passed':g.status==='dying'?'Disintegrating':g.status==='caught'?'Caught!':'Needs retry');
-    el('state').className='state '+(g.status==='passed'?'pass':['failed','caught'].includes(g.status)?'fail':'');
-    el('autoplay').textContent = g.auto && g.status==='running' ? 'Stop auto-test' : `Watch ${g.name} pass`;
-    el('drain').textContent=`${g.stats.drain} / 1000 px`;
-    el('resilience').textContent=`−${g.stats.impact} per hit`;
-    el('recovery').textContent=g.staggerRemaining>0?`${g.staggerRemaining.toFixed(1)}s slowdown`:'Ready';
-    el('events').innerHTML = g.messages.length ? g.messages.map(e=>`<div class="event ${e.kind}"><span>${Math.floor(e.time*10)/10}s</span> ${e.detail}</div>`).join('') : '<div class="event quiet">No collisions yet. Collect energy to survive.</div>';
+    const event=g.messages[0];
+    const note=g.status==='caught'?(g.reason||'Eliminated'):
+      g.status==='dying'?'Your wisp dissolves into translucent polygons.':
+      event&&g.time-event.time<3?event.detail:
+      g.energy<=0?'Exhausted — look for essence to recover speed.':'';
+    el('message').textContent=note;
+    el('restart').hidden=onlineRoom || !['caught','failed','passed'].includes(g.status);
   }
 
   function beginAction() {
-    if (actionHeld) return;
+    if (paused || game.status!=='running' || document.getElementById('wisp-menu')?.hidden===false || actionHeld) return;
     actionHeld = true;
     actionDownAt = performance.now();
     gliding = false;
@@ -1483,16 +1475,45 @@
     el('jump')?.classList.remove('down');
   }
 
-  function reset(name,energy,auto=false,noPickups=false) {
+  function reset(name,energy,auto=false,noPickups=false,seed=2026) {
+    // Internal reset, never directly wired to a public control during an online match.
     releaseAction();
     demoCameraFocus=false;
     activeKeys.clear();
-    activePointerId = null;
-    game=createGame(name,energy,{auto,noPickups,chase:!auto,seed:Number(el('courseSeed')?.value||2026)});
+    activePointerId=null;
+    game=createGame(name,energy,{auto,noPickups,chase:!auto,seed});
     lastCutterAnimation=null;
     autoPlay=auto;
-    el('message').textContent=auto?'Clean-run geometry regression: The Cutter is disabled.':'Collect energy; survive the Cutter’s hunts. He can now climb trunks, cut through wooden obstacles, and if he catches you the wisp disintegrates into translucent polygon shards.';
     updateHud(game);
+  }
+
+  function startSolo(name='Moss') {
+    if(onlineRoom || !Object.prototype.hasOwnProperty.call(CHARACTERS,name))return false;
+    soloChoice=name;
+    reset(name,100,false,false,Math.floor(Math.random()*0x7fffffff));
+    paused=false;
+    return true;
+  }
+
+  function startOnline(name,seed) {
+    if(!onlineRoom || onlineRace || !Object.prototype.hasOwnProperty.call(CHARACTERS,name) ||
+        !Number.isSafeInteger(seed) || seed<0)return false;
+    reset(name,100,false,false,seed);
+    onlineRace=true;
+    paused=false;
+    return true;
+  }
+
+  function setOnlineRoom(active) {
+    onlineRoom=Boolean(active);
+    if(onlineRoom){paused=true;releaseAction();}
+    else onlineRace=false;
+  }
+
+  function finishOnline() {
+    onlineRace=false;
+    paused=true;
+    releaseAction();
   }
 
   function frame(ts) {
@@ -1516,7 +1537,7 @@
   function inspectStage(which){
     const points=[155,1780,2400,4050,4620,6260,7000];
     const n=Math.max(0,Math.min(points.length-1,Number(which)||0));
-    const name=document.querySelector('select#character')?.value||'Moss';
+    const name=soloChoice;
     reset(name,100,false,false);
     game.x=points[n];game.distance=game.x-155;
     game.procPlan=null;game.hazardStates.clear();
@@ -1540,63 +1561,9 @@
     loadImages();
     game=createGame();
     if(window.WispCutter){cutterMotion=window.WispCutter.setup(el('cutter-svg'));}
-    const select=document.querySelector('select#character'),startEnergy=el('startEnergy'),val=el('startEnergyValue');
-    const restart=()=>reset(select.value,Number(startEnergy.value));
-    select.addEventListener('change',restart);
-    startEnergy.addEventListener('input',()=>{val.textContent=`${startEnergy.value}%`;});
-    el('restart').addEventListener('click',restart);
-    el('courseSeed')?.addEventListener('change',restart);
-    el('nextSeed')?.addEventListener('click',()=>{el('courseSeed').value=(Number(el('courseSeed').value||0)+1)%100000;restart();});
-    el('watchMoss')?.addEventListener('click',()=>{
-      releaseAction();game=createGame('Moss',0,{auto:true,procedural:true,chase:false,noPickups:true,seed:Number(el('courseSeed').value)});
-      game.procEndX=10400;paused=false;lastCutterAnimation=null;
-      el('message').textContent='Moss benchmark: 0% energy, no Essence, no Cutter. Watch the real physics clear varied procedural hazards.';
-    });
-    el('stageInspect')?.addEventListener('change',e=>inspectStage(e.target.value));
-    el('autoplay').addEventListener('click',()=>{
-      if(game.auto && game.status==='running') return restart();
-      // Use currently selected character and energy; no pickups in the proof test.
-      reset(select.value,Number(startEnergy.value),true,true);
-    });
-    el('hitboxes').addEventListener('change',e=>showHitboxes=e.target.checked);
-    el('dropTimber').addEventListener('click',()=>{if(!game.auto && game.status==='running')spawnTimber(game);});
-    el('orbSmall').addEventListener('click',()=>{if(!game.auto)collectEnergy(game,10,'common');});
-    el('orbLarge').addEventListener('click',()=>{if(!game.auto)collectEnergy(game,25,'greater');});
-    el('forceWarning').addEventListener('click',()=>callCutter(game));
-    el('forceFrenzy').addEventListener('click',()=>forceFrenzy(game));
-    el('forceRetreat').addEventListener('click',()=>forceRetreat(game));
-    el('previewFire')?.addEventListener('click',()=>{
-      // Jump directly to the Burnt Forest with the wildfire already visible.
-      inspectStage(6);
-      const g=game;
-      g.x=6900;g.distance=g.x-155;g.cutter.state='rest';g.cutter.wait=999999;
-      activateFire(g,true);
-      g.fire.x=g.x-160;
-      el('message').textContent='Wildfire test: one-button running, double jump and glide are unchanged. Fire is a separate pursuer; the Cutter is absent.';
-      paused=false;
-    });
-    el('previewDeath').addEventListener('click',()=>{
-      reset(select.value,100,false,false);
-      // Visual inspection trigger only: actual gameplay death is caused by Cutter contact.
-      const g=game;
-      g.x=245;g.y=VIEW.ground;g.grounded=true;g.surface='ground';
-      // Keep the Cutter off-screen for a clear view of the breakup.
-      g.cutter.state='rest';g.cutter.wait=999;
-      startDeath(g, `Preview: ${g.name} disperses into polygon shards.`);
-      el('message').textContent='Death preview: watch the wisp shatter into translucent polygons and settle on the ground. Restart or choose another character to replay.';
-      paused=false;
-    });
-    el('demoClimb').addEventListener('click',()=>{
-      reset(select.value,100,false,false);
-      // Dedicated inspection shot: camera follows the cutter, not the player.
-      // Keep the wisp far ahead to avoid a premature contact elimination.
-      demoCameraFocus=true;
-      game.x=2400;game.distance=game.x-155;
-      game.procedural=false;
-    const c=game.cutter; c.x=LAYOUT.trunk.x1-44; c.state='hunt';c.elapsed=0;
-      c.wait=999; c.totalHunt=0; c.frenzyUsed=true;
-      el('message').textContent='Climb demonstration: watch The Cutter step onto the trunk, saw through the forks, and step down. Restart to return to the wisp camera.';
-      paused=false;
+    el('restart').addEventListener('click',()=>{
+      // Retry is only available after a solo run finishes.
+      if(!onlineRoom && game.status!=='running' && game.status!=='dying')startSolo(soloChoice);
     });
     const jumpButton = el('jump');
     jumpButton.addEventListener('pointerdown', e => {
@@ -1621,7 +1588,7 @@
     window.addEventListener('keydown', e => {
       // Player names and menu controls take priority over gameplay hotkeys.
       // In particular, W and R must remain typeable in the online lobby.
-      if (document.getElementById('wisp-menu')?.hidden === false ||
+      if (paused || document.getElementById('wisp-menu')?.hidden === false ||
           e.target?.closest?.('input,textarea,select,[contenteditable]')) return;
       if (jumpKeys.has(e.code)) {
         e.preventDefault();
@@ -1630,7 +1597,7 @@
           beginAction();
         }
       }
-      if (e.code === 'KeyR' && !e.repeat) restart();
+      if (e.code === 'KeyR' && !e.repeat && !onlineRoom && game.status==='caught')startSolo(soloChoice);
     });
     window.addEventListener('keyup', e => {
       if (!jumpKeys.has(e.code)) return;
@@ -1647,6 +1614,24 @@
     requestAnimationFrame(frame);
   }
 
-  window.WISP_TEST={ makeFire, activateFire, updateFire, createGame, step, jump, runScenario, benchmarkMoss, courseNear, procGapAt, procObstacleRects, dynamicUpdate, drawProceduralCourse, CHARACTERS, LAYOUT, stageAt, stageSample, inspectStage, speedFor, impact, collectEnergy, spawnTimber, get current(){return game;}, get controls(){return {held:actionHeld, gliding, downAt:actionDownAt, pointer:activePointerId, holdMs:HOLD_TO_GLIDE_MS};}, setPaused:(v)=>{paused=!!v;}, callCutter, forceFrenzy, forceRetreat, updateCutter, gapAt, gapForLap, reset:(name,energy,auto=false,noPickups=false)=>reset(name,energy,auto,noPickups) };
+  // The public interface is intentionally small: menus and room transport do not
+  // get direct access to developer-only simulation, physics or hazard triggers.
+  window.WispGame={
+    get current(){return game;},
+    get onlineRoom(){return onlineRoom;},
+    startSolo,startOnline,setOnlineRoom,finishOnline,
+    setPaused(value){paused=Boolean(value);if(paused)releaseAction();}
+  };
+  // Maintain the original physics harness for local development and automated
+  // regression runs, but do not publish its mutating shortcuts on the live site.
+  if(['localhost','127.0.0.1',''].includes(location.hostname)){
+    window.WISP_TEST={makeFire,activateFire,updateFire,createGame,step,jump,runScenario,
+      benchmarkMoss,courseNear,procGapAt,procObstacleRects,dynamicUpdate,
+      drawProceduralCourse,CHARACTERS,LAYOUT,stageAt,stageSample,inspectStage,
+      speedFor,impact,collectEnergy,spawnTimber,get current(){return game;},
+      get controls(){return {held:actionHeld,gliding,downAt:actionDownAt,pointer:activePointerId,holdMs:HOLD_TO_GLIDE_MS};},
+      callCutter,forceFrenzy,forceRetreat,updateCutter,gapAt,gapForLap,
+      reset:(name,energy,auto=false,noPickups=false)=>{if(!onlineRoom)reset(name,energy,auto,noPickups);}};
+  }
   setup();
 })();

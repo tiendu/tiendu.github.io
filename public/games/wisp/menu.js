@@ -1,7 +1,7 @@
 /* WISP polygon main menu. Keep presentation separate from the one-button runner. */
 (() => {
   'use strict';
-  const engine = window.WISP_TEST;
+  const engine = window.WispGame;
   const online = window.WispOnline;
   if (!engine) return;
   const names = ['Moss','Ember','Dew','Gale','Dusk'];
@@ -17,7 +17,7 @@
   menu.innerHTML = `
     <div class="wm-scene" aria-hidden="true"><div class="wm-ridge far"></div><div class="wm-ridge near"></div><div class="wm-topline"></div></div>
     <div class="wm-shell">
-      <header class="wm-header"><div><h1 class="wm-brand">WISP</h1><p class="wm-subtitle">Run while the forest disappears</p></div><span class="wm-badge">LOW-POLY FOREST SURVIVAL · BETA</span></header>
+      <header class="wm-header"><div><h1 class="wm-brand">WISP</h1><p class="wm-subtitle">Run while the forest disappears</p></div><span class="wm-badge">LOW-POLY FOREST SURVIVAL</span></header>
       <div class="wm-board">
         <div class="wm-headrow"><span class="wm-label">01 / Choose your spirit</span><span class="wm-hint">Five spirits. One button. No weapons.</span></div>
         <div class="wm-list" id="wm-wisps" aria-label="Choose your wisp"></div>
@@ -84,11 +84,9 @@
   }
   function hide(){menu.hidden=true;menuBtn.hidden=raceRunning;}
   function startSolo(){
-    if(room) return;
-    const selector=document.querySelector('select#character');if(selector)selector.value=selected;
-    const energy=document.querySelector('#startEnergy');if(energy)energy.value='100';
-    engine.reset(selected,100,false,false);
-    raceRunning=false;hide();engine.setPaused(false);
+    if(room || engine.onlineRoom) return;
+    if(!engine.startSolo(selected))return;
+    raceRunning=false;hide();
   }
   $('wm-start-solo').addEventListener('click',startSolo);
   menuBtn.addEventListener('click',show);
