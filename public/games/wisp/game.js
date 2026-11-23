@@ -1359,12 +1359,30 @@
     el('energyFill').style.background=g.energy>45?'#9bd477':g.energy>22?'#efbd6f':'#f17b67';
   }
 
+  // The button follows the real held/downward state, not a cosmetic timer.
+  let jumpFeedbackState = 'idle';
+  function setJumpFeedback(state) {
+    if (state === jumpFeedbackState) return;
+    jumpFeedbackState = state;
+    const button = el('jump');
+    const hint = el('jump-hint');
+    if (!button || !hint) return;
+    button.classList.remove('hold-ready','is-gliding');
+    if (state === 'ready') button.classList.add('hold-ready');
+    if (state === 'gliding') button.classList.add('is-gliding');
+    hint.textContent = ({
+      idle:'HOLD TO GLIDE', holding:'KEEP HOLDING TO GLIDE',
+      ready:'GLIDE WHEN FALLING', gliding:'GLIDING · RELEASE TO DROP'
+    })[state];
+  }
+
   function beginAction() {
     if (paused || game.status!=='running' || document.getElementById('wisp-menu')?.hidden===false || actionHeld) return;
     actionHeld = true;
     actionDownAt = performance.now();
     gliding = false;
     el('jump').classList.add('down');
+    setJumpFeedback('holding');
     if (!game.auto) jump(game);
   }
 
@@ -1372,6 +1390,7 @@
     actionHeld = false;
     gliding = false;
     el('jump')?.classList.remove('down');
+    setJumpFeedback('idle');
   }
 
   function reset(name,energy,auto=false,noPickups=false,seed=2026) {
@@ -1421,9 +1440,15 @@
     accumulator=Math.min(accumulator+delta,.18);
     // Holding the same jump button activates glide only while airborne.
     // The physics engine applies glide only when velocity points downward.
-    gliding = actionHeld && ts - actionDownAt >= HOLD_TO_GLIDE_MS && !game.grounded && !game.auto;
+    const holdReady = actionHeld && ts - actionDownAt >= HOLD_TO_GLIDE_MS;
+    gliding = holdReady && !game.grounded && !game.auto;
     if(!paused) {while(accumulator>=FIXED) {step(game,FIXED,{glide:gliding});if(cutterMotion)cutterMotion.update(FIXED);accumulator-=FIXED;}}
     else accumulator=0;
+    // Glide slows descent only; do not claim the wisp is gliding on the way up.
+    if (!actionHeld || paused) setJumpFeedback('idle');
+    else if (gliding && game.vy > 0) setJumpFeedback('gliding');
+    else if (holdReady) setJumpFeedback('ready');
+    else setJumpFeedback('holding');
     const fireSvg=el('wildfire-svg');
     if(fireSvg && typeof fireSvg.pauseAnimations==='function' && typeof fireSvg.unpauseAnimations==='function'){
       if(paused && !fireSvg.animationsPaused())fireSvg.pauseAnimations();

@@ -12,7 +12,7 @@
   .wrap { max-width:1200px; margin:auto; padding:clamp(10px,2.1vw,24px) }
   .game-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:2px 0 12px }
   .game-header h1 { margin:0; font-size:24px; letter-spacing:.16em }
-  .game-header p { margin:0 88px 0 0; font-size:11px; letter-spacing:.13em; color:#a4c8b5; text-transform:uppercase }
+  .game-header p { margin:0 auto 0 0; font-size:11px; letter-spacing:.13em; color:#a4c8b5; text-transform:uppercase }
   .game-frame { position:relative; width:100%; background:#0a252b; overflow:hidden; border:1px solid #31594d; box-shadow:0 20px 55px #03101480 }
   canvas { width:100%; height:auto; aspect-ratio:2 / 1; display:block; touch-action:none }
   #wildfire-layer,#cutter-layer { position:absolute; inset:0; overflow:hidden; pointer-events:none }
@@ -34,10 +34,19 @@
   button { font:inherit; touch-action:manipulation; cursor:pointer; border:1px solid #709b75; background:#234c3c; color:#eef7e8; padding:12px 17px; font-size:14px; font-weight:700 }
   button:active,button.down { transform:translateY(1px); background:#3b6c50 }
   button:focus-visible { outline:2px solid #dcf5bc; outline-offset:3px }
-  #jump { flex:1; min-height:64px; background:#a6d585; border-color:#dcffb9; color:#112d24; letter-spacing:.08em; user-select:none; -webkit-tap-highlight-color:transparent }
+  #jump { flex:1; position:relative; overflow:hidden; isolation:isolate; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:68px; background:#a6d585; border-color:#dcffb9; color:#112d24; letter-spacing:.06em; user-select:none; -webkit-tap-highlight-color:transparent; transition:background .18s,border-color .18s,box-shadow .18s }
+  #jump .jump-main { position:relative; z-index:1; font-size:15px; font-weight:850; line-height:1.15 }
+  #jump .jump-hint { position:relative; z-index:1; font-size:10px; font-weight:750; letter-spacing:.13em; line-height:1.2; opacity:.82 }
+  #jump::after { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(100deg,transparent 15%,#f1ffe6ad 48%,transparent 82%); transform:translateX(-105%); opacity:0 }
+  #jump.down { background:#b9e79b; border-color:#f1ffdf; box-shadow:inset 0 0 0 2px #e7ffd6a8 }
+  #jump.down::after { animation:jump-press-flash .3s ease-out }
+  #jump.hold-ready { background:#bfeec3; border-color:#e4ffe5 }
+  #jump.is-gliding { background:#b5ecdf; border-color:#edfffa; box-shadow:inset 0 0 0 2px #e3fff5,0 0 18px #57bca68a }
+  #jump.is-gliding .jump-hint { opacity:1 }
+  @keyframes jump-press-flash { from { transform:translateX(-105%); opacity:.8 } to { transform:translateX(105%); opacity:0 } }
   [hidden] { display:none!important }
   @media(max-width:720px) {
-    body { padding-bottom:calc(88px + env(safe-area-inset-bottom)) }
+    body { padding-bottom:calc(12px + env(safe-area-inset-bottom)) }
     .wrap { padding:10px }
     .game-header h1 { font-size:20px }
     .game-header p { display:none }
@@ -46,10 +55,10 @@
     .wisp-hud-card span { font-size:8px }
     .wisp-hud-card strong { font-size:12px }
     .wisp-hud-energy { width:38%; max-width:145px }
-    .game-actions { position:fixed; z-index:50; bottom:0; left:0; right:0; padding:8px 10px max(10px,env(safe-area-inset-bottom)); margin:0; background:#092027f2; border-top:1px solid #365b4b; }
-    #jump { min-height:62px; font-size:14px }
+    .game-actions { position:static; margin-top:7px; padding:0; background:none; border:0 }
+    #jump { min-height:72px }
   }
-  @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 <link rel="stylesheet" href="menu.css">
 </head>
@@ -2767,7 +2776,10 @@
     </div>
   </section>
   <div class="game-actions">
-    <button id="jump" aria-label="Jump. Tap again to double-jump. Hold while falling to glide." type="button">↑ JUMP · DOUBLE-TAP · HOLD</button>
+    <button id="jump" aria-label="Jump. Tap again to double-jump. Hold while falling to glide." type="button">
+      <span class="jump-main">↑ JUMP · DOUBLE-TAP</span>
+      <span class="jump-hint" id="jump-hint" aria-hidden="true">HOLD TO GLIDE</span>
+    </button>
   </div>
 </main>
 

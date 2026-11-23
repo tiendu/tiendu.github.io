@@ -71,7 +71,7 @@
   const $result = id => result.querySelector('#'+id);
   const menuBtn=document.createElement('button');menuBtn.id='wisp-menu-trigger';menuBtn.type='button';menuBtn.hidden=true;menuBtn.textContent='MENU';
   const exitBtn=document.createElement('button');exitBtn.id='wisp-exit-room';exitBtn.type='button';exitBtn.hidden=true;exitBtn.textContent='LEAVE RACE';
-  document.body.append(menuBtn,exitBtn);
+  document.querySelector('.game-header').append(menuBtn,exitBtn);
 
   const cards=$('wm-wisps');
   names.forEach((name,i)=>{

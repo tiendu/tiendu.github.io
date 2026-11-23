@@ -54,7 +54,7 @@
 #wisp-menu .wm-help{margin:16px 0 0;color:#b6cdbc;font-size:12px}
 #wisp-menu .wm-help span{color:#e6f1d7;font-weight:700}
 #wisp-menu .wm-footer{display:flex;justify-content:space-between;gap:12px;margin-top:16px;flex-wrap:wrap;color:#9bb6a8;font-size:11px;letter-spacing:.04em}
-#wisp-menu-trigger,#wisp-exit-room{position:fixed;top:12px;right:12px;z-index:90;border:1px solid #aac990;border-radius:2px;min-height:42px;min-width:75px;color:#f2f9ed;background:#102a2bec;box-shadow:0 3px 20px #0008;font-weight:800;font-size:12px;letter-spacing:.12em}
+#wisp-menu-trigger,#wisp-exit-room{position:static;flex:0 0 auto;margin-left:auto;display:inline-flex;align-items:center;justify-content:center;border:1px solid #aac990;border-radius:2px;min-height:42px;min-width:72px;padding:8px 14px;color:#f2f9ed;background:#102a2bec;box-shadow:0 3px 14px #0005;font-weight:800;font-size:12px;letter-spacing:.12em}
 #wisp-exit-room{border-color:#e3a57f;color:#f6d1c0}
 #wisp-menu .wm-online-controls{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 #wisp-menu .wm-tab{border:1px solid #4b7662;background:#163e33;color:#ebf8e7;padding:10px 15px;font-size:12px;min-height:42px}
