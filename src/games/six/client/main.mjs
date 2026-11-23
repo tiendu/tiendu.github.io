@@ -195,8 +195,10 @@ export function mountSix() {
     replay.classList.toggle('finished', !!game?.over);
     replay.textContent = game?.over ? '↻ PLAY AGAIN' : '↻ RESTART MATCH';
     $('[data-replay-hint]').hidden = mode !== 'online' || !game?.over || host === me;
-    $('[data-progress]').textContent = game ? `ROUND ${Math.min(game.round, 10)} / 10`
+    const maxRounds = game?.maxRounds ?? (game ? 6 + game.ids.length : null);
+    $('[data-progress]').textContent = game ? `ROUND ${Math.min(game.round, maxRounds)} / ${maxRounds}`
       : mode === 'online' ? `LOBBY · ${players.length} / 20` : 'CHOOSE A MODE';
+    $('[data-rounds]').textContent = game ? `${maxRounds} ROUNDS` : '6 + PLAYERS ROUNDS';
 
     if (game && presented) {
       const player = rolling ? game.last?.player : current;

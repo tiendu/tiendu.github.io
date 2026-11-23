@@ -1,0 +1,58 @@
+name: SIX multiplayer backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['multiplayer/wrangler.six.jsonc', 'multiplayer/src/six-worker.mjs', 'multiplayer/package.json', 'multiplayer/package-lock.json', 'src/games/six/**', 'src/games/shared/server/**', '.github/workflows/six-worker.yml']
+  pull_request:
+    paths: ['multiplayer/wrangler.six.jsonc', 'multiplayer/src/six-worker.mjs', 'multiplayer/package.json', 'multiplayer/package-lock.json', 'src/games/six/**', 'src/games/shared/server/**', '.github/workflows/six-worker.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: six-worker-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: multiplayer/package-lock.json
+      - run: npm ci
+        working-directory: multiplayer
+      - run: npm run check:six
+        working-directory: multiplayer
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.SIX_BACKEND == 'cloudflare'
+    runs-on: ubuntu-latest
+    environment: cloudflare-six
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: multiplayer/package-lock.json
+      - name: Check deployment credentials
+        shell: bash
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo 'Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in GitHub Actions secrets, or the cloudflare-six environment.'
+            exit 1
+          fi
+      - run: npm ci
+        working-directory: multiplayer
+      - run: npm run deploy:six
+        working-directory: multiplayer
