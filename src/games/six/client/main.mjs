@@ -229,52 +229,41 @@ export function mountSix() {
 
     if (game && presented) {
       const player = rolling ? game.last?.player : current;
-      $('[data-turn]').textContent = rolling ? `${name(player)} IS ROLLING…`
+      $('[data-turn]').textContent = rolling ? player === me ? 'YOU ARE ROLLING…' : `${name(player)} IS ROLLING…`
         : game.over ? game.winner ? game.winner === me ? 'YOU WIN!' : `${name(game.winner)} WINS!` : 'IT’S A DRAW!'
         : player === me ? 'YOUR TURN' : `${name(player)}’S TURN`;
+      const lead = presented.alive.length ? Math.max(...presented.alive.map(id => presented.scores[id])) : 0;
+      $('[data-mobile-left-label]').textContent = 'YOU';
+      $('[data-mobile-left-value]').textContent = String(presented.scores[me] ?? '—');
+      $('[data-mobile-right-label]').textContent = mode === 'solo' ? 'COMPUTER' : 'LEADER';
+      $('[data-mobile-right-value]').textContent = String(mode === 'solo' ? presented.scores.bot : lead);
+      $('[data-mobile-turn]').textContent = rolling ? 'ROLLING…'
+        : game.over ? game.winner ? game.winner === me ? 'YOU WIN!' : `${name(game.winner)} WINS` : 'DRAW'
+        : player === me ? 'YOUR TURN' : mode === 'solo' ? 'BOT TURN' : `${name(player)}’S TURN`;
 
       const myPoints = presented.scores[me];
       $('[data-your-score]').hidden = myPoints === undefined;
       $('[data-my-points]').textContent = String(myPoints ?? 0);
-      $('[data-dice-label]').textContent = rolling ? 'ROLLING…' : 'PREVIOUS ROLL';
+      $('[data-dice-label]').textContent = rolling ? 'ROLLING…' : `LAST ROLL · D${sides}`;
       $('[data-dice-value]').textContent = rolling ? 'ROLLING…' : `${presented.previous || '—'} / ${sides}`;
       if (!rolling) showFace(presented.previous, sides);
 
       const outcome = $('[data-result]');
       const last = $('[data-last]');
-      const verdict = $('[data-verdict]');
-      const details = $('[data-result-details]');
-      const rolls = $('[data-result-roll]');
-      const score = $('[data-result-score]');
-      const delta = $('[data-delta]');
-      outcome.classList.remove('gain', 'loss', 'neutral', 'jackpot', 'is-wrong');
+      outcome.classList.remove('gain', 'loss', 'neutral', 'jackpot');
       die.classList.remove('jackpot-land');
-      verdict.hidden = true;
-      details.hidden = true;
-      delta.hidden = true;
       if (rolling) {
-        last.textContent = 'ROLLING…';
+        last.textContent = 'Rolling…';
       } else if (!presented.last) {
-        last.textContent = 'Choose your prediction.';
+        last.textContent = 'Choose a prediction.';
       } else {
         const event = presented.last;
-        const points = presented.scores[event.player];
-        const before = points - event.delta;
-        last.textContent = event.opening
-          ? `${name(event.player)} · OPENING ROLL`
-          : `${name(event.player)} · ${event.choice.toUpperCase()}`;
-        verdict.textContent = event.opening ? 'START' : event.eliminated ? 'ELIMINATED'
-          : event.choice === 'tie' && event.correct ? 'JACKPOT'
-          : event.correct ? 'CORRECT' : 'WRONG';
-        verdict.hidden = false;
-        if (!event.opening && !event.correct) outcome.classList.add('is-wrong');
-        rolls.textContent = event.opening ? `FIRST ROLL ${event.roll}`
-          : `${event.previous} → ${event.roll}`;
-        score.textContent = `SCORE ${before} → ${points}`;
-        details.hidden = false;
-        delta.textContent = `${event.delta > 0 ? '+' : ''}${event.delta}`;
-        delta.setAttribute('aria-label', `${event.delta > 0 ? '+' : ''}${event.delta} ${Math.abs(event.delta) === 1 ? 'point' : 'points'}`);
-        delta.hidden = false;
+        const label = event.opening ? `${name(event.player)} opened with ${event.roll}`
+          : event.choice === 'tie' && event.correct ? `${name(event.player)} hit TIE!`
+          : `${name(event.player)}: ${event.choice.toUpperCase()} · ${event.previous} → ${event.roll}${!event.correct && event.delta === 0 ? ' · WRONG' : ''}`;
+        const points = document.createElement('strong');
+        points.textContent = `${event.delta > 0 ? '+' : ''}${event.delta}${event.eliminated ? ' · OUT' : ''}`;
+        last.replaceChildren(document.createTextNode(`${label} · `), points);
         outcome.classList.add(event.delta > 0 ? 'gain' : event.delta < 0 ? 'loss' : 'neutral');
         if (event.choice === 'tie' && event.correct) {
           outcome.classList.add('jackpot');

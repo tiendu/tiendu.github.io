@@ -81,6 +81,11 @@ import './six.css';
       </section>
 
       <section class="six-stage six-panel" data-stage hidden aria-label="SIX game board">
+        <div class="six-mobile-scorebar" aria-label="Current scores">
+          <span class="six-mobile-score-item"><span data-mobile-left-label>YOU</span><strong data-mobile-left-value>0</strong></span>
+          <strong class="six-mobile-turn" data-mobile-turn aria-live="polite">YOUR TURN</strong>
+          <span class="six-mobile-score-item six-mobile-score-right"><span data-mobile-right-label>COMPUTER</span><strong data-mobile-right-value>0</strong></span>
+        </div>
         <div class="six-turn-row">
           <div>
             <span class="six-eyebrow">AT THE TABLE</span>
@@ -92,11 +97,6 @@ import './six.css';
           </div>
         </div>
 
-        <details class="six-mobile-roster" data-mobile-roster>
-          <summary><strong>PLAYERS</strong><span data-mobile-summary>VIEW SCORES</span></summary>
-          <ol data-mobile-scores aria-label="Mobile player scores"></ol>
-        </details>
-
         <div class="six-dice-table">
           <div class="six-dice-context">
             <span class="six-eyebrow" data-dice-label>PREVIOUS ROLL</span>
@@ -107,15 +107,7 @@ import './six.css';
             <div class="six-die" data-die aria-hidden="true"></div>
           </div>
           <div class="six-result" data-result role="status" aria-live="polite" aria-atomic="true">
-            <div class="six-result-heading">
-              <p data-last>Choose your prediction.</p>
-              <span class="six-result-verdict" data-verdict hidden></span>
-            </div>
-            <div class="six-result-details" data-result-details hidden>
-              <span class="six-result-roll" data-result-roll></span>
-              <span class="six-result-score" data-result-score></span>
-            </div>
-            <strong data-delta hidden></strong>
+            <p data-last>Choose your prediction.</p>
           </div>
         </div>
 
@@ -139,12 +131,16 @@ import './six.css';
             </button>
           </div>
         </div>
+        <details class="six-mobile-roster" data-mobile-roster>
+          <summary><strong>PLAYERS</strong><span data-mobile-summary>VIEW SCORES</span></summary>
+          <ol data-mobile-scores aria-label="Mobile player scores"></ol>
+        </details>
         <details class="six-mobile-history" data-mobile-history>
           <summary>RECENT ROLLS</summary>
           <ol data-mobile-history-list aria-label="Recent rolls on mobile"></ol>
         </details>
         <details class="six-match-actions" data-match-actions open>
-          <summary>MATCH OPTIONS</summary>
+          <summary>OPTIONS</summary>
           <div class="six-stage-footer">
             <button type="button" data-replay hidden>↻ RESTART MATCH</button>
             <button type="button" data-back hidden>CHANGE MODE</button>

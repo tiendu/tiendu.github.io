@@ -5,6 +5,7 @@
   --six-accent: #f0ab72;
   --six-surface: #242527;
   box-sizing: border-box;
+  width: 100%;
   max-width: 1290px;
   min-height: 100vh;
   margin: 0 auto;
@@ -82,7 +83,6 @@
 .six-dice-value { color: var(--six-ink); font-size: .87rem; }
 .six-result { min-height: 73px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; text-align: center; }
 .six-result p { margin: 0; color: var(--six-muted); line-height: 1.35; }
-.six-result strong { font-size: clamp(1.45rem, 3vw, 2rem); font-variant-numeric: tabular-nums; }
 .six-result.gain strong { color: #91d9ad; }
 .six-result.loss strong { color: #ff9f8d; }
 .six-play-controls { display: grid; gap: 12px; }
@@ -194,9 +194,6 @@
   .six.is-playing .six-your-score strong { font-size:1.5rem; }
   .six.is-playing .six-dice-table { min-height:0; padding:12px 8px 10px; gap:6px; border-radius:12px; }
   .six.is-playing .six-die { width:108px; height:108px; }
-  .six.is-playing .six-dice-value { font-size:.73rem; }
-  .six.is-playing .six-result { min-height:34px; gap:1px; font-size:.82rem; }
-  .six.is-playing .six-result strong { font-size:1.3rem; }
   .six.is-playing .six-play-controls { gap:8px; }
   .six.is-playing .six-choices button { min-height:78px; }
   .six.is-playing .six-choice-symbol { font-size:1.9rem; }
@@ -249,8 +246,6 @@
 .six-dice-jackpot { font-size:.76rem; font-weight:800; letter-spacing:.04em; color:#efd49a; }
 .six-die-frame { display:grid; place-items:center; min-width:0; }
 .six-die-svg { width:100%; height:100%; overflow:visible; }
-.six-result.jackpot strong { color:#ffe1a1; text-shadow:0 0 18px #e4ad6170; }
-.six-result.jackpot strong::before { content:'JACKPOT '; display:block; color:#efd49a; font-size:.7rem; letter-spacing:.14em; }
 .six .six-choices button:disabled { opacity:.32; }
 .six .six-choices button:not(:disabled):focus-visible { outline:3px solid var(--six-accent); outline-offset:3px; }
 
@@ -270,7 +265,6 @@
   .six-die { width:clamp(195px,20vw,260px); height:clamp(195px,20vw,260px); }
   .six-result { align-items:flex-start; text-align:left; gap:10px; min-width:0; }
   .six-result p { font-size:.95rem; }
-  .six-result strong { font-size:clamp(2rem,3.3vw,3.4rem); }
   .six-choices button { min-height:124px; }
   .six-choice-symbol { font-size:3.1rem; }
   .six-choice-title { font-size:1.05rem; }
@@ -292,12 +286,9 @@
 }
 @media (max-width: 560px) {
   .six-dice-context { align-items:center; text-align:center; gap:3px; }
-  .six-dice-context .six-dice-value { font-size:1rem; letter-spacing:0; }
-  .six-dice-jackpot { font-size:.66rem; }
   .six.is-playing .six-dice-table { gap:5px; padding:10px 8px; }
   .six.is-playing .six-die { width:120px; height:120px; }
   .six.is-playing .six-result { min-height:30px; }
-  .six-result.jackpot strong::before { font-size:.58rem; }
   .six .six-dice-selector button { min-height:44px; }
   .six-dice-setting { padding:10px; gap:7px; }
 }
@@ -311,52 +302,20 @@
   .six-die.jackpot-land { animation:none; }
 }
 
-.six-result strong:not([hidden])::after { content:" PTS"; font-size:.7rem; font-weight:800; letter-spacing:.07em; vertical-align:middle; color:var(--six-muted); }
 
-/* Keep the outcome readable as a compact, complete recap. */
-.six-result {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-content: center;
-  align-items: center;
-  gap: 9px 14px;
-  text-align: left;
-  min-width: 0;
+/* The result is one line of game commentary, not a second scorecard. */
+.six-result { min-width:0; min-height:36px; display:block; text-align:center; }
+.six-result p { color:var(--six-muted); font-size:.85rem; line-height:1.45; overflow-wrap:anywhere; }
+.six-result p strong { font-size:inherit; font-weight:900; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.six-result.jackpot p strong { color:#ffe1a1; }
+@media (min-width:881px) {
+  .six-result { text-align:left; }
+  .six-result p { font-size:.9rem; }
 }
-.six-result-heading {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 5px 12px;
-  min-width: 0;
-}
-.six-result-heading p { color: var(--six-ink); font-size: .85rem; font-weight: 800; letter-spacing: .03em; }
-.six-result-verdict {
-  font-size: .7rem;
-  font-weight: 900;
-  letter-spacing: .1em;
-  color: var(--six-muted);
-}
-.six-result.gain .six-result-verdict { color: #91d9ad; }
-.six-result.loss .six-result-verdict, .six-result.is-wrong .six-result-verdict { color: #ff9f8d; }
-.six-result.jackpot .six-result-verdict { color: #ffe1a1; }
-.six-result-details { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; min-width: 0; }
-.six-result-roll { font-size: 1.22rem; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.six-result-score { font-size: .76rem; color: var(--six-muted); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.six-result > strong { grid-column: 2; grid-row: 2; justify-self: end; white-space: nowrap; }
-.six-result.jackpot > strong::before { content: none; }
 .six.is-finished .six-play-controls { display: none; }
 .six-match-actions { min-width: 0; }
 .six-match-actions > summary { display: none; }
 @media (max-width: 560px) {
-  .six.is-playing .six-result { min-height: 58px; gap: 5px 8px; padding: 2px 4px; }
-  .six-result-heading p { font-size: .75rem; }
-  .six-result-verdict { font-size: .65rem; }
-  .six-result-roll { font-size: 1rem; }
-  .six-result-score { font-size: .67rem; }
-  .six.is-playing .six-result > strong { font-size: 1.25rem; }
   .six-match-actions > summary {
     display: list-item;
     min-height: 44px;
@@ -373,4 +332,51 @@
   .six-match-actions[open] > summary { border-color: #75675a; }
   .six-match-actions[open] .six-stage-footer { margin-top: 8px; }
   .six.is-playing footer { display: none; }
+}
+
+/* The phone layout should show the die and choices first, not duplicate cards. */
+.six-mobile-scorebar { display:none; }
+@media (max-width:560px) {
+  .six.is-playing .six-topbar { margin-bottom:6px; }
+  .six.is-playing .six-stage { gap:12px; }
+  .six.is-playing .six-turn-row { display:none; }
+  .six.is-playing .six-mobile-scorebar {
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1fr);
+    align-items:center; gap:8px; min-height:64px; padding:10px 12px;
+    background:var(--six-surface); border:1px solid var(--six-outline);
+    border-radius:12px;
+  }
+  .six-mobile-score-item { display:grid; min-width:0; gap:2px; }
+  .six-mobile-score-item > span {
+    font-size:.65rem; color:var(--six-muted); font-weight:800;
+    letter-spacing:.04em; overflow:hidden; text-overflow:ellipsis;
+  }
+  .six-mobile-score-item > strong { font-size:1.33rem; line-height:1; font-variant-numeric:tabular-nums; }
+  .six-mobile-score-right { text-align:right; }
+  .six-mobile-turn { font-size:.7rem; text-align:center; color:var(--six-accent); line-height:1.2; overflow-wrap:anywhere; }
+  .six.is-playing .six-dice-table {
+    background:transparent; border:0; padding:6px 0 2px; gap:4px;
+  }
+  .six.is-playing .six-dice-context .six-dice-value,
+  .six.is-playing .six-dice-context .six-dice-jackpot { display:none; }
+  .six.is-playing .six-dice-context .six-eyebrow { font-size:.7rem; }
+  .six.is-playing .six-die { width:148px; height:148px; }
+  .six.is-playing .six-result { min-height:34px; padding:3px 0; }
+  .six.is-playing .six-result p { font-size:.75rem; }
+  .six.is-playing .six-play-controls { gap:0; }
+  .six.is-playing .six-play-controls > .six-eyebrow { display:none; }
+  .six.is-playing .six-choices button { min-height:88px; }
+  .six.is-playing .six-mobile-roster { display:block; }
+  .six.is-playing:not(.is-online) .six-mobile-roster { display:none; }
+  .six.is-playing .six-mobile-history,
+  .six.is-playing .six-mobile-roster,
+  .six.is-playing .six-match-actions > summary {
+    background:transparent; border:0; border-radius:0;
+    border-top:1px solid var(--six-outline);
+  }
+  .six.is-playing .six-mobile-history summary,
+  .six.is-playing .six-mobile-roster summary,
+  .six.is-playing .six-match-actions > summary { padding:9px 2px; }
+  .six.is-playing .six-match-actions > summary { min-height:36px; }
+  .six.is-playing .six-status:empty { display:none; }
 }
