@@ -8,37 +8,4 @@ test('wrong guess eliminates only when below zero after opening round', () => {c
 test('twenty players admitted, twenty one rejected',()=>{assert.equal(createGame(Array.from({length:20},(_,i)=>String(i)),3).ids.length,20);assert.throws(()=>createGame(Array.from({length:21},(_,i)=>String(i)),3));});
 test('bot returns a legal choice',()=>assert.ok(['higher','lower','tie'].includes(botChoice(5,4,12))));
 
-// The number of rounds is fixed by the initial room size, not by survivors.
-for (const count of [2, 5, 20]) {
-  test(`${count} players play exactly ${6 + count} rounds`, () => {
-    const ids = Array.from({ length: count }, (_, i) => `player-${i}`);
-    const g = createGame(ids, 4);
-    assert.equal(g.maxRounds, 6 + count);
-    // Force correct guesses, so no one is eliminated before the round limit.
-    for (let move = 1; move < count * g.maxRounds; move++) {
-      const player = currentPlayer(g);
-      const next = g.previous === 6 ? 5 : 6;
-      const choice = next > g.previous ? 'higher' : 'lower';
-      guess(g, player, choice, next);
-      assert.equal(g.over, move === count * g.maxRounds - 1);
-    }
-    assert.equal(g.round, g.maxRounds + 1);
-    assert.equal(g.moves, count * g.maxRounds - 1);
-  });
-}
-
-test('eliminations and old room snapshots preserve initial round limit', () => {
-  const g = createGame(['a', 'b', 'c'], 6);
-  assert.equal(g.maxRounds, 9);
-  guess(g, 'b', 'higher', 1); // Opening loss: zero, but still alive.
-  guess(g, 'c', 'higher', 1); // Opening loss: zero, but still alive.
-  assert.equal(g.round, 2);
-  guess(g, 'a', 'higher', 1); // Lose 1, remain alive.
-  guess(g, 'b', 'higher', 1); // Eliminate b, 0 - 1 < 0.
-  assert.equal(g.alive.length, 2);
-  assert.equal(g.maxRounds, 9);
-  // Prior deployed rooms might have no maxRounds property.
-  delete g.maxRounds;
-  guess(g, 'c', 'higher', 1); // Eliminates c; rehydrates maxRounds.
-  assert.equal(g.maxRounds, 9);
-});
+// The configurable round limit is checked in rounds-settings.test.mjs.

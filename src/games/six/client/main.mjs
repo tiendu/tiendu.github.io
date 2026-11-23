@@ -1,4 +1,4 @@
-import { createGame, guess, botChoice, currentPlayer, rollDie } from '../core/rules.mjs';
+import { createGame, guess, botChoice, currentPlayer, rollDie, DEFAULT_ROUNDS, validRounds } from '../core/rules.mjs';
 
 const pips = {
   1: [[50, 50]],
@@ -61,6 +61,10 @@ export function mountSix() {
   const die = $('[data-die]');
   const scores = $('[data-scores]');
   const historyList = $('[data-history]');
+  const mobileHistoryList = $('[data-mobile-history-list]');
+  const mobileScores = $('[data-mobile-scores]');
+  const soloRoundsField = $('[data-solo-rounds]');
+  const onlineRoundsField = $('[data-online-rounds]');
   const replay = $('[data-replay]');
   const buttons = [...root.querySelectorAll('[data-guess]')];
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -84,6 +88,8 @@ export function mountSix() {
   let rollInterval = 0;
   let rollTimeout = 0;
   let botTimeout = 0;
+  let soloRounds = DEFAULT_ROUNDS;
+  let onlineRounds = DEFAULT_ROUNDS;
 
   const name = id => players.find(p => p.id === id)?.name || id || 'Player';
   const canPlay = () => game && !game.over && !rolling && !waitingForServer &&
@@ -141,6 +147,7 @@ export function mountSix() {
       entries.push(li);
     }
     historyList.replaceChildren(...entries);
+    mobileHistoryList.replaceChildren(...entries.map(li => li.cloneNode(true)));
   }
 
   function renderScores(presented) {
@@ -172,6 +179,10 @@ export function mountSix() {
       entries.push(li);
     }
     scores.replaceChildren(...entries);
+    mobileScores.replaceChildren(...entries.map(li => li.cloneNode(true)));
+    const leaders = presented?.alive.map(id => presented.scores[id]) ?? [];
+    const lead = leaders.length ? Math.max(...leaders) : 0;
+    $('[data-mobile-summary]').textContent = `${ids.length} PLAYERS · LEAD ${lead}`;
     $('[data-player-count]').textContent = `${ids.length} / 20`;
     $('[data-now-playing]').textContent = !presented ? mode === 'menu'
       ? 'Choose a mode to begin'
@@ -184,21 +195,31 @@ export function mountSix() {
   function render() {
     const presented = view || game;
     const current = game && currentPlayer(game);
+    root.classList.toggle('is-playing', !!game);
+    root.classList.toggle('is-active-match', !!game && !game.over);
+    root.classList.toggle('is-online', mode === 'online');
     menu.hidden = mode !== 'menu';
     roomPanel.hidden = mode !== 'online';
     stage.hidden = !game;
     $('[data-start]').hidden = mode !== 'online' || host !== me || !!game || !connected;
     $('[data-start]').disabled = waitingForServer;
+    const editable = mode === 'online' && connected && host === me && !waitingForServer && (!game || game.over);
+    $('[data-room-settings]').hidden = mode !== 'online' || (!!game && !game.over);
+    $('[data-settings-note]').textContent = host === me ? 'HOST SETTING · 1–99' : 'HOST CHOOSES · 1–99';
+    for (const control of root.querySelectorAll('[data-adjust^="online:"], [data-online-rounds]')) control.disabled = !editable;
+    if (document.activeElement !== onlineRoundsField) onlineRoundsField.value = String(onlineRounds);
+    if (document.activeElement !== soloRoundsField) soloRoundsField.value = String(soloRounds);
     $('[data-back]').hidden = mode !== 'solo';
     replay.hidden = !game || (mode === 'online' && (host !== me || !game.over));
     replay.disabled = rolling || waitingForServer || (mode === 'online' && !connected);
     replay.classList.toggle('finished', !!game?.over);
     replay.textContent = game?.over ? '↻ PLAY AGAIN' : '↻ RESTART MATCH';
     $('[data-replay-hint]').hidden = mode !== 'online' || !game?.over || host === me;
-    const maxRounds = game?.maxRounds ?? (game ? 6 + game.ids.length : null);
+    const maxRounds = game?.maxRounds ?? DEFAULT_ROUNDS;
     $('[data-progress]').textContent = game ? `ROUND ${Math.min(game.round, maxRounds)} / ${maxRounds}`
       : mode === 'online' ? `LOBBY · ${players.length} / 20` : 'CHOOSE A MODE';
-    $('[data-rounds]').textContent = game ? `${maxRounds} ROUNDS` : '6 + PLAYERS ROUNDS';
+    $('[data-rounds]').textContent = game ? `${maxRounds} ROUNDS` : `${mode === 'solo' ? soloRounds : mode === 'online' ? onlineRounds : DEFAULT_ROUNDS} ROUNDS`;
+    $('[data-mobile-progress]').textContent = game ? `ROUND ${Math.min(game.round, maxRounds)} / ${maxRounds}` : '';
 
     if (game && presented) {
       const player = rolling ? game.last?.player : current;
@@ -301,7 +322,7 @@ export function mountSix() {
     players = [{ id: 'you', name: 'YOU' }, { id: 'bot', name: 'COMPUTER' }];
     me = 'you';
     waitingForServer = false;
-    const next = createGame(['bot', 'you']);
+    const next = createGame(['bot', 'you'], rollDie(), soloRounds);
     soloMatch++;
     lastSeen = null;
     status.textContent = '';
@@ -367,6 +388,7 @@ export function mountSix() {
       if (message.type === 'state') {
         players = message.players;
         host = message.host;
+        onlineRounds = validRounds(message.rounds) ? message.rounds : DEFAULT_ROUNDS;
         waitingForServer = false;
         status.textContent = '';
         if (message.game) {
@@ -397,7 +419,44 @@ export function mountSix() {
     render();
   }
 
-  $('[data-solo]').addEventListener('click', startSolo);
+  const parsedRounds = (text) => {
+    const number = Number(text);
+    return validRounds(number) && String(text).trim() !== '' ? number : null;
+  };
+  function updateRounds(which, direction = 0) {
+    const input = which === 'solo' ? soloRoundsField : onlineRoundsField;
+    const current = which === 'solo' ? soloRounds : onlineRounds;
+    const next = direction ? Math.min(99, Math.max(1, current + direction)) : parsedRounds(input.value);
+    if (next === null) {
+      input.value = String(current);
+      status.textContent = 'Choose 1–99 rounds.';
+      return;
+    }
+    if (which === 'solo') {
+      soloRounds = next;
+      status.textContent = '';
+      render();
+    } else if (mode === 'online' && host === me && connected && (!game || game.over) && !waitingForServer) {
+      if (next === onlineRounds) { render(); return; }
+      waitingForServer = true;
+      ws?.send(JSON.stringify({ type: 'settings', rounds: next }));
+      render();
+    }
+  }
+  for (const button of root.querySelectorAll('[data-adjust]')) {
+    button.addEventListener('click', () => {
+      const [which, direction] = button.dataset.adjust.split(':');
+      updateRounds(which, Number(direction));
+    });
+  }
+  soloRoundsField.addEventListener('change', () => updateRounds('solo'));
+  onlineRoundsField.addEventListener('change', () => updateRounds('online'));
+
+  $('[data-solo]').addEventListener('click', () => {
+    if (parsedRounds(soloRoundsField.value) === null) { updateRounds('solo'); return; }
+    updateRounds('solo');
+    startSolo();
+  });
   $('[data-back]').addEventListener('click', () => { reset(); status.textContent = ''; });
   $('[data-leave]').addEventListener('click', () => { reset(); status.textContent = ''; });
   replay.addEventListener('click', () => {

@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { roomRouter, roomLobbyClass } from '../../shared/server/cloudflare-rooms.mjs';
 import { cleanName } from '../../shared/server/name.mjs';
 import { createGame, guess, currentPlayer, rollDie, MAX_PLAYERS } from '../core/rules.mjs';
+import { roomRounds, setRoomRounds } from './settings.mjs';
 
 export default roomRouter('/six');
 export class SixLobby extends roomLobbyClass(DurableObject, 'six') {}
@@ -10,7 +11,7 @@ export class SixRoom extends DurableObject {
     const path = new URL(request.url).pathname;
     if (path === '/init') {
       const {room,id,token,expires} = await request.json();
-      await this.ctx.storage.put('room',{room,id,token,expires,players:[],host:null,game:null,round:0});
+      await this.ctx.storage.put('room',{room,id,token,expires,players:[],host:null,game:null,round:0,rounds:10});
       await this.ctx.storage.setAlarm(expires);
       return new Response(null,{status:204});
     }
@@ -26,7 +27,7 @@ export class SixRoom extends DurableObject {
   online() {return this.ctx.getWebSockets().filter(ws=>ws.readyState===1 && ws.deserializeAttachment()?.id);}
   async broadcast(room) {
     const online = new Set(this.online().map(ws=>ws.deserializeAttachment().id));
-    const message = JSON.stringify({type:'state',players:room.players.map(({id,name})=>({id,name,online:online.has(id)})),host:room.host,round:room.round,game:room.game});
+    const message = JSON.stringify({type:'state',players:room.players.map(({id,name})=>({id,name,online:online.has(id)})),host:room.host,round:room.round,rounds:roomRounds(room),game:room.game});
     for(const ws of this.online()) ws.send(message);
   }
   async webSocketMessage(ws,raw) {
@@ -51,13 +52,15 @@ export class SixRoom extends DurableObject {
           if(!room.host)room.host=player.id;
           peer.id=player.id;ws.serializeAttachment(peer);
           ws.send(JSON.stringify({type:'identity',you:player.id,key:player.key}));
+        } else if(msg.type==='settings') {
+          setRoomRounds(room, peer.id, msg.rounds);
         } else if(msg.type==='start') {
           if(peer.id!==room.host)throw Error('Only the host can start.');
           if(room.game&&!room.game.over)throw Error('Game already running.');
           const online=new Set(this.online().map(s=>s.deserializeAttachment().id));
           const seats=room.players.filter(p=>online.has(p.id)).map(p=>p.id);
           if(seats.length<2)throw Error('Need at least two connected players.');
-          room.game=createGame(seats);room.round++;
+          room.game=createGame(seats,rollDie(),roomRounds(room));room.round++;
         } else if(msg.type==='guess') {
           if(!room.game)throw Error('Start the game first.');
           if(msg.move!==room.game.moves)throw Error('Outdated turn.');

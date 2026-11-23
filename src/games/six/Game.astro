@@ -4,7 +4,9 @@ import './six.css';
 <main class="six" data-six data-backend={import.meta.env.PUBLIC_SIX_BACKEND_URL || ''}>
   <header class="six-topbar">
     <a href="/games/" class="six-home">← GAMES</a>
-    <span>SOLO · ONLINE 2–20</span>
+    <span class="six-mode-label">SOLO · ONLINE 2–20</span>
+    <strong class="six-mini-brand" aria-hidden="true">SIX.</strong>
+    <span class="six-mobile-progress" data-mobile-progress></span>
   </header>
 
   <div class="six-heading">
@@ -21,6 +23,14 @@ import './six.css';
         <p class="six-eyebrow">READY TO ROLL?</p>
         <h2 id="six-welcome">Guess the next die.</h2>
         <p>Higher, lower, or a risky tie. Correct guesses earn points; wrong guesses cost points after the first round. Below zero? You're out.</p>
+        <div class="six-round-setting" aria-label="Solo match length">
+          <span>ROUNDS <small>DEFAULT 10 · 1–99</small></span>
+          <div class="six-stepper">
+            <button type="button" data-adjust="solo:-1" aria-label="Fewer solo rounds">−</button>
+            <input data-solo-rounds type="number" min="1" max="99" step="1" inputmode="numeric" value="10" aria-label="Solo rounds" />
+            <button type="button" data-adjust="solo:1" aria-label="More solo rounds">+</button>
+          </div>
+        </div>
         <button class="six-primary six-solo-button" type="button" data-solo>PLAY VS COMPUTER <span aria-hidden="true">↗</span></button>
         <div class="six-separator"><span>OR PLAY WITH FRIENDS</span></div>
         <label class="six-field">YOUR NAME <input data-name maxlength="16" placeholder="Player" autocomplete="nickname" /></label>
@@ -39,6 +49,14 @@ import './six.css';
           <button type="button" data-invite>COPY INVITE</button>
           <button type="button" data-leave>LEAVE ROOM</button>
         </div>
+        <div class="six-round-setting" data-room-settings aria-label="Online match length">
+          <span>ROUNDS <small data-settings-note>HOST CHOOSES · 1–99</small></span>
+          <div class="six-stepper">
+            <button type="button" data-adjust="online:-1" aria-label="Fewer online rounds" disabled>−</button>
+            <input data-online-rounds type="number" min="1" max="99" step="1" inputmode="numeric" value="10" aria-label="Online rounds" disabled />
+            <button type="button" data-adjust="online:1" aria-label="More online rounds" disabled>+</button>
+          </div>
+        </div>
         <button class="six-primary" type="button" data-start hidden>START GAME</button>
       </section>
 
@@ -54,15 +72,19 @@ import './six.css';
           </div>
         </div>
 
+        <details class="six-mobile-roster" data-mobile-roster>
+          <summary><strong>PLAYERS</strong><span data-mobile-summary>VIEW SCORES</span></summary>
+          <ol data-mobile-scores aria-label="Mobile player scores"></ol>
+        </details>
+
         <div class="six-dice-table">
           <span class="six-eyebrow" data-dice-label>PREVIOUS ROLL</span>
           <div class="six-die" data-die aria-hidden="true"></div>
           <span class="six-dice-value" data-dice-value>—</span>
-        </div>
-
-        <div class="six-result" data-result role="status" aria-live="polite" aria-atomic="true">
-          <p data-last>Choose your prediction.</p>
-          <strong data-delta hidden></strong>
+          <div class="six-result" data-result role="status" aria-live="polite" aria-atomic="true">
+            <p data-last>Choose your prediction.</p>
+            <strong data-delta hidden></strong>
+          </div>
         </div>
 
         <div class="six-play-controls">
@@ -85,6 +107,10 @@ import './six.css';
             </button>
           </div>
         </div>
+        <details class="six-mobile-history" data-mobile-history>
+          <summary>RECENT ROLLS</summary>
+          <ol data-mobile-history-list aria-label="Recent rolls on mobile"></ol>
+        </details>
         <div class="six-stage-footer">
           <button type="button" data-replay hidden>↻ RESTART MATCH</button>
           <button type="button" data-back hidden>CHANGE MODE</button>
@@ -112,5 +138,5 @@ import './six.css';
       </section>
     </aside>
   </div>
-  <footer><span data-rounds>6 + PLAYERS ROUNDS</span> · BELOW ZERO = OUT · TIE PAYS DOUBLE</footer>
+  <footer><span data-rounds>10 ROUNDS DEFAULT</span> · BELOW ZERO = OUT · TIE PAYS DOUBLE</footer>
 </main>
