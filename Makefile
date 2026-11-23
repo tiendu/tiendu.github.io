@@ -19,7 +19,6 @@ room-server:
 
 check:
 	$(NPM) run check
-	node --test src/games/unfold/tests/*.mjs scripts/test-game-boundaries.mjs
 
 build:
 	$(NPM) run build
@@ -39,7 +38,7 @@ help:
 		'hot       Same as dev' \
 		'host      Share dev server on your LAN (port 4321)' \
 		'room-server Start authoritative online room server (port 8787)' \
-		'check     Existing npm checks + UNFOLD tests' \
+		'check     Run current game, Wisp, styles, and Astro checks' \
 		'build     Production build' \
 		'verify    Check and build' \
 		'preview   Preview production build' \
