@@ -802,6 +802,11 @@
     ctx.globalAlpha=1;
   }
 
+  function drawGroundTile(name,screenX,y,width,height){
+    const img=imageAssets[name];
+    if(img && img.complete && img.naturalWidth)ctx.drawImage(img,screenX,y,width,height);
+  }
+
   // Exact wall contours from the existing gap SVGs; gameplay collision remains
   // the flat interval [h.x,h.x + h.width] at the terrain surface.
   const GAP_LEFT_EDGE=[[0,0],[-5,10],[-8,28],[-17,42],[-11,58],[-26,77],
@@ -1042,20 +1047,39 @@
     ctx.restore();
   }
 
+  // Fast paths apply only where both ends of a segment are fully in the
+  // same biome. Transition bands continue using their smooth SVG crossfade.
+  function settledBiome(mix){
+    if(mix.a===mix.b || mix.t===0)return mix.a;
+    if(mix.t===1)return mix.b;
+    return null;
+  }
   function drawBg(camera,g) {
     // Sky and soil are sampled in WORLD space across the whole viewport; the
     // whole screen no longer changes palette when the player crosses a border.
     const SKY_STEP=24;
     const soilBands=[];
-    for(let sx=0;sx<VIEW.width;sx+=SKY_STEP){
-      const width=Math.min(SKY_STEP,VIEW.width-sx);
-      const mix=visualStageAt(camera+sx+width/2);
-      const a=STAGE_COLORS[stageKey(mix.a)],b=STAGE_COLORS[stageKey(mix.b)];
+    const skyStart=settledBiome(visualStageAt(camera));
+    const skyEnd=settledBiome(visualStageAt(camera+VIEW.width));
+    if(skyStart!==null && skyStart===skyEnd){
+      const color=STAGE_COLORS[stageKey(skyStart)];
       const grad=ctx.createLinearGradient(0,0,0,VIEW.ground);
-      grad.addColorStop(0,blendHex(a.sky,b.sky,mix.t));
-      grad.addColorStop(1,blendHex(a.haze,b.haze,mix.t));
-      ctx.fillStyle=grad;ctx.fillRect(sx,0,width+.5,VIEW.ground);
-      soilBands.push({x:sx,width:width+.5,color:blendHex(a.soil,b.soil,mix.t)});
+      grad.addColorStop(0,color.sky);
+      grad.addColorStop(1,color.haze);
+      ctx.fillStyle=grad;ctx.fillRect(0,0,VIEW.width,VIEW.ground);
+      soilBands.push({x:0,width:VIEW.width,color:color.soil});
+    }else{
+      // Only biome boundaries need per-strip palette blending.
+      for(let sx=0;sx<VIEW.width;sx+=SKY_STEP){
+        const width=Math.min(SKY_STEP,VIEW.width-sx);
+        const mix=visualStageAt(camera+sx+width/2);
+        const a=STAGE_COLORS[stageKey(mix.a)],b=STAGE_COLORS[stageKey(mix.b)];
+        const grad=ctx.createLinearGradient(0,0,0,VIEW.ground);
+        grad.addColorStop(0,blendHex(a.sky,b.sky,mix.t));
+        grad.addColorStop(1,blendHex(a.haze,b.haze,mix.t));
+        ctx.fillStyle=grad;ctx.fillRect(sx,0,width+.5,VIEW.ground);
+        soilBands.push({x:sx,width:width+.5,color:blendHex(a.soil,b.soil,mix.t)});
+      }
     }
 
     drawLightShafts(camera);
@@ -1099,9 +1123,19 @@
     // The ground tiles are genuine SVG facets. Mix neighboring biome sprites
     // every 32 world pixels, not once per tile; preserve the unchanged geometry.
     const tile=256, slice=32;
-    const first=Math.floor(camera/tile)-1,last=Math.floor((camera+VIEW.width)/tile)+1;
+    const first=Math.floor(camera/tile);
+    const last=Math.floor((camera+VIEW.width-.001)/tile);
     for(let i=first;i<=last;i++){
       const worldX=i*tile, suffix=i%2===0?'A':'B';
+      const from=settledBiome(visualStageAt(worldX));
+      const to=settledBiome(visualStageAt(worldX+tile));
+      if(from!==null && from===to){
+        // A steady 256px tile needs two SVG draws, not sixteen cropped ones.
+        const screenX=worldX-camera;
+        drawGroundTile(groundSprite(from,'Face'+suffix),screenX,VIEW.ground+26,tile,160);
+        drawGroundTile(groundSprite(from,'Top'+suffix),screenX,VIEW.ground-22,tile,60);
+        continue;
+      }
       for(let dx=0;dx<tile;dx+=slice){
         const width=Math.min(slice,tile-dx),mix=visualStageAt(worldX+dx+width/2);
         const screenX=worldX+dx-camera;
@@ -1212,15 +1246,16 @@
     if(sx < -170 || sx>VIEW.width+150)return;
     ctx.fillStyle='rgba(5,13,17,.45)';ctx.beginPath();ctx.ellipse(sx,VIEW.ground+c.y+4,33,7,0,0,Math.PI*2);ctx.fill();
   }
-  function updateCutterOverlay(g,camera){
+  function updateCutterOverlay(g,camera,factor){
     const svg=el('cutter-svg');if(!svg)return;
     const c=g.cutter,visible=g.chaseEnabled&&!g.fire.active&&!['rest','warning'].includes(c.state);
-    svg.style.display=visible?'block':'none';
-    if(!visible)return;
-    const factor=canvas.getBoundingClientRect().width/VIEW.width;
+    const display=visible?'block':'none';
+    if(svg.style.display!==display)svg.style.display=display;
+    if(!visible){lastCutterAnimation=null;return;}
     const size=.35;
-    svg.style.width=`${760*size*factor}px`;
-    svg.style.height=`${520*size*factor}px`;
+    const width=`${760*size*factor}px`,height=`${520*size*factor}px`;
+    if(svg.style.width!==width)svg.style.width=width;
+    if(svg.style.height!==height)svg.style.height=height;
     const sx=c.x-camera;
     svg.style.left=`${(sx-326*size)*factor}px`;
     svg.style.top=`${(VIEW.ground+c.y-476*size)*factor}px`;
@@ -1230,24 +1265,25 @@
 
   // Native inline SVG overlay (not Canvas drawImage): SMIL runs in the DOM,
   // including the anchored flame-tip polygons. The collision plane is still f.x.
-  function drawWildfire(g,camera){
+  function drawWildfire(g,camera,ratio){
     const svg=el('wildfire-svg');
     const f=g.fire;
-    if(!svg || !f || !f.active){if(svg)svg.style.display='none';return;}
+    if(!svg || !f || !f.active){if(svg && svg.style.display!=='none')svg.style.display='none';return;}
     const front=f.x-camera;
     const size=.76;
-    const ratio=canvas.getBoundingClientRect().width/VIEW.width;
     // SVG's actual ground bed is y=463..480. Align flame roots at y=463 with
     // gameplay's soil surface, WITHOUT any vertical bobbing or sway.
     const groundAnchorY=463;
     const leadingEdgeX=1034;
-    svg.style.width=`${(1120*size*ratio).toFixed(2)}px`;
-    svg.style.height=`${(530*size*ratio).toFixed(2)}px`;
+    const width=`${(1120*size*ratio).toFixed(2)}px`;
+    const height=`${(530*size*ratio).toFixed(2)}px`;
+    if(svg.style.width!==width)svg.style.width=width;
+    if(svg.style.height!==height)svg.style.height=height;
     svg.style.left=`${((front-leadingEdgeX*size)*ratio).toFixed(2)}px`;
     svg.style.top=`${((VIEW.ground-groundAnchorY*size)*ratio).toFixed(2)}px`;
     svg.style.opacity=f.phase==='warning'?.68:f.phase==='storm'?Math.max(0,1-f.elapsed/STORM_QUENCH):1;
-    svg.style.display='block';
-    svg.setAttribute('data-fire-phase',f.phase);
+    if(svg.style.display!=='block')svg.style.display='block';
+    if(svg.getAttribute('data-fire-phase')!==f.phase)svg.setAttribute('data-fire-phase',f.phase);
     // Treat the wall as artwork, NOT as hundreds of separate collisions.
     // This marked contact line follows the world-space gameplay front f.x.
     // Warm front lighting belongs behind sprites and does not affect physics.
@@ -1323,8 +1359,10 @@
   }
 
   function paint(g) {
-    const pixelRatio=Math.min(window.devicePixelRatio||1,2);
     const bounds=canvas.getBoundingClientRect();
+    // On small high-DPI screens, 1.5x uses ~44% fewer canvas pixels than 2x.
+    // This only changes raster resolution, not the 960x480 game coordinates.
+    const pixelRatio=Math.min(window.devicePixelRatio||1,bounds.width<720?1.5:2);
     const fit=Math.min(bounds.width/VIEW.width,bounds.height/VIEW.height);
     const dw=Math.max(1,Math.round(bounds.width*pixelRatio));
     const dh=Math.max(1,Math.round(bounds.height*pixelRatio));
@@ -1338,25 +1376,37 @@
     drawBg(camera,g);
     drawProceduralCourse(g,camera);
     drawCutterShadow(g,camera);
-    drawWildfire(g,camera);
+    const overlayScale=bounds.width/VIEW.width;
+    drawWildfire(g,camera,overlayScale);
     if(g.status==='dying' || (g.status==='caught' && g.death)) drawDeath(g,camera);
     else if(g.gapRescue) drawGapRescue(g,camera);
     else drawWisp(g,camera);
     window.WispOnline?.draw?.(ctx,g,camera);
     drawWeather(g);
     sceneryGame=null;
-    updateCutterOverlay(g,camera);
+    updateCutterOverlay(g,camera,overlayScale);
 
   }
 
   // Only resource and distance are exposed. Pursuer distance is deliberately
   // absent: fire and Cutter artwork convey danger without a numeric hint.
+  let lastEnergyColor=null;
   function updateHud(g) {
-    el('distance').textContent=String(Math.round(g.distance));
-    el('energyText').textContent=`${g.energy.toFixed(0)}%`;
-    el('energyFill').style.width=`${g.energy}%`;
-    el('energyFill').parentElement.setAttribute('aria-valuenow',String(Math.round(g.energy)));
-    el('energyFill').style.background=g.energy>45?'#9bd477':g.energy>22?'#efbd6f':'#f17b67';
+    const distance=String(Math.round(g.distance));
+    const distanceText=el('distance');
+    if(distanceText.textContent!==distance)distanceText.textContent=distance;
+    const energy=Math.round(g.energy);
+    const energyText=el('energyText');
+    const value=`${energy}%`;
+    if(energyText.textContent!==value)energyText.textContent=value;
+    const bar=el('energyFill');
+    const width=`${(Math.round(g.energy*10)/10).toFixed(1)}%`;
+    if(bar.style.width!==width)bar.style.width=width;
+    const meter=bar.parentElement;
+    const now=String(energy);
+    if(meter.getAttribute('aria-valuenow')!==now)meter.setAttribute('aria-valuenow',now);
+    const color=g.energy>45?'#9bd477':g.energy>22?'#efbd6f':'#f17b67';
+    if(lastEnergyColor!==color){bar.style.background=color;lastEnergyColor=color;}
   }
 
   // The button follows the real held/downward state, not a cosmetic timer.
@@ -1442,8 +1492,11 @@
     // The physics engine applies glide only when velocity points downward.
     const holdReady = actionHeld && ts - actionDownAt >= HOLD_TO_GLIDE_MS;
     gliding = holdReady && !game.grounded && !game.auto;
-    if(!paused) {while(accumulator>=FIXED) {step(game,FIXED,{glide:gliding});if(cutterMotion)cutterMotion.update(FIXED);accumulator-=FIXED;}}
-    else accumulator=0;
+    if(!paused) {
+      while(accumulator>=FIXED){step(game,FIXED,{glide:gliding});accumulator-=FIXED;}
+      if(cutterMotion && game.chaseEnabled && !game.fire.active &&
+          !['rest','warning'].includes(game.cutter.state))cutterMotion.update(delta);
+    }else accumulator=0;
     // Glide slows descent only; do not claim the wisp is gliding on the way up.
     if (!actionHeld || paused) setJumpFeedback('idle');
     else if (gliding && game.vy > 0) setJumpFeedback('gliding');
@@ -1540,7 +1593,7 @@
   // regression runs, but do not publish its mutating shortcuts on the live site.
   if(['localhost','127.0.0.1',''].includes(location.hostname)){
     // Physics inspection is local-only; browser UI and Cloudflare never use this.
-    window.WISP_TEST={createGame,step,jump,courseNear,
+    window.WISP_TEST={createGame,step,jump,courseNear,paint,
       procGapAt,procObstacleRects,stageAt,visualStageAt,treeMixAt,cameraForX,speedFor,CHARACTERS,
       traceGapOpening,maskGroundGaps,ridgeHeight,smoothNoise,sceneryTreeAt,
       updateFire,updateForest,epochAt,stageAtFor,rainIntensity,FIRE_SURVIVAL,
