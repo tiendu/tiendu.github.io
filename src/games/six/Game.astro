@@ -2,30 +2,115 @@
 import './six.css';
 ---
 <main class="six" data-six data-backend={import.meta.env.PUBLIC_SIX_BACKEND_URL || ''}>
-  <header><a href="/games/">← GAMES</a><span>SOLO · ONLINE 2–20</span></header>
-  <h1>SIX<span>.</span></h1>
-  <p class="six-intro">Guess higher, lower, or tie. Win points. Go below zero and you're out.</p>
-  <section class="six-menu" data-menu>
-    <button data-solo>PLAY COMPUTER</button>
-    <label>YOUR NAME <input data-name maxlength="16" placeholder="Player" autocomplete="nickname" /></label>
-    <div class="six-actions"><button data-create>CREATE ROOM</button><button data-join>JOIN ROOM</button></div>
-    <label data-code-label hidden>ROOM CODE <input data-code inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="123456" /></label>
-  </section>
-  <section data-room hidden>
-    <div class="six-actions"><strong data-room-code></strong><button data-invite>COPY INVITE</button><button data-leave>LEAVE</button></div>
-    <button data-start hidden>START GAME</button>
-  </section>
-  <section class="six-stage" data-stage hidden>
-    <p data-turn class="six-turn" aria-live="polite"></p>
-    <div class="six-die" data-die aria-label="Previous die roll"></div>
-    <p data-last class="six-last" aria-live="polite"></p>
-    <div class="six-actions six-choices" data-choices>
-      <button data-guess="higher">↑ HIGHER</button>
-      <button data-guess="lower">↓ LOWER</button>
-      <button data-guess="tie">= TIE ×2</button>
+  <header class="six-topbar">
+    <a href="/games/" class="six-home">← GAMES</a>
+    <span>SOLO · ONLINE 2–20</span>
+  </header>
+
+  <div class="six-heading">
+    <div>
+      <h1>SIX<span>.</span></h1>
+      <p class="six-intro">One die. Three choices. Don’t go negative.</p>
     </div>
-  </section>
-  <section class="six-scores"><h2>SCORES</h2><ol data-scores></ol></section>
-  <p data-status role="status" aria-live="polite"></p>
+    <span class="six-progress" data-progress>CHOOSE A MODE</span>
+  </div>
+
+  <div class="six-shell">
+    <div class="six-main">
+      <section class="six-menu six-panel" data-menu aria-labelledby="six-welcome">
+        <p class="six-eyebrow">READY TO ROLL?</p>
+        <h2 id="six-welcome">Guess the next die.</h2>
+        <p>Higher, lower, or a risky tie. Correct guesses earn points; wrong guesses cost points after the first round. Below zero? You're out.</p>
+        <button class="six-primary six-solo-button" type="button" data-solo>PLAY VS COMPUTER <span aria-hidden="true">↗</span></button>
+        <div class="six-separator"><span>OR PLAY WITH FRIENDS</span></div>
+        <label class="six-field">YOUR NAME <input data-name maxlength="16" placeholder="Player" autocomplete="nickname" /></label>
+        <div class="six-actions">
+          <button type="button" data-create>CREATE ROOM</button>
+          <button type="button" data-join>JOIN ROOM</button>
+        </div>
+        <label class="six-field" data-code-label hidden>ROOM CODE
+          <input data-code inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="123456" />
+        </label>
+      </section>
+
+      <section class="six-room six-panel" data-room hidden aria-label="Online room">
+        <div class="six-room-label"><span class="six-eyebrow">ONLINE ROOM</span><strong data-room-code></strong></div>
+        <div class="six-actions">
+          <button type="button" data-invite>COPY INVITE</button>
+          <button type="button" data-leave>LEAVE ROOM</button>
+        </div>
+        <button class="six-primary" type="button" data-start hidden>START GAME</button>
+      </section>
+
+      <section class="six-stage six-panel" data-stage hidden aria-label="SIX game board">
+        <div class="six-turn-row">
+          <div>
+            <span class="six-eyebrow">AT THE TABLE</span>
+            <h2 class="six-turn" data-turn aria-live="polite"></h2>
+          </div>
+          <div class="six-your-score" data-your-score hidden>
+            <span>YOUR SCORE</span>
+            <strong data-my-points>0</strong>
+          </div>
+        </div>
+
+        <div class="six-dice-table">
+          <span class="six-eyebrow" data-dice-label>PREVIOUS ROLL</span>
+          <div class="six-die" data-die aria-hidden="true"></div>
+          <span class="six-dice-value" data-dice-value>—</span>
+        </div>
+
+        <div class="six-result" data-result role="status" aria-live="polite" aria-atomic="true">
+          <p data-last>Choose your prediction.</p>
+          <strong data-delta hidden></strong>
+        </div>
+
+        <div class="six-play-controls">
+          <p class="six-eyebrow">WHAT COMES NEXT?</p>
+          <div class="six-choices" data-choices>
+            <button type="button" data-guess="higher" aria-label="Guess higher than the previous die">
+              <span class="six-choice-symbol" aria-hidden="true">+</span>
+              <span class="six-choice-title">HIGHER</span>
+              <small>ROLL IS GREATER</small>
+            </button>
+            <button type="button" data-guess="lower" aria-label="Guess lower than the previous die">
+              <span class="six-choice-symbol" aria-hidden="true">−</span>
+              <span class="six-choice-title">LOWER</span>
+              <small>ROLL IS SMALLER</small>
+            </button>
+            <button type="button" data-guess="tie" aria-label="Guess the same number, double points if correct">
+              <span class="six-choice-symbol" aria-hidden="true">=</span>
+              <span class="six-choice-title">TIE <span class="six-multiplier">×2</span></span>
+              <small>SAME NUMBER</small>
+            </button>
+          </div>
+        </div>
+        <div class="six-stage-footer">
+          <button type="button" data-replay hidden>↻ RESTART MATCH</button>
+          <button type="button" data-back hidden>CHANGE MODE</button>
+          <p data-replay-hint hidden>Waiting for the host to start another match.</p>
+        </div>
+      </section>
+
+      <p class="six-status" data-status role="status" aria-live="polite"></p>
+    </div>
+
+    <aside class="six-sidebar" aria-label="Match information">
+      <section class="six-scores six-panel" aria-labelledby="six-score-title">
+        <div class="six-sidebar-head">
+          <h2 id="six-score-title">PLAYERS</h2>
+          <span data-player-count>0 / 20</span>
+        </div>
+        <p class="six-now-playing" data-now-playing>Waiting for a game</p>
+        <ol data-scores aria-label="Player scores">
+          <li class="six-empty">Scores will appear here.</li>
+        </ol>
+      </section>
+      <section class="six-history six-panel" aria-labelledby="six-history-title">
+        <div class="six-sidebar-head"><h2 id="six-history-title">RECENT ROLLS</h2></div>
+        <ol data-history aria-label="Recent roll history"><li class="six-empty">No rolls yet.</li></ol>
+      </section>
+    </aside>
+  </div>
   <footer>10 ROUNDS · BELOW ZERO = OUT · TIE PAYS DOUBLE</footer>
 </main>
