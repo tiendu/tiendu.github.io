@@ -1,4 +1,5 @@
 ---
+import SoundToggle from '../shared/ui/SoundToggle.astro';
 import './six.css';
 ---
 <main class="six" data-six data-backend={import.meta.env.PUBLIC_SIX_BACKEND_URL || ''}>
@@ -7,6 +8,7 @@ import './six.css';
     <span class="six-mode-label">SOLO · ONLINE 2–20</span>
     <strong class="six-mini-brand" aria-hidden="true">SIX.</strong>
     <span class="six-mobile-progress" data-mobile-progress></span>
+    <SoundToggle class="six-sound-toggle" />
   </header>
 
   <div class="six-heading">

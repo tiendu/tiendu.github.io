@@ -27,6 +27,20 @@ export const effects = {
     tone(880, 990, 0.13, 0.16);
   },
 
+  // SIX: the roll is a few quiet clacks, not a looping sound effect.
+  // A D6 sounds heavier; a D20 rattles with more, lighter contacts.
+  diceRoll(tone, intensity) {
+    const count = 5 + Math.round(intensity * 4);
+    for (let i = 0; i < count; i++) {
+      const frequency = 210 + intensity * 150 + (i % 3) * 65;
+      tone(frequency, 90 + intensity * 90, 0.027, i * 0.055, 0.09 - intensity * 0.02, "triangle");
+    }
+  },
+  diceLand(tone) {
+    tone(250, 70, 0.11, 0, 0.2, "triangle");
+    tone(800, 220, 0.03, 0.015, 0.055);
+  },
+
   // Number keypad and explosion.
   tap(tone) { tone(720, 480, 0.035); },
   delete(tone) { tone(300, 160, 0.045); },

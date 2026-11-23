@@ -380,3 +380,29 @@
   .six.is-playing .six-match-actions > summary { min-height:36px; }
   .six.is-playing .six-status:empty { display:none; }
 }
+
+/* SIX shares NUMBER's optional audio toggle and lightweight press feedback. */
+.six .six-sound-toggle {
+  min-height: 36px;
+  padding: 7px 11px;
+  font-size: .7rem;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.six button { transition: background .15s ease, border-color .15s ease, transform .12s ease, filter .12s ease, box-shadow .12s ease; }
+.six button.six-pressed:not(:disabled) { transform: translateY(2px) scale(.975); filter: brightness(1.15); }
+.six .six-choices button.six-committed {
+  background: #514338;
+  border-color: var(--six-accent);
+  box-shadow: inset 0 0 0 1px var(--six-accent), 0 0 0 2px #f0ab7233;
+}
+.six .six-choices button.six-committed:disabled { opacity: 1; }
+@media (max-width: 560px) {
+  .six .six-sound-toggle { width: 36px; min-width: 36px; padding: 5px; font-size: 0; }
+  .six .six-sound-toggle::before { content: '🔇'; font-size: 17px; line-height: 1; }
+  .six .six-sound-toggle[aria-pressed='true']::before { content: '🔊'; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .six button { transition: none; }
+  .six button.six-pressed:not(:disabled) { transform: none; }
+}

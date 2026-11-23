@@ -1,5 +1,6 @@
 import { createGame, guess, botChoice, currentPlayer, rollDie, DEFAULT_ROUNDS, validRounds, DEFAULT_SIDES, validSides, TIE_JACKPOTS, allowedChoice } from '../core/rules.mjs';
 import { dieSvg } from './dice.mjs';
+import { mountGameSound } from '../../shared/game-sound.ts';
 
 // The presentation copy stays unchanged until the dice settles. Neither the new
 // score nor the server's final roll appears during the animation.
@@ -41,6 +42,7 @@ export function mountSix() {
   const onlineRoundsField = $('[data-online-rounds]');
   const replay = $('[data-replay]');
   const buttons = [...root.querySelectorAll('[data-guess]')];
+  const sounds = mountGameSound(root, 'six');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const desktopMatchActions = window.matchMedia('(min-width: 561px)');
   const matchActions = $('[data-match-actions]');
@@ -64,12 +66,59 @@ export function mountSix() {
   let rollInterval = 0;
   let rollTimeout = 0;
   let botTimeout = 0;
+  let outcomeTimer = 0;
+  const pressTimers = new WeakMap();
   let soloRounds = DEFAULT_ROUNDS;
   let onlineRounds = DEFAULT_ROUNDS;
   let soloDiceSides = DEFAULT_SIDES;
   let onlineDiceSides = DEFAULT_SIDES;
 
   const name = id => players.find(p => p.id === id)?.name || id || 'Player';
+  const clearChoice = () => buttons.forEach(button => button.classList.remove('six-committed'));
+  // A short visible press for pointer, touch and keyboard. Disabled buttons
+  // never respond. The committed state lasts until the roll is revealed.
+  function flashButton(button) {
+    if (!button || button.disabled) return;
+    clearTimeout(pressTimers.get(button));
+    button.classList.add('six-pressed');
+    pressTimers.set(button, window.setTimeout(() => {
+      button.classList.remove('six-pressed');
+      pressTimers.delete(button);
+    }, 150));
+  }
+  root.addEventListener('pointerdown', event => {
+    const button = event.target instanceof Element ? event.target.closest('button') : null;
+    if (button && root.contains(button)) flashButton(button);
+  }, true);
+  root.addEventListener('keydown', event => {
+    if (event.repeat || !['Enter', ' '].includes(event.key)) return;
+    const button = event.target instanceof Element ? event.target.closest('button') : null;
+    if (button && root.contains(button)) flashButton(button);
+  }, true);
+  root.addEventListener('click', event => {
+    const button = event.target instanceof Element ? event.target.closest('button') : null;
+    if (!button || button.disabled || !root.contains(button)) return;
+    flashButton(button);
+    if (!button.matches('[data-game-sound]')) sounds.play('tap');
+  }, true);
+
+  function outcomeSound(next) {
+    const event = next?.last;
+    if (next?.over && next.winner === me) sounds.play('clear');
+    else if (event?.choice === 'tie' && event.correct) sounds.play('bonus');
+    else if (event?.eliminated) sounds.play('impact');
+    else if (event?.opening) sounds.play('confirm');
+    else if (event?.correct) sounds.play('pickup');
+    else if (event) sounds.play('impact');
+  }
+  function landed(next) {
+    sounds.play('diceLand');
+    clearTimeout(outcomeTimer);
+    outcomeTimer = window.setTimeout(() => {
+      outcomeTimer = 0;
+      outcomeSound(next);
+    }, 100);
+  }
   const canPlay = () => game && !game.over && !rolling && !waitingForServer &&
     (mode === 'solo' ? currentPlayer(game) === 'you' :
       mode === 'online' && connected && currentPlayer(game) === me);
@@ -84,6 +133,8 @@ export function mountSix() {
   function stopRoll() {
     clearInterval(rollInterval);
     clearTimeout(rollTimeout);
+    clearTimeout(outcomeTimer);
+    outcomeTimer = 0;
     rollInterval = 0;
     rollTimeout = 0;
     rolling = false;
@@ -297,14 +348,18 @@ export function mountSix() {
     const firstSnapshotMidgame = !previousKey && next.moves > 0;
     if (reducedMotion.matches || firstSnapshotMidgame) {
       view = null;
+      clearChoice();
       recordRoll(next);
       render();
+      // Rejoining an active room must not replay an old result.
+      if (!firstSnapshotMidgame) landed(next);
       done?.();
       return;
     }
     view = newMatch ? openingPreview(next) : before || openingPreview(next);
     rolling = true;
     render();
+    sounds.play('diceRoll', ((next.dieSides ?? 6) - 6) / 14);
     // All rapidly changing faces are cosmetic. Only the final face comes from
     // the already-validated local roll / authoritative server snapshot.
     const sides = next.dieSides ?? 6;
@@ -318,8 +373,10 @@ export function mountSix() {
     rollTimeout = window.setTimeout(() => {
       stopRoll();
       view = null;
+      clearChoice();
       recordRoll(next);
       render();
+      landed(next);
       done?.();
     }, 720);
   }
@@ -340,6 +397,7 @@ export function mountSix() {
   function startSolo() {
     stopBot();
     stopRoll();
+    clearChoice();
     mode = 'solo';
     players = [{ id: 'you', name: 'YOU' }, { id: 'bot', name: 'COMPUTER' }];
     me = 'you';
@@ -354,6 +412,8 @@ export function mountSix() {
   function reset({ leave = true, clearUrl = true } = {}) {
     stopBot();
     stopRoll();
+    sounds.stop();
+    clearChoice();
     if (ws) {
       if (leave && ws.readyState === WebSocket.OPEN)
         ws.send(JSON.stringify({ type: 'leave' }));
@@ -397,6 +457,7 @@ export function mountSix() {
       let message;
       try { message = JSON.parse(event.data); } catch { status.textContent = 'Invalid server response.'; return; }
       if (message.type === 'error') {
+        clearChoice();
         waitingForServer = false;
         status.textContent = message.error;
         render();
@@ -418,6 +479,7 @@ export function mountSix() {
           applyGame(message.game, `${message.round}:${message.game.moves}`);
         } else {
           stopRoll();
+          clearChoice();
           game = null;
           view = null;
           lastSeen = null;
@@ -432,6 +494,8 @@ export function mountSix() {
       connected = false;
       waitingForServer = false;
       stopRoll();
+      sounds.stop();
+      clearChoice();
       view = null;
       status.textContent = 'Disconnected. Rejoin using the room code.';
       render();
@@ -497,8 +561,8 @@ export function mountSix() {
     updateRounds('solo');
     startSolo();
   });
-  $('[data-back]').addEventListener('click', () => { reset(); status.textContent = ''; });
-  $('[data-leave]').addEventListener('click', () => { reset(); status.textContent = ''; });
+  $('[data-back]').addEventListener('click', () => { reset(); sounds.play('leave'); status.textContent = ''; });
+  $('[data-leave]').addEventListener('click', () => { reset(); sounds.play('leave'); status.textContent = ''; });
   replay.addEventListener('click', () => {
     if (mode === 'solo') startSolo();
     else if (mode === 'online' && game?.over && host === me && connected && !waitingForServer) {
@@ -510,6 +574,8 @@ export function mountSix() {
   buttons.forEach(button => button.addEventListener('click', () => {
     if (!canPlay()) return;
     const choice = button.dataset.guess;
+    clearChoice();
+    button.classList.add('six-committed');
     if (mode === 'solo') {
       const before = copyGame(game);
       guess(game, 'you', choice, rollDie(game.dieSides ?? 6));
