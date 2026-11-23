@@ -169,7 +169,7 @@
 .six .six-stepper input { display:block; min-height:44px; width:58px; max-width:none; padding:5px; font-size:1.1rem; text-align:center; font-variant-numeric:tabular-nums; appearance:textfield; -moz-appearance:textfield; }
 .six-stepper input::-webkit-inner-spin-button, .six-stepper input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 .six-stepper :disabled { opacity:.5; }
-.six-mini-brand, .six-mobile-progress, .six-mobile-roster, .six-mobile-history { display:none; }
+.six-mini-brand, .six-round-progress, .six-mobile-roster, .six-mobile-history { display:none; }
 .six-mobile-roster summary, .six-mobile-history summary { cursor:pointer; }
 @media (max-width: 560px) {
   .six { padding:12px; min-height:100svh; }
@@ -184,7 +184,7 @@
   .six.is-playing .six-topbar { margin-bottom:12px; }
   .six.is-playing .six-mode-label { display:none; }
   .six.is-playing .six-mini-brand { display:block; font-size:1.25rem; color:var(--six-ink); margin-left:auto; }
-  .six.is-playing .six-mobile-progress { display:block; color:var(--six-accent); font-weight:800; font-size:.73rem; }
+
   .six.is-playing .six-main { gap:8px; }
   .six.is-playing .six-stage { gap:10px; }
   .six.is-playing .six-stage.six-panel { padding:0; border:0; background:transparent; }
@@ -379,6 +379,32 @@
   .six.is-playing .six-match-actions > summary { padding:9px 2px; }
   .six.is-playing .six-match-actions > summary { min-height:36px; }
   .six.is-playing .six-status:empty { display:none; }
+}
+
+/* Keep the round count beside the game controls, not stranded next to a giant title. */
+.six.is-playing .six-heading { display: none; }
+.six.is-playing .six-topbar {
+  position: sticky; top: 0; z-index: 5; padding: 6px 0; background: #090b0b;
+  justify-content: flex-start; gap: clamp(12px, 2vw, 24px); margin-bottom: 20px;
+}
+.six.is-playing .six-mode-label { display: none; }
+.six.is-playing .six-mini-brand { display: block; font-size: 1.5rem; color: var(--six-ink); }
+.six.is-playing .six-sound-toggle { margin-left: auto; }
+.six.is-playing .six-round-progress {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 50px; padding: 8px 18px; border: 2px solid var(--six-accent);
+  border-radius: 10px; background: #36291f; color: #ffcb9f;
+  font-size: 1.18rem; font-weight: 900; letter-spacing: .075em;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .six.is-playing .six-topbar { gap: 8px; margin-bottom: 12px; }
+  .six.is-playing .six-mini-brand { margin-left: 0; font-size: 1.22rem; }
+  .six.is-playing .six-round-progress {
+    min-height: 44px; padding: 8px 9px; font-size: .86rem;
+    letter-spacing: .02em; border-radius: 8px;
+  }
+  .six.is-playing .six-home { font-size: .67rem; }
 }
 
 /* SIX shares NUMBER's optional audio toggle and lightweight press feedback. */
