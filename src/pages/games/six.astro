@@ -1,0 +1,11 @@
+---
+import GameLayout from '../../layouts/GameLayout.astro';
+import SixGame from '../../games/six/Game.astro';
+---
+<GameLayout title="Six" description="Guess higher, lower or tie. Survive against the computer or up to twenty players online.">
+  <SixGame />
+</GameLayout>
+<script>
+  import {mountSix} from '../../games/six/client/main.mjs';
+  mountSix();
+</script>

@@ -9,7 +9,7 @@
     "start": "astro dev",
     "check:styles": "node scripts/check-styles.mjs",
     "check:games": "node scripts/check-games.mjs",
-    "test:games": "node --test src/games/number/tests/local-rules.test.mjs src/games/blackjack/tests/tally.test.mjs src/games/mines/tests/mines.test.mjs src/games/mines/tests/mines-defeat.test.mjs src/games/mines/tests/mines-elevator.test.mjs src/games/mines/tests/mines-hats.test.mjs src/games/mines/tests/cardinal-neighbors.test.mjs",
+    "test:games": "node --test src/games/six/tests/*.test.mjs src/games/six/tests/*.test.mjs src/games/number/tests/local-rules.test.mjs src/games/blackjack/tests/tally.test.mjs src/games/mines/tests/mines.test.mjs src/games/mines/tests/mines-defeat.test.mjs src/games/mines/tests/mines-elevator.test.mjs src/games/mines/tests/mines-hats.test.mjs src/games/mines/tests/cardinal-neighbors.test.mjs",
     "check:astro": "astro check",
     "check": "npm run check:styles && npm run check:games && npm run test:games && npm run test:wisp && npm run check:astro",
     "build": "astro build && node scripts/fix-html-routes.mjs",

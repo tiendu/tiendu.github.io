@@ -1,0 +1,31 @@
+---
+import './six.css';
+---
+<main class="six" data-six data-backend={import.meta.env.PUBLIC_SIX_BACKEND_URL || ''}>
+  <header><a href="/games/">← GAMES</a><span>SOLO · ONLINE 2–20</span></header>
+  <h1>SIX<span>.</span></h1>
+  <p class="six-intro">Guess higher, lower, or tie. Win points. Go below zero and you're out.</p>
+  <section class="six-menu" data-menu>
+    <button data-solo>PLAY COMPUTER</button>
+    <label>YOUR NAME <input data-name maxlength="16" placeholder="Player" autocomplete="nickname" /></label>
+    <div class="six-actions"><button data-create>CREATE ROOM</button><button data-join>JOIN ROOM</button></div>
+    <label data-code-label hidden>ROOM CODE <input data-code inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="123456" /></label>
+  </section>
+  <section data-room hidden>
+    <div class="six-actions"><strong data-room-code></strong><button data-invite>COPY INVITE</button><button data-leave>LEAVE</button></div>
+    <button data-start hidden>START GAME</button>
+  </section>
+  <section class="six-stage" data-stage hidden>
+    <p data-turn class="six-turn" aria-live="polite"></p>
+    <div class="six-die" data-die aria-label="Previous die roll"></div>
+    <p data-last class="six-last" aria-live="polite"></p>
+    <div class="six-actions six-choices" data-choices>
+      <button data-guess="higher">↑ HIGHER</button>
+      <button data-guess="lower">↓ LOWER</button>
+      <button data-guess="tie">= TIE ×2</button>
+    </div>
+  </section>
+  <section class="six-scores"><h2>SCORES</h2><ol data-scores></ol></section>
+  <p data-status role="status" aria-live="polite"></p>
+  <footer>10 ROUNDS · BELOW ZERO = OUT · TIE PAYS DOUBLE</footer>
+</main>

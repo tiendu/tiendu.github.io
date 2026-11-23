@@ -2,7 +2,7 @@ import { access, readFile } from "node:fs/promises";
 const expected = {
   mines: "../../games/mines/Game.astro",
   number: "../../games/number/Game.astro",
-  unfold: "../../../games/unfold/Game.astro",
+  six: "../../games/six/Game.astro",
 };
 for (const [name, importPath] of Object.entries(expected)) {
   const route = name === 'unfold' ? `../src/pages/games/unfold/index.astro` : `../src/pages/games/${name}.astro`;
