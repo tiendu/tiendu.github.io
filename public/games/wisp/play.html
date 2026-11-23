@@ -34,7 +34,9 @@
   button { font:inherit; touch-action:manipulation; cursor:pointer; border:1px solid #709b75; background:#234c3c; color:#eef7e8; padding:12px 17px; font-size:14px; font-weight:700 }
   button:active,button.down { transform:translateY(1px); background:#3b6c50 }
   button:focus-visible { outline:2px solid #dcf5bc; outline-offset:3px }
-  #jump { flex:1; position:relative; overflow:hidden; isolation:isolate; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:68px; background:#a6d585; border-color:#dcffb9; color:#112d24; letter-spacing:.06em; user-select:none; -webkit-tap-highlight-color:transparent; transition:background .18s,border-color .18s,box-shadow .18s }
+  #jump { flex:1; position:relative; overflow:hidden; isolation:isolate; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:68px; background:#a6d585; border-color:#dcffb9; color:#112d24; letter-spacing:.06em; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:none; -webkit-tap-highlight-color:transparent; transition:background .18s,border-color .18s,box-shadow .18s }
+  /* Safari must not select the two labels during a long hold for glide. */
+  #jump, #jump * { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   #jump .jump-main { position:relative; z-index:1; font-size:15px; font-weight:850; line-height:1.15 }
   #jump .jump-hint { position:relative; z-index:1; font-size:10px; font-weight:750; letter-spacing:.13em; line-height:1.2; opacity:.82 }
   #jump::after { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(100deg,transparent 15%,#f1ffe6ad 48%,transparent 82%); transform:translateX(-105%); opacity:0 }

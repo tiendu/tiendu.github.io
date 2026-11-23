@@ -29,3 +29,14 @@ test('jump feedback distinguishes held input from real downward glide',()=>{
   assert.match(game,/GLIDING · RELEASE TO DROP/);
   assert.match(html,/@media\(prefers-reduced-motion:reduce\).*animation:none!important/);
 });
+
+test('Safari long-press cannot select the jump labels or open its callout',()=>{
+  const html=source('public/games/wisp/play.html');
+  const game=source('public/games/wisp/game.js');
+  assert.match(html, /#jump, #jump \* \{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; \}/);
+  assert.match(html, /#jump \{[^\n]+touch-action:none;/);
+  assert.match(game, /jumpButton\.addEventListener\('touchstart', e => e\.preventDefault\(\), \{passive:false\}\)/);
+  assert.match(game, /\['contextmenu','selectstart'\]/);
+  // Native touch cancellation must not replace the pointer-driven jump handler.
+  assert.match(game, /jumpButton\.addEventListener\('pointerdown', e => \{/);
+});

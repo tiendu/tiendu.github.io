@@ -1473,6 +1473,13 @@
     game=createGame();
     if(window.WispCutter){cutterMotion=window.WispCutter.setup(el('cutter-svg'));}
     const jumpButton = el('jump');
+    // iOS Safari can invoke text selection on a long press despite pointer
+    // capture and the standard user-select rule. Cancel only this control's
+    // native touch gesture; pointer events still drive jump and hold-to-glide.
+    jumpButton.addEventListener('touchstart', e => e.preventDefault(), {passive:false});
+    for (const type of ['contextmenu','selectstart']) {
+      jumpButton.addEventListener(type, e => e.preventDefault());
+    }
     jumpButton.addEventListener('pointerdown', e => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       e.preventDefault();
