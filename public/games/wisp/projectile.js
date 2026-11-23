@@ -73,4 +73,4 @@
       top:d.y-b.ry*.88,bottom:d.y+b.ry*.88,kind:'flying timber'};
   }
   global.WispProjectiles={newLog,advance,collider,bounds};
-})(typeof window!=='undefined'?window:this);
+})(typeof window!=='undefined'?window:globalThis);

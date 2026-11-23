@@ -62,6 +62,6 @@ test('camera keeps the Wisp horizontally centered from the first frame through e
   assert.equal(cameraForX(155),-325,'negative camera is required at the starting line');
   // The multiplayer spectator should center the racer being followed too.
   const online=readFileSync(new URL('../../../../public/games/wisp/online.js',import.meta.url),'utf8');
-  assert.match(online,/game\.cameraForX\(live\[0\]\.x\)/);
+  assert.match(online,/game\.cameraForX\(remoteMotion\?\.sample\(leader\.id\)\?\.x\?\?leader\.x\)/);
   assert.doesNotMatch(online,/Math\.max\(0,live\[0\]\.x-210\)/);
 });

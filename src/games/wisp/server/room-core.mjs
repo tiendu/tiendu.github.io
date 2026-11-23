@@ -1,3 +1,4 @@
+import {createWorld,advanceWorld,worldSnapshot,authoritativeContacts} from './world.mjs';
 // WISP multiplayer room state. Room membership and race results are held here;
 // client physics remains a beta trust boundary until full server simulation lands.
 export const WISPS = Object.freeze(['Ember', 'Moss', 'Dew', 'Gale', 'Dusk']);
@@ -50,6 +51,7 @@ export class WispRegistry {
     return {
       code: room.code, state: room.state, seed: room.seed, startAt: room.startAt,
       serverNow: this.now(), revision: room.revision, winnerId: room.winnerId,
+      world: room.world?worldSnapshot(room.world,room.players):null,
       me: player?.id ?? null, host: Boolean(player?.host),
       players: room.players.map(p => ({id:p.id, name:p.name, wisp:p.wisp,
         host:p.host, connected:p.connected, alive:p.alive, distance:p.distance,
@@ -80,6 +82,7 @@ export class WispRegistry {
     const room = this.require(String(code));
     const p = this.player(room, token);
     p.lastSeen = this.now(); p.connected = true;
+    this.tick(room);
     this.evaluate(room);
     return this.snapshot(room,p);
   }
@@ -92,6 +95,7 @@ export class WispRegistry {
     room.state = 'running';
     room.startAt = this.now()+3000;
     room.seed = int(this.random()*2**31, 0, 2**31-1);
+    room.world=createWorld(room.seed,room.startAt);
     for (const other of room.players) {
       Object.assign(other,{alive:true,connected:true,distance:0,x:155,y:380,energy:100,
         submittedAt:0,lastEnergyGainX:155,lastReportedEnergy:100,sequence:-1,reason:null,lastSeen:this.now()});
@@ -106,7 +110,7 @@ export class WispRegistry {
     if(!p.host)throw error('Only the host can request a rematch',403);
     if(room.state!=='finished')throw error('The race has not finished',409);
     room.players=room.players.filter(player=>player.reason!=='Left race');
-    room.state='lobby';room.seed=null;room.startAt=null;room.winnerId=null;
+    room.state='lobby';room.seed=null;room.startAt=null;room.winnerId=null;room.world=null;
     for(const player of room.players) {
       Object.assign(player,{alive:true,connected:true,distance:0,x:155,y:380,energy:100,
         submittedAt:0,lastEnergyGainX:155,lastReportedEnergy:100,sequence:-1,
@@ -153,9 +157,16 @@ export class WispRegistry {
     p.distance = Math.round(Math.max(0,p.x-155));
     p.sequence = sequence;p.submittedAt = now;
     if (eliminated) {p.alive=false;p.reason=String(reason ?? 'eliminated').slice(0,90);}
+    this.tick(room);
     this.evaluate(room);
     room.revision++;
     return this.snapshot(room,p);
+  }
+  tick(room){
+    if(room.state!=='running'||!room.startAt)return;
+    if(!room.world)room.world=createWorld(room.seed,room.startAt);
+    advanceWorld(room.world,room.players,this.now());
+    if(authoritativeContacts(room.world,room.players))this.touch(room);
   }
   evaluate(room) {
     if (room.state !== 'running') return;

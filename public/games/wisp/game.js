@@ -215,7 +215,7 @@
       collected: new Set(), noPickups: opts.noPickups === true,
       auto: !!opts.auto, lastJumpX: null, events: [],
       glide: false, death: null, fire: makeFire(), deathCause:null, seed:Number.isFinite(+opts.seed)?(Number(opts.seed)|0):2026,
-      hazardStates:new Map(), gapRescue:null,
+      hazardStates:new Map(), gapRescue:null,sharedWorld:false,
       forest:{cycle:0,milestones:[],weather:'clear',weatherElapsed:0,completed:0},
       procPlan:null, procPlanStep:0, procPlanX:0, procCleared:new Set(),
     };
@@ -602,9 +602,10 @@
       g.impactCooldown=Math.max(0,g.impactCooldown-dt);
       g.staggerRemaining=Math.max(0,g.staggerRemaining-dt);
       advanceGapRescue(g,dt);
-      updateFire(g,dt);
-      updateForest(g,dt);
-      if(g.chaseEnabled && !g.fire.active && g.status==='running')proceduralCutter(g,dt);
+      if(!g.sharedWorld){
+        updateFire(g,dt);updateForest(g,dt);
+        if(g.chaseEnabled && !g.fire.active && g.status==='running')proceduralCutter(g,dt);
+      }
       return;
     }
     if(g.auto){
@@ -650,7 +651,7 @@
         g.y=VIEW.ground;g.vy=0;g.grounded=true;g.surface='ground';g.jumps=0;
       }
     }
-    dynamicUpdate(g,dt);
+    if(!g.sharedWorld)dynamicUpdate(g,dt);
     // Projectile spawn points can be behind us while the airborne log is still nearby.
     const obstacles=courseNear(g,g.x,850,350);
     for(const h of obstacles){
@@ -673,9 +674,10 @@
       const gap=procGapAt(g,g.x)||courseNear(g,g.x,200,120).find(h=>h.type==='erosion-gap'&&Math.abs(h.x-g.x)<200);
       if(gap)beginGapRescue(g,gap);
     }
-    updateFire(g,dt);
-    updateForest(g,dt);
-    if(g.chaseEnabled && !g.fire.active && g.status==='running') proceduralCutter(g,dt);
+    if(!g.sharedWorld){
+      updateFire(g,dt);updateForest(g,dt);
+      if(g.chaseEnabled && !g.fire.active && g.status==='running')proceduralCutter(g,dt);
+    }
     if(g.auto)window.WispBenchmark.finish(g);
   }
 
@@ -1450,7 +1452,7 @@
     activePointerId=null;
     game=createGame(name,energy,{auto,noPickups,chase:!auto,seed});
     game.isOnlineRun=false;resultAnnounced=false;
-    lastCutterAnimation=null;
+    lastCutterAnimation=null;latestShared=null;
     updateHud(game);
   }
 
@@ -1462,11 +1464,16 @@
     return true;
   }
 
-  function startOnline(name,seed) {
+  function startOnline(name,seed,shared=false,resume=null) {
     if(!onlineRoom || onlineRace || !Object.prototype.hasOwnProperty.call(CHARACTERS,name) ||
         !Number.isSafeInteger(seed) || seed<0)return false;
     reset(name,100,false,false,seed);
-    game.isOnlineRun=true;
+    game.isOnlineRun=true;game.sharedWorld=!!shared;
+    if(shared&&resume&&Number.isFinite(resume.x)&&Number.isFinite(resume.y)){
+      game.x=Math.max(155,resume.x);game.y=resume.y;game.energy=resume.energy;
+      game.distance=Math.max(0,resume.distance||resume.x-155);
+      game.grounded=resume.y>=379;game.surface=game.grounded?'ground':null;
+    }
     onlineRace=true;
     paused=false;
     return true;
@@ -1476,6 +1483,56 @@
     onlineRoom=Boolean(active);
     if(onlineRoom){paused=true;releaseAction();}
     else onlineRace=false;
+  }
+
+  // Shared room state is authoritative; extrapolation only changes visuals.
+  let latestShared=null;
+  function applyOnlineSnapshot(s){
+    if(!game?.sharedWorld||!s?.world)return;
+    const world=s.world;
+    latestShared={world,received:performance.now()};
+    game.forest.weather=world.weather;
+    game.forest.weatherElapsed=world.weatherElapsed;
+    game.forest.milestones=world.milestones;
+    game.forest.cycle=world.cycle;
+    game.forest.completed=world.completed;
+    const states=new Map();
+    for(const d of world.hazards)states.set(d.id,{...d});
+    game.hazardStates=states;
+    const me=s.players.find(p=>p.id===s.me);
+    if(me&&!me.alive&&game.status==='running'){
+      game.deathCause=/wildfire/i.test(me.reason||'')?'wildfire':/cutter/i.test(me.reason||'')?'cutter':'hazard';
+      startDeath(game,`${game.name} was caught by ${me.reason||'the forest'}.`);
+    }
+    presentSharedWorld(game);
+  }
+  function presentSharedWorld(g){
+    if(!g.sharedWorld||!latestShared)return;
+    const {world,received}=latestShared;
+    const dt=Math.min(.13,Math.max(0,(performance.now()-received)/1000));
+    Object.assign(g.cutter,world.cutter);
+    g.cutter.x=world.cutter.x+(world.cutter.velocity||0)*dt;
+    Object.assign(g.fire,world.fire);
+    g.fire.x=world.fire.x+(world.fire.velocity||0)*dt;
+    g.forest.weatherElapsed=world.weatherElapsed+dt;
+    // Predict only the visual pose between snapshots. The next server packet
+    // replaces these values; no client ever decides a shared hazard's timing.
+    for(const source of world.hazards){
+      const d=g.hazardStates.get(source.id);
+      if(!d)continue;
+      if(source.type==='falling-timber'&&['flight','bouncing','rolling'].includes(source.phase)){
+        d.x=source.x+(source.vx||0)*dt;
+        d.y=source.y+(source.vy||0)*dt+(source.phase==='rolling'?0:490*dt*dt);
+        d.angle=source.angle+(source.spin||0)*dt;
+      }else if(['falling-tree','charred-tree'].includes(source.type)&&source.phase==='falling'){
+        d.timer=source.timer+dt;
+        const t=Math.max(0,Math.min(1,(d.timer-2.05)/.58));
+        d.y=90+(380-23-90)*t*t;
+      }else if(source.type==='rolling-log'&&source.phase==='rolling'){
+        d.travel=Math.min(55,source.travel+dt*34);
+        d.x=source.x-(d.travel-source.travel);
+      }
+    }
   }
 
   function finishOnline() {
@@ -1507,6 +1564,7 @@
       if(paused && !fireSvg.animationsPaused())fireSvg.pauseAnimations();
       if(!paused && fireSvg.animationsPaused())fireSvg.unpauseAnimations();
     }
+    presentSharedWorld(game);
     paint(game);updateHud(game);
     if(game.status==='running')resultAnnounced=false;
     else if(!resultAnnounced && !onlineRoom && !game.isOnlineRun &&
@@ -1586,7 +1644,7 @@
   window.WispGame={
     get current(){return game;},
     get onlineRoom(){return onlineRoom;},
-    startSolo,startOnline,setOnlineRoom,finishOnline,cameraForX,
+    startSolo,startOnline,setOnlineRoom,finishOnline,applyOnlineSnapshot,cameraForX,
     setPaused(value){paused=Boolean(value);if(paused)releaseAction();}
   };
   // Maintain the original physics harness for local development and automated

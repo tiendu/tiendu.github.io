@@ -187,8 +187,13 @@
   $('wm-begin').addEventListener('click',async()=>{try{await online.start();}catch(error){note(error.message);}});
   $('wm-invite').addEventListener('click',async()=>{try{await online.invite();}catch(error){note(error.message);}});
   $('wm-leave').addEventListener('click',async()=>{try{await online.leave();}catch(error){note(error.message);}});
+  let lastLobbyStamp=null;
   function renderRoom(s){
     room=s;
+    if(s?.state==='running'&&raceRunning)return;
+    const stamp=s?.state==='lobby'?`${s.code}:${s.revision}:${s.me}:${s.host}`:null;
+    if(stamp&&stamp===lastLobbyStamp)return;
+    lastLobbyStamp=stamp;
     $('wm-online-entry').hidden=!!s;
     $('wm-lobby').hidden=!s;
     if(!s){$('wm-online-entry').hidden=false;closeResult();return;}

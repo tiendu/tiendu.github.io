@@ -17,6 +17,9 @@
   }));
 
   let session=null,snapshot=null,sequence=0,matchStarted=false;
+  const remoteMotion=window.WispRemoteMotion?.create?.()||null;
+  let socket=null,socketReady=false,reconnectAt=0,lastFallback=0;
+  let snapshotPerf=0;
   let timer=null,busy=false,entering=false,lastSync=0,generation=0;
   const emit=(name,detail)=>window.dispatchEvent(new CustomEvent(name,{detail}));
   const status=message=>emit('wisp:online-status',message);
@@ -45,7 +48,9 @@
       else sessionStorage.removeItem(sessionKey);}catch{}
   }
   function update(s){
-    snapshot=s;
+    snapshot=s;snapshotPerf=performance.now();
+    remoteMotion?.ingest(s);
+    game.applyOnlineSnapshot?.(s);
     emit('wisp:online-state',s);
     if(s.state==='lobby')status(`${s.players.length}/5 wisps. Invite a friend, then the host starts.`);
     else if(s.state==='running'){
@@ -62,8 +67,9 @@
   function launch(){
     if(!session||!snapshot||matchStarted||snapshot.state!=='running')return;
     const own=snapshot.players.find(p=>p.id===snapshot.me);
-    if(!game.startOnline(own?.wisp||'Moss',snapshot.seed))return;
+    if(!game.startOnline(own?.wisp||'Moss',snapshot.seed,!!snapshot.world,own))return;
     sequence=0;matchStarted=true;
+    game.applyOnlineSnapshot?.(snapshot);
     emit('wisp:online-race-start',null);
   }
   async function poll(){
@@ -85,10 +91,48 @@
       status('Connection: '+(error.name==='AbortError'?'timeout':error.message));}
     finally{busy=false;}
   }
+  function connectSocket(){
+    if(!session||socket||typeof WebSocket!=='function')return;
+    if(Date.now()<reconnectAt)return;
+    try{
+      const url=endpoint().replace(/^http/,'ws')+'/api/wisp/stream';
+      const ws=new WebSocket(url);
+      socket=ws;socketReady=false;
+      ws.onopen=()=>{if(socket===ws&&session)
+        ws.send(JSON.stringify({type:'hello',code:session.code,token:session.token}));};
+      ws.onmessage=e=>{
+        if(socket!==ws||!session)return;
+        try{
+          const msg=JSON.parse(e.data);
+          if(msg.type==='snapshot'&&msg.snapshot.code===session.code){
+            socketReady=true;update(msg.snapshot);
+            if(snapshot.state==='running'&&!matchStarted&&snapshot.serverNow>=snapshot.startAt)launch();
+          }else if(msg.type==='error')status('Connection: '+msg.error);
+        }catch{ /* Corrupt frames are ignored; HTTP remains available. */ }
+      };
+      ws.onclose=()=>{if(socket===ws){socket=null;socketReady=false;reconnectAt=Date.now()+3000;}};
+      ws.onerror=()=>{if(socket===ws){socketReady=false;try{ws.close();}catch{}}};
+    }catch{socket=null;socketReady=false;reconnectAt=Date.now()+3000;}
+  }
+  function sendSocket(){
+    if(!session||!socketReady||socket?.readyState!==1)return;
+    if(snapshot?.state==='running'&&!matchStarted&&
+      snapshot.serverNow+(performance.now()-snapshotPerf)>=snapshot.startAt)launch();
+    if(matchStarted&&snapshot?.state==='running'){
+      const g=game.current;
+      socket.send(JSON.stringify({type:'sync',sequence:++sequence,x:g.x,y:g.y,
+        energy:g.energy,eliminated:g.status==='caught',reason:g.deathCause||g.reason||'Caught'}));
+    }else socket.send(JSON.stringify({type:'state'}));
+  }
   function startPolling(){
     if(timer)clearInterval(timer);
-    timer=setInterval(poll,250);
-    void poll();
+    timer=setInterval(()=>{
+      if(!session)return;
+      if(socketReady){sendSocket();return;}
+      if(Date.now()-lastFallback>=250){lastFallback=Date.now();void poll();}
+      if(!socket)connectSocket();
+    },100);
+    void poll();connectSocket();
   }
   async function enter(op,{name,wisp,code}={}){
     if(session||entering)throw new Error('A room is already active or being joined.');
@@ -106,6 +150,9 @@
   async function leave(){
     const old=session;
     generation++;session=null;snapshot=null;matchStarted=false;
+    remoteMotion?.reset();
+    const oldSocket=socket;socket=null;socketReady=false;
+    if(oldSocket)try{oldSocket.close(1000,'Leaving room');}catch{}
     clearInterval(timer);timer=null;persist();
     game.setOnlineRoom(false);game.setPaused(true);
     emit('wisp:online-state',null);
@@ -152,20 +199,24 @@
     camera(_g,solo){
       if(!this.isSpectating())return solo;
       const live=snapshot.players.filter(p=>p.alive).sort((a,b)=>b.distance-a.distance);
-      return live.length?game.cameraForX(live[0].x):solo;
+      const leader=live[0];
+      return leader?game.cameraForX(remoteMotion?.sample(leader.id)?.x??leader.x):solo;
     },
     draw(ctx,_g,camera){
       if(!matchStarted||!snapshot)return;
       for(const p of snapshot.players){
         if(p.id===snapshot.me||!p.alive)continue;
-        const image=localImages[p.wisp],x=p.x-camera;
+        const motion=remoteMotion?.sample(p.id)||p;
+        const image=localImages[p.wisp],x=motion.x-camera,y=motion.y;
         if(x<-90||x>1050)continue;
         if(image?.complete&&image.naturalWidth){
-          ctx.save();ctx.globalAlpha=p.connected?.68:.32;
-          ctx.drawImage(image,x-39,p.y-70,78,78);ctx.restore();
+          ctx.save();ctx.globalAlpha=p.connected?.88:.32;
+          ctx.translate(x,y-31);
+          ctx.rotate(Math.max(-.12,Math.min(.12,(motion.vy||0)/3800)));
+          ctx.drawImage(image,-39,-39,78,78);ctx.restore();
         }
         ctx.save();ctx.font='bold 13px system-ui';ctx.textAlign='center';
-        ctx.fillStyle='#e4f6dd';ctx.fillText(p.name,x,p.y-77);ctx.restore();
+        ctx.fillStyle='#e4f6dd';ctx.fillText(p.name,x,y-77);ctx.restore();
       }
     }
   };

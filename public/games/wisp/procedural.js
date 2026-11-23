@@ -130,4 +130,4 @@
     return found;
   }
   global.WispCourse={CHUNK,POOLS,NAMES,hash,make,nearby,intensity};
-})(typeof window!=='undefined'?window:this);
+})(typeof window!=='undefined'?window:globalThis);
