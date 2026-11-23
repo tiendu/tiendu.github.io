@@ -120,3 +120,24 @@ test('D12 and D20 SVG faces are numbered and distinct; D6 retains familiar pips'
   assert.equal(dieSvg(21,20),'');
   assert.equal(dieSvg(0,6),'');
 });
+
+test('regular D12 and D20 render unique numbers on visible facets', () => {
+  for (const sides of [12, 20]) {
+    const encountered = new Set();
+    for (let value = 1; value <= sides; value++) {
+      const svg = dieSvg(value, sides);
+      const labels = [...svg.matchAll(/<g class="six-poly-face(?: six-poly-current)?" data-face="(\d+)">/g)]
+        .map(match => Number(match[1]));
+      assert.ok(labels.length >= (sides === 12 ? 5 : 8));
+      assert.equal(new Set(labels).size, labels.length, 'A number cannot occupy two faces');
+      assert.ok(labels.every(label => label >= 1 && label <= sides));
+      assert.ok(labels.includes(value), 'The rolled face must be visible');
+      const current = svg.match(new RegExp(`<g class="six-poly-face six-poly-current" data-face="${value}">([\\s\\S]*?)<\\/g>`));
+      assert.ok(current, 'Exactly one front-facing face should be highlighted');
+      assert.ok(current[1].includes(`>${value}</text>`), 'The result must remain legible on its face');
+      assert.equal((svg.match(/six-poly-current/g) || []).length, 1);
+      labels.forEach(label => encountered.add(label));
+    }
+    assert.deepEqual([...encountered].sort((a,b) => a-b), Array.from({length:sides},(_,i)=>i+1));
+  }
+});
