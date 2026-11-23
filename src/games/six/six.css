@@ -312,3 +312,65 @@
 }
 
 .six-result strong:not([hidden])::after { content:" PTS"; font-size:.7rem; font-weight:800; letter-spacing:.07em; vertical-align:middle; color:var(--six-muted); }
+
+/* Keep the outcome readable as a compact, complete recap. */
+.six-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: center;
+  gap: 9px 14px;
+  text-align: left;
+  min-width: 0;
+}
+.six-result-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  min-width: 0;
+}
+.six-result-heading p { color: var(--six-ink); font-size: .85rem; font-weight: 800; letter-spacing: .03em; }
+.six-result-verdict {
+  font-size: .7rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: var(--six-muted);
+}
+.six-result.gain .six-result-verdict { color: #91d9ad; }
+.six-result.loss .six-result-verdict, .six-result.is-wrong .six-result-verdict { color: #ff9f8d; }
+.six-result.jackpot .six-result-verdict { color: #ffe1a1; }
+.six-result-details { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; min-width: 0; }
+.six-result-roll { font-size: 1.22rem; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.six-result-score { font-size: .76rem; color: var(--six-muted); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.six-result > strong { grid-column: 2; grid-row: 2; justify-self: end; white-space: nowrap; }
+.six-result.jackpot > strong::before { content: none; }
+.six.is-finished .six-play-controls { display: none; }
+.six-match-actions { min-width: 0; }
+.six-match-actions > summary { display: none; }
+@media (max-width: 560px) {
+  .six.is-playing .six-result { min-height: 58px; gap: 5px 8px; padding: 2px 4px; }
+  .six-result-heading p { font-size: .75rem; }
+  .six-result-verdict { font-size: .65rem; }
+  .six-result-roll { font-size: 1rem; }
+  .six-result-score { font-size: .67rem; }
+  .six.is-playing .six-result > strong { font-size: 1.25rem; }
+  .six-match-actions > summary {
+    display: list-item;
+    min-height: 44px;
+    border: 1px solid var(--six-outline);
+    border-radius: 10px;
+    padding: 10px 13px;
+    color: var(--six-muted);
+    background: var(--six-surface);
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    cursor: pointer;
+  }
+  .six-match-actions[open] > summary { border-color: #75675a; }
+  .six-match-actions[open] .six-stage-footer { margin-top: 8px; }
+  .six.is-playing footer { display: none; }
+}

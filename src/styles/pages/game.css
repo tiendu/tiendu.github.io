@@ -1,3 +1,11 @@
+/* The game uses a full-screen dark canvas. Do not expose the site's paper
+   background when mobile browsers expand their viewport or overscroll. */
+html:has(.game-page),
+body:has(.game-page),
+body:has(.game-page) > .page-content {
+  background: #090b0b;
+}
+
 .game-page {
   --terminal-green: #e9a14a;
   --terminal-green-bright: #ffd27a;

@@ -107,7 +107,14 @@ import './six.css';
             <div class="six-die" data-die aria-hidden="true"></div>
           </div>
           <div class="six-result" data-result role="status" aria-live="polite" aria-atomic="true">
-            <p data-last>Choose your prediction.</p>
+            <div class="six-result-heading">
+              <p data-last>Choose your prediction.</p>
+              <span class="six-result-verdict" data-verdict hidden></span>
+            </div>
+            <div class="six-result-details" data-result-details hidden>
+              <span class="six-result-roll" data-result-roll></span>
+              <span class="six-result-score" data-result-score></span>
+            </div>
             <strong data-delta hidden></strong>
           </div>
         </div>
@@ -136,11 +143,14 @@ import './six.css';
           <summary>RECENT ROLLS</summary>
           <ol data-mobile-history-list aria-label="Recent rolls on mobile"></ol>
         </details>
-        <div class="six-stage-footer">
-          <button type="button" data-replay hidden>↻ RESTART MATCH</button>
-          <button type="button" data-back hidden>CHANGE MODE</button>
-          <p data-replay-hint hidden>Waiting for the host to start another match.</p>
-        </div>
+        <details class="six-match-actions" data-match-actions open>
+          <summary>MATCH OPTIONS</summary>
+          <div class="six-stage-footer">
+            <button type="button" data-replay hidden>↻ RESTART MATCH</button>
+            <button type="button" data-back hidden>CHANGE MODE</button>
+            <p data-replay-hint hidden>Waiting for the host to start another match.</p>
+          </div>
+        </details>
       </section>
 
       <p class="six-status" data-status role="status" aria-live="polite"></p>

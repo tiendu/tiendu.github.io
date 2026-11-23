@@ -42,6 +42,8 @@ export function mountSix() {
   const replay = $('[data-replay]');
   const buttons = [...root.querySelectorAll('[data-guess]')];
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const desktopMatchActions = window.matchMedia('(min-width: 561px)');
+  const matchActions = $('[data-match-actions]');
   const backend = root.dataset.backend.replace(/\/$/, '');
 
   let game = null;
@@ -169,11 +171,23 @@ export function mountSix() {
       : `${name(current)} is up next`;
   }
 
+  function syncMatchActions() {
+    // Keep controls visible on desktop and at game-over, but tuck them away
+    // during mobile play. Do not override a menu opened by the player.
+    const phase = `${desktopMatchActions.matches}:${!!game?.over}`;
+    if (matchActions.dataset.phase !== phase) {
+      matchActions.open = desktopMatchActions.matches || !!game?.over;
+      matchActions.dataset.phase = phase;
+    }
+  }
+
   function render() {
     const presented = view || game;
+    syncMatchActions();
     const current = game && currentPlayer(game);
     root.classList.toggle('is-playing', !!game);
     root.classList.toggle('is-active-match', !!game && !game.over);
+    root.classList.toggle('is-finished', !!game?.over);
     root.classList.toggle('is-online', mode === 'online');
     menu.hidden = mode !== 'menu';
     roomPanel.hidden = mode !== 'online';
@@ -228,24 +242,39 @@ export function mountSix() {
 
       const outcome = $('[data-result]');
       const last = $('[data-last]');
+      const verdict = $('[data-verdict]');
+      const details = $('[data-result-details]');
+      const rolls = $('[data-result-roll]');
+      const score = $('[data-result-score]');
       const delta = $('[data-delta]');
-      outcome.classList.remove('gain', 'loss', 'neutral', 'jackpot');
+      outcome.classList.remove('gain', 'loss', 'neutral', 'jackpot', 'is-wrong');
       die.classList.remove('jackpot-land');
+      verdict.hidden = true;
+      details.hidden = true;
       delta.hidden = true;
       if (rolling) {
-        last.textContent = 'The die is in motion…';
+        last.textContent = 'ROLLING…';
       } else if (!presented.last) {
         last.textContent = 'Choose your prediction.';
       } else {
         const event = presented.last;
-        if (event.opening) {
-          last.textContent = `${name(event.player)} opens with a ${event.roll}`;
-        } else {
-          last.textContent = `${name(event.player)} guessed ${event.choice.toUpperCase()} · rolled ${event.roll} · ${event.correct ? 'CORRECT' : 'WRONG'}${event.eliminated ? ' · ELIMINATED' : ''}`;
-        }
-        delta.hidden = false;
+        const points = presented.scores[event.player];
+        const before = points - event.delta;
+        last.textContent = event.opening
+          ? `${name(event.player)} · OPENING ROLL`
+          : `${name(event.player)} · ${event.choice.toUpperCase()}`;
+        verdict.textContent = event.opening ? 'START' : event.eliminated ? 'ELIMINATED'
+          : event.choice === 'tie' && event.correct ? 'JACKPOT'
+          : event.correct ? 'CORRECT' : 'WRONG';
+        verdict.hidden = false;
+        if (!event.opening && !event.correct) outcome.classList.add('is-wrong');
+        rolls.textContent = event.opening ? `FIRST ROLL ${event.roll}`
+          : `${event.previous} → ${event.roll}`;
+        score.textContent = `SCORE ${before} → ${points}`;
+        details.hidden = false;
         delta.textContent = `${event.delta > 0 ? '+' : ''}${event.delta}`;
         delta.setAttribute('aria-label', `${event.delta > 0 ? '+' : ''}${event.delta} ${Math.abs(event.delta) === 1 ? 'point' : 'points'}`);
+        delta.hidden = false;
         outcome.classList.add(event.delta > 0 ? 'gain' : event.delta < 0 ? 'loss' : 'neutral');
         if (event.choice === 'tie' && event.correct) {
           outcome.classList.add('jackpot');
@@ -537,6 +566,7 @@ export function mountSix() {
       render();
     }
   });
+  desktopMatchActions.addEventListener('change', syncMatchActions);
   const invited = new URLSearchParams(location.search).get('room');
   if (invited && /^\d{6}$/.test(invited)) {
     $('[data-code-label]').hidden = false;
