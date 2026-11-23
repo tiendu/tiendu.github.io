@@ -1,31 +1,5 @@
-import { createGame, guess, botChoice, currentPlayer, rollDie, DEFAULT_ROUNDS, validRounds } from '../core/rules.mjs';
-
-const pips = {
-  1: [[50, 50]],
-  2: [[28, 28], [72, 72]],
-  3: [[28, 28], [50, 50], [72, 72]],
-  4: [[28, 28], [72, 28], [28, 72], [72, 72]],
-  5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]],
-  6: [[28, 24], [72, 24], [28, 50], [72, 50], [28, 76], [72, 76]],
-};
-
-function dieSvg(face) {
-  if (!pips[face]) return '';
-  const circles = pips[face].map(([x, y]) =>
-    `<circle cx="${x}" cy="${y}" r="8" fill="#242326" stroke="#77716f" stroke-width="1"/>`,
-  ).join('');
-  return `<svg viewBox="0 0 100 100" focusable="false" aria-hidden="true">
-    <defs><linearGradient id="six-face-gradient" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#fffefa"/><stop offset=".55" stop-color="#eee9e2"/>
-      <stop offset="1" stop-color="#c8c0b8"/>
-    </linearGradient></defs>
-    <rect x="3" y="3" width="94" height="94" rx="20"
-      fill="url(#six-face-gradient)" stroke="#bcb3aa" stroke-width="2"/>
-    <path d="M15 43V24Q15 14 27 14H71" stroke="#fff"
-      stroke-opacity=".8" stroke-width="4" stroke-linecap="round" fill="none"/>
-    ${circles}
-  </svg>`;
-}
+import { createGame, guess, botChoice, currentPlayer, rollDie, DEFAULT_ROUNDS, validRounds, DEFAULT_SIDES, validSides, TIE_JACKPOTS, allowedChoice } from '../core/rules.mjs';
+import { dieSvg } from './dice.mjs';
 
 // The presentation copy stays unchanged until the dice settles. Neither the new
 // score nor the server's final roll appears during the animation.
@@ -90,16 +64,19 @@ export function mountSix() {
   let botTimeout = 0;
   let soloRounds = DEFAULT_ROUNDS;
   let onlineRounds = DEFAULT_ROUNDS;
+  let soloDiceSides = DEFAULT_SIDES;
+  let onlineDiceSides = DEFAULT_SIDES;
 
   const name = id => players.find(p => p.id === id)?.name || id || 'Player';
   const canPlay = () => game && !game.over && !rolling && !waitingForServer &&
     (mode === 'solo' ? currentPlayer(game) === 'you' :
       mode === 'online' && connected && currentPlayer(game) === me);
 
-  function showFace(value) {
-    if (visibleFace === value) return;
-    visibleFace = value;
-    die.innerHTML = dieSvg(value);
+  function showFace(value, sides) {
+    const key = `${sides}:${value}`;
+    if (visibleFace === key) return;
+    visibleFace = key;
+    die.innerHTML = dieSvg(value, sides);
   }
 
   function stopRoll() {
@@ -206,7 +183,14 @@ export function mountSix() {
     const editable = mode === 'online' && connected && host === me && !waitingForServer && (!game || game.over);
     $('[data-room-settings]').hidden = mode !== 'online' || (!!game && !game.over);
     $('[data-settings-note]').textContent = host === me ? 'HOST SETTING · 1–99' : 'HOST CHOOSES · 1–99';
-    for (const control of root.querySelectorAll('[data-adjust^="online:"], [data-online-rounds]')) control.disabled = !editable;
+    for (const control of root.querySelectorAll('[data-adjust^="online:"], [data-online-rounds], [data-dice-select^="online:"]')) control.disabled = !editable;
+    for (const button of root.querySelectorAll('[data-dice-select]')) {
+      const [which, value] = button.dataset.diceSelect.split(':');
+      const selected = which === 'solo' ? soloDiceSides : onlineDiceSides;
+      button.setAttribute('aria-pressed', String(selected === Number(value)));
+    }
+    $('[data-solo-dice-note]').textContent = `D${soloDiceSides} · TIE JACKPOT +${TIE_JACKPOTS[soloDiceSides]}`;
+    $('[data-online-dice-note]').textContent = `D${onlineDiceSides} · TIE JACKPOT +${TIE_JACKPOTS[onlineDiceSides]}`;
     if (document.activeElement !== onlineRoundsField) onlineRoundsField.value = String(onlineRounds);
     if (document.activeElement !== soloRoundsField) soloRoundsField.value = String(soloRounds);
     $('[data-back]').hidden = mode !== 'solo';
@@ -216,6 +200,14 @@ export function mountSix() {
     replay.textContent = game?.over ? '↻ PLAY AGAIN' : '↻ RESTART MATCH';
     $('[data-replay-hint]').hidden = mode !== 'online' || !game?.over || host === me;
     const maxRounds = game?.maxRounds ?? DEFAULT_ROUNDS;
+    // Legacy active rooms without dieSides always use their original D6 rules.
+    const sides = game ? (game.dieSides ?? 6) : mode === 'online' ? onlineDiceSides : soloDiceSides;
+    const jackpot = TIE_JACKPOTS[sides];
+    const legacy = !!game && game.dieSides == null;
+    const tieLabel = legacy ? '×2' : `+${jackpot}`;
+    $('[data-jackpot-hint]').textContent = `D${sides} · TIE ${tieLabel}`;
+    $('[data-tie-jackpot]').textContent = tieLabel;
+    $('[data-tie-rule]').textContent = `D${sides} · TIE ${legacy ? 'PAYS DOUBLE' : 'JACKPOT ' + tieLabel}`;
     $('[data-progress]').textContent = game ? `ROUND ${Math.min(game.round, maxRounds)} / ${maxRounds}`
       : mode === 'online' ? `LOBBY · ${players.length} / 20` : 'CHOOSE A MODE';
     $('[data-rounds]').textContent = game ? `${maxRounds} ROUNDS` : `${mode === 'solo' ? soloRounds : mode === 'online' ? onlineRounds : DEFAULT_ROUNDS} ROUNDS`;
@@ -231,13 +223,14 @@ export function mountSix() {
       $('[data-your-score]').hidden = myPoints === undefined;
       $('[data-my-points]').textContent = String(myPoints ?? 0);
       $('[data-dice-label]').textContent = rolling ? 'ROLLING…' : 'PREVIOUS ROLL';
-      $('[data-dice-value]').textContent = rolling ? '● ● ●' : `D6 · ${presented.previous || '—'}`;
-      if (!rolling) showFace(presented.previous);
+      $('[data-dice-value]').textContent = rolling ? 'ROLLING…' : `${presented.previous || '—'} / ${sides}`;
+      if (!rolling) showFace(presented.previous, sides);
 
       const outcome = $('[data-result]');
       const last = $('[data-last]');
       const delta = $('[data-delta]');
-      outcome.classList.remove('gain', 'loss');
+      outcome.classList.remove('gain', 'loss', 'neutral', 'jackpot');
+      die.classList.remove('jackpot-land');
       delta.hidden = true;
       if (rolling) {
         last.textContent = 'The die is in motion…';
@@ -251,11 +244,20 @@ export function mountSix() {
           last.textContent = `${name(event.player)} guessed ${event.choice.toUpperCase()} · rolled ${event.roll} · ${event.correct ? 'CORRECT' : 'WRONG'}${event.eliminated ? ' · ELIMINATED' : ''}`;
         }
         delta.hidden = false;
-        delta.textContent = `${event.delta > 0 ? '+' : ''}${event.delta} ${Math.abs(event.delta) === 1 ? 'POINT' : 'POINTS'}`;
+        delta.textContent = `${event.delta > 0 ? '+' : ''}${event.delta}`;
+        delta.setAttribute('aria-label', `${event.delta > 0 ? '+' : ''}${event.delta} ${Math.abs(event.delta) === 1 ? 'point' : 'points'}`);
         outcome.classList.add(event.delta > 0 ? 'gain' : event.delta < 0 ? 'loss' : 'neutral');
+        if (event.choice === 'tie' && event.correct) {
+          outcome.classList.add('jackpot');
+          die.classList.add('jackpot-land');
+        }
       }
     }
-    buttons.forEach(button => { button.disabled = !canPlay(); });
+    buttons.forEach(button => {
+      const permitted = !game || legacy || allowedChoice(game.previous, button.dataset.guess, sides);
+      button.disabled = !canPlay() || !permitted;
+      button.title = !permitted ? `Cannot predict ${button.dataset.guess} from ${game.previous} on D${sides}.` : '';
+    });
     renderScores(presented);
     renderHistory();
   }
@@ -287,12 +289,13 @@ export function mountSix() {
     render();
     // All rapidly changing faces are cosmetic. Only the final face comes from
     // the already-validated local roll / authoritative server snapshot.
-    showFace(1 + Math.floor(Math.random() * 6));
+    const sides = next.dieSides ?? 6;
+    showFace(1 + Math.floor(Math.random() * sides), sides);
     die.classList.remove('rolling');
     void die.offsetWidth;
     die.classList.add('rolling');
     rollInterval = window.setInterval(() => {
-      showFace(1 + Math.floor(Math.random() * 6));
+      showFace(1 + Math.floor(Math.random() * sides), sides);
     }, 85);
     rollTimeout = window.setTimeout(() => {
       stopRoll();
@@ -309,8 +312,9 @@ export function mountSix() {
     botTimeout = window.setTimeout(() => {
       if (mode !== 'solo' || !game || game.over || currentPlayer(game) !== 'bot') return;
       const before = copyGame(game);
-      const choice = botChoice(game.previous, game.scores.bot, game.scores.you);
-      guess(game, 'bot', choice, rollDie());
+      const sides = game.dieSides ?? 6;
+      const choice = botChoice(game.previous, game.scores.bot, game.scores.you, sides);
+      guess(game, 'bot', choice, rollDie(sides));
       applyGame(game, `${soloMatch}:${game.moves}`, { before });
     }, 320);
   }
@@ -322,7 +326,7 @@ export function mountSix() {
     players = [{ id: 'you', name: 'YOU' }, { id: 'bot', name: 'COMPUTER' }];
     me = 'you';
     waitingForServer = false;
-    const next = createGame(['bot', 'you'], rollDie(), soloRounds);
+    const next = createGame(['bot', 'you'], rollDie(soloDiceSides), soloRounds, soloDiceSides);
     soloMatch++;
     lastSeen = null;
     status.textContent = '';
@@ -389,6 +393,7 @@ export function mountSix() {
         players = message.players;
         host = message.host;
         onlineRounds = validRounds(message.rounds) ? message.rounds : DEFAULT_ROUNDS;
+        onlineDiceSides = validSides(message.dieSides) ? message.dieSides : DEFAULT_SIDES;
         waitingForServer = false;
         status.textContent = '';
         if (message.game) {
@@ -443,6 +448,23 @@ export function mountSix() {
       render();
     }
   }
+  for (const button of root.querySelectorAll('[data-dice-select]')) {
+    button.addEventListener('click', () => {
+      const [which, raw] = button.dataset.diceSelect.split(':');
+      const sides = Number(raw);
+      if (!validSides(sides)) return;
+      if (which === 'solo') {
+        if (mode !== 'menu') return;
+        soloDiceSides = sides;
+        render();
+      } else if (mode === 'online' && host === me && connected && (!game || game.over) && !waitingForServer) {
+        if (sides === onlineDiceSides) return;
+        waitingForServer = true;
+        ws?.send(JSON.stringify({ type: 'settings', dieSides: sides }));
+        render();
+      }
+    });
+  }
   for (const button of root.querySelectorAll('[data-adjust]')) {
     button.addEventListener('click', () => {
       const [which, direction] = button.dataset.adjust.split(':');
@@ -472,7 +494,7 @@ export function mountSix() {
     const choice = button.dataset.guess;
     if (mode === 'solo') {
       const before = copyGame(game);
-      guess(game, 'you', choice, rollDie());
+      guess(game, 'you', choice, rollDie(game.dieSides ?? 6));
       applyGame(game, `${soloMatch}:${game.moves}`, { before, done: scheduleBot });
     } else if (ws?.readyState === WebSocket.OPEN) {
       waitingForServer = true;

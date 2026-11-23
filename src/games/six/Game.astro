@@ -23,12 +23,22 @@ import './six.css';
         <p class="six-eyebrow">READY TO ROLL?</p>
         <h2 id="six-welcome">Guess the next die.</h2>
         <p>Higher, lower, or a risky tie. Correct guesses earn points; wrong guesses cost points after the first round. Below zero? You're out.</p>
-        <div class="six-round-setting" aria-label="Solo match length">
+        <div class="six-match-options">
+          <div class="six-dice-setting" aria-label="Solo die selection">
+            <span>DIE <small data-solo-dice-note>D12 · TIE JACKPOT +36</small></span>
+            <div class="six-dice-selector" role="group" aria-label="Choose solo die">
+              <button type="button" data-dice-select="solo:6" aria-pressed="false">D6</button>
+              <button type="button" data-dice-select="solo:12" aria-pressed="true">D12</button>
+              <button type="button" data-dice-select="solo:20" aria-pressed="false">D20</button>
+            </div>
+          </div>
+          <div class="six-round-setting" aria-label="Solo match length">
           <span>ROUNDS <small>DEFAULT 10 · 1–99</small></span>
           <div class="six-stepper">
             <button type="button" data-adjust="solo:-1" aria-label="Fewer solo rounds">−</button>
             <input data-solo-rounds type="number" min="1" max="99" step="1" inputmode="numeric" value="10" aria-label="Solo rounds" />
             <button type="button" data-adjust="solo:1" aria-label="More solo rounds">+</button>
+          </div>
           </div>
         </div>
         <button class="six-primary six-solo-button" type="button" data-solo>PLAY VS COMPUTER <span aria-hidden="true">↗</span></button>
@@ -49,12 +59,22 @@ import './six.css';
           <button type="button" data-invite>COPY INVITE</button>
           <button type="button" data-leave>LEAVE ROOM</button>
         </div>
-        <div class="six-round-setting" data-room-settings aria-label="Online match length">
+        <div class="six-match-options" data-room-settings aria-label="Online match settings">
+          <div class="six-dice-setting" aria-label="Room die selection">
+            <span>DIE <small data-online-dice-note>D12 · TIE JACKPOT +36</small></span>
+            <div class="six-dice-selector" role="group" aria-label="Choose room die">
+              <button type="button" data-dice-select="online:6" aria-pressed="false" disabled>D6</button>
+              <button type="button" data-dice-select="online:12" aria-pressed="true" disabled>D12</button>
+              <button type="button" data-dice-select="online:20" aria-pressed="false" disabled>D20</button>
+            </div>
+          </div>
+          <div class="six-round-setting" aria-label="Online match length">
           <span>ROUNDS <small data-settings-note>HOST CHOOSES · 1–99</small></span>
           <div class="six-stepper">
             <button type="button" data-adjust="online:-1" aria-label="Fewer online rounds" disabled>−</button>
             <input data-online-rounds type="number" min="1" max="99" step="1" inputmode="numeric" value="10" aria-label="Online rounds" disabled />
             <button type="button" data-adjust="online:1" aria-label="More online rounds" disabled>+</button>
+          </div>
           </div>
         </div>
         <button class="six-primary" type="button" data-start hidden>START GAME</button>
@@ -78,9 +98,14 @@ import './six.css';
         </details>
 
         <div class="six-dice-table">
-          <span class="six-eyebrow" data-dice-label>PREVIOUS ROLL</span>
-          <div class="six-die" data-die aria-hidden="true"></div>
-          <span class="six-dice-value" data-dice-value>—</span>
+          <div class="six-dice-context">
+            <span class="six-eyebrow" data-dice-label>PREVIOUS ROLL</span>
+            <strong class="six-dice-value" data-dice-value>—</strong>
+            <span class="six-dice-jackpot" data-jackpot-hint>D12 · TIE +36</span>
+          </div>
+          <div class="six-die-frame">
+            <div class="six-die" data-die aria-hidden="true"></div>
+          </div>
           <div class="six-result" data-result role="status" aria-live="polite" aria-atomic="true">
             <p data-last>Choose your prediction.</p>
             <strong data-delta hidden></strong>
@@ -100,9 +125,9 @@ import './six.css';
               <span class="six-choice-title">LOWER</span>
               <small>ROLL IS SMALLER</small>
             </button>
-            <button type="button" data-guess="tie" aria-label="Guess the same number, double points if correct">
+            <button type="button" data-guess="tie" aria-label="Guess the same number for the fixed TIE jackpot">
               <span class="six-choice-symbol" aria-hidden="true">=</span>
-              <span class="six-choice-title">TIE <span class="six-multiplier">×2</span></span>
+              <span class="six-choice-title">TIE <span class="six-multiplier" data-tie-jackpot>+36</span></span>
               <small>SAME NUMBER</small>
             </button>
           </div>
@@ -138,5 +163,5 @@ import './six.css';
       </section>
     </aside>
   </div>
-  <footer><span data-rounds>10 ROUNDS DEFAULT</span> · BELOW ZERO = OUT · TIE PAYS DOUBLE</footer>
+  <footer><span data-rounds>10 ROUNDS DEFAULT</span> · BELOW ZERO = OUT · <span data-tie-rule>TIE JACKPOT +36</span></footer>
 </main>

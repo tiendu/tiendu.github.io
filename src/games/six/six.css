@@ -233,3 +233,82 @@
   .six-mobile-roster summary::after { content:'▾'; color:var(--six-accent); }
   .six-mobile-roster[open] summary::after { content:'▴'; }
 }
+
+/* Polyhedral update: one match-settings treatment for solo and hosted rooms. */
+.six-match-options { display:grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap:12px; }
+.six-match-options > * { min-width:0; }
+.six-dice-setting { display:grid; gap:10px; padding:12px 14px; border:1px solid var(--six-outline); border-radius:12px; }
+.six-dice-setting > span { color:var(--six-ink); font-size:.85rem; font-weight:800; letter-spacing:.04em; }
+.six-dice-setting small { display:block; margin-top:4px; color:var(--six-muted); font-size:.67rem; }
+.six-dice-selector { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.six .six-dice-selector button { min-height:48px; padding:8px 4px; font-size:.86rem; letter-spacing:.02em; }
+.six .six-dice-selector button[aria-pressed="true"] { background:var(--six-accent); border-color:var(--six-accent); color:#211b17; }
+.six .six-dice-selector button[aria-pressed="true"]:not(:disabled):hover { background:#ffd1a8; }
+.six-dice-context { display:flex; flex-direction:column; justify-content:center; gap:9px; }
+.six-dice-context .six-dice-value { display:block; font-weight:900; font-size:clamp(1.9rem,3.2vw,3.4rem); letter-spacing:-.07em; font-variant-numeric:tabular-nums; }
+.six-dice-jackpot { font-size:.76rem; font-weight:800; letter-spacing:.04em; color:#efd49a; }
+.six-die-frame { display:grid; place-items:center; min-width:0; }
+.six-die-svg { width:100%; height:100%; overflow:visible; }
+.six-result.jackpot strong { color:#ffe1a1; text-shadow:0 0 18px #e4ad6170; }
+.six-result.jackpot strong::before { content:'JACKPOT '; display:block; color:#efd49a; font-size:.7rem; letter-spacing:.14em; }
+.six .six-choices button:disabled { opacity:.32; }
+.six .six-choices button:not(:disabled):focus-visible { outline:3px solid var(--six-accent); outline-offset:3px; }
+
+@media (min-width: 881px) {
+  .six { max-width:1480px; }
+  .six-shell { grid-template-columns:minmax(0,1fr) minmax(300px,330px); gap:24px; }
+  .six-stage { gap:19px; padding:clamp(24px,2.5vw,36px); }
+  .six-dice-table {
+    display:grid;
+    grid-template-columns:minmax(125px,1fr) minmax(220px,1.6fr) minmax(155px,1fr);
+    align-items:center;
+    gap:clamp(12px,2vw,26px);
+    min-height:365px;
+    padding:28px clamp(22px,3vw,38px);
+    background:radial-gradient(ellipse at 48% 42%,#41403e 0%,#302e2e 49%,#222325 100%);
+  }
+  .six-die { width:clamp(195px,20vw,260px); height:clamp(195px,20vw,260px); }
+  .six-result { align-items:flex-start; text-align:left; gap:10px; min-width:0; }
+  .six-result p { font-size:.95rem; }
+  .six-result strong { font-size:clamp(2rem,3.3vw,3.4rem); }
+  .six-choices button { min-height:124px; }
+  .six-choice-symbol { font-size:3.1rem; }
+  .six-choice-title { font-size:1.05rem; }
+  .six-choices small { font-size:.68rem; }
+  .six-sidebar { top:24px; }
+  .six-sidebar .six-panel { padding:24px; }
+  .six-score-number { font-size:1.55rem; }
+  .six-scores li { padding:13px 10px; }
+  .six.is-playing .six-heading { margin-bottom:22px; }
+}
+@media (min-width: 561px) and (max-width: 880px) {
+  .six-dice-table { min-height:0; }
+  .six-dice-context { align-items:center; text-align:center; gap:5px; }
+  .six-die { width:clamp(150px,23vw,210px); height:clamp(150px,23vw,210px); }
+}
+@media (max-width: 760px) {
+  .six-match-options { grid-template-columns:1fr; }
+  .six-round-setting { align-items:center; }
+}
+@media (max-width: 560px) {
+  .six-dice-context { align-items:center; text-align:center; gap:3px; }
+  .six-dice-context .six-dice-value { font-size:1rem; letter-spacing:0; }
+  .six-dice-jackpot { font-size:.66rem; }
+  .six.is-playing .six-dice-table { gap:5px; padding:10px 8px; }
+  .six.is-playing .six-die { width:120px; height:120px; }
+  .six.is-playing .six-result { min-height:30px; }
+  .six-result.jackpot strong::before { font-size:.58rem; }
+  .six .six-dice-selector button { min-height:44px; }
+  .six-dice-setting { padding:10px; gap:7px; }
+}
+@keyframes six-jackpot-pop {
+  0% { transform:scale(.9); filter:brightness(1); }
+  55% { transform:scale(1.1); filter:brightness(1.22); }
+  100% { transform:scale(1); filter:brightness(1); }
+}
+.six-die.jackpot-land { animation:six-jackpot-pop .46s ease-out both; }
+@media (prefers-reduced-motion:reduce) {
+  .six-die.jackpot-land { animation:none; }
+}
+
+.six-result strong:not([hidden])::after { content:" PTS"; font-size:.7rem; font-weight:800; letter-spacing:.07em; vertical-align:middle; color:var(--six-muted); }
