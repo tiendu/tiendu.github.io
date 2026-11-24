@@ -95,6 +95,12 @@ function bellCenterShift(v, phase, halfW) {
   ) * smoothstep(t);
 }
 
+// The bell gets its own denser text lattice. Ribbons and tentacles stay on the
+// normal scene grid so extra detail is spent only on the translucent membrane.
+export function bellGridScaleFor(compact = false) {
+  return compact ? { x: 0.78, y: 0.82 } : { x: 0.62, y: 0.66 };
+}
+
 export class AsciiRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -397,8 +403,9 @@ export class AsciiRenderer {
     const height = jelly.bellHeight();
     const halfW = width * 0.5;
 
-    const cellW = this.cellW * (this.compact ? 0.96 : 0.84);
-    const cellH = this.cellH * (this.compact ? 0.98 : 0.89);
+    const bellGrid = bellGridScaleFor(this.compact);
+    const cellW = this.cellW * bellGrid.x;
+    const cellH = this.cellH * bellGrid.y;
     const bellFont = cellH * 0.97;
     const xMin = jelly.x - halfW - cellW * 2;
     const xMax = jelly.x + halfW + cellW * 2;

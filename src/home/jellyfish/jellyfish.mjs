@@ -127,14 +127,23 @@ export class Jellyfish {
       damping: arm ? range(random, 0.977, 0.986) : range(random, 0.9885, 0.9925),
       gravity: arm ? range(random, 7.8, 10.6) : range(random, 13.5, 18.0),
       seed: this.seed + index * 13.17,
-      bend: (arm ? range(random, -0.65, 0.65) : range(random, 0.18, 0.72) * (random() < 0.5 ? -1 : 1)) * this.anatomyScale,
-      bendStiffness: arm ? range(random, 0.012, 0.027) : range(random, 0.010, 0.022),
-      bendFrequency: arm ? range(random, 0.65, 1.05) : range(random, 0.62, 1.02),
+      bend: (arm
+        ? range(random, -0.65, 0.65)
+        : range(random, expressiveTentacle ? 0.30 : 0.18, expressiveTentacle ? 0.56 : 0.62)
+          * (random() < 0.5 ? -1 : 1)) * this.anatomyScale,
+      bendStiffness: arm
+        ? range(random, 0.012, 0.027)
+        : range(random, expressiveTentacle ? 0.008 : 0.010, expressiveTentacle ? 0.014 : 0.020),
+      bendFrequency: arm
+        ? range(random, 0.65, 1.05)
+        : range(random, expressiveTentacle ? 0.36 : 0.62, expressiveTentacle ? 0.52 : 0.96),
       bendPhase: range(random, 0, TAU),
-      tipDrag: arm ? range(random, 0.002, 0.005) : range(random, 0.014, 0.021),
-      maxBendAngle: arm ? Math.PI : range(random, 0.43, 0.54),
+      tipDrag: arm
+        ? range(random, 0.002, 0.005)
+        : range(random, expressiveTentacle ? 0.020 : 0.014, expressiveTentacle ? 0.026 : 0.021),
+      maxBendAngle: arm ? Math.PI : range(random, 0.43, expressiveTentacle ? 0.50 : 0.54),
       bendLimitStiffness: arm ? 0 : range(random, 0.72, 0.84),
-      maxTotalTurn: arm ? Math.PI * 1.9 : range(random, expressiveTentacle ? 2.78 : 2.42, expressiveTentacle ? 3.02 : 2.72),
+      maxTotalTurn: arm ? Math.PI * 1.9 : range(random, expressiveTentacle ? 2.48 : 2.42, expressiveTentacle ? 2.68 : 2.72),
       totalTurnStiffness: arm ? 0 : range(random, 0.78, 0.88),
     });
     const item = {
@@ -143,16 +152,25 @@ export class Jellyfish {
       offset,
       layer,
       phase: range(random, 0, TAU),
-      forceScale: arm ? range(random, 0.52, 0.76) : range(random, 0.82, 1.18),
+      forceScale: arm
+        ? range(random, 0.52, 0.76)
+        : range(random, expressiveTentacle ? 0.72 : 0.82, expressiveTentacle ? 0.94 : 1.18),
       width: (arm ? range(random, 3.0, 5.15) : range(random, 0.70, 1.04)) * this.anatomyScale,
       curl: range(random, -1, 1),
       bright: arm ? range(random, 0.78, 1.09) : range(random, 0.56, 1.03),
       fray: range(random, 0.5, 1),
       memoryPhase: range(random, 0, TAU),
-      memoryWaves: arm ? range(random, 0.65, 1.1) : range(random, expressiveTentacle ? 0.72 : 0.55, expressiveTentacle ? 1.02 : 0.84),
-      memoryStrength: (arm ? range(random, 2.2, 4.5) : range(random, expressiveTentacle ? 3.3 : 1.1, expressiveTentacle ? 5.0 : 2.5)) * this.anatomyScale,
-      tipHook: (arm ? range(random, -4, 4) : hookSign * range(random, expressiveTentacle ? 5.2 : 1.2, expressiveTentacle ? 8.4 : 3.4)) * this.anatomyScale,
+      memoryWaves: arm
+        ? range(random, 0.65, 1.1)
+        : range(random, expressiveTentacle ? 0.38 : 0.55, expressiveTentacle ? 0.52 : 0.84),
+      memoryStrength: (arm
+        ? range(random, 2.2, 4.5)
+        : range(random, expressiveTentacle ? 1.8 : 1.1, expressiveTentacle ? 2.7 : 2.5)) * this.anatomyScale,
+      tipHook: (arm
+        ? range(random, -4, 4)
+        : hookSign * range(random, expressiveTentacle ? 1.8 : 1.2, expressiveTentacle ? 3.2 : 3.4)) * this.anatomyScale,
       expressiveTentacle,
+      expressiveShape: expressiveTentacle ? hookSign * 2.6 * this.anatomyScale : 0,
       twistRate: arm ? range(random, 1.35, 3.35) : 0,
       twistPhase: arm ? range(random, 0, TAU) : 0,
       ruffleLeft: arm ? range(random, 0.95, 1.72) : 0,
@@ -250,6 +268,10 @@ export class Jellyfish {
     // V4.1 keeps only enough persistent shape for broad S-curves and hooks.
     const memory = Math.sin(item.memoryPhase + along * item.memoryWaves * TAU)
       * item.memoryStrength * smoothstep(along) * (0.30 + along * 0.50);
+    const expressiveShape = item.expressiveTentacle
+      ? Math.sin((along - 0.18) * Math.PI * 1.55 + item.memoryPhase * 0.18)
+        * item.expressiveShape * Math.sin(Math.PI * along)
+      : 0;
     const tip = smoothstep(clamp((along - 0.72) / 0.28, 0, 1));
     const tipHook = item.tipHook * tip * tip;
     const curl = item.curl * Math.sin(along * Math.PI) * (item.arm ? 5.2 : 2.2) * this.anatomyScale;
@@ -257,7 +279,7 @@ export class Jellyfish {
     const guard = this.#trailGuard(item, anchor, x, y, along);
 
     return {
-      x: localFlow.x + wake + memory + tipHook + curl + guard.x,
+      x: localFlow.x + wake + memory + expressiveShape + tipHook + curl + guard.x,
       y: localFlow.y + Math.max(0, -this.vy) * 0.66 * along + trailingBias + guard.y,
     };
   }
@@ -290,6 +312,13 @@ export class Jellyfish {
     this.pulse = pulse;
 
     const flow = ocean.sample(this.x, this.y, time, 0.13);
+
+    // The bell is the heaviest part of the animal: current direction influences
+    // its attitude, but only after a slow inertial lag. Tentacles/ribbons still
+    // reveal a reversal first; the bell commits last and settles upright in calm.
+    const targetTilt = clamp(flow.x * 0.032 + this.vx * 0.0035, -0.115, 0.115);
+    this.tilt += (targetTilt - this.tilt) * (1 - Math.exp(-0.62 * dt));
+
     this.vx += flow.x * 0.030 * dt;
     this.vy += (this.settle + flow.y * 0.018) * dt;
     if (pulseDelta > 0) this.vy -= pulseDelta * this.thrust;
@@ -300,7 +329,8 @@ export class Jellyfish {
     this.vy += (targetY - this.y) * 0.030 * dt;
 
     const topClearance = topClearanceFor(height);
-    const minimumCenterY = this.bellHeight() + topClearance;
+    const tiltLift = Math.abs(Math.sin(this.tilt)) * this.bellWidth() * 0.50;
+    const minimumCenterY = this.bellHeight() + topClearance + tiltLift;
     const softCeilingY = minimumCenterY + Math.max(26, this.bellHeight() * 0.30);
     if (this.y < softCeilingY) {
       const proximity = 1 - clamp((this.y - minimumCenterY) / Math.max(1, softCeilingY - minimumCenterY), 0, 1);
@@ -326,9 +356,6 @@ export class Jellyfish {
       if (this.vy < 0) this.vy = 0;
     }
     if (this.y > maxY) this.vy -= (this.y - maxY) * 0.14 * dt;
-
-    const targetTilt = clamp(this.vx * 0.0105, -0.13, 0.13);
-    this.tilt += (targetTilt - this.tilt) * (1 - Math.exp(-1.8 * dt));
 
     for (const item of this.chains) {
       const anchor = bellAnchor(this, item.offset, item.arm ? 0.052 : 0.014);

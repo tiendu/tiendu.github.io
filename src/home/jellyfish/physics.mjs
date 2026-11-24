@@ -251,40 +251,97 @@ export class VerletChain {
     this.#limitVelocityHistory();
   }
 
+  #projectTrailEnvelope(anchorX, anchorY, rise, side, drop) {
+    let clipped = false;
+    for (let i = 1; i < this.count; i += 1) {
+      const along = i / (this.count - 1);
+      const minY = anchorY - rise * (0.42 + along * 0.58);
+      const maxY = anchorY + drop * (0.12 + along * 0.88);
+      const allowedSide = side * (0.20 + Math.pow(along, 0.72) * 0.80);
+      let x = this.x[i];
+      let y = this.y[i];
+
+      if (y < minY) y = minY;
+      if (y > maxY) y = maxY;
+      const dx = x - anchorX;
+      if (Math.abs(dx) > allowedSide) x = anchorX + Math.sign(dx) * allowedSide;
+
+      if (x !== this.x[i] || y !== this.y[i]) {
+        this.x[i] = x;
+        this.y[i] = y;
+        clipped = true;
+      }
+    }
+    return clipped;
+  }
+
+  #settleTrail(anchorX, anchorY, side) {
+    // This is an emergency pose, not normal animation. If a chain reaches the
+    // safety envelope with too much stored strain, preserving that momentum is
+    // exactly what causes the explosive V4.6 failure. Rebuild a gentle hanging
+    // S-curve with exact segment lengths and make it the new Verlet history.
+    this.x[0] = anchorX;
+    this.y[0] = anchorY;
+    const amplitude = Math.min(side * 0.15, this.segmentLength * 2.5);
+    const phase = (this.seed * 1.73) % TAU;
+
+    for (let i = 1; i < this.count; i += 1) {
+      const along = i / (this.count - 1);
+      const wave = Math.sin(along * Math.PI * 1.55 + phase) * Math.sin(Math.PI * along);
+      const targetX = anchorX + amplitude * wave;
+      let dx = targetX - this.x[i - 1];
+      dx = Math.max(-this.segmentLength * 0.65, Math.min(this.segmentLength * 0.65, dx));
+      const dy = Math.sqrt(Math.max(
+        0.0001,
+        this.segmentLength * this.segmentLength - dx * dx,
+      ));
+      this.x[i] = this.x[i - 1] + dx;
+      this.y[i] = this.y[i - 1] + dy;
+    }
+
+    for (let i = 0; i < this.count; i += 1) {
+      this.px[i] = this.x[i];
+      this.py[i] = this.y[i];
+    }
+  }
+
   clipTrailEnvelope(anchorX, anchorY, { maxRise, maxSide, maxDrop } = {}) {
     const rise = Math.max(this.segmentLength * 1.5, maxRise ?? this.segmentLength * 4);
     const side = Math.max(this.segmentLength * 3, maxSide ?? this.segmentLength * (this.count - 1) * 0.76);
     const drop = Math.max(this.segmentLength * 4, maxDrop ?? this.segmentLength * (this.count - 1) * 1.05);
+    const clipped = this.#projectTrailEnvelope(anchorX, anchorY, rise, side, drop);
+    let error = this.maxConstraintError();
 
-    // Curvature limits cannot stop a nearly straight strand from being swept
-    // wholesale upward. This is a final safety envelope, not normal motion:
-    // position and Verlet history move together so clipping adds no velocity.
-    for (let i = 1; i < this.count; i += 1) {
-      const along = i / (this.count - 1);
-      const minY = anchorY - rise * (0.42 + along * 0.58);
-      if (this.y[i] < minY) {
-        const correction = minY - this.y[i];
-        this.y[i] += correction;
-        this.py[i] += correction;
-      }
-      const maxY = anchorY + drop * (0.12 + along * 0.88);
-      if (this.y[i] > maxY) {
-        const correction = this.y[i] - maxY;
-        this.y[i] -= correction;
-        this.py[i] -= correction;
+    // Also catch a strained chain that is technically still inside the visual
+    // envelope. That is how a nearly straight strand can hide enormous spring
+    // energy without looking out of bounds yet.
+    const needsRepair = clipped || !Number.isFinite(error) || error > 1.0;
+    if (needsRepair) {
+      // Alternate the two simple, stable constraints. Do not run bend-memory or
+      // total-turn corrections here: on a heavily clipped chain those angular
+      // solvers can amplify the correction and create the billion-pixel blowup.
+      for (let n = 0; n < 16; n += 1) {
+        this.#applyDistanceConstraints(anchorX, anchorY);
+        this.#projectTrailEnvelope(anchorX, anchorY, rise, side, drop);
       }
 
-      const allowedSide = side * (0.20 + Math.pow(along, 0.72) * 0.80);
-      const dx = this.x[i] - anchorX;
-      if (Math.abs(dx) > allowedSide) {
-        const correction = (Math.abs(dx) - allowedSide) * Math.sign(dx);
-        this.x[i] -= correction;
-        this.px[i] -= correction;
+      error = this.maxConstraintError();
+      const repairLimit = Math.min(0.75, this.segmentLength * 0.16);
+      if (!Number.isFinite(error) || error > repairLimit) {
+        this.#settleTrail(anchorX, anchorY, side);
+      } else {
+        // Safety intervention is allowed to dissipate momentum. The repaired
+        // pose becomes the new history, so there is no snap-back next frame.
+        for (let i = 0; i < this.count; i += 1) {
+          this.px[i] = this.x[i];
+          this.py[i] = this.y[i];
+        }
       }
     }
+
     this.x[0] = this.px[0] = anchorX;
     this.y[0] = this.py[0] = anchorY;
-    this.#limitVelocityHistory();
+    return clipped;
   }
 
   maxConstraintError() {

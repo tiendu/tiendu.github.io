@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderFpsFor } from "../config.mjs";
-import { bellPoreThresholdAt, bellProfileAt, bellRimAt } from "../renderer.mjs";
+import { bellGridScaleFor, bellPoreThresholdAt, bellProfileAt, bellRimAt } from "../renderer.mjs";
 import { heroSizeFor, topClearanceFor } from "../jellyfish.mjs";
 import { currentWeather, OceanField } from "../ocean.mjs";
 import { VerletChain } from "../physics.mjs";
@@ -217,7 +217,8 @@ test("V4.5 keeps the specimen slightly smaller and the crown below the stage cei
   let minCrown = Infinity;
   for (let n = 0; n < 7200; n += 1) {
     world.step(1 / 60);
-    minCrown = Math.min(minCrown, world.jelly.y - world.jelly.bellHeight());
+    const tiltLift = Math.abs(Math.sin(world.jelly.tilt)) * world.jelly.bellWidth() * 0.50;
+    minCrown = Math.min(minCrown, world.jelly.y - world.jelly.bellHeight() - tiltLift);
   }
   assert.ok(minCrown >= topClearanceFor(620) - 0.01, `crown ${minCrown}`);
 });
@@ -278,3 +279,71 @@ test("single jellyfish and all branch chains remain finite during a long changin
     }
   }
 });
+
+test("V4.6 gives the bell a denser sub-grid without increasing the whole-scene grid", () => {
+  const desktop = bellGridScaleFor(false);
+  const compact = bellGridScaleFor(true);
+  assert.ok(desktop.x <= 0.64 && desktop.y <= 0.68, `desktop grid ${desktop.x},${desktop.y}`);
+  assert.ok(compact.x <= 0.80 && compact.y <= 0.84, `compact grid ${compact.x},${compact.y}`);
+  assert.ok(0.84 / desktop.x > 1.30, `desktop horizontal density ${0.84 / desktop.x}`);
+  assert.ok(0.89 / desktop.y > 1.30, `desktop vertical density ${0.89 / desktop.y}`);
+});
+
+test("V4.6 expressive tentacles use broad shape memory without extra angular freedom", () => {
+  const world = new JellyWorld(1200, 760, 991);
+  const expressive = world.jelly.chains.filter((item) => item.expressiveTentacle);
+  assert.equal(expressive.length, 2);
+  for (const item of expressive) {
+    assert.ok(item.memoryWaves <= 0.53, `memory waves ${item.memoryWaves}`);
+    assert.ok(item.memoryStrength <= 2.8 * world.jelly.anatomyScale, `memory ${item.memoryStrength}`);
+    assert.ok(Math.abs(item.tipHook) <= 3.3 * world.jelly.anatomyScale, `hook ${item.tipHook}`);
+    assert.ok(item.forceScale <= 0.95, `force scale ${item.forceScale}`);
+    assert.ok(item.chain.tipDrag >= 0.019, `tip drag ${item.chain.tipDrag}`);
+    assert.ok(item.chain.maxTotalTurn <= 2.70, `total turn ${item.chain.maxTotalTurn}`);
+    assert.ok(Math.abs(item.expressiveShape) > 0);
+  }
+});
+
+test("V4.6 bell tilt follows sustained current with inertia and reverses gradually", () => {
+  const world = new JellyWorld(1000, 700, 2026);
+  world.ocean.sample = (_x, _y, _time, sensitivity = 1) => ({ x: 18 * sensitivity, y: 0 });
+  for (let n = 0; n < 120; n += 1) world.step(1 / 60);
+  const rightTilt = world.jelly.tilt;
+  assert.ok(rightTilt > 0.025 && rightTilt < 0.115, `right tilt ${rightTilt}`);
+
+  world.ocean.sample = (_x, _y, _time, sensitivity = 1) => ({ x: -18 * sensitivity, y: 0 });
+  for (let n = 0; n < 20; n += 1) world.step(1 / 60);
+  assert.ok(world.jelly.tilt > -0.005, `tilt reversed too quickly ${world.jelly.tilt}`);
+  for (let n = 0; n < 240; n += 1) world.step(1 / 60);
+  assert.ok(world.jelly.tilt < -0.025, `left tilt ${world.jelly.tilt}`);
+});
+
+test("V4.6 envelope repair keeps segment lengths coherent during hostile current", () => {
+  const chain = new VerletChain({
+    anchorX: 120,
+    anchorY: 80,
+    segments: 58,
+    segmentLength: 4.8,
+    damping: 0.991,
+    gravity: 14,
+    bend: 0.45,
+    bendStiffness: 0.014,
+    bendFrequency: 0.48,
+    tipDrag: 0.022,
+    maxBendAngle: 0.50,
+    bendLimitStiffness: 0.80,
+    maxTotalTurn: 2.65,
+    totalTurnStiffness: 0.84,
+  });
+  let worst = 0;
+  for (let n = 0; n < 900; n += 1) {
+    chain.step(1 / 60, 120, 80, (_x, _y, along) => ({
+      x: 900 * along * along,
+      y: -650 * along * along,
+    }), 6);
+    chain.clipTrailEnvelope(120, 80, { maxRise: 20, maxSide: 70, maxDrop: 280 });
+    worst = Math.max(worst, chain.maxConstraintError());
+  }
+  assert.ok(worst < 1.2, `worst post-envelope constraint ${worst}`);
+});
+
