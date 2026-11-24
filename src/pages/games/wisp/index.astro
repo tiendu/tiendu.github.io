@@ -1,28 +1,12 @@
 ---
 import '../../../styles/pages/wisp.css';
-
-// The SVG-heavy browser game stays independent of Astro's build pipeline.
-// This matches the existing static-game pattern without affecting other games.
-// This is the same Cloudflare account subdomain as the site's UNFOLD worker.
-// PUBLIC_WISP_BACKEND_URL overrides it for other accounts/deployments.
-const workerURL=(import.meta.env.PUBLIC_WISP_BACKEND_URL ||
-  (import.meta.env.PROD?'https://wisp-multiplayer.tiendu107.workers.dev':'http://127.0.0.1:8787')).trim();
-const gameURL=`/games/wisp/play.html${workerURL?'?api='+encodeURIComponent(workerURL):''}`;
 ---
 <html lang="en"><head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#081c23" />
-  <meta name="description" content="WISP: a polygonal endless forest survival race. Run, jump, glide and escape the wildfire, solo or with friends." />
-  <title>WISP · Forest Survival</title>
+  <meta name="theme-color" content="#090d19" />
+  <meta name="robots" content="noindex" />
+  <title>WISP · Development preview</title>
 </head><body>
-  <iframe id="wisp-game" src={gameURL} title="WISP — forest survival game" allow="fullscreen"></iframe>
-  <script is:inline>
-    const iframe=document.getElementById('wisp-game');
-    const parentQuery=new URLSearchParams(location.search);
-    const room=parentQuery.get('room');
-    if(room&&/^\d{6}$/.test(room)){
-      const game=new URL(iframe.src);game.searchParams.set('room',room);iframe.src=game.toString();
-    }
-  </script>
+  <iframe id="wisp-game" src="/games/wisp/play.html" title="WISP — development preview"></iframe>
 </body></html>

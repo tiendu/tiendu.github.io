@@ -27,7 +27,6 @@ jobs:
           PUBLIC_MINES_BACKEND_URL: ${{ vars.PUBLIC_MINES_BACKEND_URL }}
           PUBLIC_NUMBER_BACKEND_URL: ${{ vars.PUBLIC_NUMBER_BACKEND_URL }}
           PUBLIC_SIX_BACKEND_URL: ${{ vars.PUBLIC_SIX_BACKEND_URL }}
-          PUBLIC_WISP_BACKEND_URL: ${{ vars.PUBLIC_WISP_BACKEND_URL }}
 
   deploy:
     needs: build
