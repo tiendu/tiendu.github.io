@@ -8,18 +8,20 @@
   <link rel="stylesheet" href="./preview.css">
 </head>
 <body>
-  <header><a href="/games/" target="_top">← Games</a><h1>WISP</h1><p>Development preview · Phase 1</p></header>
+  <header><a href="/games/" target="_top">← Games</a><h1>WISP</h1><p>Development preview · Phase 2</p></header>
   <main>
     <section aria-label="Maze preview" class="arena">
-      <div class="toolbar"><button id="new">New maze</button><button id="rotate">Rotate</button><button id="tutorial" aria-pressed="false">Tutorial maze</button><span id="seed"></span></div>
+      <div class="toolbar"><button id="start">Start</button><button id="new">New maze</button><button id="rotate">Rotate</button><button id="tutorial" aria-pressed="false">Tutorial maze</button><span id="seed"></span></div>
+      <div class="hud"><div><strong id="phase">Ready</strong> <span id="clock"></span></div><span id="alive"></span><div><span id="identity"></span> · <span id="condition"></span></div><progress id="energy" max="100" value="100" aria-label="Energy"></progress></div>
       <canvas id="board" aria-label="Maze and eight characters"></canvas>
       <div id="controls" aria-label="Movement controls"><button data-d="0,-1" aria-label="Up">↑</button><button data-d="-1,0" aria-label="Left">←</button><button data-d="0,1" aria-label="Down">↓</button><button data-d="1,0" aria-label="Right">→</button></div>
-      <p class="hint">Arrow keys / WASD or buttons. Click a cell to preview a location ping.</p>
+      <p class="hint">Arrow keys / WASD, swipe, or buttons. Tap a cell to preview a ping.</p>
+      <p id="result" role="status"></p>
     </section>
     <section aria-label="Character gallery" class="gallery">
       <h2>Wisps</h2><div id="wisps" class="roster"></div>
       <h2>Hunters</h2><div id="hunters" class="roster"></div>
-      <p class="hint">Select a character to inspect it at gameplay scale. Abilities are not active yet.</p>
+      <p class="hint">Select a character to inspect it at gameplay scale. Abilities and intelligent AI arrive in later phases. Bots roam for testing.</p>
     </section>
   </main>
   <script type="module" src="./preview.mjs"></script>

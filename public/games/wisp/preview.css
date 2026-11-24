@@ -14,7 +14,12 @@ button[aria-pressed="true"] { border-color: #b5efff; }
 .roster button { min-width: 0; display: grid; justify-items: center; padding: 6px 2px; }
 .roster svg { width: 64px; max-width: 100%; display: block; }
 small, .hint, #seed, header p { color: #aab9cc; font-size: .8rem; }
-canvas { display: block; width: auto; max-width: 100%; max-height: 65dvh; height: auto; margin: 12px auto; touch-action: manipulation; }
+canvas { display: block; width: auto; max-width: 100%; max-height: 54dvh; height: auto; margin: 12px auto; touch-action: none; }
 #controls { display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; }
 #controls button { min-width: 44px; }
 @media (min-width: 820px) and (orientation: landscape) { main { grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); } }
+
+.hud { display: flex; align-items: center; gap: 5px 14px; flex-wrap: wrap; margin-top: 10px; font-size: .85rem; }
+.hud progress { accent-color: #59dfff; width: 100%; height: 8px; }
+#result { color: #9fffe0; min-height: 1.2em; }
+@media (min-width: 820px) and (orientation: landscape) { canvas { max-height: 65dvh; } }
