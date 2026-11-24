@@ -173,6 +173,58 @@ test("oral arms retain motion and catch progressively more current than before",
   }
 });
 
+test("long oral arms get progressively stronger anti-hairpin discipline", () => {
+  const world = new JellyWorld(1200, 760, 991);
+  const arms = world.jelly.chains.filter((item) => item.arm);
+  assert.equal(arms.length, 7);
+
+  const byLength = [...arms].sort((a, b) => {
+    const aLength = (a.chain.count - 1) * a.chain.segmentLength;
+    const bLength = (b.chain.count - 1) * b.chain.segmentLength;
+    return aLength - bLength;
+  });
+
+  for (let i = 0; i < byLength.length; i += 1) {
+    const item = byLength[i];
+    assert.ok(item.lengthBias >= 0 && item.lengthBias <= 1, `lengthBias ${item.lengthBias}`);
+
+    const bendNominal = 1.18 + (0.94 - 1.18) * item.lengthBias;
+    assert.ok(
+      item.chain.maxBendAngle >= bendNominal * 0.959
+        && item.chain.maxBendAngle <= bendNominal * 1.041,
+      `maxBendAngle ${item.chain.maxBendAngle} bias ${item.lengthBias}`,
+    );
+
+    const totalNominal = Math.PI * (1.38 + (1.08 - 1.38) * item.lengthBias);
+    assert.ok(
+      item.chain.maxTotalTurn >= totalNominal * 0.969
+        && item.chain.maxTotalTurn <= totalNominal * 1.031,
+      `maxTotalTurn ${item.chain.maxTotalTurn} bias ${item.lengthBias}`,
+    );
+
+    if (i > 0) {
+      assert.ok(
+        item.lengthBias >= byLength[i - 1].lengthBias - 1e-9,
+        "physical ribbon length should never reduce length bias",
+      );
+    }
+  }
+
+  const shortest = byLength[0];
+  const longest = byLength.at(-1);
+  assert.ok(longest.lengthBias >= shortest.lengthBias, "longest arm should be at least as guarded");
+  if (longest.lengthBias > 0.80) {
+    assert.ok(
+      longest.chain.maxTotalTurn < Math.PI * 1.20,
+      `long-arm total turn ${longest.chain.maxTotalTurn}`,
+    );
+    assert.ok(
+      Math.abs(longest.tipHook) < 3.0 * world.jelly.anatomyScale,
+      `long-arm tip hook ${longest.tipHook}`,
+    );
+  }
+});
+
 test("ribbon surface kinematics respond to real chain bend and retained velocity", () => {
   const straight = {
     count: 4,

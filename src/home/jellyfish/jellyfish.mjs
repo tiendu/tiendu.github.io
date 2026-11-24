@@ -1,5 +1,5 @@
 import { JELLY_PALETTE, SIMULATION } from "./config.mjs";
-import { clamp, lerp, mulberry32, range, rotate, smoothstep, TAU } from "./math.mjs";
+import { clamp, invLerp, lerp, mulberry32, range, rotate, smoothstep, TAU } from "./math.mjs";
 import { pulseEnvelope, pulseVelocity } from "./pulse.mjs";
 import { VerletChain } from "./physics.mjs";
 
@@ -116,6 +116,13 @@ export class Jellyfish {
     const segmentLength = (arm
       ? range(random, 4.6, 6.1)
       : range(random, 4.35, 5.55)) * this.anatomyScale;
+    const armLengthBias = arm
+      ? smoothstep(invLerp(
+          this.baseSize * 0.58,
+          this.baseSize * 0.92,
+          segments * segmentLength,
+        ))
+      : 0;
     const anchor = bellAnchor(this, offset, arm ? 0.052 : 0.014);
     const expressiveTentacle = !arm && (index === 3 || index === 11);
     const hookSign = random() < 0.5 ? -1 : 1;
@@ -141,10 +148,20 @@ export class Jellyfish {
       tipDrag: arm
         ? range(random, 0.002, 0.005)
         : range(random, expressiveTentacle ? 0.020 : 0.014, expressiveTentacle ? 0.026 : 0.021),
-      maxBendAngle: arm ? Math.PI : range(random, 0.43, expressiveTentacle ? 0.50 : 0.54),
-      bendLimitStiffness: arm ? 0 : range(random, 0.72, 0.84),
-      maxTotalTurn: arm ? Math.PI * 1.9 : range(random, expressiveTentacle ? 2.48 : 2.42, expressiveTentacle ? 2.68 : 2.72),
-      totalTurnStiffness: arm ? 0 : range(random, 0.78, 0.88),
+      // Oral arms stay much freer than thin tentacles, but long sheets
+      // need progressively stronger protection against hairpins/self-wrapping.
+      maxBendAngle: arm
+        ? lerp(1.18, 0.94, armLengthBias) * range(random, 0.96, 1.04)
+        : range(random, 0.43, expressiveTentacle ? 0.50 : 0.54),
+      bendLimitStiffness: arm
+        ? lerp(0.20, 0.34, armLengthBias) * range(random, 0.95, 1.05)
+        : range(random, 0.72, 0.84),
+      maxTotalTurn: arm
+        ? Math.PI * lerp(1.38, 1.08, armLengthBias) * range(random, 0.97, 1.03)
+        : range(random, expressiveTentacle ? 2.48 : 2.42, expressiveTentacle ? 2.68 : 2.72),
+      totalTurnStiffness: arm
+        ? lerp(0.18, 0.33, armLengthBias) * range(random, 0.95, 1.05)
+        : range(random, 0.78, 0.88),
     });
     const item = {
       chain,
@@ -155,6 +172,7 @@ export class Jellyfish {
       forceScale: arm
         ? range(random, 0.64, 0.90)
         : range(random, expressiveTentacle ? 0.72 : 0.82, expressiveTentacle ? 0.94 : 1.18),
+      lengthBias: arm ? armLengthBias : 0,
       width: (arm ? range(random, 3.0, 5.15) : range(random, 0.70, 1.04)) * this.anatomyScale,
       curl: range(random, -1, 1),
       bright: arm ? range(random, 0.78, 1.09) : range(random, 0.56, 1.03),
@@ -167,7 +185,7 @@ export class Jellyfish {
         ? range(random, 2.2, 4.5)
         : range(random, expressiveTentacle ? 1.8 : 1.1, expressiveTentacle ? 2.7 : 2.5)) * this.anatomyScale,
       tipHook: (arm
-        ? range(random, -4, 4)
+        ? range(random, -4, 4) * lerp(1, 0.35, armLengthBias)
         : hookSign * range(random, expressiveTentacle ? 1.8 : 1.2, expressiveTentacle ? 3.2 : 3.4)) * this.anatomyScale,
       expressiveTentacle,
       expressiveShape: expressiveTentacle ? hookSign * 2.6 * this.anatomyScale : 0,
@@ -254,24 +272,38 @@ export class Jellyfish {
   }
 
   #chainForce(item, anchor, ocean, time, x, y, along) {
-    // Oral arms keep a heavy root but progressively catch more of the water
-    // through the middle and tip. This preserves attachment while allowing a
-    // broad delayed bow when the current changes direction.
+    // Oral arms keep a heavy root and a lively middle, while very long
+    // sheets ease off at the far tip so they form broad S-curves instead of
+    // turning back into cable-like hairpins.
+    const armLengthBias = item.arm ? (item.lengthBias ?? 0) : 0;
+    const armTipForce = item.arm
+      ? item.forceScale * lerp(1, 0.84, armLengthBias)
+      : item.forceScale;
     const sensitivity = item.arm
-      ? lerp(0.14, item.forceScale, Math.pow(along, 1.55))
+      ? lerp(
+          0.14,
+          armTipForce,
+          Math.pow(along, lerp(1.55, 1.82, armLengthBias)),
+        )
       : lerp(0.19, item.forceScale, along * along);
     const localFlow = ocean.sample(x, y, time, sensitivity);
     const loosen = along * along;
+    const distalEase = item.arm
+      ? 1 - armLengthBias * smoothstep(invLerp(0.70, 1, along)) * 0.18
+      : 1;
     const wake = Math.sin(
       time * (item.arm ? 0.52 : 0.90) + item.phase + along * (item.arm ? 4.1 : 7.0),
-    ) * (item.arm ? 4.6 : 5.5) * loosen * this.anatomyScale;
+    ) * (item.arm ? 4.6 : 5.5) * loosen * this.anatomyScale * distalEase;
 
     // Thin tentacles keep a stable broad memory curve. Oral arms instead carry
     // that memory slowly downstream, so their whole body billows rather than
     // holding one leaf-like pose indefinitely.
     const memoryPhase = item.memoryPhase + (item.arm ? time * 0.20 : 0);
     const memory = Math.sin(memoryPhase + along * item.memoryWaves * TAU)
-      * item.memoryStrength * smoothstep(along) * (0.30 + along * 0.50);
+      * item.memoryStrength
+      * smoothstep(along)
+      * (0.30 + along * 0.50)
+      * (item.arm ? lerp(1, 0.90, armLengthBias * smoothstep(along)) : 1);
     const expressiveShape = item.expressiveTentacle
       ? Math.sin((along - 0.18) * Math.PI * 1.55 + item.memoryPhase * 0.18)
         * item.expressiveShape * Math.sin(Math.PI * along)
