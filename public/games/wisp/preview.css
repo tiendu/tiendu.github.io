@@ -23,3 +23,11 @@ canvas { display: block; width: auto; max-width: 100%; max-height: 54dvh; height
 .hud progress { accent-color: #59dfff; width: 100%; height: 8px; }
 #result { color: #9fffe0; min-height: 1.2em; }
 @media (min-width: 820px) and (orientation: landscape) { canvas { max-height: 65dvh; } }
+
+#controls { flex-wrap: wrap; }
+#ability { border-color: var(--ability-color, #59dfff); color: var(--ability-color, #59dfff); min-width: 108px; position: relative; background: linear-gradient(to right, #273449 var(--ready, 100%), #101827 var(--ready, 100%)); }
+#ability:disabled { opacity: .55; cursor: default; }
+#ability-status { min-height: 1.2em; text-align: center; }
+
+#ability-help { text-align: center; }
+canvas:focus-visible { outline: 1px solid #8ab7cc; outline-offset: 2px; }

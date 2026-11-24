@@ -1,5 +1,6 @@
 import {WIDTH,HEIGHT} from '../core/maze.mjs';
 import {view,unview} from './orientation.mjs';
+import {drawEffects,drawStatus} from './effects.mjs';
 import {drawCharacter} from '../characters.mjs';
 const TILE=40;
 export function renderer(canvas) {
@@ -42,14 +43,22 @@ export function renderer(canvas) {
       const [x,y]=cell(ping.x,ping.y,landscape);
       ring(x,y,8+((time/300)%1)*12,'#e8f6ff');ring(x,y,5,'#e8f6ff');
     }
+    const screen=(x,y)=>cell(x,y,landscape);
+    drawEffects(ctx,s,screen,TILE);
+    for(const d of s.decoys){
+      const c=s.actors.find(a=>a.id===d.character),p=previous?.get(d.id)??d;
+      const [x,y]=screen(p.x+(d.x-p.x)*alpha,p.y+(d.y-p.y)*alpha);
+      drawCharacter(ctx,c,x-24,y-24,48,{energy:d.energy});
+    }
     // Draw the local player last, so the marker is always readable.
     const actors=[...s.actors].sort((a,b)=>Number(a.player==='local')-Number(b.player==='local'));
     for(const a of actors) {
       if(a.status!=='active')continue;
-      const p=previous?.get(a.id)??a;
+      const old=previous?.get(a.id),p=old&&old.warp===a.warp?old:a;
       const [x,y]=cell(p.x+(a.x-p.x)*alpha,p.y+(a.y-p.y)*alpha,landscape);
       if(a.player==='local') ring(x,y,18,'#dce9f5',1.3);
       if(s.tick<a.immuneUntil) ring(x,y,15,'#78a6c7',1.3);
+      drawStatus(ctx,s,a,x,y,screen,TILE);
       const size=a.faction==='wisp'?48:38;
       drawCharacter(ctx,a,x-size/2,y-size/2,size,{energy:a.energy??100,dim:s.tick<a.recoverUntil});
     }
