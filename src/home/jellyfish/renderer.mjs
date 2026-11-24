@@ -145,6 +145,28 @@ export function tentaclePresenceScale(item) {
   return 1 - outer * long * 0.28;
 }
 
+// Visible anatomy should emerge from the bell rather than look pinned to a
+// single bright point. Rear/mid roots begin faint and resolve over the first
+// few segments; foreground anatomy stays more legible.
+export function rootEmergenceScale(item, along) {
+  const depth = item.layer ?? 0;
+  const start = depth < -0.25 ? 0.12 : depth < 0.45 ? 0.22 : 0.50;
+  const end = depth < -0.25 ? 0.11 : depth < 0.45 ? 0.13 : 0.075;
+  return lerp(start, 1, smoothstep(invLerp(0, end, along)));
+}
+
+// Ghost anatomy is only visible inside the lower bell and only for structures
+// that live behind or within the membrane. It is deliberately subtle: enough
+// to explain origin/depth, never enough to count every strand through the cap.
+export function internalRootOpacityAt(item, v) {
+  const depth = item.layer ?? 0;
+  if (depth >= 0.45 || v < -0.46 || v > 0.045) return 0;
+  const lowerBell = smoothstep(invLerp(-0.46, -0.08, v));
+  const depthFactor = depth < -0.25 ? 1 : 0.72;
+  const tissueFactor = item.arm ? 1 : 0.68;
+  return lowerBell * depthFactor * tissueFactor * 0.22;
+}
+
 export class AsciiRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -261,7 +283,8 @@ export class AsciiRenderer {
       const along = i / Math.max(1, chain.count - 2);
       const samples = Math.max(1, Math.ceil(distance / (this.cellH * 0.48)));
       const tipFade = 1 - smoothstep(invLerp(0.84, 1, along));
-      const alpha = baseAlpha * lerp(1, 0.34, along) * tipFade;
+      const rootFade = rootEmergenceScale(item, along);
+      const alpha = baseAlpha * lerp(1, 0.34, along) * tipFade * rootFade;
       if (alpha < 0.010) continue;
       const nx = -dy / distance;
       const ny = dx / distance;
@@ -328,6 +351,7 @@ export class AsciiRenderer {
     for (let i = 2; i < chain.count - 1; i += 1) {
       const along = i / Math.max(1, chain.count - 2);
       const geometry = this.#ribbonSample(item, along, time, widthScale);
+      ctx.globalAlpha = rootEmergenceScale(item, along);
       ctx.lineWidth = Math.max(this.cellW * 1.4, geometry.projected * 1.45);
       ctx.beginPath();
       ctx.moveTo(chain.x[i - 1], chain.y[i - 1]);
@@ -358,7 +382,8 @@ export class AsciiRenderer {
       const nx = -dy / distance;
       const ny = dx / distance;
       const tipFade = 1 - smoothstep(invLerp(branch ? 0.75 : 0.84, 1, segmentAlong));
-      const alpha = baseAlpha * lerp(1, branch ? 0.32 : 0.45, segmentAlong) * tipFade;
+      const rootFade = branch ? 1 : rootEmergenceScale(item, segmentAlong);
+      const alpha = baseAlpha * lerp(1, branch ? 0.32 : 0.45, segmentAlong) * tipFade * rootFade;
       if (alpha < 0.012) continue;
 
       for (let s = 0; s < samples; s += 1) {
@@ -431,6 +456,72 @@ export class AsciiRenderer {
         }
       }
     }
+  }
+
+  #drawEmbeddedRoots(jelly, items) {
+    const ctx = this.ctx;
+    const width = jelly.bellWidth();
+    const height = jelly.bellHeight();
+    const halfW = width * 0.5;
+    this.#setFont(this.fontSize * 0.92);
+    ctx.shadowBlur = 0;
+
+    for (const item of items) {
+      if ((item.layer ?? 0) >= 0.45 || !item.chain || item.chain.count < 2) continue;
+
+      const rootX = item.chain.x[0];
+      const rootY = item.chain.y[0];
+      const targetLocal = {
+        x: (item.offset ?? 0) * width * (item.arm ? 0.30 : 0.33),
+        y: -height * (item.arm ? 0.30 : 0.19),
+      };
+      const target = rotate(targetLocal.x, targetLocal.y, jelly.tilt);
+      const targetX = jelly.x + target.x;
+      const targetY = jelly.y + target.y;
+      const steps = item.arm ? 9 : 7;
+      let previous = null;
+
+      for (let step = 0; step <= steps; step += 1) {
+        const q = step / steps;
+        const curve = Math.sin(q * Math.PI)
+          * Math.sin((item.phase ?? 0) + (item.offset ?? 0) * 4.7)
+          * width * (item.arm ? 0.010 : 0.006);
+        const x = lerp(targetX, rootX, q) + curve;
+        const y = lerp(targetY, rootY, q);
+        const raw = rotate(x - jelly.x, y - jelly.y, -jelly.tilt);
+        const v = raw.y / height;
+        const shift = bellCenterShift(v, jelly.anatomyPhase, halfW);
+        const u = (raw.x - shift) / halfW;
+        const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
+        const opacity = internalRootOpacityAt(item, v);
+        if (!(profile > 0 && Math.abs(u) < profile * 0.92 && opacity > 0.004)) {
+          previous = null;
+          continue;
+        }
+
+        if (previous) {
+          const dx = x - previous.x;
+          const dy = y - previous.y;
+          const filtered = item.arm
+            ? mixColor(jelly.palette.bellCool, jelly.palette.armHot, 0.34, opacity)
+            : mixColor(jelly.palette.bellCool, jelly.palette.tentacleHot, 0.28, opacity);
+          ctx.fillStyle = filtered;
+          ctx.fillText(
+            item.arm ? directionGlyph(dx, dy, ASCII.arm) : directionGlyph(dx, dy),
+            x,
+            y,
+          );
+
+          if (item.arm && step % 3 === 0) {
+            ctx.fillStyle = rgba(jelly.palette.bellSoft, opacity * 0.42);
+            ctx.fillText(".", x + this.cellW * 0.55, y);
+          }
+        }
+        previous = { x, y };
+      }
+    }
+
+    this.#setFont(this.fontSize);
   }
 
   #drawRibbon(jelly, item, opacity = 1, time = 0) {
@@ -769,6 +860,10 @@ export class AsciiRenderer {
       else this.#drawTentacle(jelly, item, 0.70);
     }
 
+    // A faint continuation of rear/mid anatomy is drawn before the bell so
+    // membrane glyphs naturally sit on top of it. This visually connects roots
+    // to the subumbrella without changing any physics anchors.
+    this.#drawEmbeddedRoots(jelly, [...back, ...middle]);
     this.#drawBell(jelly, time);
 
     // Mid and foreground layers are progressively brighter. Foreground ribbons

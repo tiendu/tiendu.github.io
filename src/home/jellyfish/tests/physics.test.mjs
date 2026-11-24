@@ -8,6 +8,8 @@ import {
   bellRimAt,
   skirtMembraneAt,
   tentaclePresenceScale,
+  rootEmergenceScale,
+  internalRootOpacityAt,
 } from "../renderer.mjs";
 import { heroSizeFor, topClearanceFor } from "../jellyfish.mjs";
 import { currentWeather, OceanField } from "../ocean.mjs";
@@ -378,6 +380,25 @@ test("V4.7 outer long tentacles recede without dimming central strands", () => {
   assert.equal(central, 1);
   assert.ok(outerLong < 0.76, `outer long scale ${outerLong}`);
   assert.ok(outerShort > outerLong + 0.18, `outer short ${outerShort} vs long ${outerLong}`);
+});
+
+test("V4.8 depth-aware roots emerge from the bell instead of hanging from a point", () => {
+  const rear = { arm: false, layer: -0.7 };
+  const middle = { arm: false, layer: 0.1 };
+  const front = { arm: false, layer: 0.8 };
+  assert.ok(rootEmergenceScale(rear, 0) < rootEmergenceScale(middle, 0));
+  assert.ok(rootEmergenceScale(middle, 0) < rootEmergenceScale(front, 0));
+  assert.ok(rootEmergenceScale(rear, 0.18) > 0.95);
+  assert.ok(rootEmergenceScale(middle, 0.20) > 0.95);
+
+  const rearTentacle = internalRootOpacityAt(rear, -0.10);
+  const rearArm = internalRootOpacityAt({ arm: true, layer: -0.7 }, -0.10);
+  const middleTentacle = internalRootOpacityAt(middle, -0.10);
+  assert.ok(rearTentacle > 0.08, `rear tentacle opacity ${rearTentacle}`);
+  assert.ok(rearArm > rearTentacle, `rear arm ${rearArm} tentacle ${rearTentacle}`);
+  assert.ok(middleTentacle > 0 && middleTentacle < rearTentacle);
+  assert.equal(internalRootOpacityAt(front, -0.10), 0);
+  assert.equal(internalRootOpacityAt(rear, -0.50), 0);
 });
 
 test("V4.6.2 skirt is broken, brightness-varied and pulse-responsive", () => {
