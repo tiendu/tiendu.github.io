@@ -9,7 +9,7 @@ export function characterSVG(c) {
 }
 const cache = new Map();
 let hunterEyes;
-export function drawCharacter(ctx, c, x, y, size, {energy = 100, dim = false} = {}) {
+export function drawCharacter(ctx, c, x, y, size, {energy = 100, dim = false, pulse = 1} = {}) {
   if (!cache.has(c.id)) cache.set(c.id, new Path2D(c.path));
   const p = cache.get(c.id);
   ctx.save();
@@ -19,7 +19,7 @@ export function drawCharacter(ctx, c, x, y, size, {energy = 100, dim = false} = 
   ctx.strokeStyle = ctx.fillStyle = c.color;
   const glow = c.faction === 'wisp' ? Math.max(.12, energy / 100) : 1;
   const opacity = dim ? .48 : 1;
-  ctx.globalAlpha = .20 * glow * opacity; ctx.lineWidth = 8; ctx.stroke(p);
+  ctx.globalAlpha = .20 * glow * opacity * pulse; ctx.lineWidth = 8; ctx.stroke(p);
   ctx.globalAlpha = (.08 + .20 * glow) * opacity; ctx.fill(p);
   ctx.globalAlpha = opacity; ctx.lineWidth = 3.5; ctx.stroke(p);
   if (c.faction === 'hunter') ctx.fill(hunterEyes ??= new Path2D(HUNTER_EYES));

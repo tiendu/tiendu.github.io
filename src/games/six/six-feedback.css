@@ -1,0 +1,36 @@
+/* SIX shares NUMBER's optional audio toggle and lightweight press feedback. */
+.six .six-sound-toggle {
+  min-height: 36px;
+  padding: 7px 11px;
+  font-size: .7rem;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.six button { transition: background .15s ease, border-color .15s ease, transform .12s ease, filter .12s ease, box-shadow .12s ease; }
+.six button.six-pressed:not(:disabled) { transform: translateY(2px) scale(.975); filter: brightness(1.15); }
+.six .six-choices button.six-committed {
+  background: #514338;
+  border-color: var(--six-accent);
+  box-shadow: inset 0 0 0 1px var(--six-accent), 0 0 0 2px #f0ab7233;
+}
+.six .six-choices button.six-committed:disabled { opacity: 1; }
+@media (max-width: 560px) {
+  /* Keep the accessible SOUND ON/OFF text; display a monochrome icon. */
+  .six .six-sound-toggle {
+    width: 44px; min-width: 44px; min-height: 44px; padding: 0;
+    display: grid; place-items: center; font-size: 0;
+  }
+  .six .six-sound-toggle::before {
+    content: ''; display: block; width: 22px; height: 22px;
+    background: currentColor;
+    --six-sound-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M3%209h5l5-4v14l-5-4H3z%22%20fill%3D%22black%22%2F%3E%3Cpath%20d%3D%22M17%209l5%206m0-6l-5%206%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E");
+    -webkit-mask: var(--six-sound-icon) center / contain no-repeat;
+    mask: var(--six-sound-icon) center / contain no-repeat;
+  }
+  .six .six-sound-toggle[aria-pressed='true'] { color: var(--six-accent); border-color: var(--six-accent); }
+  .six .six-sound-toggle[aria-pressed='true']::before { --six-sound-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M3%209h5l5-4v14l-5-4H3z%22%20fill%3D%22black%22%2F%3E%3Cpath%20d%3D%22M16%209c2%202%202%204%200%206m3-9c4%204%204%208%200%2012%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .six button { transition: none; }
+  .six button.six-pressed:not(:disabled) { transform: none; }
+}

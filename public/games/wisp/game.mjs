@@ -9,12 +9,17 @@ import {renderer} from './client/renderer.mjs';
 import {installInput} from './client/input.mjs';
 import {characterSVG} from './characters.mjs';
 import {backendURL,socketClient} from './client/socket.mjs';
+import {createFeedback} from './client/feedback.mjs';
+import {createAudio} from './client/audio.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('board'),render=renderer(canvas),orientation=matchMedia('(orientation: landscape)');
+const feedback=createFeedback(),playSound=createAudio($('sound'));
 const freshSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
 const api=backendURL(new URLSearchParams(location.search).get('api'));
 let landscape=orientation.matches,selected='Orb',run,s,previous,ping,pendingAbility=false,pendingDirection=null;
+let shownResult='';
 let running=false,paused=false,accumulator=0,last=0,online=false,onlineReady=false,myId=null,lobby=null,arrived=0,snapshotGap=50,onlineSnapshot=null, tutorialSeen={};
+const roster=[...WISPS,...HUNTERS];
 const positions=state=>new Map([...state.actors,...state.decoys].map(a=>[a.id,{x:a.x,y:a.y,warp:a.warp}]));
 const local=()=>s.actors.find(a=>a.player==='local');
 const recordKey=()=>`wisp-solo-v2:${selected}`;
@@ -22,14 +27,14 @@ function readRecord(){try{const r=JSON.parse(localStorage.getItem(recordKey()));
 function saveRecord(){const r=soloRecord(run);try{if(betterRecord(r,readRecord()))localStorage.setItem(recordKey(),JSON.stringify(r));}catch{}}
 for(const [id,roster] of [['wisps',WISPS],['hunters',HUNTERS]])for(const c of roster){
   const b=document.createElement('button');b.innerHTML=`${characterSVG(c)}<span>${c.id}</span><small>${c.ability}</small>`;
-  b.dataset.character=c.id;b.onclick=()=>{if(online){if(onlineReady&&lobby?.state==='lobby')socket.select(c.id);return;}if(running)return;selected=c.id;reset();};$(id).append(b);
+  b.title=ABILITIES[c.id].description;b.dataset.character=c.id;b.onclick=()=>{if(online){if(onlineReady&&lobby?.state==='lobby')socket.select(c.id);return;}if(running)return;selected=c.id;reset();};$(id).append(b);
 }
 function setControls(){
   const inLobby=online&&(!lobby||lobby.state==='lobby'),host=lobby?.host===myId,mine=lobby?.players.find(p=>p.id===myId);
   document.body.dataset.screen=inLobby||online&&!onlineSnapshot&&['aborted','finished','between'].includes(lobby?.state)?'online-lobby':online?'online':running?'solo':'setup';
   for(const b of document.querySelectorAll('[data-character]')){
     b.setAttribute('aria-pressed',String(b.dataset.character===selected));
-    const c=[...WISPS,...HUNTERS].find(c=>c.id===b.dataset.character);
+    const c=roster.find(c=>c.id===b.dataset.character);
     const taken=lobby?.players.some(p=>p.id!==myId&&p.character===c.id),wrongSide=lobby?.mode==='coop'&&lobby.side!==c.faction&&lobby.players.length>1;
     b.disabled=running||online&&(!onlineReady||!inLobby||taken||wrongSide);
   }
@@ -45,7 +50,7 @@ function showLobby(){
   const node=$('room-roster');node.replaceChildren();
   if(!lobby){$('match-results').textContent='';return;}
   for(const p of lobby.players){
-    const c=[...WISPS,...HUNTERS].find(c=>c.id===p.character),row=document.createElement('div');row.className='room-player';
+    const c=roster.find(c=>c.id===p.character),row=document.createElement('div');row.className='room-player';
     if(c){const icon=document.createElement('span');icon.innerHTML=characterSVG(c);row.append(icon);}
     const name=document.createElement('span');name.textContent=`${p.character}${p.id===myId?' (you)':''}${p.id===lobby.host?' · Host':''} · ${p.connected?p.ready?'Ready':'Connected':'Offline / bot'}`;row.append(name);
     const stats=document.createElement('small');stats.textContent=`Wins ${p.wins} · Co-op clears ${p.clears}`;row.append(stats);
@@ -60,6 +65,7 @@ function showLobby(){
   ].filter(Boolean).join('\n'):'';
 }
 function reset(){
+  feedback.reset();shownResult='';
   run=createSolo({seed:freshSeed(),character:selected,skipTutorial:$('skip').checked});s=run.round;
   previous=positions(s);ping=null;tutorialSeen={};pendingAbility=false;pendingDirection=null;running=false;paused=false;accumulator=0;
   setControls();updateHUD();
@@ -78,11 +84,21 @@ function updateHUD(){
   $('phase').textContent=online&&lobby?.state==='aborted'?'Match aborted':online&&lobby?.state==='finished'?'Match complete':online&&lobby?.state==='between'?'Round complete':online&&!onlineSnapshot?'Waiting for round':!online&&run.status==='lost'?'Run over':!online&&run.status==='cleared'?'Level cleared':!running&&!online&&s.phase==='prepare'?'Ready':paused?'Paused':phase;
   $('clock').textContent=`${secondsLeft(s)}s`;
   $('level').textContent=online?`${lobby?.mode==='coop'?'Level':'Round'} ${lobby?.series?.level??1}`:`Level ${run.level}${run.level===1?' · Tutorial':''}`;
-  $('score').textContent=online?(lobby?.series?lobby.mode==='coop'?`${lobby.series.cleared} cleared`:`${lobby.series.score.wisp} — ${lobby.series.score.hunter}`:''):`${run.cleared} cleared`;
+  $('score').textContent=online?(lobby?.series?lobby.mode==='coop'?`${lobby.series.cleared} cleared`:`Wisps ${lobby.series.score.wisp} — ${lobby.series.score.hunter} Hunters`:''):`${run.cleared} cleared`;
   const record=online?null:readRecord();$('record').textContent=record?`Best: ${record.cleared} cleared`:'';
   $('alive').textContent=`${s.actors.filter(a=>a.faction==='wisp'&&a.status==='active').length}/4 Wisps active`;
   $('start').textContent=!running?'Start solo':run.status==='cleared'?'Next level':run.status==='lost'?'New run':paused?'Resume':'Pause';
-  const outcome=online?s.result:run.outcome;
+  const outcome=online?lobby?.series?.last??s.result:run.outcome;
+  const resolved=online?['between','finished'].includes(lobby?.state):run.status!=='playing';
+  const won=online?Boolean(lobby?.state==='finished'&&lobby.series?.winner===a?.faction||lobby?.state==='between'&&lobby.series?.last?.cleared):run.status==='cleared';
+  const resultKey=resolved?(online?`${lobby.code}:${lobby.series?.level}:${lobby.state}:${s.seed}`:`${s.seed}:${run.status}`):'';
+  const resultTitle=online?(lobby?.state==='finished'?(lobby.series?.winner==='opponents'?'Co-op run over':`${lobby.series?.winner==='wisp'?'Wisps':'Hunters'} win`):lobby?.mode==='coop'?'Level cleared':'Round complete'):run.status==='cleared'?'Level cleared':'Run over';
+  $('round-summary').hidden=!resolved;
+  if(resolved&&resultKey!==shownResult){shownResult=resultKey;$('round-summary').dataset.outcome=won?'win':'neutral';$('result-title').textContent=resultTitle;
+    $('round-summary').classList.remove('reveal');void $('round-summary').offsetWidth;$('round-summary').classList.add('reveal');
+    if(!online||onlineSnapshot&&(lobby.state==='finished'||lobby.mode==='coop'))for(const e of feedback.result(resultKey,!!won))playSound(e.kind);
+  }
+  $('result-detail').textContent=resolved?(online?lobby.state==='between'?'Host can continue to the next round.':'Return to the lobby to play again.':`${run.cleared} levels cleared`):'';
   $('result').textContent=outcome?`${outcome.escaped} escaped · ${outcome.eliminated} eliminated${outcome.active?` · ${outcome.active} still active`:''}${!online?` · ${Math.floor(run.ticks/HZ)}s played`:''}`:'';
   if(!a){$('tutorial-help').textContent='';$('ability-help').textContent='';$('ability-status').textContent='';$('ability').disabled=true;$('identity').textContent=selected;$('condition').textContent='Spectating';$('energy').hidden=true;return;}
   $('identity').textContent=`${a.id} · ${a.faction==='wisp'?'Wisp':'Hunter'}`;
@@ -95,8 +111,8 @@ function updateHUD(){
   const statuses=[['Silenced',a.silenceUntil],['Stunned',a.stunUntil],['Slowed',a.slowUntil],['Surge',a.surgeUntil],['Barrier',a.barrierUntil],['Drain',a.drainUntil]].filter(([,until])=>s.tick<until).map(([label,until])=>`${label} ${Math.ceil((until-s.tick)/HZ)}s`);
   if(a.lunge)statuses.push(s.tick<a.lunge.chargeUntil?'Charging':'Lunging');
   $('ability-help').textContent=spec.description;
-  const feedback=a.lastAbility&&s.tick-a.lastAbility.tick<2*HZ?(a.lastAbility.ok?'Activated':a.lastAbility.reason):'';
-  $('ability-status').textContent=[...statuses,feedback||(!reason?'Ready':reason)].join(' · ');
+  const castFeedback=a.lastAbility&&s.tick-a.lastAbility.tick<2*HZ?(a.lastAbility.ok?'Activated':a.lastAbility.reason):'';
+  $('ability-status').textContent=[...statuses,castFeedback||(!reason?'Ready':reason)].join(' · ');
   $('tutorial-help').textContent=tutorialHelp(a)||(selected==='Stalker'&&!running&&!online?'Stalker starts at Level 2 (not available in the tutorial).':'');
 }
 const socket=api?socketClient(api,{
@@ -106,14 +122,14 @@ const socket=api?socketClient(api,{
   onResult(result){$('result').textContent=`${result.escaped} escaped · ${result.eliminated} eliminated`;},
   onLobby(msg){
     const prior=lobby;lobby=msg;$('mode').value=msg.mode;const mine=msg.players.find(p=>p.id===myId);if(mine)selected=mine.character;
-    if(msg.state==='lobby'||msg.state==='running'&&prior?.state!=='running'){onlineSnapshot=null;ping=null;}
+    if(msg.state==='lobby'||msg.state==='running'&&prior?.state!=='running'){onlineSnapshot=null;ping=null;feedback.reset();shownResult='';}
     if(msg.state==='aborted')$('online-status').textContent='Match aborted by server restart. Host can return to lobby.';
     $('room-info').textContent=`Room ${msg.code} · ${msg.mode==='coop'?`Co-op (${msg.side})`:'Competitive'} · ${msg.state}`;
     showLobby();setControls();updateHUD();
   },
   onState(state,old,now){const same=old&&state.seed===old.seed&&state.tick>old.tick;previous=positions(same?old:state);snapshotGap=Math.max(25,Math.min(150,now-arrived));arrived=now;s=state;onlineSnapshot=state;updateHUD();},
 }):null;
-function enterOnline(){online=true;onlineReady=false;onlineSnapshot=null;lobby=null;myId=null;ping=null;setControls();updateHUD();}
+function enterOnline(){feedback.reset();shownResult='';online=true;onlineReady=false;onlineSnapshot=null;lobby=null;myId=null;ping=null;setControls();updateHUD();}
 function exitOnline(){socket?.leave();try{sessionStorage.removeItem('wisp-room-v3');}catch{}online=false;onlineReady=false;onlineSnapshot=null;lobby=null;myId=null;$('room-info').textContent='';showLobby();$('online-status').textContent=api?'':'Backend not configured';reset();}
 function savedSession(){try{return JSON.parse(sessionStorage.getItem('wisp-room-v3'));}catch{return null;}}
 const saved=savedSession();if(/^\d{6}$/.test(saved?.code??''))$('room-code').value=saved.code;
@@ -136,13 +152,15 @@ function frame(now){
   }
   const alpha=online&&onlineSnapshot?Math.min(1,Math.max(0,(now-arrived)/snapshotGap)):running&&!paused&&run.status==='playing'?accumulator/STEP:1;
   const pings=online&&onlineSnapshot?s.pings.map(p=>({...p,until:arrived+(p.until-s.tick)*1000/HZ})):ping;
-  render.draw(s,landscape,previous,alpha,pings,now,online&&onlineSnapshot&&onlineReady?socket.prediction(now):null);
+  const events=feedback.observe(s,selected);
+  for(const e of events){if(!e.id||e.id===selected)playSound(e.kind);}
+  render.draw(s,landscape,previous,alpha,pings,now,online&&onlineSnapshot&&onlineReady?socket.prediction(now):null,events);
   requestAnimationFrame(frame);
 }
 $('start').onclick=()=>{
   if(online)return;
   if(run.status==='lost')reset();
-  if(run.status==='cleared'){nextLevel(run);s=run.round;ping=null;paused=false;}
+  if(run.status==='cleared'){nextLevel(run);s=run.round;ping=null;paused=false;feedback.reset();shownResult='';}
   else if(!running){running=true;paused=false;}else paused=!paused;
   pendingAbility=false;pendingDirection=null;accumulator=0;previous=positions(s);setControls();updateHUD();
   if(!paused)canvas.focus({preventScroll:true});

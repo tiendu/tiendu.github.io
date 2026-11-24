@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {maze, WIDTH, HEIGHT, DIRS, view, unview, direction, teams, WISPS, HUNTERS} from '../../../../public/games/wisp/core.mjs';
+import {maze, WIDTH, HEIGHT, DIRS} from '../../../../public/games/wisp/core/maze.mjs';
+import {view, unview, direction} from '../../../../public/games/wisp/client/orientation.mjs';
+import {teams} from '../../../../public/games/wisp/core/roster.mjs';
+import {WISPS, HUNTERS} from '../../../../public/games/wisp/core/characters.mjs';
 import {characterSVG} from '../../../../public/games/wisp/characters.mjs';
 test('600 deterministic connected, braided mazes with closed boundaries', () => {
   for (let s = 0; s < 300; s++) for (const tutorial of [false, true]) {
@@ -58,12 +61,12 @@ test('all 12 silhouettes are distinct and use their agreed eyes', () => {
     assert.equal((svg.match(/<ellipse /g)||[]).length,c.faction==='wisp'?2:0);
   }
 });
-test('development route replaces the runner and is absent from Games', async () => {
+test('release route is listed in Games', async () => {
   const source = p => readFile(new URL('../../../../'+p,import.meta.url),'utf8');
   const [catalog, route, page] = await Promise.all(['src/pages/games/index.astro','src/pages/games/wisp/index.astro','public/games/wisp/play.html'].map(source));
-  assert.doesNotMatch(catalog,/href:\s*["']\/games\/wisp\//i);
+  assert.match(catalog,/href:\s*["']\/games\/wisp\//i);
   assert.match(route,/\/games\/wisp\/play\.html/);
-  assert.match(route,/noindex/); assert.match(page,/noindex/);
+  assert.doesNotMatch(route,/noindex/); assert.doesNotMatch(page,/noindex/);
   assert.match(route,/PUBLIC_WISP_BACKEND_URL/);
-  assert.match(page,/preview\.mjs/);
+  assert.match(page,/game\.mjs/);
 });

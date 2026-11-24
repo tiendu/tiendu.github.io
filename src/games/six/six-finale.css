@@ -1,0 +1,78 @@
+
+/* Match-end presentation: final standings replace the die/choices after the last reveal. */
+.six-finale { display:grid; gap:22px; min-width:0; }
+.six.is-finished .six-shell { grid-template-columns:minmax(0,1fr); max-width:960px; margin-inline:auto; }
+.six.is-finished .six-stage { order:-2; }
+.six.is-finished .six-stage > :not(.six-finale) { display:none !important; }
+.six.is-finished .six-room { order:1; }
+.six.is-finished .six-status { order:2; }
+.six.is-finished .six-sidebar { display:none; }
+.six-finale-hero {
+  position:relative; isolation:isolate; overflow:hidden; display:grid; justify-items:center;
+  gap:10px; padding:34px 16px 28px; text-align:center;
+  border-bottom:1px solid var(--six-outline);
+}
+.six-finale-hero .six-eyebrow { margin:0; color:var(--six-accent); }
+.six-finale-hero h2 { margin:0; max-width:100%; overflow-wrap:anywhere; font-size:clamp(1.9rem,5vw,3.4rem); line-height:1.1; color:var(--six-ink); }
+.six-finale-hero h2:focus { outline:none; }
+.six-finale-hero > p:last-child { margin:0; font-size:.78rem; color:var(--six-muted); }
+.six-finale-crown { width:64px; height:64px; color:var(--six-accent); filter:drop-shadow(0 3px 0 #3b2b1e); }
+.six-finale-hero.is-draw .six-finale-crown, .six-finale-hero.is-draw .six-finale-burst { display:none; }
+.six-finale-burst { position:absolute; top:25px; left:50%; width:8px; height:8px; pointer-events:none; color:var(--six-accent); }
+.six-finale-burst::before, .six-finale-burst::after { content:''; position:absolute; width:8px; height:8px; background:currentColor; }
+.six-finale-burst::before { box-shadow:-82px -15px currentColor,72px -35px currentColor,-106px 32px currentColor,104px 23px currentColor; }
+.six-finale-burst::after { box-shadow:-56px 52px #e8d3a5,48px 62px #e8d3a5,-32px -42px #e8d3a5,28px -55px #e8d3a5; }
+.six-finale.without-animation .six-finale-burst { display:none; }
+.six-finale:not(.without-animation) .six-finale-hero { animation:six-finale-reveal .65s cubic-bezier(.17,.74,.29,1) both; }
+.six-finale:not(.without-animation) .six-finale-burst { animation:six-finale-spark .75s ease-out both; }
+@keyframes six-finale-reveal {
+  from { opacity:0; transform:translateY(12px) scale(.97); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes six-finale-spark {
+  from { opacity:0; transform:scale(.25) rotate(-15deg); }
+  35% { opacity:1; }
+  to { opacity:0; transform:scale(1.4) rotate(15deg); }
+}
+.six-final-board { min-width:0; }
+.six-final-board-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding-bottom:10px; }
+.six-final-board-head h3 { margin:0; color:var(--six-ink); font-size:.86rem; letter-spacing:.08em; }
+.six-final-board-head span { color:var(--six-muted); font-size:.7rem; font-weight:800; }
+.six-final-board ol { max-height:min(52vh,520px); overflow-y:auto; list-style:none; padding:0; margin:0; scrollbar-width:thin; }
+.six-final-player { display:flex; align-items:center; gap:16px; min-height:65px; padding:10px 16px; border-top:1px solid var(--six-outline); border-radius:7px; }
+.six-final-player.champion { background:#3c3026; box-shadow:inset 3px 0 var(--six-accent); }
+.six-final-player.eliminated { opacity:.64; }
+.six-final-player.is-you:not(.champion) { box-shadow:inset 3px 0 #bcb4aa; }
+.six-final-rank { width:36px; flex:none; color:var(--six-muted); font-size:1rem; font-weight:900; font-variant-numeric:tabular-nums; }
+.six-final-player.champion .six-final-rank { color:var(--six-accent); }
+.six-final-player-info { min-width:0; flex:1; display:grid; gap:4px; }
+.six-final-player-info strong { color:var(--six-ink); font-size:1rem; overflow-wrap:anywhere; }
+.six-final-player-info small { font-size:.65rem; letter-spacing:.04em; color:var(--six-muted); font-weight:800; }
+.six-final-player.champion .six-final-player-info small { color:var(--six-accent); }
+.six-final-points { color:var(--six-ink); font-size:1.6rem; font-weight:900; font-variant-numeric:tabular-nums; }
+.six-final-player.champion .six-final-points { color:#ffcb9f; }
+.six-final-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding-top:4px; }
+.six-final-actions button { min-height:54px; }
+.six-final-actions button[data-final-replay] { font-size:1rem; }
+.six-final-actions button[data-final-back] { font-size:.84rem; }
+.six-final-actions [data-final-wait] { grid-column:1/-1; color:var(--six-muted); font-size:.8rem; text-align:center; }
+.six-final-actions:has([data-final-replay][hidden]) { grid-template-columns:minmax(0,1fr); }
+.six.is-finished .six-room { opacity:.82; }
+@media (max-width:560px) {
+  .six.is-finished .six-stage.six-panel { padding:12px 0 0; }
+  .six-finale { gap:16px; }
+  .six-finale-hero { padding:28px 8px 20px; }
+  .six-finale-crown { width:52px; height:52px; }
+  .six-finale-burst { top:20px; }
+  .six-final-player { min-height:58px; padding:9px 10px; gap:10px; }
+  .six-final-rank { width:28px; }
+  .six-final-player-info strong { font-size:.88rem; }
+  .six-final-points { font-size:1.25rem; }
+  .six-final-actions { gap:8px; }
+  .six-final-actions button { padding:10px 6px; font-size:.78rem; }
+  .six.is-finished .six-room { margin-top:10px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .six-finale-hero { animation:none !important; }
+  .six-finale-burst { display:none; animation:none !important; }
+}

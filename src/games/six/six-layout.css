@@ -1,0 +1,409 @@
+.six {
+  --six-ink: #f6f2ed;
+  --six-muted: #bcb4aa;
+  --six-outline: #514d4b;
+  --six-accent: #f0ab72;
+  --six-surface: #242527;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1290px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(16px, 3vw, 42px);
+  color: var(--six-ink);
+  font-family: inherit;
+}
+.six *, .six *::before, .six *::after { box-sizing: border-box; }
+.six [hidden] { display: none !important; }
+.six-topbar, .six-heading, .six-actions, .six-sidebar-head, .six-turn-row, .six-stage-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.six-topbar { color: var(--six-muted); font-size: .77rem; font-weight: 700; letter-spacing: .08em; }
+.six-home { color: inherit; text-decoration: none; padding: 10px 0; }
+.six-home:hover { color: var(--six-ink); }
+.six-heading { align-items: end; margin: 28px 0 26px; }
+.six h1 { font-size: clamp(68px, 9vw, 120px); line-height: .85; letter-spacing: -.095em; margin: 0 0 14px; font-weight: 900; }
+.six h1 span { color: var(--six-accent); }
+.six-intro { color: var(--six-muted); margin: 0; font-size: .98rem; }
+.six-progress { color: var(--six-accent); text-align: right; font-size: .76rem; font-weight: 800; letter-spacing: .08em; }
+.six-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); gap: 20px; align-items: start; }
+.six-main, .six-sidebar { min-width: 0; }
+.six-main { display: grid; gap: 16px; }
+.six-sidebar { display: grid; gap: 16px; position: sticky; top: 18px; }
+.six-panel { background: var(--six-surface); border: 1px solid var(--six-outline); border-radius: 18px; padding: clamp(20px, 3vw, 32px); }
+.six-eyebrow, .six-field, .six-sidebar-head, .six-dice-value { color: var(--six-muted); font-size: .76rem; font-weight: 800; letter-spacing: .1em; }
+.six button, .six input { font: inherit; }
+.six button {
+  appearance: none; min-height: 48px; border: 1px solid #69645e;
+  border-radius: 10px; padding: 12px 18px; color: var(--six-ink);
+  background: #343331; font-weight: 800; cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.six button:not(:disabled):hover { border-color: var(--six-accent); background: #48413b; }
+.six button:not(:disabled):active { transform: translateY(1px); }
+.six button:disabled { cursor: not-allowed; opacity: .4; }
+.six button:focus-visible, .six input:focus-visible, .six a:focus-visible { outline: 3px solid var(--six-accent); outline-offset: 3px; }
+.six .six-primary { background: var(--six-accent); border-color: var(--six-accent); color: #211b17; }
+.six .six-primary:not(:disabled):hover { background: #ffd1a8; border-color: #ffd1a8; }
+.six-menu { display: grid; gap: 16px; }
+.six-menu h2 { margin: 0; font-size: clamp(1.35rem, 2.5vw, 2.1rem); line-height: 1.15; }
+.six-menu p { margin: 0; line-height: 1.55; color: var(--six-muted); max-width: 58ch; }
+.six-menu .six-eyebrow { color: var(--six-accent); }
+.six-menu .six-solo-button { min-height: 68px; width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; }
+.six-separator { position: relative; margin-top: 8px; text-align: center; font-size: .72rem; letter-spacing: .1em; color: var(--six-muted); font-weight: 800; }
+.six-separator::before { content: ''; position: absolute; height: 1px; top: 50%; left: 0; right: 0; background: var(--six-outline); }
+.six-separator span { position: relative; background: var(--six-surface); padding: 0 14px; }
+.six-field { display: grid; gap: 8px; }
+.six input { width: 100%; min-height: 50px; border: 1px solid #69645e; border-radius: 9px; padding: 11px 13px; color: var(--six-ink); background: #191a1c; }
+.six input::placeholder { color: #a39a91; }
+.six-actions { flex-wrap: wrap; }
+.six-actions button { flex: 1 1 150px; }
+.six-room { display: grid; gap: 14px; padding: 20px 24px; }
+.six-room-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.six-room-label strong { font-size: 1rem; letter-spacing: .08em; }
+.six-room .six-primary { width: 100%; }
+.six-stage { display: grid; gap: 24px; }
+.six-turn-row { align-items: start; }
+.six-turn { margin: 6px 0 0; font-size: clamp(1.1rem, 2.3vw, 1.5rem); font-weight: 850; line-height: 1.25; }
+.six-your-score { min-width: 88px; padding: 11px 15px; border-radius: 11px; background: #37312d; text-align: right; }
+.six-your-score span { display: block; font-size: .68rem; color: var(--six-muted); font-weight: 800; letter-spacing: .08em; }
+.six-your-score strong { font-size: 1.9rem; font-variant-numeric: tabular-nums; }
+.six-dice-table {
+  min-height: 270px; display: flex; flex-direction: column; justify-content: center;
+  align-items: center; gap: 12px; border-radius: 16px; padding: 24px 10px;
+  background: radial-gradient(ellipse at center, #393332 0%, #292829 60%, #232426 100%);
+  border: 1px solid #46413e;
+}
+.six-die { width: clamp(116px, 17vw, 172px); height: clamp(116px, 17vw, 172px); filter: drop-shadow(0 15px 12px #0006); transform-origin: center; }
+.six-die svg { display: block; width: 100%; height: 100%; }
+.six-die.rolling { animation: six-dice-roll .72s cubic-bezier(.45,.05,.38,1) both; }
+.six-dice-value { color: var(--six-ink); font-size: .87rem; }
+.six-result { min-height: 73px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; text-align: center; }
+.six-result p { margin: 0; color: var(--six-muted); line-height: 1.35; }
+.six-result.gain strong { color: #91d9ad; }
+.six-result.loss strong { color: #ff9f8d; }
+.six-play-controls { display: grid; gap: 12px; }
+.six-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.six-choices button { min-width: 0; min-height: 114px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; padding: 12px 8px; border-width: 2px; }
+.six-choices button[data-guess="higher"] { border-color: #4c7863; }
+.six-choices button[data-guess="lower"] { border-color: #946351; }
+.six-choices button[data-guess="tie"] { border-color: #8f7e58; }
+.six-choice-symbol { display: block; font-size: 2.55rem; line-height: .95; font-weight: 900; }
+.six-choices button[data-guess="higher"] .six-choice-symbol { color: #99ddbb; }
+.six-choices button[data-guess="lower"] .six-choice-symbol { color: #ffb099; }
+.six-choices button[data-guess="tie"] .six-choice-symbol { color: #efd49a; }
+.six-choice-title { font-weight: 900; font-size: .92rem; letter-spacing: .02em; }
+.six-multiplier { color: #efd49a; }
+.six-choices small { font-size: .59rem; font-weight: 800; letter-spacing: .04em; color: var(--six-muted); }
+.six-stage-footer { flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--six-outline); }
+.six-stage-footer button { min-height: 44px; font-size: .78rem; letter-spacing: .04em; }
+.six-stage-footer button[data-replay].finished { background: var(--six-accent); border-color: var(--six-accent); color: #211b17; }
+.six-stage-footer p { color: var(--six-muted); margin: 0; font-size: .84rem; }
+.six-status { margin: 0; min-height: 1.4em; color: var(--six-accent); font-size: .85rem; }
+.six-sidebar .six-panel { padding: 21px; }
+.six-sidebar-head { align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--six-outline); }
+.six-sidebar-head h2 { font-size: .88rem; letter-spacing: .09em; margin: 0; }
+.six-now-playing { color: var(--six-muted); font-size: .77rem; line-height: 1.3; margin: 12px 0 4px; }
+.six-scores ol, .six-history ol { list-style: none; margin: 0; padding: 0; }
+.six-scores ol { overflow-y: auto; max-height: min(60vh, 650px); scrollbar-width: thin; }
+.six-scores li { display: flex; align-items: center; gap: 12px; padding: 12px 10px; border-bottom: 1px solid #44403c; border-radius: 7px; }
+.six-scores li:last-child { border-bottom: 0; }
+.six-scores li.active { background: #49372c; box-shadow: inset 3px 0 var(--six-accent); }
+.six-scores li.out { opacity: .55; }
+.six-player { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.six-player strong { font-size: .91rem; overflow-wrap: anywhere; }
+.six-player small { color: var(--six-muted); font-size: .65rem; letter-spacing: .06em; font-weight: 700; }
+.six-scores li.active .six-player small { color: #ffc89c; }
+.six-score-number { font-size: 1.35rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+.six-history ol { max-height: 250px; overflow: auto; }
+.six-history li { padding: 11px 0; border-bottom: 1px solid #44403c; font-size: .79rem; line-height: 1.45; color: var(--six-muted); }
+.six-history li:last-child { border-bottom: 0; }
+.six-history li strong { color: var(--six-ink); }
+.six-history li .plus { color: #91d9ad; }
+.six-history li .minus { color: #ff9f8d; }
+.six-empty { color: var(--six-muted); font-size: .84rem; }
+.six footer { margin: 25px 0 0; color: var(--six-muted); font-size: .73rem; letter-spacing: .08em; text-align: center; }
+@keyframes six-dice-roll {
+  0% { transform: translate(-9px, -4px) rotate(-16deg) scale(.94); }
+  20% { transform: translate(8px, -12px) rotate(21deg) scale(1.08); }
+  42% { transform: translate(-10px, 3px) rotate(-18deg) scale(.98); }
+  63% { transform: translate(9px, -8px) rotate(14deg) scale(1.07); }
+  82% { transform: translate(-3px, -2px) rotate(-6deg) scale(1.03); }
+  100% { transform: translate(0,0) rotate(0) scale(1); }
+}
+@media(max-width: 880px) {
+  .six-shell { grid-template-columns: minmax(0,1fr); }
+  .six-sidebar { position: static; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; }
+  .six-scores ol { max-height: 360px; }
+}
+@media(max-width: 560px) {
+  .six-heading { align-items: start; flex-direction: column; gap: 14px; }
+  .six-progress { text-align: left; }
+  .six-panel { padding: 18px; }
+  .six-stage { gap: 18px; }
+  .six-sidebar { grid-template-columns: minmax(0,1fr); }
+  .six-dice-table { min-height: 240px; }
+  .six-die { width: 138px; height: 138px; }
+  .six-choices { gap: 7px; }
+  .six-choices button { min-height: 100px; padding: 10px 4px; }
+  .six-choice-symbol { font-size: 2.2rem; }
+  .six-choice-title { font-size: .8rem; }
+  .six-choices small { display: none; }
+  .six-stage-footer { gap: 10px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .six-die.rolling { animation: none; }
+  .six button { transition: none; }
+}
+
+/* Settings are identical in solo and in the online host's lobby. */
+.six-round-setting { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border:1px solid var(--six-outline); border-radius:12px; }
+.six-round-setting > span { color:var(--six-ink); font-weight:800; font-size:.85rem; letter-spacing:.04em; }
+.six-round-setting small { display:block; margin-top:4px; color:var(--six-muted); font-size:.63rem; }
+.six-stepper { display:flex; align-items:center; gap:6px; }
+.six .six-stepper button { min-height:44px; width:44px; padding:0; font-size:1.4rem; }
+.six .six-stepper input { display:block; min-height:44px; width:58px; max-width:none; padding:5px; font-size:1.1rem; text-align:center; font-variant-numeric:tabular-nums; appearance:textfield; -moz-appearance:textfield; }
+.six-stepper input::-webkit-inner-spin-button, .six-stepper input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+.six-stepper :disabled { opacity:.5; }
+.six-mini-brand, .six-round-progress, .six-mobile-roster, .six-mobile-history { display:none; }
+.six-mobile-roster summary, .six-mobile-history summary { cursor:pointer; }
+@media (max-width: 560px) {
+  .six { padding:12px; min-height:100svh; }
+  .six-topbar { gap:12px; }
+  .six-heading { margin:20px 0 16px; }
+  .six-menu { gap:12px; }
+  .six-menu .six-solo-button { min-height:58px; }
+  .six-round-setting { padding:10px; }
+  .six-stepper { gap:4px; }
+  .six .six-stepper button { width:42px; }
+  .six.is-playing .six-heading { display:none; }
+  .six.is-playing .six-topbar { margin-bottom:12px; }
+  .six.is-playing .six-mode-label { display:none; }
+  .six.is-playing .six-mini-brand { display:block; font-size:1.25rem; color:var(--six-ink); margin-left:auto; }
+
+  .six.is-playing .six-main { gap:8px; }
+  .six.is-playing .six-stage { gap:10px; }
+  .six.is-playing .six-stage.six-panel { padding:0; border:0; background:transparent; }
+  .six.is-playing .six-turn-row { padding:3px 1px; gap:8px; align-items:center; }
+  .six.is-playing .six-turn { margin-top:4px; font-size:1.08rem; }
+  .six.is-playing .six-your-score { padding:8px 12px; min-width:82px; }
+  .six.is-playing .six-your-score strong { font-size:1.5rem; }
+  .six.is-playing .six-dice-table { min-height:0; padding:12px 8px 10px; gap:6px; border-radius:12px; }
+  .six.is-playing .six-die { width:108px; height:108px; }
+  .six.is-playing .six-play-controls { gap:8px; }
+  .six.is-playing .six-choices button { min-height:78px; }
+  .six.is-playing .six-choice-symbol { font-size:1.9rem; }
+  .six.is-playing .six-choice-title { font-size:.76rem; }
+  .six.is-active-match .six-room { padding:8px 10px; display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .six.is-active-match .six-room .six-room-label { min-width:0; }
+  .six.is-active-match .six-room .six-room-label .six-eyebrow { display:none; }
+  .six.is-active-match .six-room .six-actions { flex-wrap:nowrap; }
+  .six.is-active-match .six-room .six-actions [data-invite] { display:none; }
+  .six.is-active-match .six-room .six-actions button { flex:auto; min-height:38px; padding:6px 9px; font-size:.71rem; }
+  .six.is-active-match .six-room [data-room-settings] { display:none !important; }
+  .six.is-active-match .six-room [data-start] { display:none !important; }
+  .six-mobile-roster, .six-mobile-history { display:block; background:var(--six-surface); border:1px solid var(--six-outline); border-radius:10px; }
+  .six-mobile-roster summary, .six-mobile-history summary { padding:10px 12px; color:var(--six-muted); font-size:.73rem; font-weight:800; letter-spacing:.04em; }
+  .six-mobile-roster summary { display:flex; justify-content:space-between; gap:10px; }
+  .six-mobile-roster summary strong { color:var(--six-ink); }
+  .six-mobile-roster summary::marker, .six-mobile-history summary::marker { color:var(--six-accent); }
+  .six-mobile-roster ol, .six-mobile-history ol { list-style:none; padding:0 12px 8px; margin:0; max-height:240px; overflow:auto; }
+  .six-mobile-roster li { display:flex; align-items:center; gap:8px; padding:9px 8px; border-top:1px solid var(--six-outline); }
+  .six-mobile-roster li.active { background:#49372c; }
+  .six-mobile-roster li.out { opacity:.55; }
+  .six-mobile-roster .six-player { flex:1; }
+  .six-mobile-history li { padding:8px 0; border-top:1px solid var(--six-outline); color:var(--six-muted); font-size:.74rem; }
+  .six-mobile-history .plus { color:#91d9ad; }
+  .six-mobile-history .minus { color:#ff9f8d; }
+  .six.is-playing .six-sidebar { display:none; }
+  .six.is-playing .six-stage-footer { padding-top:8px; }
+  .six.is-playing .six-status { min-height:0; }
+  .six footer { margin:16px 0 0; font-size:.62rem; }
+  .six:not(.is-playing):not(.is-online) .six-sidebar { display:none; }
+}
+@media (max-width: 560px) {
+  .six-mobile-roster summary span { margin-left:auto; }
+  .six-mobile-roster summary::after { content:'▾'; color:var(--six-accent); }
+  .six-mobile-roster[open] summary::after { content:'▴'; }
+}
+
+/* Polyhedral update: one match-settings treatment for solo and hosted rooms. */
+.six-match-options { display:grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap:12px; }
+.six-match-options > * { min-width:0; }
+.six-dice-setting { display:grid; gap:10px; padding:12px 14px; border:1px solid var(--six-outline); border-radius:12px; }
+.six-dice-setting > span { color:var(--six-ink); font-size:.85rem; font-weight:800; letter-spacing:.04em; }
+.six-dice-setting small { display:block; margin-top:4px; color:var(--six-muted); font-size:.67rem; }
+.six-dice-selector { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.six .six-dice-selector button { min-height:48px; padding:8px 4px; font-size:.86rem; letter-spacing:.02em; }
+.six .six-dice-selector button[aria-pressed="true"] { background:var(--six-accent); border-color:var(--six-accent); color:#211b17; }
+.six .six-dice-selector button[aria-pressed="true"]:not(:disabled):hover { background:#ffd1a8; }
+.six-dice-context { display:flex; flex-direction:column; justify-content:center; gap:9px; }
+.six-dice-context .six-dice-value { display:block; font-weight:900; font-size:clamp(1.9rem,3.2vw,3.4rem); letter-spacing:-.07em; font-variant-numeric:tabular-nums; }
+.six-dice-jackpot { font-size:.76rem; font-weight:800; letter-spacing:.04em; color:#efd49a; }
+.six-die-frame { display:grid; place-items:center; min-width:0; }
+.six-die-svg { width:100%; height:100%; overflow:visible; }
+.six .six-choices button:disabled { opacity:.32; }
+.six .six-choices button:not(:disabled):focus-visible { outline:3px solid var(--six-accent); outline-offset:3px; }
+
+@media (min-width: 881px) {
+  .six { max-width:1480px; }
+  .six-shell { grid-template-columns:minmax(0,1fr) minmax(300px,330px); gap:24px; }
+  .six-stage { gap:19px; padding:clamp(24px,2.5vw,36px); }
+  .six-dice-table {
+    display:grid;
+    grid-template-columns:minmax(125px,1fr) minmax(220px,1.6fr) minmax(155px,1fr);
+    align-items:center;
+    gap:clamp(12px,2vw,26px);
+    min-height:365px;
+    padding:28px clamp(22px,3vw,38px);
+    background:radial-gradient(ellipse at 48% 42%,#41403e 0%,#302e2e 49%,#222325 100%);
+  }
+  .six-die { width:clamp(195px,20vw,260px); height:clamp(195px,20vw,260px); }
+  .six-result { align-items:flex-start; text-align:left; gap:10px; min-width:0; }
+  .six-result p { font-size:.95rem; }
+  .six-choices button { min-height:124px; }
+  .six-choice-symbol { font-size:3.1rem; }
+  .six-choice-title { font-size:1.05rem; }
+  .six-choices small { font-size:.68rem; }
+  .six-sidebar { top:24px; }
+  .six-sidebar .six-panel { padding:24px; }
+  .six-score-number { font-size:1.55rem; }
+  .six-scores li { padding:13px 10px; }
+  .six.is-playing .six-heading { margin-bottom:22px; }
+}
+@media (min-width: 561px) and (max-width: 880px) {
+  .six-dice-table { min-height:0; }
+  .six-dice-context { align-items:center; text-align:center; gap:5px; }
+  .six-die { width:clamp(150px,23vw,210px); height:clamp(150px,23vw,210px); }
+}
+@media (max-width: 760px) {
+  .six-match-options { grid-template-columns:1fr; }
+  .six-round-setting { align-items:center; }
+}
+@media (max-width: 560px) {
+  .six-dice-context { align-items:center; text-align:center; gap:3px; }
+  .six.is-playing .six-dice-table { gap:5px; padding:10px 8px; }
+  .six.is-playing .six-die { width:120px; height:120px; }
+  .six.is-playing .six-result { min-height:30px; }
+  .six .six-dice-selector button { min-height:44px; }
+  .six-dice-setting { padding:10px; gap:7px; }
+}
+@keyframes six-jackpot-pop {
+  0% { transform:scale(.9); filter:brightness(1); }
+  55% { transform:scale(1.1); filter:brightness(1.22); }
+  100% { transform:scale(1); filter:brightness(1); }
+}
+.six-die.jackpot-land { animation:six-jackpot-pop .46s ease-out both; }
+@media (prefers-reduced-motion:reduce) {
+  .six-die.jackpot-land { animation:none; }
+}
+
+
+/* The result is one line of game commentary, not a second scorecard. */
+.six-result { min-width:0; min-height:36px; display:block; text-align:center; }
+.six-result p { color:var(--six-muted); font-size:.85rem; line-height:1.45; overflow-wrap:anywhere; }
+.six-result p strong { font-size:inherit; font-weight:900; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.six-result.jackpot p strong { color:#ffe1a1; }
+@media (min-width:881px) {
+  .six-result { text-align:left; }
+  .six-result p { font-size:.9rem; }
+}
+.six.is-finished .six-play-controls { display: none; }
+.six-match-actions { min-width: 0; }
+.six-match-actions > summary { display: none; }
+@media (max-width: 560px) {
+  .six-match-actions > summary {
+    display: list-item;
+    min-height: 44px;
+    border: 1px solid var(--six-outline);
+    border-radius: 10px;
+    padding: 10px 13px;
+    color: var(--six-muted);
+    background: var(--six-surface);
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    cursor: pointer;
+  }
+  .six-match-actions[open] > summary { border-color: #75675a; }
+  .six-match-actions[open] .six-stage-footer { margin-top: 8px; }
+  .six.is-playing footer { display: none; }
+}
+
+/* The phone layout should show the die and choices first, not duplicate cards. */
+.six-mobile-scorebar { display:none; }
+@media (max-width:560px) {
+  .six.is-playing .six-topbar { margin-bottom:6px; }
+  .six.is-playing .six-stage { gap:12px; }
+  .six.is-playing .six-turn-row { display:none; }
+  .six.is-playing .six-mobile-scorebar {
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1fr);
+    align-items:center; gap:8px; min-height:64px; padding:10px 12px;
+    background:var(--six-surface); border:1px solid var(--six-outline);
+    border-radius:12px;
+  }
+  .six-mobile-score-item { display:grid; min-width:0; gap:2px; }
+  .six-mobile-score-item > span {
+    font-size:.65rem; color:var(--six-muted); font-weight:800;
+    letter-spacing:.04em; overflow:hidden; text-overflow:ellipsis;
+  }
+  .six-mobile-score-item > strong { font-size:1.33rem; line-height:1; font-variant-numeric:tabular-nums; }
+  .six-mobile-score-right { text-align:right; }
+  .six-mobile-turn { font-size:.7rem; text-align:center; color:var(--six-accent); line-height:1.2; overflow-wrap:anywhere; }
+  .six.is-playing .six-dice-table {
+    background:transparent; border:0; padding:6px 0 2px; gap:4px;
+  }
+  .six.is-playing .six-dice-context .six-dice-value,
+  .six.is-playing .six-dice-context .six-dice-jackpot { display:none; }
+  .six.is-playing .six-dice-context .six-eyebrow { font-size:.7rem; }
+  .six.is-playing .six-die { width:148px; height:148px; }
+  .six.is-playing .six-result { min-height:34px; padding:3px 0; }
+  .six.is-playing .six-result p { font-size:.75rem; }
+  .six.is-playing .six-play-controls { gap:0; }
+  .six.is-playing .six-play-controls > .six-eyebrow { display:none; }
+  .six.is-playing .six-choices button { min-height:88px; }
+  .six.is-playing .six-mobile-roster { display:block; }
+  .six.is-playing:not(.is-online) .six-mobile-roster { display:none; }
+  .six.is-playing .six-mobile-history,
+  .six.is-playing .six-mobile-roster,
+  .six.is-playing .six-match-actions > summary {
+    background:transparent; border:0; border-radius:0;
+    border-top:1px solid var(--six-outline);
+  }
+  .six.is-playing .six-mobile-history summary,
+  .six.is-playing .six-mobile-roster summary,
+  .six.is-playing .six-match-actions > summary { padding:9px 2px; }
+  .six.is-playing .six-match-actions > summary { min-height:36px; }
+  .six.is-playing .six-status:empty { display:none; }
+}
+
+/* Keep the round count beside the game controls, not stranded next to a giant title. */
+.six.is-playing .six-heading { display: none; }
+.six.is-playing .six-topbar {
+  position: sticky; top: 0; z-index: 5; padding: 6px 0; background: #090b0b;
+  justify-content: flex-start; gap: clamp(12px, 2vw, 24px); margin-bottom: 20px;
+}
+.six.is-playing .six-mode-label { display: none; }
+.six.is-playing .six-mini-brand { display: block; font-size: 1.5rem; color: var(--six-ink); }
+.six.is-playing .six-sound-toggle { margin-left: auto; }
+.six.is-playing .six-round-progress {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 50px; padding: 8px 18px; border: 2px solid var(--six-accent);
+  border-radius: 10px; background: #36291f; color: #ffcb9f;
+  font-size: 1.18rem; font-weight: 900; letter-spacing: .075em;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .six.is-playing .six-topbar { gap: 8px; margin-bottom: 12px; }
+  .six.is-playing .six-mini-brand { margin-left: 0; font-size: 1.22rem; }
+  .six.is-playing .six-round-progress {
+    min-height: 44px; padding: 8px 9px; font-size: .86rem;
+    letter-spacing: .02em; border-radius: 8px;
+  }
+  .six.is-playing .six-home { font-size: .67rem; }
+}
+

@@ -4,7 +4,7 @@ export function installInput(canvas,move,ping,ability) {
     if(e.ctrlKey||e.metaKey||e.altKey||['INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName))return;
     if(e.code==='Space'&&e.target?.tagName!=='BUTTON'){e.preventDefault();if(!e.repeat)ability();return;}
     const d=keys[e.key]??keys[e.key.toLowerCase()];
-    if(d){e.preventDefault();move(...d);}
+    if(d){e.preventDefault();if(!e.repeat)move(...d);}
   });
   document.querySelectorAll('[data-d]').forEach(b=>b.addEventListener('click',()=>move(...b.dataset.d.split(',').map(Number))));
   let start=null;
