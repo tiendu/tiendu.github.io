@@ -1,4 +1,5 @@
 import { JELLY_PALETTE, SIMULATION } from "./config.mjs";
+import { fluidSensitivityFor, oralArmBillowAt } from "./fluid.mjs";
 import { clamp, invLerp, lerp, mulberry32, range, rotate, smoothstep, TAU } from "./math.mjs";
 import { pulseEnvelope, pulseVelocity } from "./pulse.mjs";
 import { VerletChain } from "./physics.mjs";
@@ -154,13 +155,13 @@ export class Jellyfish {
         ? lerp(1.18, 0.94, armLengthBias) * range(random, 0.96, 1.04)
         : range(random, 0.43, expressiveTentacle ? 0.50 : 0.54),
       bendLimitStiffness: arm
-        ? lerp(0.20, 0.34, armLengthBias) * range(random, 0.95, 1.05)
+        ? lerp(0.18, 0.28, armLengthBias) * range(random, 0.95, 1.05)
         : range(random, 0.72, 0.84),
       maxTotalTurn: arm
         ? Math.PI * lerp(1.38, 1.08, armLengthBias) * range(random, 0.97, 1.03)
         : range(random, expressiveTentacle ? 2.48 : 2.42, expressiveTentacle ? 2.68 : 2.72),
       totalTurnStiffness: arm
-        ? lerp(0.18, 0.33, armLengthBias) * range(random, 0.95, 1.05)
+        ? lerp(0.14, 0.24, armLengthBias) * range(random, 0.95, 1.05)
         : range(random, 0.78, 0.88),
     });
     const item = {
@@ -272,28 +273,22 @@ export class Jellyfish {
   }
 
   #chainForce(item, anchor, ocean, time, x, y, along) {
-    // Oral arms keep a heavy root and a lively middle, while very long
-    // sheets ease off at the far tip so they form broad S-curves instead of
-    // turning back into cable-like hairpins.
     const armLengthBias = item.arm ? (item.lengthBias ?? 0) : 0;
-    const armTipForce = item.arm
-      ? item.forceScale * lerp(1, 0.84, armLengthBias)
-      : item.forceScale;
-    const sensitivity = item.arm
-      ? lerp(
-          0.14,
-          armTipForce,
-          Math.pow(along, lerp(1.55, 1.82, armLengthBias)),
-        )
-      : lerp(0.19, item.forceScale, along * along);
+    const sensitivity = fluidSensitivityFor(item, along);
     const localFlow = ocean.sample(x, y, time, sensitivity);
     const loosen = along * along;
+
+    // Wake motion stays broad and slow. The water field provides the fine
+    // variation; this term only preserves a readable trailing rhythm.
     const distalEase = item.arm
-      ? 1 - armLengthBias * smoothstep(invLerp(0.70, 1, along)) * 0.18
+      ? 1 - armLengthBias * smoothstep(invLerp(0.72, 1, along)) * 0.08
       : 1;
     const wake = Math.sin(
-      time * (item.arm ? 0.52 : 0.90) + item.phase + along * (item.arm ? 4.1 : 7.0),
-    ) * (item.arm ? 4.6 : 5.5) * loosen * this.anatomyScale * distalEase;
+      time * (item.arm ? 0.44 : 0.68)
+        + item.phase
+        + along * (item.arm ? 3.4 : 5.6),
+    ) * (item.arm ? 4.0 : 4.7) * loosen * this.anatomyScale * distalEase;
+    const billow = oralArmBillowAt(item, time, along, this.anatomyScale);
 
     // Thin tentacles keep a stable broad memory curve. Oral arms instead carry
     // that memory slowly downstream, so their whole body billows rather than
@@ -303,7 +298,7 @@ export class Jellyfish {
       * item.memoryStrength
       * smoothstep(along)
       * (0.30 + along * 0.50)
-      * (item.arm ? lerp(1, 0.90, armLengthBias * smoothstep(along)) : 1);
+      * (item.arm ? lerp(1, 0.96, armLengthBias * smoothstep(along)) : 1);
     const expressiveShape = item.expressiveTentacle
       ? Math.sin((along - 0.18) * Math.PI * 1.55 + item.memoryPhase * 0.18)
         * item.expressiveShape * Math.sin(Math.PI * along)
@@ -315,7 +310,15 @@ export class Jellyfish {
     const guard = this.#trailGuard(item, anchor, x, y, along);
 
     return {
-      x: localFlow.x + wake + memory + expressiveShape + tipHook + curl + guard.x,
+      x:
+        localFlow.x
+        + wake
+        + billow
+        + memory
+        + expressiveShape
+        + tipHook
+        + curl
+        + guard.x,
       y: localFlow.y + Math.max(0, -this.vy) * 0.66 * along + trailingBias + guard.y,
     };
   }
@@ -329,14 +332,28 @@ export class Jellyfish {
     );
     const riseAllowance = maxRise * (0.42 + along * 0.58);
     const sideAllowance = maxSide * (0.20 + Math.pow(along, 0.72) * 0.80);
-    const riseExcess = Math.max(0, anchor.y - y - riseAllowance);
+    const riseDelta = anchor.y - y;
     const sideDelta = x - anchor.x;
+    const riseRatio = Math.max(0, riseDelta) / Math.max(1, riseAllowance);
+    const sideRatio = Math.abs(sideDelta) / Math.max(1, sideAllowance);
+    const riseSoft = smoothstep(invLerp(0.72, 1.02, riseRatio));
+    const sideSoft = smoothstep(invLerp(0.74, 1.02, sideRatio));
+    const riseExcess = Math.max(0, riseDelta - riseAllowance);
     const sideExcess = Math.max(0, Math.abs(sideDelta) - sideAllowance);
+
+    // Apply resistance before the hard envelope. clipTrailEnvelope remains the
+    // emergency boundary, but normal motion should feel like water resistance
+    // rather than a chain suddenly hitting an invisible wall.
     return {
-      x: sideExcess > 0
-        ? -Math.sign(sideDelta) * Math.min(30, sideExcess * (item.arm ? 2.0 : 2.7))
-        : 0,
-      y: riseExcess > 0 ? Math.min(30, riseExcess * (item.arm ? 2.2 : 3.0)) : 0,
+      x:
+        -Math.sign(sideDelta)
+        * (
+          sideSoft * (item.arm ? 4.2 : 5.2)
+          + Math.min(24, sideExcess * (item.arm ? 1.7 : 2.2))
+        ),
+      y:
+        riseSoft * (item.arm ? 4.5 : 5.8)
+        + Math.min(24, riseExcess * (item.arm ? 1.9 : 2.5)),
     };
   }
 
@@ -422,7 +439,12 @@ export class Jellyfish {
           by,
           (x, y, along) => {
             const flow = ocean.sample(x, y, time, lerp(0.30, branch.forceScale, along * along));
-            const sideWave = branch.side * Math.sin(branch.phase + time * 0.62 + along * 8.4) * 5.4 * along * this.anatomyScale;
+            const sideWave =
+              branch.side
+              * Math.sin(branch.phase + time * 0.46 + along * 6.2)
+              * 4.5
+              * along
+              * this.anatomyScale;
             const branchLength = (branch.chain.count - 1) * branch.chain.segmentLength;
             const maxSide = Math.min(branchLength * 0.74, this.baseSize * 0.62);
             const riseAllowance = this.baseSize * 0.13 * (0.42 + along * 0.58);

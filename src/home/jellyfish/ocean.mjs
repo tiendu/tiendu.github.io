@@ -1,4 +1,5 @@
 import { ASCII } from "./config.mjs";
+import { ambientEddyAt } from "./fluid.mjs";
 import { clamp, range, smoothstep, TAU } from "./math.mjs";
 
 // Long-period current "weather". The signed horizontal carrier naturally
@@ -56,19 +57,22 @@ export class OceanField {
     const ny = y / this.height;
     const slow = time * 0.16;
     const weather = currentWeather(time);
+    const ambient = ambientEddyAt(nx, ny, time);
 
-    // The large-scale flow gives the scene a changing mood. Small local
-    // variations mean two points on the same tentacle do not receive exactly
-    // the same force, which is where much of the organic motion comes from.
+    // Macro weather sets direction; broad local eddies bend neighboring tissue
+    // differently; the weak ambient field prevents perfectly static calm.
+    // Amplitudes remain bounded so none of these layers overwhelms the others.
     let fx =
-      weather.x +
-      Math.sin(ny * 7.8 + slow * 1.2) * 7.2 +
-      Math.sin((nx + ny) * 5.4 - slow * 0.7) * 4.7 +
-      Math.cos(ny * 2.9 - slow * 0.31) * 3.2;
+      weather.x
+      + Math.sin(ny * 7.8 + slow * 1.2) * 6.4
+      + Math.sin((nx + ny) * 5.4 - slow * 0.7) * 4.1
+      + Math.cos(ny * 2.9 - slow * 0.31) * 2.8
+      + ambient.x;
     let fy =
-      weather.y +
-      Math.cos(nx * 7.1 - slow) * 3.8 +
-      Math.sin(nx * 3.4 - ny * 4.3 + slow * 0.66) * 2.9;
+      weather.y
+      + Math.cos(nx * 7.1 - slow) * 3.4
+      + Math.sin(nx * 3.4 - ny * 4.3 + slow * 0.66) * 2.6
+      + ambient.y;
 
     const p = this.pointer;
     if (p.strength > 0.002) {

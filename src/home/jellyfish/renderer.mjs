@@ -1,4 +1,5 @@
 import { ASCII } from "./config.mjs";
+import { ribbonSurfaceBreathAt } from "./fluid.mjs";
 import { clamp, invLerp, lerp, rotate, smoothstep, TAU } from "./math.mjs";
 
 function rgb(hex) {
@@ -405,35 +406,37 @@ export class AsciiRenderer {
     const taper = bodyTaper * tipTaper;
     const baseWidth = this.cellW * (item.width ?? 2.4) * foldEnvelope * taper * widthScale;
 
+    const surfaceBreath = ribbonSurfaceBreathAt(item, time, along);
     const motionRoll =
       motion.bend
         * (0.72 + along * 0.78)
-        * (1 - lengthBias * terminal * 0.28)
+        * (1 - lengthBias * terminal * 0.24)
       + Math.sin(time * 0.16 + (item.phase ?? 0) + along * 5.1)
         * motion.speed
         * 0.62
         * motionEnvelope
-        * (1 - lengthBias * terminal * 0.55);
+        * (1 - lengthBias * terminal * 0.32)
+      + surfaceBreath;
 
     // Long sheets twist normally near the root/middle, then stop accumulating
     // extra rotations toward the tip. The progress correction stays monotonic.
-    const twistRate = (item.twistRate ?? 3.4) * lerp(1, 0.82, lengthBias);
+    const twistRate = (item.twistRate ?? 3.4) * lerp(1, 0.88, lengthBias);
     const twistProgress =
-      along - lengthBias * 0.12 * smoothstep(invLerp(0.62, 1, along));
+      along - lengthBias * 0.08 * smoothstep(invLerp(0.62, 1, along));
     const twistAngle = (item.twistPhase ?? item.phase ?? 0)
       + twistProgress * twistRate * TAU
       + Math.sin(time * 0.10 + (item.phase ?? 0)) * 0.24
       + motionRoll;
     const face = Math.cos(twistAngle);
     const projected = baseWidth * (0.10 + Math.abs(face) * 0.90)
-      * (1 + motion.speed * lerp(0.12, 0.07, lengthBias) * motionEnvelope);
+      * (1 + motion.speed * lerp(0.12, 0.09, lengthBias) * motionEnvelope);
     const torsionOffset = Math.sin(twistAngle) * baseWidth * 0.24;
     const ruffleEnvelope = (0.24 + smoothstep(along) * 0.76)
-      * (1 + motion.speed * lerp(0.32, 0.20, lengthBias) * motionEnvelope)
-      * (1 - lengthBias * terminal * 0.48);
-    const leftRuffle = Math.sin((item.edgePhaseLeft ?? item.phase ?? 0) + along * 29.0 + time * 0.24)
+      * (1 + motion.speed * lerp(0.32, 0.23, lengthBias) * motionEnvelope)
+      * (1 - lengthBias * terminal * 0.30);
+    const leftRuffle = Math.sin((item.edgePhaseLeft ?? item.phase ?? 0) + along * 29.0 + time * 0.29)
       * this.cellW * (item.ruffleLeft ?? 1) * ruffleEnvelope;
-    const rightRuffle = Math.sin((item.edgePhaseRight ?? (item.phase ?? 0) + 1.7) + along * 33.0 - time * 0.21)
+    const rightRuffle = Math.sin((item.edgePhaseRight ?? (item.phase ?? 0) + 1.7) + along * 33.0 - time * 0.26)
       * this.cellW * (item.ruffleRight ?? 1) * ruffleEnvelope;
     return {
       baseWidth,

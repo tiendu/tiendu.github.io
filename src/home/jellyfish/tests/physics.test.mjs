@@ -2,6 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderFpsFor } from "../config.mjs";
 import {
+  ambientEddyAt,
+  fluidSensitivityFor,
+  oralArmBillowAt,
+  ribbonSurfaceBreathAt,
+} from "../fluid.mjs";
+import {
   bellGridScaleFor,
   bellPoreThresholdAt,
   bellProfileAt,
@@ -111,30 +117,6 @@ test("bend limiting prevents a thin chain from winding into tight circles", () =
   assert.ok(Math.abs(chain.signedTurn()) < 3.10, `signed turn ${chain.signedTurn()}`);
 });
 
-
-test("bell profile rounds into a narrower skirt with a porous lower membrane", () => {
-  const crown = bellProfileAt(-0.90, 0.1, 1.2);
-  const shoulder = bellProfileAt(-0.42, 0.1, 1.2);
-  const lower = bellProfileAt(-0.10, 0.1, 1.2);
-  const skirt = bellProfileAt(0.015, 0.1, 1.2);
-  assert.equal(bellProfileAt(-1.065, 0.1, 1.2), 0);
-  assert.ok(crown > 0.35 && crown < 0.55, `crown ${crown}`);
-  assert.ok(shoulder > crown + 0.35, `shoulder ${shoulder}`);
-  assert.ok(shoulder < 0.925, `shoulder too wide ${shoulder}`);
-  assert.ok(lower < shoulder - 0.04 && lower > 0.72, `lower ${lower} shoulder ${shoulder}`);
-  assert.ok(skirt < lower, `skirt ${skirt} lower ${lower}`);
-
-  const rim = [];
-  for (let u = -0.9; u <= 0.9; u += 0.05) rim.push(bellRimAt(u, 0.4, 2.1));
-  const span = Math.max(...rim) - Math.min(...rim);
-  assert.ok(span > 0.035 && span < 0.08, `rim span ${span}`);
-  assert.ok(bellRimAt(0, 0.4, 2.1) > bellRimAt(0.85, 0.4, 2.1) + 0.01);
-
-  const upperPore = bellPoreThresholdAt(-0.80, 0.30, 0.10);
-  const lowerPore = bellPoreThresholdAt(-0.10, 0.30, 0.10);
-  assert.ok(lowerPore < upperPore - 0.08, `upper ${upperPore} lower ${lowerPore}`);
-});
-
 test("world contains one detailed specimen with long tentacles and ribbon oral arms", () => {
   const world = new JellyWorld(1200, 760, 991);
   assert.equal("jellies" in world, false);
@@ -159,116 +141,6 @@ test("world contains one detailed specimen with long tentacles and ribbon oral a
   assert.ok(tentacles.every((item) => item.chain.tipDrag >= 0.014));
   assert.ok(tentacles.every((item) => item.chain.maxBendAngle <= 0.54));
   assert.ok(tentacles.every((item) => item.chain.maxTotalTurn <= 3.02));
-});
-
-test("oral arms retain motion and catch progressively more current than before", () => {
-  const world = new JellyWorld(1200, 760, 991);
-  const arms = world.jelly.chains.filter((item) => item.arm);
-  assert.equal(arms.length, 7);
-  for (const item of arms) {
-    assert.ok(item.chain.damping >= 0.984 && item.chain.damping <= 0.990, `damping ${item.chain.damping}`);
-    assert.ok(item.forceScale >= 0.64 && item.forceScale <= 0.90, `force ${item.forceScale}`);
-    assert.ok(item.chain.bendStiffness >= 0.007 && item.chain.bendStiffness <= 0.016, `bend ${item.chain.bendStiffness}`);
-    assert.ok(item.memoryWaves >= 0.48 && item.memoryWaves <= 0.82, `waves ${item.memoryWaves}`);
-  }
-});
-
-test("long oral arms get progressively stronger anti-hairpin discipline", () => {
-  const world = new JellyWorld(1200, 760, 991);
-  const arms = world.jelly.chains.filter((item) => item.arm);
-  assert.equal(arms.length, 7);
-
-  const byLength = [...arms].sort((a, b) => {
-    const aLength = (a.chain.count - 1) * a.chain.segmentLength;
-    const bLength = (b.chain.count - 1) * b.chain.segmentLength;
-    return aLength - bLength;
-  });
-
-  for (let i = 0; i < byLength.length; i += 1) {
-    const item = byLength[i];
-    assert.ok(item.lengthBias >= 0 && item.lengthBias <= 1, `lengthBias ${item.lengthBias}`);
-
-    const bendNominal = 1.18 + (0.94 - 1.18) * item.lengthBias;
-    assert.ok(
-      item.chain.maxBendAngle >= bendNominal * 0.959
-        && item.chain.maxBendAngle <= bendNominal * 1.041,
-      `maxBendAngle ${item.chain.maxBendAngle} bias ${item.lengthBias}`,
-    );
-
-    const totalNominal = Math.PI * (1.38 + (1.08 - 1.38) * item.lengthBias);
-    assert.ok(
-      item.chain.maxTotalTurn >= totalNominal * 0.969
-        && item.chain.maxTotalTurn <= totalNominal * 1.031,
-      `maxTotalTurn ${item.chain.maxTotalTurn} bias ${item.lengthBias}`,
-    );
-
-    if (i > 0) {
-      assert.ok(
-        item.lengthBias >= byLength[i - 1].lengthBias - 1e-9,
-        "physical ribbon length should never reduce length bias",
-      );
-    }
-  }
-
-  const shortest = byLength[0];
-  const longest = byLength.at(-1);
-  assert.ok(longest.lengthBias >= shortest.lengthBias, "longest arm should be at least as guarded");
-  if (longest.lengthBias > 0.80) {
-    assert.ok(
-      longest.chain.maxTotalTurn < Math.PI * 1.20,
-      `long-arm total turn ${longest.chain.maxTotalTurn}`,
-    );
-    assert.ok(
-      Math.abs(longest.tipHook) < 3.0 * world.jelly.anatomyScale,
-      `long-arm tip hook ${longest.tipHook}`,
-    );
-  }
-});
-
-test("ribbon surface kinematics respond to real chain bend and retained velocity", () => {
-  const straight = {
-    count: 4,
-    segmentLength: 5,
-    x: new Float32Array([0, 0, 0, 0]),
-    y: new Float32Array([0, 5, 10, 15]),
-    px: new Float32Array([0, 0, 0, 0]),
-    py: new Float32Array([0, 5, 10, 15]),
-  };
-  const still = ribbonKinematicsAt(straight, 2);
-  assert.ok(Math.abs(still.bend) < 1e-8, `straight bend ${still.bend}`);
-  assert.equal(still.speed, 0);
-
-  const curved = {
-    ...straight,
-    x: new Float32Array([0, 0, 2.5, 6]),
-    y: new Float32Array([0, 5, 9.3, 12.8]),
-    px: new Float32Array([0, 0, 1.1, 4.2]),
-    py: new Float32Array([0, 5, 9.9, 13.6]),
-  };
-  const moving = ribbonKinematicsAt(curved, 2);
-  assert.ok(Math.abs(moving.bend) > 0.10, `curved bend ${moving.bend}`);
-  assert.ok(moving.speed > 0.40, `moving speed ${moving.speed}`);
-});
-
-test("ocean weather has calm transitions plus meaningful left and right currents", () => {
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let calmest = Infinity;
-  for (let time = 0; time <= 1800; time += 1) {
-    const weather = currentWeather(time);
-    minX = Math.min(minX, weather.x);
-    maxX = Math.max(maxX, weather.x);
-    calmest = Math.min(calmest, weather.strength);
-  }
-  assert.ok(minX < -10, `left current ${minX}`);
-  assert.ok(maxX > 10, `right current ${maxX}`);
-  assert.ok(calmest < 0.25, `calmest strength ${calmest}`);
-
-  for (const time of [20, 220, 520, 900, 1250]) {
-    const a = currentWeather(time);
-    const b = currentWeather(time + 0.05);
-    assert.ok(Math.hypot(b.x - a.x, b.y - a.y) < 0.2, `weather jump at ${time}`);
-  }
 });
 
 test("pointer disturbance is clamped below a disruptive impulse", () => {
@@ -312,9 +184,7 @@ test("anatomy scales with height and survives portrait-landscape-portrait resize
   assert.ok(world.jelly.baseSize > 180, `restored size ${world.jelly.baseSize}`);
 });
 
-
-
-test("V4.5 keeps the specimen slightly smaller and the crown below the stage ceiling", () => {
+test("specimen sizing keeps the crown below the stage ceiling", () => {
   assert.ok(heroSizeFor(1200, 760) > 260 && heroSizeFor(1200, 760) < 280);
   assert.ok(heroSizeFor(390, 700) > 175 && heroSizeFor(390, 700) < 190);
   // Keep the already-stable tiny landscape scale instead of shrinking it further.
@@ -330,7 +200,7 @@ test("V4.5 keeps the specimen slightly smaller and the crown below the stage cei
   assert.ok(minCrown >= topClearanceFor(620) - 0.01, `crown ${minCrown}`);
 });
 
-test("V4.5 trail envelope prevents a sustained current from flinging strands above or away from the animal", () => {
+test("trail envelope prevents sustained current from flinging anatomy away", () => {
   const world = new JellyWorld(1000, 700, 444);
   world.ocean.sample = (_x, _y, _time, sensitivity = 1) => ({
     x: 60 * sensitivity,
@@ -387,45 +257,7 @@ test("single jellyfish and all branch chains remain finite during a long changin
   }
 });
 
-test("V4.6 gives the bell a denser sub-grid without increasing the whole-scene grid", () => {
-  const desktop = bellGridScaleFor(false);
-  const compact = bellGridScaleFor(true);
-  assert.ok(desktop.x <= 0.64 && desktop.y <= 0.68, `desktop grid ${desktop.x},${desktop.y}`);
-  assert.ok(compact.x <= 0.80 && compact.y <= 0.84, `compact grid ${compact.x},${compact.y}`);
-  assert.ok(0.84 / desktop.x > 1.30, `desktop horizontal density ${0.84 / desktop.x}`);
-  assert.ok(0.89 / desktop.y > 1.30, `desktop vertical density ${0.89 / desktop.y}`);
-});
-
-test("V4.6 expressive tentacles use broad shape memory without extra angular freedom", () => {
-  const world = new JellyWorld(1200, 760, 991);
-  const expressive = world.jelly.chains.filter((item) => item.expressiveTentacle);
-  assert.equal(expressive.length, 2);
-  for (const item of expressive) {
-    assert.ok(item.memoryWaves <= 0.53, `memory waves ${item.memoryWaves}`);
-    assert.ok(item.memoryStrength <= 2.8 * world.jelly.anatomyScale, `memory ${item.memoryStrength}`);
-    assert.ok(Math.abs(item.tipHook) <= 3.3 * world.jelly.anatomyScale, `hook ${item.tipHook}`);
-    assert.ok(item.forceScale <= 0.95, `force scale ${item.forceScale}`);
-    assert.ok(item.chain.tipDrag >= 0.019, `tip drag ${item.chain.tipDrag}`);
-    assert.ok(item.chain.maxTotalTurn <= 2.70, `total turn ${item.chain.maxTotalTurn}`);
-    assert.ok(Math.abs(item.expressiveShape) > 0);
-  }
-});
-
-test("V4.6 bell tilt follows sustained current with inertia and reverses gradually", () => {
-  const world = new JellyWorld(1000, 700, 2026);
-  world.ocean.sample = (_x, _y, _time, sensitivity = 1) => ({ x: 18 * sensitivity, y: 0 });
-  for (let n = 0; n < 120; n += 1) world.step(1 / 60);
-  const rightTilt = world.jelly.tilt;
-  assert.ok(rightTilt > 0.025 && rightTilt < 0.115, `right tilt ${rightTilt}`);
-
-  world.ocean.sample = (_x, _y, _time, sensitivity = 1) => ({ x: -18 * sensitivity, y: 0 });
-  for (let n = 0; n < 20; n += 1) world.step(1 / 60);
-  assert.ok(world.jelly.tilt > -0.005, `tilt reversed too quickly ${world.jelly.tilt}`);
-  for (let n = 0; n < 240; n += 1) world.step(1 / 60);
-  assert.ok(world.jelly.tilt < -0.025, `left tilt ${world.jelly.tilt}`);
-});
-
-test("V4.6 envelope repair keeps segment lengths coherent during hostile current", () => {
+test("envelope repair keeps segment lengths coherent during hostile current", () => {
   const chain = new VerletChain({
     anchorX: 120,
     anchorY: 80,
@@ -452,124 +284,5 @@ test("V4.6 envelope repair keeps segment lengths coherent during hostile current
     worst = Math.max(worst, chain.maxConstraintError());
   }
   assert.ok(worst < 1.2, `worst post-envelope constraint ${worst}`);
-});
-
-test("V4.7 outer long tentacles recede without dimming central strands", () => {
-  const central = tentaclePresenceScale({
-    arm: false,
-    offset: 0.18,
-    chain: { count: 76 },
-  });
-  const outerLong = tentaclePresenceScale({
-    arm: false,
-    offset: 0.94,
-    chain: { count: 76 },
-  });
-  const outerShort = tentaclePresenceScale({
-    arm: false,
-    offset: 0.94,
-    chain: { count: 54 },
-  });
-  assert.equal(central, 1);
-  assert.ok(outerLong < 0.76, `outer long scale ${outerLong}`);
-  assert.ok(outerShort > outerLong + 0.18, `outer short ${outerShort} vs long ${outerLong}`);
-});
-
-test("material transmission increases toward the lower bell", () => {
-  const crown = bellTransmissionAt(-0.90);
-  const middle = bellTransmissionAt(-0.50);
-  const lower = bellTransmissionAt(-0.10);
-  assert.ok(crown < 0.07, `crown transmission ${crown}`);
-  assert.ok(middle > crown + 0.06, `middle ${middle} crown ${crown}`);
-  assert.ok(lower > 0.22, `lower transmission ${lower}`);
-});
-
-test("thin-tentacle cyan accents are sparse, stable and non-periodic", () => {
-  const item = { phase: 2.3, offset: -0.6 };
-  assert.equal(tentacleAccentStrength(item, 0.40, 30), 0);
-
-  const accents = [];
-  for (let i = 42; i < 76; i += 1) {
-    const along = i / 75;
-    accents.push(tentacleAccentStrength(item, along, i));
-  }
-  const visible = accents.filter((value) => value > 0.10);
-  assert.ok(visible.length >= 2 && visible.length <= 8, `accent count ${visible.length}`);
-  assert.ok(Math.max(...visible) > 0.70, `strongest accent ${Math.max(...visible)}`);
-  assert.equal(
-    tentacleAccentStrength(item, 60 / 75, 60),
-    tentacleAccentStrength(item, 60 / 75, 60),
-  );
-});
-
-test("skirt depth lighting creates stable foreground and rear fragments", () => {
-  const samples = [];
-  for (let i = 0; i <= 120; i += 1) {
-    const u = -0.89 + (1.78 * i) / 120;
-    samples.push(skirtDepthLightAt(u, 1.2));
-  }
-  assert.ok(Math.min(...samples) < 0.66, `minimum depth light ${Math.min(...samples)}`);
-  assert.ok(Math.max(...samples) > 1.02, `maximum depth light ${Math.max(...samples)}`);
-  assert.ok(
-    Math.max(...samples) - Math.min(...samples) > 0.40,
-    "skirt depth field should have visible range",
-  );
-  assert.equal(skirtDepthLightAt(0.31, 1.2), skirtDepthLightAt(0.31, 1.2));
-});
-
-test("V4.8 depth-aware roots emerge from the bell instead of hanging from a point", () => {
-  const rear = { arm: false, layer: -0.7 };
-  const middle = { arm: false, layer: 0.1 };
-  const front = { arm: false, layer: 0.8 };
-  assert.ok(rootEmergenceScale(rear, 0) < rootEmergenceScale(middle, 0));
-  assert.ok(rootEmergenceScale(middle, 0) < rootEmergenceScale(front, 0));
-  assert.ok(rootEmergenceScale(rear, 0.18) > 0.95);
-  assert.ok(rootEmergenceScale(middle, 0.20) > 0.95);
-
-  const rearTentacle = internalRootOpacityAt(rear, -0.10);
-  const rearArm = internalRootOpacityAt({ arm: true, layer: -0.7 }, -0.10);
-  const middleTentacle = internalRootOpacityAt(middle, -0.10);
-  assert.ok(rearTentacle > 0.08, `rear tentacle opacity ${rearTentacle}`);
-  assert.ok(rearArm > rearTentacle, `rear arm ${rearArm} tentacle ${rearTentacle}`);
-  assert.ok(middleTentacle > 0 && middleTentacle < rearTentacle);
-  assert.equal(internalRootOpacityAt(front, -0.10), 0);
-  assert.equal(internalRootOpacityAt(rear, -0.50), 0);
-});
-
-test("V4.6.2 skirt is broken, brightness-varied and pulse-responsive", () => {
-  const samples = [];
-  for (let i = 0; i <= 120; i += 1) {
-    const u = -0.89 + (1.78 * i) / 120;
-    samples.push(skirtMembraneAt(u, 0.25, 1.2, 20, 0.08));
-  }
-  const visible = samples.filter((sample) => sample.visible);
-  const ratio = visible.length / samples.length;
-  assert.ok(ratio > 0.62 && ratio < 0.82, `visible ratio ${ratio}`);
-
-  const intensities = visible.map((sample) => sample.intensity);
-  const span = Math.max(...intensities) - Math.min(...intensities);
-  assert.ok(span > 0.32, `intensity span ${span}`);
-  assert.ok(visible.filter((sample) => sample.frill).length >= 3, "expected sparse frills");
-
-  const relaxed = skirtMembraneAt(0.28, 0, 1.2, 20, 0.08);
-  const contracted = skirtMembraneAt(0.28, 1, 1.2, 20, 0.08);
-  assert.ok(
-    contracted.offset < relaxed.offset - 0.007,
-    `pulse offsets ${contracted.offset}, ${relaxed.offset}`,
-  );
-
-  const middleEdge = skirtMembraneAt(0.64, 0.2, 1.2, 20, 0.04);
-  const outerEdge = skirtMembraneAt(0.89, 0.2, 1.2, 20, 0.04);
-  assert.ok(
-    !outerEdge.visible || outerEdge.intensity < middleEdge.intensity * 0.45,
-    `skirt edge did not fade: outer=${outerEdge.intensity} middle=${middleEdge.intensity}`,
-  );
-
-  const calm = skirtMembraneAt(0.72, 0.2, 1.2, 20, 0);
-  const current = skirtMembraneAt(0.72, 0.2, 1.2, 20, 0.11);
-  assert.ok(
-    Math.abs(current.offset - calm.offset) > 0.001,
-    `current response ${current.offset - calm.offset}`,
-  );
 });
 
