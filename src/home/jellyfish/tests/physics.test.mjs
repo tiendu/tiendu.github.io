@@ -8,6 +8,7 @@ import {
   bellRimAt,
   bellTransmissionAt,
   internalRootOpacityAt,
+  ribbonKinematicsAt,
   rootEmergenceScale,
   skirtDepthLightAt,
   skirtMembraneAt,
@@ -158,6 +159,43 @@ test("world contains one detailed specimen with long tentacles and ribbon oral a
   assert.ok(tentacles.every((item) => item.chain.tipDrag >= 0.014));
   assert.ok(tentacles.every((item) => item.chain.maxBendAngle <= 0.54));
   assert.ok(tentacles.every((item) => item.chain.maxTotalTurn <= 3.02));
+});
+
+test("oral arms retain motion and catch progressively more current than before", () => {
+  const world = new JellyWorld(1200, 760, 991);
+  const arms = world.jelly.chains.filter((item) => item.arm);
+  assert.equal(arms.length, 7);
+  for (const item of arms) {
+    assert.ok(item.chain.damping >= 0.984 && item.chain.damping <= 0.990, `damping ${item.chain.damping}`);
+    assert.ok(item.forceScale >= 0.64 && item.forceScale <= 0.90, `force ${item.forceScale}`);
+    assert.ok(item.chain.bendStiffness >= 0.007 && item.chain.bendStiffness <= 0.016, `bend ${item.chain.bendStiffness}`);
+    assert.ok(item.memoryWaves >= 0.48 && item.memoryWaves <= 0.82, `waves ${item.memoryWaves}`);
+  }
+});
+
+test("ribbon surface kinematics respond to real chain bend and retained velocity", () => {
+  const straight = {
+    count: 4,
+    segmentLength: 5,
+    x: new Float32Array([0, 0, 0, 0]),
+    y: new Float32Array([0, 5, 10, 15]),
+    px: new Float32Array([0, 0, 0, 0]),
+    py: new Float32Array([0, 5, 10, 15]),
+  };
+  const still = ribbonKinematicsAt(straight, 2);
+  assert.ok(Math.abs(still.bend) < 1e-8, `straight bend ${still.bend}`);
+  assert.equal(still.speed, 0);
+
+  const curved = {
+    ...straight,
+    x: new Float32Array([0, 0, 2.5, 6]),
+    y: new Float32Array([0, 5, 9.3, 12.8]),
+    px: new Float32Array([0, 0, 1.1, 4.2]),
+    py: new Float32Array([0, 5, 9.9, 13.6]),
+  };
+  const moving = ribbonKinematicsAt(curved, 2);
+  assert.ok(Math.abs(moving.bend) > 0.10, `curved bend ${moving.bend}`);
+  assert.ok(moving.speed > 0.40, `moving speed ${moving.speed}`);
 });
 
 test("ocean weather has calm transitions plus meaningful left and right currents", () => {

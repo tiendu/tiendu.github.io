@@ -83,7 +83,7 @@ export class Jellyfish {
       anchorY,
       segments: Math.round(range(random, 10, 18)),
       segmentLength: range(random, 4.4, 5.7) * this.anatomyScale,
-      damping: range(random, 0.981, 0.988),
+      damping: range(random, 0.985, 0.991),
       gravity: range(random, 7.0, 9.5),
       seed: this.seed + 700 + branchIndex * 23.7,
       bend: range(random, 0.5, 1.3) * side * this.anatomyScale,
@@ -100,7 +100,7 @@ export class Jellyfish {
       phase: range(random, 0, TAU),
       bright: parent.bright * range(random, 0.72, 0.95),
       layer: parent.layer + side * 0.08,
-      forceScale: parent.forceScale * range(random, 0.88, 1.12),
+      forceScale: parent.forceScale * range(random, 0.94, 1.16),
       twistRate: range(random, 1.6, 3.4),
       twistPhase: range(random, 0, TAU),
       ruffleLeft: range(random, 0.8, 1.45),
@@ -124,7 +124,7 @@ export class Jellyfish {
       anchorY: anchor.y,
       segments,
       segmentLength,
-      damping: arm ? range(random, 0.977, 0.986) : range(random, 0.9885, 0.9925),
+      damping: arm ? range(random, 0.984, 0.990) : range(random, 0.9885, 0.9925),
       gravity: arm ? range(random, 7.8, 10.6) : range(random, 13.5, 18.0),
       seed: this.seed + index * 13.17,
       bend: (arm
@@ -132,10 +132,10 @@ export class Jellyfish {
         : range(random, expressiveTentacle ? 0.30 : 0.18, expressiveTentacle ? 0.56 : 0.62)
           * (random() < 0.5 ? -1 : 1)) * this.anatomyScale,
       bendStiffness: arm
-        ? range(random, 0.012, 0.027)
+        ? range(random, 0.007, 0.016)
         : range(random, expressiveTentacle ? 0.008 : 0.010, expressiveTentacle ? 0.014 : 0.020),
       bendFrequency: arm
-        ? range(random, 0.65, 1.05)
+        ? range(random, 0.52, 0.88)
         : range(random, expressiveTentacle ? 0.36 : 0.62, expressiveTentacle ? 0.52 : 0.96),
       bendPhase: range(random, 0, TAU),
       tipDrag: arm
@@ -153,7 +153,7 @@ export class Jellyfish {
       layer,
       phase: range(random, 0, TAU),
       forceScale: arm
-        ? range(random, 0.52, 0.76)
+        ? range(random, 0.64, 0.90)
         : range(random, expressiveTentacle ? 0.72 : 0.82, expressiveTentacle ? 0.94 : 1.18),
       width: (arm ? range(random, 3.0, 5.15) : range(random, 0.70, 1.04)) * this.anatomyScale,
       curl: range(random, -1, 1),
@@ -161,7 +161,7 @@ export class Jellyfish {
       fray: range(random, 0.5, 1),
       memoryPhase: range(random, 0, TAU),
       memoryWaves: arm
-        ? range(random, 0.65, 1.1)
+        ? range(random, 0.48, 0.82)
         : range(random, expressiveTentacle ? 0.38 : 0.55, expressiveTentacle ? 0.52 : 0.84),
       memoryStrength: (arm
         ? range(random, 2.2, 4.5)
@@ -254,19 +254,23 @@ export class Jellyfish {
   }
 
   #chainForce(item, anchor, ocean, time, x, y, along) {
+    // Oral arms keep a heavy root but progressively catch more of the water
+    // through the middle and tip. This preserves attachment while allowing a
+    // broad delayed bow when the current changes direction.
     const sensitivity = item.arm
-      ? lerp(0.22, item.forceScale, along * along)
+      ? lerp(0.14, item.forceScale, Math.pow(along, 1.55))
       : lerp(0.19, item.forceScale, along * along);
     const localFlow = ocean.sample(x, y, time, sensitivity);
     const loosen = along * along;
     const wake = Math.sin(
-      time * (item.arm ? 0.66 : 0.90) + item.phase + along * (item.arm ? 5.0 : 7.0),
-    ) * (item.arm ? 3.4 : 5.5) * loosen * this.anatomyScale;
+      time * (item.arm ? 0.52 : 0.90) + item.phase + along * (item.arm ? 4.1 : 7.0),
+    ) * (item.arm ? 4.6 : 5.5) * loosen * this.anatomyScale;
 
-    // Curvature is deliberately gentle. V4 let the force field and chain
-    // memory reinforce each other until long tentacles could become lassos.
-    // V4.1 keeps only enough persistent shape for broad S-curves and hooks.
-    const memory = Math.sin(item.memoryPhase + along * item.memoryWaves * TAU)
+    // Thin tentacles keep a stable broad memory curve. Oral arms instead carry
+    // that memory slowly downstream, so their whole body billows rather than
+    // holding one leaf-like pose indefinitely.
+    const memoryPhase = item.memoryPhase + (item.arm ? time * 0.20 : 0);
+    const memory = Math.sin(memoryPhase + along * item.memoryWaves * TAU)
       * item.memoryStrength * smoothstep(along) * (0.30 + along * 0.50);
     const expressiveShape = item.expressiveTentacle
       ? Math.sin((along - 0.18) * Math.PI * 1.55 + item.memoryPhase * 0.18)
@@ -274,7 +278,7 @@ export class Jellyfish {
       : 0;
     const tip = smoothstep(clamp((along - 0.72) / 0.28, 0, 1));
     const tipHook = item.tipHook * tip * tip;
-    const curl = item.curl * Math.sin(along * Math.PI) * (item.arm ? 5.2 : 2.2) * this.anatomyScale;
+    const curl = item.curl * Math.sin(along * Math.PI) * (item.arm ? 4.3 : 2.2) * this.anatomyScale;
     const trailingBias = item.arm ? 0 : 3.8 * along * along * this.anatomyScale;
     const guard = this.#trailGuard(item, anchor, x, y, along);
 

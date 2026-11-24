@@ -202,6 +202,32 @@ export function skirtDepthLightAt(u, phase = 0) {
   return lerp(0.58, 1.08, smoothstep(normalized));
 }
 
+// Read motion from the actual Verlet chain instead of animating ribbon faces in
+// isolation. Bend rolls the sheet around its centerline; retained velocity lets
+// folds open a little as the broad tissue catches up with the water.
+export function ribbonKinematicsAt(chain, index) {
+  if (!chain || chain.count < 3) return { bend: 0, speed: 0 };
+  const i = Math.max(1, Math.min(chain.count - 2, index));
+  const ax = chain.x[i] - chain.x[i - 1];
+  const ay = chain.y[i] - chain.y[i - 1];
+  const bx = chain.x[i + 1] - chain.x[i];
+  const by = chain.y[i + 1] - chain.y[i];
+  const aLength = Math.hypot(ax, ay) || 1;
+  const bLength = Math.hypot(bx, by) || 1;
+  const cross = ax * by - ay * bx;
+  const dot = ax * bx + ay * by;
+  const bend = Math.atan2(cross, dot);
+
+  const vx = chain.x[i] - chain.px[i];
+  const vy = chain.y[i] - chain.py[i];
+  const speed = clamp(
+    Math.hypot(vx, vy) / Math.max(1, chain.segmentLength * 0.36),
+    0,
+    1,
+  );
+  return { bend, speed };
+}
+
 export class AsciiRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -357,17 +383,25 @@ export class AsciiRenderer {
     }
   }
 
-  #ribbonSample(item, along, time, widthScale = 1) {
+  #ribbonSample(item, along, time, widthScale = 1, motion = { bend: 0, speed: 0 }) {
+    const motionEnvelope = smoothstep(invLerp(0.08, 0.92, along));
     const foldEnvelope = 0.70 + 0.48 * Math.sin(Math.PI * clamp(along * 1.12, 0, 1));
     const taper = lerp(1, 0.28, along);
     const baseWidth = this.cellW * (item.width ?? 2.4) * foldEnvelope * taper * widthScale;
+    const motionRoll =
+      motion.bend * (0.72 + along * 0.78)
+      + Math.sin(time * 0.16 + (item.phase ?? 0) + along * 5.1)
+        * motion.speed * 0.62 * motionEnvelope;
     const twistAngle = (item.twistPhase ?? item.phase ?? 0)
       + along * (item.twistRate ?? 3.4) * TAU
-      + Math.sin(time * 0.10 + (item.phase ?? 0)) * 0.34;
+      + Math.sin(time * 0.10 + (item.phase ?? 0)) * 0.24
+      + motionRoll;
     const face = Math.cos(twistAngle);
-    const projected = baseWidth * (0.10 + Math.abs(face) * 0.90);
+    const projected = baseWidth * (0.10 + Math.abs(face) * 0.90)
+      * (1 + motion.speed * 0.12 * motionEnvelope);
     const torsionOffset = Math.sin(twistAngle) * baseWidth * 0.24;
-    const ruffleEnvelope = 0.24 + smoothstep(along) * 0.76;
+    const ruffleEnvelope = (0.24 + smoothstep(along) * 0.76)
+      * (1 + motion.speed * 0.32 * motionEnvelope);
     const leftRuffle = Math.sin((item.edgePhaseLeft ?? item.phase ?? 0) + along * 29.0 + time * 0.24)
       * this.cellW * (item.ruffleLeft ?? 1) * ruffleEnvelope;
     const rightRuffle = Math.sin((item.edgePhaseRight ?? (item.phase ?? 0) + 1.7) + along * 33.0 - time * 0.21)
@@ -391,7 +425,8 @@ export class AsciiRenderer {
     ctx.strokeStyle = `rgba(0, 2, 4, ${clamp(0.24 + (item.layer ?? 0) * 0.16, 0.22, 0.52)})`;
     for (let i = 2; i < chain.count - 1; i += 1) {
       const along = i / Math.max(1, chain.count - 2);
-      const geometry = this.#ribbonSample(item, along, time, widthScale);
+      const motion = ribbonKinematicsAt(chain, i);
+      const geometry = this.#ribbonSample(item, along, time, widthScale, motion);
       ctx.globalAlpha = rootEmergenceScale(item, along);
       ctx.lineWidth = Math.max(this.cellW * 1.4, geometry.projected * 1.45);
       ctx.beginPath();
@@ -438,7 +473,8 @@ export class AsciiRenderer {
         const along = clamp((i + t) / Math.max(1, chain.count - 1), 0, 1);
         const centerX = lerp(x0, x1, t);
         const centerY = lerp(y0, y1, t);
-        const g = this.#ribbonSample(item, along, time, widthScale);
+        const motion = ribbonKinematicsAt(chain, i);
+        const g = this.#ribbonSample(item, along, time, widthScale, motion);
         const leftOffset = g.torsionOffset + g.projected + g.leftRuffle;
         const rightOffset = g.torsionOffset - g.projected - g.rightRuffle;
         const leftX = centerX + nx * leftOffset;
