@@ -1,6 +1,6 @@
 # WISP — maze chase (development)
 
-The former forest runner has been retired. WISP is intentionally absent from the Games catalog until the replacement is playable. Visit `/games/wisp/` directly to review Phase 3. The direct page is public but marked noindex; this is not access control.
+The former forest runner has been retired. WISP is intentionally absent from the Games catalog until the replacement is playable. Visit `/games/wisp/` directly to review Phase 4. The direct page is public but marked noindex; this is not access control.
 
 ## Phase 1
 
@@ -26,8 +26,8 @@ The former forest runner has been retired. WISP is intentionally absent from the
 - Select a character, press Start, move with WASD/arrows, swipe, or direction
   buttons; tap/click to preview pings. Replay uses the same seed; New maze
   generates a new seed. Switching character resets the lab. Hidden tabs pause.
-- Roaming bots are temporary test actors, not strategic AI. Actual
-  tutorial/progression, mode scoring and networking are not implemented.
+- The arena is a single-round test lab. Actual tutorial/progression, mode
+  scoring and networking are not implemented.
 
 ## Phase 3 — abilities
 
@@ -60,12 +60,56 @@ its temporary cells do not mutate the original maze. Echo uses the original
 character appearance and does not collect resources or count toward a result.
 The simulation accepts ability intents with `step(state, characterIds)` in
 stable roster order; the renderer consumes status timers and transient events.
-The lab's roaming bots do not cast abilities yet; strategic bot decisions,
-including deception and ability selection, belong to Phase 4.
+The Phase 4 bots use the same direction and cast intents as humans.
 
 Parameters are initial tuning values, not final balance.
 
 Run `npm run test:wisp` and `npm run dev`.
+
+## Phase 4 — bots
+
+`core/navigation.mjs` builds small canonical-coordinate graphs, with independent
+Wisp and hunter traversal rules. BFS provides distance maps; weighted shortest
+paths let Wisps trade travel distance against visible danger. Lockdown and the
+portal affect the appropriate faction graph without changing maze geometry.
+
+`core/bots.mjs` is a deterministic intent planner. `createBotBrain(difficulty)`
+creates a JSON-serializable brain (memory and last observation); `planBots(state,
+brain)` returns direction/ability intents without changing round state. Apply
+those intents through `setDirection` and `step`. Save the brain alongside the
+round when replaying or resuming AI decisions. It never drives human-controlled
+characters. Bots obey the same collision, energy, speed, cooldown, and ability
+rules as players. No browser APIs or dependencies are used in the planner.
+
+- Wisps avoid danger, seek energy based on need, distance, value and teammate
+  competition, and route to the revealed portal. Orb and Hex can position for
+  a nearby teammate rescue when they have energy to spare. Urgent escapes favor shortest
+  routes; critical energy can justify a short refill detour. Recent cells and
+  reversal hysteresis help prevent oscillation.
+- Hunters distribute pursuit targets, predict motion, intercept escape routes,
+  and use character-specific tactics. Warden targets resources near prey;
+  Wanderer seeks useful wall shortcuts; Stalker checks the pursuit line.
+- All twelve abilities are usable by bots. Echo is considered as another
+  visible candidate, not excluded based on its owner. Opponent exact energy
+  and private ability readiness are not used in target selection. Ability
+  eligibility and aimed destinations reuse the existing simulation rules.
+- Easy, Normal and Hard differ in observation/reaction cadence (300/150/50 ms),
+  ability reconsideration, prediction, coordination and route scoring, not
+  stats. The tutorial toggle selects Easy and the normal maze selects Normal.
+  The lab difficulty selector resets the round, allowing manual comparison.
+- This is bounded, heuristic AI, not optimal adversarial search. Bot-vs-bot
+  balance is a diagnostic, not a measure of actual human difficulty.
+
+Optional deterministic balance probe (30 rounds per profile by default):
+
+```sh
+node src/games/wisp/tests/benchmark-bots.mjs 100
+```
+
+It reports escape distributions, elimination reasons, ability casts and mean
+headless tick time. Easy includes the tutorial maze/roster; Normal and Hard use
+standard rounds, so the three escape rates are not a controlled difficulty
+comparison. No browser, network, or assets are required.
 
 ## Backend retirement
 
@@ -73,4 +117,4 @@ The old runner server and its automated deployment have been removed. The Wrangl
 
 ## Next
 
-AI, solo progression, then authoritative multiplayer and team pings. Re-enable the Games entry only when playable.
+Solo progression, then authoritative multiplayer and team pings. Re-enable the Games entry only when playable.

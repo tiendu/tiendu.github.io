@@ -1,9 +1,9 @@
 import {WISPS,HUNTERS} from './core/characters.mjs';
-import {DIRS,rng,isOpen} from './core/maze.mjs';
+import {isOpen} from './core/maze.mjs';
 import {createRound,setDirection,step,secondsLeft} from './core/simulation.mjs';
 import {ABILITIES,abilityAvailability} from './core/abilities.mjs';
-import {STEP,RULES,HZ} from './core/config.mjs';
-import {centered} from './core/movement.mjs';
+import {STEP,HZ} from './core/config.mjs';
+import {createBotBrain,planBots} from './core/bots.mjs';
 import {direction} from './client/orientation.mjs';
 import {renderer} from './client/renderer.mjs';
 import {installInput} from './client/input.mjs';
@@ -12,7 +12,7 @@ const $=id=>document.getElementById(id);
 const canvas=$('board'), render=renderer(canvas), orientation=matchMedia('(orientation: landscape)');
 const freshSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
 let seed=freshSeed(), landscape=orientation.matches, tutorial=false, selected='Orb';
-let s, previous, ping, botRandom, pendingAbility=false, running=false, paused=false, accumulator=0, last=0;
+let s, previous, ping, brain, pendingAbility=false, running=false, paused=false, accumulator=0, last=0;
 for(const [id,roster] of [['wisps',WISPS],['hunters',HUNTERS]])for(const c of roster) {
   const b=document.createElement('button');b.innerHTML=`${characterSVG(c)}<span>${c.id}</span><small>${c.ability}</small>`;
   b.dataset.character=c.id;b.onclick=()=>{selected=c.id;if(selected==='Stalker')tutorial=false;reset();};$(id).append(b);
@@ -21,7 +21,7 @@ const local=()=>s.actors.find(a=>a.player==='local');
 const positions=()=>new Map([...s.actors,...s.decoys].map(a=>[a.id,{x:a.x,y:a.y,warp:a.warp}]));
 function reset() {
   s=createRound({seed,tutorial,humans:[{id:'local',character:selected}]});
-  previous=positions();botRandom=rng(seed^0x1212);ping=null;pendingAbility=false;running=false;paused=false;accumulator=0;
+  previous=positions();brain=createBotBrain($('difficulty').value);ping=null;pendingAbility=false;running=false;paused=false;accumulator=0;
   for(const b of document.querySelectorAll('[data-character]'))b.setAttribute('aria-pressed',String(b.dataset.character===selected));
   $('tutorial').setAttribute('aria-pressed',String(tutorial));$('seed').textContent=`Seed ${seed}`;
   updateHUD();
@@ -49,27 +49,18 @@ function updateHUD() {
   $('result').textContent=s.result?`${s.result.escaped} escaped · ${s.result.eliminated} eliminated`:'';
   $('start').textContent=s.phase==='finished'?'Replay':!running?'Start':paused?'Resume':'Pause';
 }
-// Temporary roaming opponents for the simulation lab, not the Phase 4 AI.
-function roam() {
-  for(const a of s.actors) {
-    if(a.player||a.status!=='active')continue;
-    // Buffer a turn just before the next center, not only on exact tick alignment.
-    const [vx,vy]=a.dir;
-    const x=centered(a)?Math.round(a.x):vx>0?Math.ceil(a.x):vx<0?Math.floor(a.x):Math.round(a.x);
-    const y=centered(a)?Math.round(a.y):vy>0?Math.ceil(a.y):vy<0?Math.floor(a.y):Math.round(a.y);
-    if(Math.abs(x-a.x)+Math.abs(y-a.y)>RULES.speed*STEP+1e-8)continue;
-    const options=DIRS.filter(([dx,dy])=>isOpen(s.board,x+dx,y+dy)&&!(a.faction==='hunter'&&s.portal?.x===x+dx&&s.portal?.y===y+dy)&&!(a.faction==='wisp'&&s.blocks.some(b=>b.x===x+dx&&b.y===y+dy)));
-    const forward=options.filter(d=>d[0]!==-a.dir[0]||d[1]!==-a.dir[1]);
-    const choices=forward.length?forward:options;
-    if(choices.length)setDirection(s,a.id,choices[Math.floor(botRandom()*choices.length)]);
-  }
-}
 function frame(now) {
   const elapsed=last?Math.min(.25,(now-last)/1000):0;last=now;
   if(running&&!paused&&s.phase!=='finished') {
     accumulator+=elapsed;
     while(accumulator>=STEP) {
-      previous=positions();roam();const cast=pendingAbility;pendingAbility=false;step(s,cast?[selected]:[]);accumulator-=STEP;
+      previous=positions();const cast=pendingAbility;pendingAbility=false;
+      const casts=cast?[selected]:[];
+      for(const intent of planBots(s,brain)) {
+        if(intent.direction)setDirection(s,intent.id,intent.direction);
+        if(intent.ability)casts.push(intent.id);
+      }
+      step(s,casts);accumulator-=STEP;
       if(cast||s.tick%5===0||s.phase==='finished')updateHUD();
       if(s.phase==='finished'){accumulator=0;previous=positions();break;}
     }
@@ -85,7 +76,8 @@ $('start').onclick=()=>{
 };
 $('new').onclick=()=>{seed=freshSeed();reset();};
 $('rotate').onclick=()=>{landscape=!landscape;};
-$('tutorial').onclick=()=>{tutorial=!tutorial;if(tutorial&&selected==='Stalker')selected='Orb';reset();};
+$('tutorial').onclick=()=>{tutorial=!tutorial;if(tutorial&&selected==='Stalker')selected='Orb';$('difficulty').value=tutorial?'easy':'normal';reset();};
+$('difficulty').onchange=()=>reset();
 orientation.addEventListener('change',e=>{landscape=e.matches;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&running&&s.phase!=='finished'){paused=true;pendingAbility=false;accumulator=0;previous=positions();updateHUD();}last=0;});
 function castAbility(){if(running&&!paused&&!abilityAvailability(s,local()))pendingAbility=true;}

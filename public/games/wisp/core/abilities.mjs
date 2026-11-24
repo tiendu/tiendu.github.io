@@ -71,6 +71,14 @@ function lockdownTarget(s,a) {
   if(cells.some(([u,v])=>!Number.isFinite(map[v][u])||degree(board,u,v)<2))return null;
   return {x,y};
 }
+// Read-only aimed cast validation, shared by bot planning and player casts.
+export function abilityTarget(s,a,direction) {
+  if(!cardinal(direction))return null;
+  const aimed={...a,wanted:direction};
+  if(a.id==='Prism'||a.id==='Wanderer')return phaseTarget(s,aimed);
+  if(a.id==='Interceptor')return lockdownTarget(s,aimed);
+  return null;
+}
 function pushHunter(s,a,h,amount) {
   const p=anchor(h);
   const old=point(h), oldDir=h.dir,oldWanted=h.wanted;
