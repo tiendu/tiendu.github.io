@@ -1,0 +1,118 @@
+html:has(.ascii-ocean-page),
+body:has(.ascii-ocean-page),
+body:has(.ascii-ocean-page) > .page-content {
+  background: #000204;
+  overflow: hidden;
+}
+
+/* The aquarium owns its own much subtler atmosphere. Do not stack the global
+   amber CRT scanlines over fine ASCII tissue. */
+body.system-interface:has(.ascii-ocean-page)::after {
+  display: none;
+}
+
+.ascii-ocean-page {
+  background: #000204;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+/* Keep the site's normal amber system chrome. The fluorescent palette is
+   reserved for the specimen inside the stage. */
+.ascii-ocean-page .system-topbar {
+  flex: 0 0 auto;
+}
+
+.ascii-ocean-stage {
+  background: #000204;
+  flex: 1 1 auto;
+  isolation: isolate;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.ascii-ocean-stage canvas {
+  cursor: crosshair;
+  display: block;
+  height: 100%;
+  inset: 0;
+  position: absolute;
+  touch-action: pan-x pan-y;
+  width: 100%;
+  z-index: 1;
+}
+
+.ascii-ocean-stage::before {
+  background: radial-gradient(
+    ellipse at 50% 43%,
+    transparent 34%,
+    rgb(0 0 0 / 11%) 68%,
+    rgb(0 0 0 / 38%) 100%
+  );
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.ascii-ocean-fallback {
+  color: #b99bdd;
+  font-family: var(--font-mono);
+  font-size: clamp(0.46rem, 1.02vw, 0.72rem);
+  left: 50%;
+  line-height: 1.03;
+  margin: 0;
+  position: absolute;
+  text-shadow:
+    0 0 7px rgb(196 113 208 / 24%),
+    0 0 14px rgb(90 91 185 / 13%);
+  top: 46%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.ascii-ocean-pause {
+  appearance: none;
+  background: rgb(5 3 1 / 68%);
+  border: 1px solid var(--system-line);
+  border-radius: 3px;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  color: var(--system-dim);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.11em;
+  min-height: 44px;
+  min-width: 66px;
+  opacity: 0.46;
+  padding: 0.45rem 0.65rem;
+  position: absolute;
+  right: max(0.75rem, env(safe-area-inset-right));
+  transition: border-color 120ms ease, color 120ms ease, opacity 120ms ease;
+  z-index: 4;
+}
+
+.ascii-ocean-pause:hover,
+.ascii-ocean-pause:focus-visible,
+.ascii-ocean-pause[aria-pressed="true"] {
+  border-color: var(--system-line-strong);
+  color: var(--system-bright);
+  opacity: 0.92;
+}
+
+@media (max-width: 560px), (max-height: 500px) {
+  .ascii-ocean-stage canvas { cursor: default; }
+  .ascii-ocean-fallback { font-size: clamp(0.31rem, 1.45vw, 0.52rem); }
+  .ascii-ocean-pause {
+    background: rgb(5 3 1 / 76%);
+    font-size: 0.64rem;
+    min-width: 62px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ascii-ocean-pause { display: none; }
+}

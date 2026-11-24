@@ -251,6 +251,42 @@ export class VerletChain {
     this.#limitVelocityHistory();
   }
 
+  clipTrailEnvelope(anchorX, anchorY, { maxRise, maxSide, maxDrop } = {}) {
+    const rise = Math.max(this.segmentLength * 1.5, maxRise ?? this.segmentLength * 4);
+    const side = Math.max(this.segmentLength * 3, maxSide ?? this.segmentLength * (this.count - 1) * 0.76);
+    const drop = Math.max(this.segmentLength * 4, maxDrop ?? this.segmentLength * (this.count - 1) * 1.05);
+
+    // Curvature limits cannot stop a nearly straight strand from being swept
+    // wholesale upward. This is a final safety envelope, not normal motion:
+    // position and Verlet history move together so clipping adds no velocity.
+    for (let i = 1; i < this.count; i += 1) {
+      const along = i / (this.count - 1);
+      const minY = anchorY - rise * (0.42 + along * 0.58);
+      if (this.y[i] < minY) {
+        const correction = minY - this.y[i];
+        this.y[i] += correction;
+        this.py[i] += correction;
+      }
+      const maxY = anchorY + drop * (0.12 + along * 0.88);
+      if (this.y[i] > maxY) {
+        const correction = this.y[i] - maxY;
+        this.y[i] -= correction;
+        this.py[i] -= correction;
+      }
+
+      const allowedSide = side * (0.20 + Math.pow(along, 0.72) * 0.80);
+      const dx = this.x[i] - anchorX;
+      if (Math.abs(dx) > allowedSide) {
+        const correction = (Math.abs(dx) - allowedSide) * Math.sign(dx);
+        this.x[i] -= correction;
+        this.px[i] -= correction;
+      }
+    }
+    this.x[0] = this.px[0] = anchorX;
+    this.y[0] = this.py[0] = anchorY;
+    this.#limitVelocityHistory();
+  }
+
   maxConstraintError() {
     let max = 0;
     for (let i = 0; i < this.count - 1; i += 1) {

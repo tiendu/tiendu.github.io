@@ -49,6 +49,52 @@ function lobeField(u, v) {
   return best;
 }
 
+// V4.4 bell material. The geometry stays broad enough to feel like the same
+// specimen, but the sides now keep curving all the way into the skirt instead
+// of settling into architectural side walls. The visual bell is also a little
+// narrower/taller than V4.3; tentacle roots still sit safely inside the rim.
+export function bellProfileAt(v, pulse = 0, phase = 0) {
+  if (v < -1.09 || v > 0.06) return 0;
+  const t = invLerp(-1.07, 0.035, v);
+  const topRound = smoothstep(invLerp(-1.09, -0.965, v));
+  const shoulderRise = smoothstep(invLerp(-1.055, -0.34, v));
+  const crown = topRound * (0.055 + 0.865 * Math.pow(shoulderRise, 0.39));
+  const shoulderSoftening = 1 - smoothstep(invLerp(0.58, 0.86, t)) * 0.028;
+  const lowerTuck = 1 - smoothstep(invLerp(0.64, 1, t)) * (0.105 + pulse * 0.026);
+  const organic = 1
+    + Math.sin(phase * 0.71 + v * 4.5) * 0.010
+    + Math.sin(phase * 1.29 - v * 8.4) * 0.0045;
+  return clamp(crown * shoulderSoftening * lowerTuck * organic, 0, 0.925);
+}
+
+export function bellRimAt(u, pulse = 0, phase = 0) {
+  const absU = Math.min(1, Math.abs(u));
+  const sideFade = 0.42 + (1 - absU) * 0.58;
+  // A shallow underbelly makes the lower membrane visibly organic even before
+  // the local scallops are added. The center hangs slightly lower than sides.
+  const underbelly = 0.010 + (1 - absU * absU) * (0.020 + pulse * 0.004);
+  const broad = Math.sin((u + 1) * Math.PI * 5.55 + phase * 0.80)
+    * (0.021 + pulse * 0.007) * sideFade;
+  const fine = Math.sin((u + 1) * Math.PI * 13.1 + phase * 1.41) * 0.0057 * sideFade;
+  const irregular = Math.sin((u + 0.29) * Math.PI * 2.7 - phase * 0.48) * 0.0041;
+  return underbelly + broad + fine + irregular;
+}
+
+export function bellPoreThresholdAt(v, tissueDensity = 0.4, crownGlow = 0) {
+  const lowerThird = smoothstep(invLerp(-0.42, 0.035, v));
+  // Lower values mean more cells become true holes. The lower third is the most
+  // transparent so oral-arm tissue can visibly sit behind the membrane.
+  return clamp(0.49 + tissueDensity * 0.27 + crownGlow * 0.055 - lowerThird * 0.14, 0.37, 0.78);
+}
+
+function bellCenterShift(v, phase, halfW) {
+  const t = invLerp(-1, 0, v);
+  return halfW * (
+    Math.sin(phase * 0.91 + v * 3.4) * 0.011
+    + Math.sin(phase * 1.47 - v * 7.2) * 0.0045
+  ) * smoothstep(t);
+}
+
 export class AsciiRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -92,29 +138,36 @@ export class AsciiRenderer {
     ctx.fillStyle = "#000204";
     ctx.fillRect(0, 0, this.width, this.height);
 
-    // A restrained halo gives translucent ASCII enough separation from true
-    // black without turning the page into an aquarium backdrop.
+    // Keep fluorescence around the animal but make the halo small enough that
+    // the eye sees light, not the boundary of a giant violet ellipse.
     const glow = ctx.createRadialGradient(
       jelly.x,
-      jelly.y + jelly.bellHeight() * 0.65,
+      jelly.y + jelly.bellHeight() * 0.28,
       0,
       jelly.x,
-      jelly.y + jelly.bellHeight() * 1.45,
-      Math.max(jelly.baseSize * 2.3, 280),
+      jelly.y + jelly.bellHeight() * 0.58,
+      Math.max(jelly.baseSize * 1.72, 210),
     );
-    glow.addColorStop(0, "rgba(94,72,190,0.105)");
-    glow.addColorStop(0.36, "rgba(48,45,130,0.060)");
-    glow.addColorStop(0.72, "rgba(16,28,54,0.025)");
+    glow.addColorStop(0, "rgba(117,82,207,0.075)");
+    glow.addColorStop(0.42, "rgba(62,46,145,0.038)");
+    glow.addColorStop(0.76, "rgba(25,24,70,0.014)");
     glow.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, this.width, this.height);
 
-    // Barely visible slow luminance breathing around the bell.
     ctx.save();
-    ctx.globalAlpha = 0.018 + (Math.sin(time * 0.19) * 0.5 + 0.5) * 0.010;
-    ctx.fillStyle = "#ff7dca";
+    ctx.globalAlpha = 0.010 + (Math.sin(time * 0.19) * 0.5 + 0.5) * 0.007;
+    ctx.fillStyle = "#ff72c8";
     ctx.beginPath();
-    ctx.ellipse(jelly.x, jelly.y - jelly.bellHeight() * 0.35, jelly.bellWidth() * 0.62, jelly.bellHeight() * 0.78, jelly.tilt, 0, TAU);
+    ctx.ellipse(
+      jelly.x,
+      jelly.y - jelly.bellHeight() * 0.37,
+      jelly.bellWidth() * 0.49,
+      jelly.bellHeight() * 0.63,
+      jelly.tilt,
+      0,
+      TAU,
+    );
     ctx.fill();
     ctx.restore();
   }
@@ -343,85 +396,146 @@ export class AsciiRenderer {
     const width = jelly.bellWidth();
     const height = jelly.bellHeight();
     const halfW = width * 0.5;
-    const cellW = this.cellW;
-    const cellH = this.cellH;
+
+    const cellW = this.cellW * (this.compact ? 0.96 : 0.84);
+    const cellH = this.cellH * (this.compact ? 0.98 : 0.89);
+    const bellFont = cellH * 0.97;
     const xMin = jelly.x - halfW - cellW * 2;
     const xMax = jelly.x + halfW + cellW * 2;
-    const yMin = jelly.y - height - cellH;
+    const yMin = jelly.y - height * 1.10 - cellH;
     const yMax = jelly.y + height * 0.105 + cellH;
     const startX = Math.floor(xMin / cellW) * cellW + cellW * 0.5;
     const startY = Math.floor(yMin / cellH) * cellH + cellH * 0.5;
 
-    ctx.shadowColor = rgba(jelly.palette.rim, 0.28);
-    ctx.shadowBlur = 1.2 * this.shadowScale;
+    this.#setFont(bellFont);
+    ctx.shadowColor = rgba(jelly.palette.rim, 0.24);
+    ctx.shadowBlur = 1.0 * this.shadowScale;
 
     for (let py = startY; py <= yMax; py += cellH) {
       for (let px = startX; px <= xMax; px += cellW) {
-        const local = rotate(px - jelly.x, py - jelly.y, -jelly.tilt);
-        const u = local.x / halfW;
-        const v = local.y / height;
-        const ellipse = u * u + ((v + 0.018) / 1.018) ** 2;
-        const insideDome = v <= 0.018 && v >= -1.03 && ellipse <= 1;
-        const scallop = 0.028 + Math.sin((u + 1) * Math.PI * 8 + jelly.twist) * 0.018
-          + Math.sin((u + 1) * Math.PI * 15 + jelly.anatomyPhase) * 0.006;
-        const insideSkirt = Math.abs(u) <= 0.95 && v > -0.025 && v <= scallop;
+        const raw = rotate(px - jelly.x, py - jelly.y, -jelly.tilt);
+        const v = raw.y / height;
+        if (v < -1.09 || v > 0.095) continue;
+        const shift = bellCenterShift(v, jelly.anatomyPhase, halfW);
+        const u = (raw.x - shift) / halfW;
+        const absU = Math.abs(u);
+        const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
+        const rimV = bellRimAt(u, jelly.pulse, jelly.twist);
+        const insideDome = v <= 0.020 && profile > 0 && absU <= profile;
+        const insideSkirt = absU <= 0.90 && v > -0.026 && v <= rimV;
         if (!insideDome && !insideSkirt) continue;
 
-        const radial = Math.sqrt(Math.max(0, ellipse));
-        const edgeDistance = insideDome ? 1 - radial : clamp((scallop - v) / 0.07, 0, 1);
-        const boundary = insideDome && edgeDistance < 0.034;
-        const lowerEdge = insideSkirt && v > scallop - 0.010;
-        const angle = Math.atan2(u * 0.98, -(v + 0.02));
-        const warmZone = smoothstep(invLerp(-0.16, -0.94, v));
-        const underside = smoothstep(invLerp(-0.34, 0.02, v));
-        const centerGlow = Math.max(0, 1 - Math.abs(u) * 0.90) * Math.max(0, 1 - Math.abs(v + 0.42) * 0.96);
-        const grain = 0.5 + 0.5 * Math.sin(u * 29 + v * 21 + jelly.anatomyPhase)
-          * Math.cos(u * 13 - v * 37 + jelly.twist);
-        const veinA = Math.abs(Math.sin(angle * 9.0 + jelly.anatomyPhase + v * 1.9)) < (0.115 + warmZone * 0.035);
-        const veinB = Math.abs(Math.sin(angle * 18.0 + jelly.twist - v * 2.4)) < 0.045 && v < -0.18;
-        const ringCanal = Math.abs(radial - 0.69) < 0.014 || Math.abs(radial - 0.46) < 0.010;
+        const t = invLerp(-1.07, 0.035, v);
+        const profileGap = profile > 0 ? profile - absU : 0;
+        const boundaryThreshold = Math.max(0.009, (cellW / Math.max(1, halfW)) * 1.16);
+        const boundary = insideDome && profileGap >= 0 && profileGap < boundaryThreshold;
+        const lowerEdge = insideSkirt && v > rimV - Math.max(0.008, cellH / height * 0.62);
+        const membraneDepth = insideDome
+          ? clamp(profileGap / Math.max(0.075, profile * 0.68), 0, 1)
+          : clamp((rimV - v) / 0.068, 0, 1);
+
+        const crownDistance = Math.hypot(u / 0.46, (v + 0.78) / 0.30);
+        const crownGlow = 1 - smoothstep(invLerp(0.18, 1.04, crownDistance));
+        const warmZone = 1 - smoothstep(invLerp(-0.66, -0.19, v));
+        const coolZone = smoothstep(invLerp(-0.45, 0.035, v));
+        const lowerGlass = smoothstep(invLerp(-0.46, 0.025, v));
+        const centerGlass = Math.max(0, 1 - Math.abs(u) / Math.max(0.17, profile))
+          * (0.28 + 0.72 * Math.sin(Math.PI * clamp(t, 0, 1)));
+
+        const theta = Math.atan2(u * 0.93, -(v + 1.055));
+        const canalPrimary = Math.abs(Math.sin(theta * 6.5 + jelly.anatomyPhase + t * 1.31))
+          < (0.057 + t * 0.017)
+          && t > 0.08 && t < 0.82;
+        const canalFine = Math.abs(Math.sin(theta * 12.7 - jelly.twist * 0.57 - t * 1.73)) < 0.022
+          && t > 0.14 && t < 0.68;
+        const flamePhase = u * 11.7 + t * 3.4
+          + Math.sin(t * 7.4 + jelly.anatomyPhase) * 0.44
+          + jelly.twist * 0.31;
+        const flameStreak = t > 0.09 && t < 0.60
+          && Math.abs(Math.sin(flamePhase)) < (0.075 + (1 - t) * 0.018);
+
+        // Only tiny broken arc remnants remain. V4.3's full rings were one of
+        // the things making the bell look engineered rather than gelatinous.
+        const arcBand = Math.abs(t - (0.60 + Math.sin(u * 4.9 + jelly.anatomyPhase) * 0.010)) < 0.006;
+        const arcFragment = arcBand && Math.sin(u * 24 + jelly.twist) > 0.52;
+
         const lobeDistance = lobeField(u, v);
         const lobe = lobeDistance < 1;
-        const lobeEdge = lobeDistance > 0.62 && lobeDistance < 1.04;
-        const pulseGlow = jelly.pulse * smoothstep(invLerp(-0.50, 0.02, v));
-        const density = clamp(
-          0.13 + edgeDistance * 0.46 + centerGlow * 0.15 + grain * 0.13 + pulseGlow * 0.12
-            + (veinA ? 0.10 : 0) + (ringCanal ? 0.10 : 0) + (lobe ? 0.08 : 0),
-          0.045,
-          0.96,
+        const lobeEdge = lobeDistance > 0.66 && lobeDistance < 1.025;
+        const pulseGlow = jelly.pulse * smoothstep(invLerp(-0.44, 0.02, v));
+
+        const grainA = 0.5 + 0.5 * Math.sin(u * 29 + v * 19 + jelly.anatomyPhase)
+          * Math.cos(u * 15 - v * 35 + jelly.twist);
+        const grainB = 0.5 + 0.5 * Math.sin(u * 61 - v * 47 + jelly.twist * 0.7)
+          * Math.cos(u * 41 + v * 31 - jelly.anatomyPhase * 1.3);
+
+        // V4.4 deliberately has less membrane ink. Bright anatomy should appear
+        // suspended inside a transparent envelope, not printed onto a wall.
+        const tissueDensity = clamp(
+          0.040
+          + membraneDepth * 0.215
+          + crownGlow * 0.19
+          + centerGlass * 0.045
+          + grainA * 0.070
+          + pulseGlow * 0.050
+          + (canalPrimary ? 0.095 : 0)
+          + (lobe ? 0.045 : 0),
+          0.020,
+          0.83,
         );
+
+        const structural = boundary || lowerEdge || canalPrimary || canalFine || flameStreak || arcFragment || lobeEdge;
+        if (!structural && grainB > bellPoreThresholdAt(v, tissueDensity, crownGlow)) continue;
 
         let glyph;
         let color;
-        let alpha = 0.52 + density * 0.34;
+        const alpha = (0.23 + tissueDensity * 0.42) * lerp(1, 0.78, lowerGlass);
 
         if (boundary) {
-          const nx = u;
-          const ny = (v + 0.018) / 1.018;
-          glyph = directionGlyph(-ny, nx);
-          color = mixColor(jelly.palette.bellSoft, jelly.palette.rimHot, underside * 0.62, 0.94);
+          const probe = 0.012;
+          const upper = bellProfileAt(v - probe, jelly.pulse, jelly.anatomyPhase);
+          const lower = bellProfileAt(v + probe, jelly.pulse, jelly.anatomyPhase);
+          const dWidth = (lower - upper) / (probe * 2);
+          const side = u < 0 ? -1 : 1;
+          glyph = directionGlyph(side * dWidth, 1);
+          const lowerMix = smoothstep(invLerp(-0.48, 0.02, v));
+          color = lowerMix > 0.44
+            ? mixColor(jelly.palette.bellGlass, jelly.palette.rimHot, lowerMix, 0.82)
+            : mixColor(jelly.palette.bellCrown, jelly.palette.bellSoft, t * 0.74, 0.80);
         } else if (lowerEdge) {
-          glyph = Math.abs(Math.sin(u * Math.PI * 8 + jelly.twist)) > 0.62 ? "_" : "~";
-          color = rgba(jelly.palette.rimHot, 0.96);
+          const slopeProbe = 0.012;
+          const dy = bellRimAt(clamp(u + slopeProbe, -1, 1), jelly.pulse, jelly.twist)
+            - bellRimAt(clamp(u - slopeProbe, -1, 1), jelly.pulse, jelly.twist);
+          glyph = directionGlyph(slopeProbe * 2, dy * height / Math.max(1, halfW));
+          color = rgba(jelly.palette.rimHot, 0.92);
         } else if (lobeEdge) {
-          glyph = densityGlyph(0.52 + (1 - lobeDistance) * 0.22, ASCII.tissue);
-          color = mixColor(jelly.palette.bellCool, jelly.palette.armHot, 0.44, 0.82);
-        } else if (ringCanal) {
-          glyph = Math.abs(u) > 0.72 ? "." : "-";
-          color = mixColor(jelly.palette.rim, jelly.palette.rimHot, 0.35 + pulseGlow * 0.5, 0.78);
-        } else if (veinA || veinB) {
-          glyph = directionGlyph(Math.sin(angle), -Math.cos(angle));
-          const hot = veinB ? 0.48 : 0.72;
-          color = mixColor(jelly.palette.bellWarm, jelly.palette.bellHot, hot, 0.76 + warmZone * 0.14);
+          glyph = densityGlyph(0.40 + (1 - lobeDistance) * 0.20, ASCII.tissue);
+          color = mixColor(jelly.palette.bellCool, jelly.palette.armHot, 0.42, 0.56);
+        } else if (arcFragment) {
+          glyph = ".";
+          color = mixColor(jelly.palette.bellCoral, jelly.palette.rimHot, 0.35, 0.38);
+        } else if (flameStreak) {
+          glyph = Math.abs(u) < 0.17 ? "|" : (u < 0 ? "/" : "\\");
+          color = mixColor(jelly.palette.bellCoral, jelly.palette.bellHot, 0.60 + crownGlow * 0.32, 0.84 + crownGlow * 0.10);
+        } else if (canalPrimary || canalFine) {
+          const radialDx = Math.sin(theta);
+          const radialDy = -Math.cos(theta);
+          glyph = directionGlyph(radialDx, radialDy);
+          const canalHeat = clamp(crownGlow * 0.60 + warmZone * 0.36 + (canalFine ? 0.06 : 0.18), 0, 1);
+          color = canalFine
+            ? mixColor(jelly.palette.bellSoft, jelly.palette.bellCoral, canalHeat, 0.48)
+            : mixColor(jelly.palette.bellCoral, jelly.palette.bellHot, canalHeat, 0.75 + crownGlow * 0.16);
         } else {
-          glyph = densityGlyph(density, ASCII.tissue);
-          if (underside > 0.58) {
-            color = mixColor(jelly.palette.bellCool, jelly.palette.rim, underside * 0.48 + grain * 0.10, alpha);
-          } else if (warmZone > 0.24) {
-            const warmth = clamp(0.50 + warmZone * 0.43 + grain * 0.10, 0, 0.98);
-            color = mixColor(jelly.palette.bellSoft, jelly.palette.bellWarm, warmth, alpha);
+          glyph = densityGlyph(tissueDensity, ASCII.tissue);
+          if (crownGlow > 0.23) {
+            color = mixColor(jelly.palette.bellWarm, jelly.palette.bellCrown, 0.42 + crownGlow * 0.52, alpha + 0.09);
+          } else if (warmZone > 0.25 && coolZone < 0.58) {
+            const coral = clamp(0.22 + t * 0.40 + grainA * 0.11, 0, 0.84);
+            color = mixColor(jelly.palette.bellGlass, jelly.palette.bellCoral, coral, alpha);
+          } else if (coolZone > 0.42) {
+            color = mixColor(jelly.palette.bellCool, jelly.palette.rim, coolZone * 0.34 + grainA * 0.06, alpha);
           } else {
-            color = mixColor(jelly.palette.bellShadow, jelly.palette.bellSoft, 0.50 + centerGlow * 0.36, alpha);
+            color = mixColor(jelly.palette.bellShadow, jelly.palette.bellSoft, 0.40 + centerGlass * 0.30, alpha);
           }
         }
 
@@ -430,58 +544,118 @@ export class AsciiRenderer {
       }
     }
 
-    // Layered scalloped skirt: three close text bands make the rim feel thick,
-    // folded and luminous rather than a single vector-like curve.
-    const steps = Math.max(34, Math.floor((halfW * 1.88) / (cellW * 0.72)));
-    for (let row = 0; row < 3; row += 1) {
-      const rowAlpha = [0.92, 0.62, 0.34][row];
-      const rowOffset = row * cellH * 0.52;
-      ctx.fillStyle = rgba(row === 0 ? jelly.palette.rimHot : jelly.palette.rim, rowAlpha);
-      ctx.shadowBlur = (row === 0 ? 2.4 : 1.2) * this.shadowScale;
-      for (let i = 0; i <= steps; i += 1) {
-        const t = i / steps;
-        const x = lerp(-halfW * 0.93, halfW * 0.93, t);
-        const wave = Math.sin(t * Math.PI * 8 + jelly.twist) * height * 0.022
-          + Math.sin(t * Math.PI * 17 + jelly.anatomyPhase) * height * 0.006;
-        const local = rotate(x, height * 0.026 + wave + rowOffset, jelly.tilt);
-        const glyph = i % 7 === 0 ? "_" : i % 3 === 0 ? "~" : ".";
-        ctx.fillText(glyph, jelly.x + local.x, jelly.y + local.y);
+    // Irregular internal canals. Each one has its own start/end, wander and
+    // occasional fork so the anatomy cannot be read as evenly spaced spokes.
+    ctx.shadowColor = rgba(jelly.palette.bellHot, 0.36);
+    ctx.shadowBlur = 1.8 * this.shadowScale;
+    const rays = [
+      { x: -0.82, start: -0.88, end: -0.23, bend: 0.020 },
+      { x: -0.62, start: -0.91, end: -0.38, bend: -0.015, fork: -0.49 },
+      { x: -0.44, start: -0.84, end: -0.18, bend: 0.026 },
+      { x: -0.23, start: -0.94, end: -0.31, bend: -0.020 },
+      { x: -0.07, start: -0.90, end: -0.13, bend: 0.012, fork: -0.43 },
+      { x: 0.16, start: -0.86, end: -0.26, bend: -0.018 },
+      { x: 0.36, start: -0.93, end: -0.35, bend: 0.024 },
+      { x: 0.57, start: -0.85, end: -0.17, bend: -0.014, fork: -0.45 },
+      { x: 0.79, start: -0.90, end: -0.30, bend: 0.018 },
+    ];
+    const drawCanal = (ray, rayIndex, branchOffset = 0, branchStart = null) => {
+      const steps = 17;
+      let previous = null;
+      for (let step = 0; step <= steps; step += 1) {
+        const q = step / steps;
+        const v = lerp(branchStart ?? ray.start, ray.end, q);
+        if ((step + rayIndex * 3 + (branchOffset ? 2 : 0)) % 8 === 0 && step > 2) {
+          previous = null;
+          continue;
+        }
+        const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
+        const progress = invLerp(ray.start, ray.end, v);
+        const spread = lerp(0.24, 0.94, clamp(progress, 0, 1));
+        const wander = Math.sin(q * (5.4 + rayIndex * 0.17) + rayIndex * 1.33 + jelly.anatomyPhase)
+          * (0.012 + Math.abs(ray.bend) * 0.36);
+        const u = (ray.x + ray.bend * q * q + wander + branchOffset * smoothstep(q)) * profile * spread;
+        const shift = bellCenterShift(v, jelly.anatomyPhase, halfW);
+        const local = rotate(u * halfW + shift, v * height, jelly.tilt);
+        const point = { x: jelly.x + local.x, y: jelly.y + local.y };
+        if (previous) {
+          const dx = point.x - previous.x;
+          const dy = point.y - previous.y;
+          const fade = 1 - smoothstep(invLerp(0.62, 1, q));
+          ctx.fillStyle = mixColor(
+            jelly.palette.bellCoral,
+            jelly.palette.bellHot,
+            0.30 + (1 - q) * 0.58,
+            (branchOffset ? 0.30 : 0.44) * (0.62 + fade * 0.38),
+          );
+          ctx.fillText(directionGlyph(dx, dy), point.x, point.y);
+        }
+        previous = point;
+      }
+    };
+    for (let rayIndex = 0; rayIndex < rays.length; rayIndex += 1) {
+      const ray = rays[rayIndex];
+      drawCanal(ray, rayIndex);
+      if (ray.fork != null) {
+        const side = rayIndex % 2 === 0 ? 1 : -1;
+        drawCanal(ray, rayIndex, side * 0.075, ray.fork);
       }
     }
 
-    // Inner subumbrella/mouth structure just below the rim. This bridges the
-    // detailed bell into the oral-arm mass so the animal does not look like a
-    // dome with strings glued on.
-    ctx.shadowBlur = 1.4 * this.shadowScale;
-    for (let row = 0; row < 13; row += 1) {
-      const y = jelly.y + height * 0.045 + row * cellH * 0.72;
-      const taper = lerp(0.34, 0.18, row / 12);
-      const half = halfW * taper * (0.88 + 0.12 * Math.sin(row * 1.3 + jelly.twist));
-      for (let x = -half; x <= half; x += cellW * 1.05) {
-        const hole = Math.sin(x * 0.17 + row * 2.7 + jelly.anatomyPhase) > 0.82;
-        if (hole && row > 2) continue;
+    // Thin two-layer skirt. The underbelly curve comes from bellRimAt itself;
+    // local scallops merely fray the fluorescent membrane rather than drawing
+    // a ruler-straight baseline across the creature.
+    const steps = Math.max(36, Math.floor((halfW * 1.80) / (cellW * 0.72)));
+    for (let row = 0; row < 2; row += 1) {
+      const rowAlpha = row === 0 ? 0.90 : 0.36;
+      const rowOffset = row * cellH * 0.38;
+      ctx.fillStyle = rgba(row === 0 ? jelly.palette.rimHot : jelly.palette.rim, rowAlpha);
+      ctx.shadowColor = rgba(jelly.palette.rim, 0.36);
+      ctx.shadowBlur = (row === 0 ? 2.2 : 1.0) * this.shadowScale;
+      for (let i = 0; i <= steps; i += 1) {
+        const q = i / steps;
+        const u = lerp(-0.89, 0.89, q);
+        const rim = bellRimAt(u, jelly.pulse, jelly.twist);
+        const nextU = clamp(u + 0.012, -0.89, 0.89);
+        const dy = bellRimAt(nextU, jelly.pulse, jelly.twist) - rim;
+        const shift = bellCenterShift(rim, jelly.anatomyPhase, halfW);
+        const local = rotate(u * halfW + shift, rim * height + rowOffset, jelly.tilt);
+        const glyph = row === 0
+          ? directionGlyph(nextU - u, dy * height / Math.max(1, halfW))
+          : (i % 6 === 0 ? "." : "~");
+        ctx.fillText(glyph, jelly.x + local.x, jelly.y + local.y);
+
+        const broadLow = Math.sin((u + 1) * Math.PI * 5.55 + jelly.twist * 0.80) < -0.84;
+        if (row === 0 && broadLow && i % 4 === 0) {
+          ctx.fillStyle = rgba(jelly.palette.rim, 0.38);
+          ctx.fillText(i % 2 ? ":" : "'", jelly.x + local.x, jelly.y + local.y + cellH * 0.72);
+          ctx.fillStyle = rgba(jelly.palette.rimHot, rowAlpha);
+        }
+      }
+    }
+
+    // Ghostly subumbrella only. The lower bell should reveal the existing oral
+    // arms rather than hide them behind a second dense plug of text.
+    ctx.shadowColor = rgba(jelly.palette.armHot, 0.14);
+    ctx.shadowBlur = 0.9 * this.shadowScale;
+    for (let row = 0; row < 10; row += 1) {
+      const y = jelly.y + height * 0.050 + row * cellH * 0.70;
+      const taper = lerp(0.27, 0.13, row / 9);
+      const half = halfW * taper * (0.86 + 0.14 * Math.sin(row * 1.23 + jelly.twist));
+      for (let x = -half; x <= half; x += cellW * 1.20) {
+        const hole = Math.sin(x * 0.19 + row * 2.8 + jelly.anatomyPhase) > 0.48;
+        if (hole && row > 0) continue;
         const local = rotate(x, y - jelly.y, jelly.tilt);
         const center = 1 - Math.abs(x) / Math.max(1, half);
-        const glyph = densityGlyph(0.22 + center * 0.48 + (row % 3) * 0.06, ASCII.ribbon);
-        ctx.fillStyle = mixColor(jelly.palette.armDark, jelly.palette.armHot, center * 0.58, 0.54 + center * 0.24);
+        const glyph = densityGlyph(0.12 + center * 0.30 + (row % 3) * 0.035, ASCII.ribbon);
+        ctx.fillStyle = mixColor(jelly.palette.armDark, jelly.palette.armHot, center * 0.48, 0.24 + center * 0.18);
         ctx.fillText(glyph, jelly.x + local.x, jelly.y + local.y);
       }
     }
 
-    // A narrow contraction ring flashes through the translucent bell during
-    // the squeeze and then fades back into the tissue.
-    const ringY = jelly.y - height * (0.18 + jelly.pulse * 0.08);
-    const ringHalf = halfW * (0.60 - jelly.pulse * 0.09);
-    ctx.shadowBlur = 2.2 * this.shadowScale;
-    ctx.fillStyle = rgba(jelly.palette.white, 0.12 + jelly.pulse * 0.42);
-    const ringSteps = Math.max(16, Math.floor((ringHalf * 2) / (cellW * 0.85)));
-    for (let i = 0; i <= ringSteps; i += 1) {
-      const t = i / ringSteps;
-      const x = lerp(-ringHalf, ringHalf, t);
-      const arc = 1 - (x / ringHalf) ** 2;
-      const local = rotate(x, -Math.sqrt(Math.max(0, arc)) * height * 0.07, jelly.tilt);
-      ctx.fillText(t < 0.06 || t > 0.94 ? "." : "-", jelly.x + local.x, ringY + local.y);
-    }
+    // No full contraction ring in V4.4. Pulse is communicated by geometry,
+    // fluorescence and motion; a horizontal ring was visually too architectural.
+    this.#setFont(this.fontSize);
   }
 
   render({ time, jelly, snow }) {

@@ -4,15 +4,23 @@ import { pulseEnvelope, pulseVelocity } from "./pulse.mjs";
 import { VerletChain } from "./physics.mjs";
 
 export function heroSizeFor(width, height) {
-  const widthFactor = width < 620 ? 0.50 : 0.265;
-  // Full anatomy is roughly 2.2x baseSize from bell crown to longest tips.
-  // Height therefore has to participate in sizing, especially in landscape.
-  return clamp(Math.min(width * widthFactor, height * 0.38), 64, 320);
+  if (height < 420) {
+    const widthFactor = width < 620 ? 0.50 : 0.265;
+    return clamp(Math.min(width * widthFactor, height * 0.38), 64, 296);
+  }
+  const widthFactor = width < 620 ? 0.47 : 0.245;
+  // V4.5 backs the specimen off by roughly 7–8% in normal viewports while
+  // preserving the already-stable compact-landscape anatomy scale.
+  return clamp(Math.min(width * widthFactor, height * 0.355), 64, 296);
+}
+
+export function topClearanceFor(height) {
+  return clamp(height * 0.055, 18, 56);
 }
 
 function homeYFor(width, height) {
-  if (height < 420) return height * 0.33;
-  return height * (width < 620 ? 0.30 : 0.32);
+  if (height < 420) return height * 0.34;
+  return height * (width < 620 ? 0.33 : 0.35);
 }
 
 function bellAnchor(jelly, offset, yOffset = 0) {
@@ -227,7 +235,7 @@ export class Jellyfish {
     }
   }
 
-  #chainForce(item, ocean, time, x, y, along) {
+  #chainForce(item, anchor, ocean, time, x, y, along) {
     const sensitivity = item.arm
       ? lerp(0.22, item.forceScale, along * along)
       : lerp(0.19, item.forceScale, along * along);
@@ -246,10 +254,31 @@ export class Jellyfish {
     const tipHook = item.tipHook * tip * tip;
     const curl = item.curl * Math.sin(along * Math.PI) * (item.arm ? 5.2 : 2.2) * this.anatomyScale;
     const trailingBias = item.arm ? 0 : 3.8 * along * along * this.anatomyScale;
+    const guard = this.#trailGuard(item, anchor, x, y, along);
 
     return {
-      x: localFlow.x + wake + memory + tipHook + curl,
-      y: localFlow.y + Math.max(0, -this.vy) * 0.66 * along + trailingBias,
+      x: localFlow.x + wake + memory + tipHook + curl + guard.x,
+      y: localFlow.y + Math.max(0, -this.vy) * 0.66 * along + trailingBias + guard.y,
+    };
+  }
+
+  #trailGuard(item, anchor, x, y, along) {
+    const length = (item.chain.count - 1) * item.chain.segmentLength;
+    const maxRise = this.baseSize * (item.arm ? 0.15 : 0.11);
+    const maxSide = Math.min(
+      length * (item.arm ? 0.68 : 0.76),
+      this.baseSize * (item.arm ? 0.96 : 1.14),
+    );
+    const riseAllowance = maxRise * (0.42 + along * 0.58);
+    const sideAllowance = maxSide * (0.20 + Math.pow(along, 0.72) * 0.80);
+    const riseExcess = Math.max(0, anchor.y - y - riseAllowance);
+    const sideDelta = x - anchor.x;
+    const sideExcess = Math.max(0, Math.abs(sideDelta) - sideAllowance);
+    return {
+      x: sideExcess > 0
+        ? -Math.sign(sideDelta) * Math.min(30, sideExcess * (item.arm ? 2.0 : 2.7))
+        : 0,
+      y: riseExcess > 0 ? Math.min(30, riseExcess * (item.arm ? 2.2 : 3.0)) : 0,
     };
   }
 
@@ -266,9 +295,17 @@ export class Jellyfish {
     if (pulseDelta > 0) this.vy -= pulseDelta * this.thrust;
 
     const targetX = this.homeX + Math.sin(time * 0.038 + this.twist) * width * 0.032;
-    const targetY = this.homeY + Math.sin(time * 0.049 + this.anatomyPhase) * height * 0.043;
+    const targetY = this.homeY + Math.sin(time * 0.049 + this.anatomyPhase) * height * 0.032;
     this.vx += (targetX - this.x) * 0.0080 * dt;
     this.vy += (targetY - this.y) * 0.030 * dt;
+
+    const topClearance = topClearanceFor(height);
+    const minimumCenterY = this.bellHeight() + topClearance;
+    const softCeilingY = minimumCenterY + Math.max(26, this.bellHeight() * 0.30);
+    if (this.y < softCeilingY) {
+      const proximity = 1 - clamp((this.y - minimumCenterY) / Math.max(1, softCeilingY - minimumCenterY), 0, 1);
+      this.vy += (7 + 16 * proximity) * proximity * dt;
+    }
 
     this.vx *= Math.exp(-0.22 * dt);
     this.vy *= Math.exp(-0.115 * dt);
@@ -282,10 +319,13 @@ export class Jellyfish {
     const maxX = width - marginX;
     if (this.x < minX) this.vx += (minX - this.x) * 0.06 * dt;
     if (this.x > maxX) this.vx -= (this.x - maxX) * 0.06 * dt;
-    const minY = this.bellHeight() * 1.08;
+    const minY = minimumCenterY;
     const maxY = Math.max(minY, height - this.trailLength() * 0.82);
-    if (this.y < minY) this.vy += (minY - this.y) * 0.08 * dt;
-    if (this.y > maxY) this.vy -= (this.y - maxY) * 0.08 * dt;
+    if (this.y < minY) {
+      this.y = minY;
+      if (this.vy < 0) this.vy = 0;
+    }
+    if (this.y > maxY) this.vy -= (this.y - maxY) * 0.14 * dt;
 
     const targetTilt = clamp(this.vx * 0.0105, -0.13, 0.13);
     this.tilt += (targetTilt - this.tilt) * (1 - Math.exp(-1.8 * dt));
@@ -296,9 +336,18 @@ export class Jellyfish {
         dt,
         anchor.x,
         anchor.y,
-        (x, y, along) => this.#chainForce(item, ocean, time, x, y, along),
+        (x, y, along) => this.#chainForce(item, anchor, ocean, time, x, y, along),
         SIMULATION.constraintIterations,
       );
+      const chainLength = (item.chain.count - 1) * item.chain.segmentLength;
+      item.chain.clipTrailEnvelope(anchor.x, anchor.y, {
+        maxRise: this.baseSize * (item.arm ? 0.15 : 0.11),
+        maxSide: Math.min(
+          chainLength * (item.arm ? 0.68 : 0.76),
+          this.baseSize * (item.arm ? 0.96 : 1.14),
+        ),
+        maxDrop: chainLength * 1.05,
+      });
 
       for (const branch of item.branches) {
         const i = Math.min(item.chain.count - 1, branch.anchorIndex);
@@ -311,13 +360,27 @@ export class Jellyfish {
           (x, y, along) => {
             const flow = ocean.sample(x, y, time, lerp(0.30, branch.forceScale, along * along));
             const sideWave = branch.side * Math.sin(branch.phase + time * 0.62 + along * 8.4) * 5.4 * along * this.anatomyScale;
+            const branchLength = (branch.chain.count - 1) * branch.chain.segmentLength;
+            const maxSide = Math.min(branchLength * 0.74, this.baseSize * 0.62);
+            const riseAllowance = this.baseSize * 0.13 * (0.42 + along * 0.58);
+            const sideAllowance = maxSide * (0.20 + Math.pow(along, 0.72) * 0.80);
+            const riseExcess = Math.max(0, by - y - riseAllowance);
+            const sideDelta = x - bx;
+            const sideExcess = Math.max(0, Math.abs(sideDelta) - sideAllowance);
             return {
-              x: flow.x + sideWave + branch.side * 5.5 * smoothstep(along) * this.anatomyScale,
-              y: flow.y + Math.max(0, -this.vy) * 0.52 * along,
+              x: flow.x + sideWave + branch.side * 5.5 * smoothstep(along) * this.anatomyScale
+                - Math.sign(sideDelta) * Math.min(28, sideExcess * 2.4),
+              y: flow.y + Math.max(0, -this.vy) * 0.52 * along + Math.min(28, riseExcess * 2.6),
             };
           },
           Math.max(4, SIMULATION.constraintIterations - 1),
         );
+        const branchLength = (branch.chain.count - 1) * branch.chain.segmentLength;
+        branch.chain.clipTrailEnvelope(bx, by, {
+          maxRise: this.baseSize * 0.13,
+          maxSide: Math.min(branchLength * 0.74, this.baseSize * 0.62),
+          maxDrop: branchLength * 1.05,
+        });
       }
     }
   }

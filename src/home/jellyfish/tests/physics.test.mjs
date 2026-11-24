@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderFpsFor } from "../config.mjs";
-import { heroSizeFor } from "../jellyfish.mjs";
+import { bellPoreThresholdAt, bellProfileAt, bellRimAt } from "../renderer.mjs";
+import { heroSizeFor, topClearanceFor } from "../jellyfish.mjs";
 import { currentWeather, OceanField } from "../ocean.mjs";
 import { VerletChain } from "../physics.mjs";
 import { pulseEnvelope } from "../pulse.mjs";
@@ -97,6 +98,29 @@ test("bend limiting prevents a thin chain from winding into tight circles", () =
   assert.ok(Math.abs(chain.signedTurn()) < 3.10, `signed turn ${chain.signedTurn()}`);
 });
 
+
+test("bell profile rounds into a narrower skirt with a porous lower membrane", () => {
+  const crown = bellProfileAt(-0.90, 0.1, 1.2);
+  const shoulder = bellProfileAt(-0.42, 0.1, 1.2);
+  const lower = bellProfileAt(-0.10, 0.1, 1.2);
+  const skirt = bellProfileAt(0.015, 0.1, 1.2);
+  assert.ok(crown > 0.35 && crown < 0.55, `crown ${crown}`);
+  assert.ok(shoulder > crown + 0.35, `shoulder ${shoulder}`);
+  assert.ok(shoulder < 0.925, `shoulder too wide ${shoulder}`);
+  assert.ok(lower < shoulder - 0.04 && lower > 0.72, `lower ${lower} shoulder ${shoulder}`);
+  assert.ok(skirt < lower, `skirt ${skirt} lower ${lower}`);
+
+  const rim = [];
+  for (let u = -0.9; u <= 0.9; u += 0.05) rim.push(bellRimAt(u, 0.4, 2.1));
+  const span = Math.max(...rim) - Math.min(...rim);
+  assert.ok(span > 0.035 && span < 0.08, `rim span ${span}`);
+  assert.ok(bellRimAt(0, 0.4, 2.1) > bellRimAt(0.85, 0.4, 2.1) + 0.01);
+
+  const upperPore = bellPoreThresholdAt(-0.80, 0.30, 0.10);
+  const lowerPore = bellPoreThresholdAt(-0.10, 0.30, 0.10);
+  assert.ok(lowerPore < upperPore - 0.08, `upper ${upperPore} lower ${lowerPore}`);
+});
+
 test("world contains one detailed specimen with long tentacles and ribbon oral arms", () => {
   const world = new JellyWorld(1200, 760, 991);
   assert.equal("jellies" in world, false);
@@ -179,6 +203,52 @@ test("anatomy scales with height and survives portrait-landscape-portrait resize
   for (let n = 0; n < 900; n += 1) world.step(1 / 60);
   assertFiniteAnatomy(world.jelly);
   assert.ok(world.jelly.baseSize > 180, `restored size ${world.jelly.baseSize}`);
+});
+
+
+
+test("V4.5 keeps the specimen slightly smaller and the crown below the stage ceiling", () => {
+  assert.ok(heroSizeFor(1200, 760) > 260 && heroSizeFor(1200, 760) < 280);
+  assert.ok(heroSizeFor(390, 700) > 175 && heroSizeFor(390, 700) < 190);
+  // Keep the already-stable tiny landscape scale instead of shrinking it further.
+  assert.equal(heroSizeFor(844, 180), 68.4);
+
+  const world = new JellyWorld(960, 620, 123456);
+  let minCrown = Infinity;
+  for (let n = 0; n < 7200; n += 1) {
+    world.step(1 / 60);
+    minCrown = Math.min(minCrown, world.jelly.y - world.jelly.bellHeight());
+  }
+  assert.ok(minCrown >= topClearanceFor(620) - 0.01, `crown ${minCrown}`);
+});
+
+test("V4.5 trail envelope prevents a sustained current from flinging strands above or away from the animal", () => {
+  const world = new JellyWorld(1000, 700, 444);
+  world.ocean.sample = (_x, _y, _time, sensitivity = 1) => ({
+    x: 60 * sensitivity,
+    y: -42 * sensitivity,
+  });
+
+  for (let n = 0; n < 1200; n += 1) world.step(1 / 60);
+  const jelly = world.jelly;
+  assertFiniteAnatomy(jelly);
+
+  for (const item of jelly.chains) {
+    const rootX = item.chain.x[0];
+    const rootY = item.chain.y[0];
+    for (let i = 1; i < item.chain.count; i += 1) {
+      assert.ok(item.chain.y[i] >= rootY - jelly.baseSize * 0.18, `main rise ${rootY - item.chain.y[i]}`);
+      assert.ok(Math.abs(item.chain.x[i] - rootX) <= jelly.baseSize * 1.20, `main side ${Math.abs(item.chain.x[i] - rootX)}`);
+    }
+    for (const branch of item.branches) {
+      const branchX = branch.chain.x[0];
+      const branchY = branch.chain.y[0];
+      for (let i = 1; i < branch.chain.count; i += 1) {
+        assert.ok(branch.chain.y[i] >= branchY - jelly.baseSize * 0.18, `branch rise ${branchY - branch.chain.y[i]}`);
+        assert.ok(Math.abs(branch.chain.x[i] - branchX) <= jelly.baseSize * 0.70, `branch side ${Math.abs(branch.chain.x[i] - branchX)}`);
+      }
+    }
+  }
 });
 
 test("single jellyfish and all branch chains remain finite during a long changing-current drift", () => {

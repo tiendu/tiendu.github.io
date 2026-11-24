@@ -1,0 +1,12 @@
+---
+import GameLayout from "../../layouts/GameLayout.astro";
+import BlackjackGame from "../../games/blackjack/Game.astro";
+---
+<GameLayout title="Blackjack" description="A quiet hand of blackjack with stained-glass cards.">
+  <BlackjackGame />
+</GameLayout>
+
+<script>
+  import { mountBlackjack } from "../../games/blackjack/ui.mjs";
+  mountBlackjack();
+</script>

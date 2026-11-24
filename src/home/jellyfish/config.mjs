@@ -21,19 +21,24 @@ export const ASCII = Object.freeze({
 // than randomly rotating palettes. The reference's orange/pink cap and
 // violet/blue underside are part of its identity.
 export const JELLY_PALETTE = Object.freeze({
-  bellShadow: "#5d55b7",
-  bellCool: "#8a78e8",
-  bellSoft: "#c69bea",
-  bellWarm: "#ff984d",
-  bellHot: "#ffd38a",
-  rim: "#ff63bd",
-  rimHot: "#ffd0ee",
+  // Fluorescence belongs to the specimen, not the site chrome. The bell moves
+  // from warm cream/coral at the crown into magenta and violet underneath.
+  bellShadow: "#40378f",
+  bellCool: "#7468db",
+  bellSoft: "#d6a0f1",
+  bellGlass: "#efc6ff",
+  bellCoral: "#ff6f68",
+  bellWarm: "#ff963f",
+  bellHot: "#ffe58e",
+  bellCrown: "#fff6c7",
+  rim: "#ff45b5",
+  rimHot: "#ffd1ef",
   armDark: "#5d64c8",
   arm: "#8b7ee7",
   armHot: "#cf8fe9",
   tentacle: "#766bd6",
   tentacleHot: "#bca8ff",
-  white: "#fff6f2",
+  white: "#fffaf2",
 });
 
 export const WORLD = Object.freeze({

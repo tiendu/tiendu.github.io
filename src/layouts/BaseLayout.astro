@@ -25,6 +25,7 @@ interface Props {
   imageHeight?: number;
   socialTitle?: string;
   socialDescription?: string;
+  themeColor?: string;
   article?: boolean;
   system?: boolean;
   structuredData?: StructuredData | StructuredData[];
@@ -39,6 +40,7 @@ const {
   imageHeight,
   socialTitle,
   socialDescription,
+  themeColor,
   article = false,
   system = false,
   structuredData = [],
@@ -58,6 +60,7 @@ const resolvedSocialDescription = socialDescription ?? description;
 const resolvedImageAlt =
   imageAlt ?? (title ? `${title} — ${SITE.title}` : SITE.title);
 const usesSystemChrome = system || article;
+const resolvedThemeColor = themeColor ?? (usesSystemChrome ? "#050301" : "#f3efe5");
 const additionalStructuredData = Array.isArray(structuredData)
   ? structuredData
   : [structuredData];
@@ -104,7 +107,7 @@ const serializedJsonLd = JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
     <meta name="generator" content={Astro.generator} />
     <meta name="author" content={SITE.author} />
     <meta name="description" content={description} />
-    <meta name="theme-color" content={usesSystemChrome ? "#050301" : "#f3efe5"} />
+    <meta name="theme-color" content={resolvedThemeColor} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
