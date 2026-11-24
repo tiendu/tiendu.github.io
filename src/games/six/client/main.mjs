@@ -1,6 +1,7 @@
 import { createGame, guess, botChoice, currentPlayer, rollDie, DEFAULT_ROUNDS, validRounds, DEFAULT_SIDES, validSides, TIE_JACKPOTS, allowedChoice } from '../core/rules.mjs';
 import { dieSvg } from './dice.mjs';
 import { mountGameSound } from '../../shared/game-sound.ts';
+import { recordWin } from '../core/series.mjs';
 
 // The presentation copy stays unchanged until the dice settles. Neither the new
 // score nor the server's final roll appears during the animation.
@@ -32,6 +33,7 @@ export function mountSix() {
   const menu = $('[data-menu]');
   const roomPanel = $('[data-room]');
   const stage = $('[data-stage]');
+  const finale = $('[data-finale]');
   const status = $('[data-status]');
   const die = $('[data-die]');
   const scores = $('[data-scores]');
@@ -51,6 +53,7 @@ export function mountSix() {
   let game = null;
   let view = null;
   let players = [];
+  let wins = {};
   let ws = null;
   let connected = false;
   let me = 'you';
@@ -67,6 +70,8 @@ export function mountSix() {
   let rollTimeout = 0;
   let botTimeout = 0;
   let outcomeTimer = 0;
+  let finaleTimer = 0;
+  let finaleReady = false;
   const pressTimers = new WeakMap();
   let soloRounds = DEFAULT_ROUNDS;
   let onlineRounds = DEFAULT_ROUNDS;
@@ -104,8 +109,7 @@ export function mountSix() {
 
   function outcomeSound(next) {
     const event = next?.last;
-    if (next?.over && next.winner === me) sounds.play('clear');
-    else if (event?.choice === 'tie' && event.correct) sounds.play('bonus');
+    if (event?.choice === 'tie' && event.correct) sounds.play('bonus');
     else if (event?.eliminated) sounds.play('impact');
     else if (event?.opening) sounds.play('confirm');
     else if (event?.correct) sounds.play('pickup');
@@ -114,6 +118,8 @@ export function mountSix() {
   function landed(next) {
     sounds.play('diceLand');
     clearTimeout(outcomeTimer);
+    // The final chime belongs to the results reveal, not the dice landing.
+    if (next?.over) return;
     outcomeTimer = window.setTimeout(() => {
       outcomeTimer = 0;
       outcomeSound(next);
@@ -134,7 +140,9 @@ export function mountSix() {
     clearInterval(rollInterval);
     clearTimeout(rollTimeout);
     clearTimeout(outcomeTimer);
+    clearTimeout(finaleTimer);
     outcomeTimer = 0;
+    finaleTimer = 0;
     rollInterval = 0;
     rollTimeout = 0;
     rolling = false;
@@ -193,8 +201,10 @@ export function mountSix() {
       label.textContent = name(id);
       const sub = document.createElement('small');
       const online = players.find(p => p.id === id)?.online;
-      sub.textContent = out ? 'OUT' : id === current ? (id === me ? 'YOUR TURN' : 'TAKING TURN')
+      const state = out ? 'OUT' : id === current ? (id === me ? 'YOUR TURN' : 'TAKING TURN')
         : id === me ? 'YOU' : mode === 'online' && online === false ? 'OFFLINE' : id === 'bot' ? 'COMPUTER' : 'IN GAME';
+      const count = wins[id] ?? 0;
+      sub.textContent = `${state} · ${count} ${count === 1 ? 'WIN' : 'WINS'}`;
       details.append(label, sub);
       const number = document.createElement('span');
       number.className = 'six-score-number';
@@ -222,12 +232,90 @@ export function mountSix() {
       : `${name(current)} is up next`;
   }
 
+  function renderFinale() {
+    if (!game?.over) return;
+    const winner = game.winner;
+    const alive = new Set(game.alive);
+    const sorted = [...game.ids].sort((a, b) =>
+      Number(b === winner) - Number(a === winner) ||
+      Number(alive.has(b)) - Number(alive.has(a)) ||
+      (game.scores[b] ?? 0) - (game.scores[a] ?? 0) ||
+      game.ids.indexOf(a) - game.ids.indexOf(b));
+    const highest = Math.max(...game.alive.map(id => game.scores[id]), -Infinity);
+    const tied = !winner && game.alive.length > 1;
+    const rows = sorted.map((id, index) => {
+      const first = id === winner;
+      const tiedFirst = tied && alive.has(id) && game.scores[id] === highest;
+      const out = !alive.has(id);
+      const li = document.createElement('li');
+      li.className = `six-final-player${first || tiedFirst ? ' champion' : ''}${out ? ' eliminated' : ''}${id === me ? ' is-you' : ''}`;
+      const rank = document.createElement('span');
+      rank.className = 'six-final-rank';
+      rank.textContent = String(tiedFirst ? 1 : index + 1).padStart(2, '0');
+      const info = document.createElement('span');
+      info.className = 'six-final-player-info';
+      const playerName = document.createElement('strong');
+      playerName.textContent = name(id);
+      const label = document.createElement('small');
+      const state = first ? 'WINNER' : tiedFirst ? 'TIED FIRST' : out ? 'ELIMINATED' : id === me ? 'YOU' : 'FINAL SCORE';
+      const count = wins[id] ?? 0;
+      label.textContent = `${state} · ${count} ${count === 1 ? 'WIN' : 'WINS'}`;
+      info.append(playerName, label);
+      const points = document.createElement('strong');
+      points.className = 'six-final-points';
+      points.textContent = String(game.scores[id] ?? 0);
+      li.append(rank, info, points);
+      return li;
+    });
+    const board = $('[data-final-scores]');
+    const scroll = board.scrollTop;
+    board.replaceChildren(...rows);
+    board.scrollTop = scroll;
+    $('[data-final-hero]').classList.toggle('is-draw', !winner);
+    $('[data-final-title]').textContent = winner ? (winner === me ? 'YOU WIN!' : `${name(winner)} WINS!`)
+      : tied ? 'IT’S A DRAW!' : 'NO WINNER';
+    const rounds = game.maxRounds ?? DEFAULT_ROUNDS;
+    $('[data-final-detail]').textContent = game.alive.length <= 1
+      ? `LAST PLAYER STANDING · ROUND ${Math.min(game.round, rounds)} / ${rounds}`
+      : `D${game.dieSides ?? 6} · ${rounds} ROUNDS`;
+    const position = sorted.indexOf(me);
+    const summary = $('[data-final-summary]');
+    summary.hidden = position < 0;
+    if (position >= 0) summary.textContent = `YOU: #${tied && game.scores[me] === highest ? 1 : position + 1} · ${game.scores[me]} PTS`;
+    $('[data-final-replay]').hidden = mode === 'online' && host !== me;
+    $('[data-final-replay]').disabled = waitingForServer || (mode === 'online' && !connected);
+    $('[data-final-replay]').textContent = waitingForServer ? 'STARTING…' : 'PLAY AGAIN';
+    $('[data-final-back]').textContent = mode === 'online' ? 'LEAVE ROOM' : 'CHANGE MODE';
+    $('[data-final-wait]').hidden = mode !== 'online' || host === me;
+  }
+
+  function revealFinale(animated = true) {
+    if (!game?.over) return;
+    clearTimeout(finaleTimer);
+    finaleTimer = 0;
+    finaleReady = true;
+    finale.classList.toggle('without-animation', !animated);
+    render();
+    window.scrollTo(0, 0);
+    if (animated) {
+      // Every participant hears the winner announced, including the loser.
+      sounds.play('clear');
+      $('[data-final-title]').focus({ preventScroll: true });
+    }
+  }
+
+  function finishAfterLastRoll(next) {
+    if (!next.over) return;
+    // Reveal only after the final die and its outcome sound have landed.
+    finaleTimer = window.setTimeout(() => revealFinale(), 650);
+  }
+
   function syncMatchActions() {
     // Keep controls visible on desktop and at game-over, but tuck them away
     // during mobile play. Do not override a menu opened by the player.
-    const phase = `${desktopMatchActions.matches}:${!!game?.over}`;
+    const phase = `${desktopMatchActions.matches}:${finaleReady}`;
     if (matchActions.dataset.phase !== phase) {
-      matchActions.open = desktopMatchActions.matches || !!game?.over;
+      matchActions.open = desktopMatchActions.matches || finaleReady;
       matchActions.dataset.phase = phase;
     }
   }
@@ -237,12 +325,13 @@ export function mountSix() {
     syncMatchActions();
     const current = game && currentPlayer(game);
     root.classList.toggle('is-playing', !!game);
-    root.classList.toggle('is-active-match', !!game && !game.over);
-    root.classList.toggle('is-finished', !!game?.over);
+    root.classList.toggle('is-active-match', !!game && !finaleReady);
+    root.classList.toggle('is-finished', finaleReady);
     root.classList.toggle('is-online', mode === 'online');
     menu.hidden = mode !== 'menu';
     roomPanel.hidden = mode !== 'online';
     stage.hidden = !game;
+    finale.hidden = !finaleReady;
     $('[data-start]').hidden = mode !== 'online' || host !== me || !!game || !connected;
     $('[data-start]').disabled = waitingForServer;
     const editable = mode === 'online' && connected && host === me && !waitingForServer && (!game || game.over);
@@ -259,7 +348,7 @@ export function mountSix() {
     if (document.activeElement !== onlineRoundsField) onlineRoundsField.value = String(onlineRounds);
     if (document.activeElement !== soloRoundsField) soloRoundsField.value = String(soloRounds);
     $('[data-back]').hidden = mode !== 'solo';
-    replay.hidden = !game || (mode === 'online' && (host !== me || !game.over));
+    replay.hidden = !game || (game.over && !finaleReady) || (mode === 'online' && (host !== me || !game.over));
     replay.disabled = rolling || waitingForServer || (mode === 'online' && !connected);
     replay.classList.toggle('finished', !!game?.over);
     replay.textContent = game?.over ? '↻ PLAY AGAIN' : '↻ RESTART MATCH';
@@ -284,9 +373,9 @@ export function mountSix() {
         : game.over ? game.winner ? game.winner === me ? 'YOU WIN!' : `${name(game.winner)} WINS!` : 'IT’S A DRAW!'
         : player === me ? 'YOUR TURN' : `${name(player)}’S TURN`;
       const lead = presented.alive.length ? Math.max(...presented.alive.map(id => presented.scores[id])) : 0;
-      $('[data-mobile-left-label]').textContent = 'YOU';
+      $('[data-mobile-left-label]').textContent = `YOU · ${wins[me] ?? 0}W`;
       $('[data-mobile-left-value]').textContent = String(presented.scores[me] ?? '—');
-      $('[data-mobile-right-label]').textContent = mode === 'solo' ? 'COMPUTER' : 'LEADER';
+      $('[data-mobile-right-label]').textContent = mode === 'solo' ? `COMPUTER · ${wins.bot ?? 0}W` : 'LEADER';
       $('[data-mobile-right-value]').textContent = String(mode === 'solo' ? presented.scores.bot : lead);
       $('[data-mobile-turn]').textContent = rolling ? 'ROLLING…'
         : game.over ? game.winner ? game.winner === me ? 'YOU WIN!' : `${name(game.winner)} WINS` : 'DRAW'
@@ -329,6 +418,7 @@ export function mountSix() {
     });
     renderScores(presented);
     renderHistory();
+    if (finaleReady) renderFinale();
   }
 
   // A move is identified by its match and move number, not by WebSocket message
@@ -340,19 +430,27 @@ export function mountSix() {
       render();
       return;
     }
+    if (mode === 'solo' && next.over && !before?.over) wins = recordWin(wins, next.winner);
     const newMatch = !previousKey || key.split(':')[0] !== previousKey.split(':')[0];
     if (newMatch) rollHistory = [];
     lastSeen = key;
     stopRoll();
+    finaleReady = false;
+    finale.classList.remove('without-animation');
     game = next;
     const firstSnapshotMidgame = !previousKey && next.moves > 0;
     if (reducedMotion.matches || firstSnapshotMidgame) {
       view = null;
       clearChoice();
       recordRoll(next);
+      if (next.over) { finaleReady = true; finale.classList.add('without-animation'); }
       render();
+      if (next.over) window.scrollTo(0, 0);
       // Rejoining an active room must not replay an old result.
-      if (!firstSnapshotMidgame) landed(next);
+      if (!firstSnapshotMidgame) {
+        landed(next);
+        if (next.over) sounds.play('clear');
+      }
       done?.();
       return;
     }
@@ -377,6 +475,7 @@ export function mountSix() {
       recordRoll(next);
       render();
       landed(next);
+      finishAfterLastRoll(next);
       done?.();
     }, 720);
   }
@@ -398,6 +497,7 @@ export function mountSix() {
     stopBot();
     stopRoll();
     clearChoice();
+    finaleReady = false;
     mode = 'solo';
     players = [{ id: 'you', name: 'YOU' }, { id: 'bot', name: 'COMPUTER' }];
     me = 'you';
@@ -413,6 +513,7 @@ export function mountSix() {
     stopBot();
     stopRoll();
     sounds.stop();
+    finaleReady = false;
     clearChoice();
     if (ws) {
       if (leave && ws.readyState === WebSocket.OPEN)
@@ -425,6 +526,7 @@ export function mountSix() {
     game = null;
     view = null;
     players = [];
+    wins = {};
     me = 'you';
     host = null;
     roomCode = '';
@@ -470,6 +572,8 @@ export function mountSix() {
       }
       if (message.type === 'state') {
         players = message.players;
+        // Durable Object room stats are authoritative, including after reconnect.
+        wins = message.wins && typeof message.wins === 'object' && !Array.isArray(message.wins) ? message.wins : {};
         host = message.host;
         onlineRounds = validRounds(message.rounds) ? message.rounds : DEFAULT_ROUNDS;
         onlineDiceSides = validSides(message.dieSides) ? message.dieSides : DEFAULT_SIDES;
@@ -498,7 +602,8 @@ export function mountSix() {
       clearChoice();
       view = null;
       status.textContent = 'Disconnected. Rejoin using the room code.';
-      render();
+      if (game?.over) revealFinale(false);
+      else render();
     };
     socket.onerror = () => { if (ws === socket) status.textContent = 'Room connection failed.'; };
     $('[data-room-code]').textContent = 'ROOM ' + code;
@@ -561,16 +666,20 @@ export function mountSix() {
     updateRounds('solo');
     startSolo();
   });
-  $('[data-back]').addEventListener('click', () => { reset(); sounds.play('leave'); status.textContent = ''; });
-  $('[data-leave]').addEventListener('click', () => { reset(); sounds.play('leave'); status.textContent = ''; });
-  replay.addEventListener('click', () => {
+  const leaveMatch = () => { reset(); sounds.play('leave'); status.textContent = ''; };
+  $('[data-back]').addEventListener('click', leaveMatch);
+  $('[data-leave]').addEventListener('click', leaveMatch);
+  $('[data-final-back]').addEventListener('click', leaveMatch);
+  const replayMatch = () => {
     if (mode === 'solo') startSolo();
     else if (mode === 'online' && game?.over && host === me && connected && !waitingForServer) {
       waitingForServer = true;
       ws?.send(JSON.stringify({ type: 'start' }));
       render();
     }
-  });
+  };
+  replay.addEventListener('click', replayMatch);
+  $('[data-final-replay]').addEventListener('click', replayMatch);
   buttons.forEach(button => button.addEventListener('click', () => {
     if (!canPlay()) return;
     const choice = button.dataset.guess;

@@ -83,6 +83,29 @@ import './six.css';
       </section>
 
       <section class="six-stage six-panel" data-stage hidden aria-label="SIX game board">
+        <section class="six-finale" data-finale hidden aria-label="Final match results">
+          <div class="six-finale-hero" data-final-hero>
+            <span class="six-finale-burst" aria-hidden="true"></span>
+            <svg class="six-finale-crown" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+              <path d="M8 16h8v8h8V12h16v12h8v-8h8v32H8zM8 52h48v6H8z" fill="currentColor"/>
+            </svg>
+            <p class="six-eyebrow">MATCH COMPLETE</p>
+            <h2 data-final-title tabindex="-1">Final results</h2>
+            <p data-final-detail></p>
+          </div>
+          <div class="six-final-board">
+            <div class="six-final-board-head">
+              <h3>FINAL SCORES</h3>
+              <span data-final-summary></span>
+            </div>
+            <ol data-final-scores aria-label="Final standings"></ol>
+          </div>
+          <div class="six-final-actions">
+            <button class="six-primary" type="button" data-final-replay>PLAY AGAIN</button>
+            <button type="button" data-final-back>CHANGE MODE</button>
+            <p data-final-wait hidden>Waiting for the host to start another match.</p>
+          </div>
+        </section>
         <div class="six-mobile-scorebar" aria-label="Current scores">
           <span class="six-mobile-score-item"><span data-mobile-left-label>YOU</span><strong data-mobile-left-value>0</strong></span>
           <strong class="six-mobile-turn" data-mobile-turn aria-live="polite">YOUR TURN</strong>

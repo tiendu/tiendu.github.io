@@ -3,6 +3,7 @@ import { roomRouter, roomLobbyClass } from '../../shared/server/cloudflare-rooms
 import { cleanName } from '../../shared/server/name.mjs';
 import { createGame, guess, rollDie, MAX_PLAYERS, DEFAULT_ROUNDS, DEFAULT_SIDES } from '../core/rules.mjs';
 import { roomRounds, roomDieSides, setRoomSettings } from './settings.mjs';
+import { recordWin } from '../core/series.mjs';
 
 export default roomRouter('/six');
 export class SixLobby extends roomLobbyClass(DurableObject, 'six') {}
@@ -11,7 +12,7 @@ export class SixRoom extends DurableObject {
     const path = new URL(request.url).pathname;
     if (path === '/init') {
       const {room,id,token,expires} = await request.json();
-      await this.ctx.storage.put('room',{room,id,token,expires,players:[],host:null,game:null,round:0,rounds:DEFAULT_ROUNDS,dieSides:DEFAULT_SIDES});
+      await this.ctx.storage.put('room',{room,id,token,expires,players:[],host:null,game:null,round:0,rounds:DEFAULT_ROUNDS,dieSides:DEFAULT_SIDES,wins:{}});
       await this.ctx.storage.setAlarm(expires);
       return new Response(null,{status:204});
     }
@@ -27,7 +28,7 @@ export class SixRoom extends DurableObject {
   online() {return this.ctx.getWebSockets().filter(ws=>ws.readyState===1 && ws.deserializeAttachment()?.id);}
   async broadcast(room) {
     const online = new Set(this.online().map(ws=>ws.deserializeAttachment().id));
-    const message = JSON.stringify({type:'state',players:room.players.map(({id,name})=>({id,name,online:online.has(id)})),host:room.host,round:room.round,rounds:roomRounds(room),dieSides:roomDieSides(room),game:room.game});
+    const message = JSON.stringify({type:'state',players:room.players.map(({id,name})=>({id,name,online:online.has(id)})),host:room.host,round:room.round,rounds:roomRounds(room),dieSides:roomDieSides(room),game:room.game,wins:room.wins ?? {}});
     for(const ws of this.online()) ws.send(message);
   }
   async webSocketMessage(ws,raw) {
@@ -67,10 +68,14 @@ export class SixRoom extends DurableObject {
         } else if(msg.type==='guess') {
           if(!room.game)throw Error('Start the game first.');
           if(msg.move!==room.game.moves)throw Error('Outdated turn.');
+          // Only the authoritative final move awards a series win.
+          // Duplicate/outdated guesses are rejected by the move number.
           guess(room.game,peer.id,msg.choice,rollDie(room.game.dieSides ?? 6));
+          if(room.game.over)room.wins=recordWin(room.wins ?? {},room.game.winner);
         } else if(msg.type==='leave') {
           if(room.game&&!room.game.over&&room.game.alive.includes(peer.id))throw Error('Finish the game before leaving.');
           room.players=room.players.filter(p=>p.id!==peer.id);
+          if(room.wins)delete room.wins[peer.id];
           if(room.host===peer.id)room.host=room.players[0]?.id??null;
           ws.close(1000,'Left room');
         } else throw Error('Unknown action.');
