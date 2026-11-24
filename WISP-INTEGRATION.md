@@ -136,12 +136,12 @@ native WebSocket, not HTTP polling, and sends only direction/ability intents.
 The server owns all positions, energy, hits, abilities, portal and results.
 Remote actors interpolate between snapshots; local movement has bounded
 visual-only prediction (100 ms) and authoritative corrections. No client
-predictions of combat or energy are accepted. The wire protocol is v2.
+predictions of combat or energy are accepted. The wire protocol is now v3 (Phase 7).
 
-The development online panel creates six-digit rooms for 1–4 human testers;
-bots fill both sides to 4 vs 4. Select unique characters before joining. The
-host starts a single test round when every joined seat is connected. This
-is not yet the full co-op/competitive mode UI or scoring system. Transient
+The online panel creates six-digit rooms for 2–4 human players; bots fill both
+sides to 4 vs 4. Choose a mode when creating a room, and select unique characters
+before joining. All humans must be connected and ready before the host starts.
+Transient
 network loss permits bot takeover and reconnect with the same private
 session token. The same tab can reload and join its saved room code; explicit
 leave releases the seat. Host migrates to a connected player. The lobby
@@ -154,7 +154,7 @@ eye on public room admission and Cloudflare usage before release.
 
 The retained `WispRooms` class, `WISP_ROOMS` binding, Worker name and
 `v1-wisp-rooms` migration are unchanged. New object names and storage keys
-(`maze-v2:` / `maze-v2-*`) avoid interpreting retired runner state as new
+(`maze-v3:` / `maze-v3-*`) avoid interpreting retired runner state as new
 rooms. Active matches run a 20 Hz timer; idle lobbies use hibernatable
 WebSockets. Active simulation duration and network traffic may incur costs.
 
@@ -174,7 +174,8 @@ npm run dev
 
 Visit `http://localhost:4321/games/wisp/` in two separate browser tabs or
 profiles. Select distinct characters, create a room, join using the code,
-and start from the host. If Astro uses another port, configure the Worker
+mark both players ready, and start from the host. Choose opposite factions for
+competitive or the same faction for co-op. If Astro uses another port, configure the Worker
 `WISP_ALLOWED_ORIGINS` accordingly. Default local backend is
 `http://127.0.0.1:8787`; `PUBLIC_WISP_BACKEND_URL` overrides it.
 
@@ -197,11 +198,39 @@ must provide `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. These credentia
 are never sent to the browser. The GitHub Pages workflow passes only the public
 backend URL. The Wisp Worker workflow checks, bundles and smoke-tests locally
 before deploying to the existing Worker on main if `WISP_BACKEND=cloudflare`.
-Confirm both deployments succeed before testing the hosted preview. `/v2/health`
+Confirm both deployments succeed before testing the hosted preview. `/v3/health`
 reports the protocol version. Solo works even without a backend URL.
+
+## Phase 7 — Multiplayer modes
+
+- Co-op: all human seats share a faction. Wisp co-op advances if at least one
+  reserved human seat escapes; hunter co-op advances if all four Wisps are
+  eliminated. A disconnected reserved seat is controlled by AI; an explicit
+  leaver's seat no longer counts toward Wisp co-op success. Level 1 is the
+  tutorial unless a human selects Stalker (then start at level 2). Later levels
+  follow the solo difficulty schedule. Each cleared level increments the
+  remaining players' co-op clear counters.
+- Competitive: humans must occupy both factions at match start. Five rounds,
+  each escape scores one Wisp point and each elimination scores one hunter
+  point. A tied cumulative score after round five requires another round;
+  the first non-tied cumulative result from then on wins. Each remaining
+  player on the winning faction gets one lobby win, not one win per round.
+- Every round generates a fresh seeded maze; energy and cooldowns reset.
+  Human character selection is locked through the series. Bots retain their
+  composition except for the tutorial's Stalker exclusion.
+- Host advances after results, or returns to the lobby. Rematches reset
+  readiness and series scores, not lifetime-of-room win and clear counters.
+  The host can switch modes in the lobby; co-op requires a common faction.
+  Offline reservations can be removed by the host in the lobby.
+- Room results and counters are persisted in Durable Object storage. A server
+  restart during active play aborts that series without awarding a match win.
+  An intermission or completed series can be resumed after hibernation.
+- v3 intentionally isolates v2 rooms and clients; deploy both Worker and site.
+  Existing Cloudflare binding/class/migration, public URL and secrets are
+  unchanged. Old leases are not migrated. The live smoke test now checks v3
+  and ready gating. Local solo record storage is unchanged.
 
 ## Next
 
-Phase 7: full co-op and competitive lifecycle, ready checks, round scoring,
-rematches and lobby UX. Phase 8: balance, sound, animation, mobile playtesting
-and release. WISP stays absent from the Games catalog throughout development.
+Phase 8: balance, sound, animation, mobile playtesting and release. WISP stays
+absent from the Games catalog throughout development.

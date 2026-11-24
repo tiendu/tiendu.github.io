@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="./preview.css">
 </head>
 <body>
-  <header><a href="/games/" target="_top">← Games</a><h1>WISP</h1><p>Solo & online development · Phases 5–6</p></header>
+  <header><a href="/games/" target="_top">← Games</a><h1>WISP</h1><p>Solo · Co-op · Competitive</p></header>
   <main>
     <section aria-label="Maze preview" class="arena">
       <div class="toolbar"><button id="start">Start solo</button><button id="new">End run</button><button id="rotate">Rotate</button><label><input id="skip" type="checkbox"> Skip tutorial</label></div>
@@ -26,11 +26,11 @@
       <div id="character-selection"><h2>Wisps</h2><div id="wisps" class="roster"></div>
       <h2>Hunters</h2><div id="hunters" class="roster"></div>
       <p class="hint">Choose your character before starting a run. Escape as a Wisp, or eliminate all four Wisps as a hunter. Level 1 teaches the rules.</p></div>
-      <section id="online" aria-label="Online transport test">
-        <h2>Online · WebSocket test</h2>
-        <p class="hint">One authoritative round. Up to four humans; bots fill the remaining slots. Full mode selection and rematches arrive in Phase 7.</p>
-        <div class="toolbar"><button id="create">Create room</button><input id="room-code" inputmode="numeric" maxlength="6" placeholder="Room code" aria-label="Room code"><button id="join">Join</button><button id="online-start" hidden>Start round</button><button id="leave" hidden>Leave</button></div>
-        <p id="online-status" role="status"></p><p id="room-info" class="hint"></p>
+      <section id="online" aria-label="Online multiplayer">
+        <h2>Online</h2>
+        <p class="hint">Two to four humans. Bots fill both teams to four. Co-op: same faction. Competitive: opposing factions, five rounds plus tiebreakers.</p>
+        <div class="toolbar"><label>Mode <select id="mode"><option value="coop">Co-op</option><option value="competitive" selected>Competitive</option></select></label><button id="create">Create room</button><input id="room-code" inputmode="numeric" maxlength="6" placeholder="Room code" aria-label="Room code"><button id="join">Join</button><button id="ready" hidden>Ready</button><button id="online-start" hidden>Start match</button><button id="next-round" hidden>Next round</button><button id="rematch" hidden>Return to lobby</button><button id="leave" hidden>Leave</button></div>
+        <p id="online-status" role="status"></p><p id="room-info" class="hint"></p><div id="room-roster" aria-label="Room players"></div><div id="match-results" aria-live="polite"></div>
       </section>
     </section>
   </main>

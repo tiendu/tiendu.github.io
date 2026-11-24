@@ -38,10 +38,10 @@ jobs:
           worker=$!
           trap 'kill "$worker" 2>/dev/null || true; cat /tmp/wisp-worker.log' EXIT
           for i in {1..60}; do
-            if curl -fsS http://127.0.0.1:8787/v2/health >/dev/null; then break; fi
+            if curl -fsS http://127.0.0.1:8787/v3/health >/dev/null; then break; fi
             sleep 1
           done
-          curl -fsS http://127.0.0.1:8787/v2/health
+          curl -fsS http://127.0.0.1:8787/v3/health
           npm run smoke:wisp
   deploy:
     needs: check

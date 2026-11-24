@@ -5,10 +5,10 @@ import WebSocket from 'ws';
 const base=new URL(process.argv[2]??'http://127.0.0.1:8787');
 assert.ok(['localhost','127.0.0.1','[::1]'].includes(base.hostname),'Smoke test is restricted to local workers');
 const origin='http://localhost:4321';
-const health=await fetch(new URL('/v2/health',base));assert.equal((await health.json()).protocol,2);
-const created=await fetch(new URL('/v2/rooms',base),{method:'POST',headers:{Origin:origin}});assert.equal(created.status,201);
+const health=await fetch(new URL('/v3/health',base));assert.equal((await health.json()).protocol,3);
+const created=await fetch(new URL('/v3/rooms',base),{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({mode:'competitive'})});assert.equal(created.status,201);
 const {code,token}=await created.json();
-const address=new URL(`/v2/rooms/${code}/socket`,base);address.protocol=base.protocol==='https:'?'wss:':'ws:';
+const address=new URL(`/v3/rooms/${code}/socket`,base);address.protocol=base.protocol==='https:'?'wss:':'ws:';
 const clients=[];
 function open(character,session){
   const ws=new WebSocket(address,{origin});clients.push(ws);
@@ -22,14 +22,15 @@ function open(character,session){
     waiters.add(check);check();
   });}
   const send=msg=>ws.send(JSON.stringify(msg));
-  ws.once('open',()=>send({type:'hello',protocol:2,character,token:session}));
+  ws.once('open',()=>send({type:'hello',protocol:3,character,token:session}));
   return {ws,wait,send};
 }
 try{
   const host=open('Orb',token),a=await host.wait(m=>m.type==='welcome');
   const guest=open('Leech'),b=await guest.wait(m=>m.type==='welcome');
   await host.wait(m=>m.type==='lobby'&&m.players.length===2);
-  host.send({type:'start'});
+  host.send({type:'ready',ready:true});guest.send({type:'ready',ready:true});
+  await host.wait(m=>m.type==='lobby'&&m.canStart);host.send({type:'start'});
   const first=await host.wait(m=>m.type==='snapshot'&&m.phase==='survive');
   const p=first.actors.find(a=>a.player==='local');assert.equal(p.id,'Orb');assert.equal(first.actors.length,8);
   const same=await guest.wait(m=>m.type==='snapshot'&&m.seed===first.seed);assert.deepEqual(same.board,first.board);

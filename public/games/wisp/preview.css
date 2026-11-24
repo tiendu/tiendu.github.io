@@ -45,3 +45,12 @@ body[data-screen="solo"] main { grid-template-columns: minmax(0, 1fr); }
 body[data-screen="solo"] .gallery, body[data-screen="online"] #character-selection { display: none; }
 body[data-screen="solo"] canvas { max-height: 65dvh; }
 @media (max-width: 819px) { body[data-screen="solo"] canvas { max-height: 55dvh; } }
+
+body[data-screen="online-lobby"] .arena { display: none; }
+body[data-screen="online-lobby"] main { grid-template-columns: minmax(0,1fr); }
+#mode { font: inherit; color: inherit; background: #101827; border: 1px solid #354861; border-radius: 6px; min-height: 44px; }
+#room-roster { display: grid; gap: 6px; }
+.room-player { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px; border-bottom: 1px solid #354861; }
+.room-player svg { width: 36px; height: 36px; }
+.room-player small { margin-left: auto; }
+#match-results { white-space: pre-line; margin-top: 12px; color: #9fffe0; }
