@@ -1,6 +1,6 @@
 # WISP — maze chase (development)
 
-The former forest runner has been retired. WISP is intentionally absent from the Games catalog until the replacement is playable. Visit `/games/wisp/` directly to review Phase 4. The direct page is public but marked noindex; this is not access control.
+The former forest runner has been retired. WISP is intentionally absent from the Games catalog until the replacement is playable. Visit `/games/wisp/` directly to play the solo game and test online transport. The direct page is public but marked noindex; this is not access control.
 
 ## Phase 1
 
@@ -111,10 +111,97 @@ headless tick time. Easy includes the tutorial maze/roster; Normal and Hard use
 standard rounds, so the three escape rates are not a controlled difficulty
 comparison. No browser, network, or assets are required.
 
-## Backend retirement
+## Phase 5 — solo
 
-The old runner server and its automated deployment have been removed. The Wrangler configuration is retained as historical migration metadata only; it is not deployable until a compatible replacement Worker is implemented. Do not discard or change the deployed Durable Object migration history without an explicit migration plan. Removing local files does not delete the previously deployed Cloudflare service.
+Choose any Wisp or hunter. Level 1 is the randomized tutorial (Easy AI,
+more pickups, no Stalker); skip it to start at Level 2. Stalker starts at
+Level 2 automatically. Levels 2–5 use Normal AI; levels 6+ use Hard, with no
+stat inflation. Every level generates a fresh deterministic maze, resets
+energy and cooldowns, and retains the normal-level team composition. The
+tutorial may have a different roster because Stalker is excluded.
+
+A human Wisp death ends the run immediately; escaping lets you spectate
+until team results are ready. A solo hunter advances only if all four Wisps
+are eliminated. Advance with Next level. The local per-character record
+counts actual levels cleared, not levels skipped. No account is required.
+Solo pauses in a hidden tab; online matches do not.
+
+## Phase 6 — authoritative WebSockets
+
+`core/session.mjs` provides the same fixed-tick path for solo and server,
+including AI decisions. `src/games/wisp/server/room.mjs` owns room rules,
+sequence validation, bot takeover, snapshots and teammate-only pings.
+`server/worker.mjs` is the Cloudflare adapter. The browser connects over
+native WebSocket, not HTTP polling, and sends only direction/ability intents.
+The server owns all positions, energy, hits, abilities, portal and results.
+Remote actors interpolate between snapshots; local movement has bounded
+visual-only prediction (100 ms) and authoritative corrections. No client
+predictions of combat or energy are accepted. The wire protocol is v2.
+
+The development online panel creates six-digit rooms for 1–4 human testers;
+bots fill both sides to 4 vs 4. Select unique characters before joining. The
+host starts a single test round when every joined seat is connected. This
+is not yet the full co-op/competitive mode UI or scoring system. Transient
+network loss permits bot takeover and reconnect with the same private
+session token. The same tab can reload and join its saved room code; explicit
+leave releases the seat. Host migrates to a connected player. The lobby
+and finished result persist, but a Worker restart aborts an active match.
+No fabricated win on server restart. A room lasts at most one hour; five
+concurrent room leases are allowed, and explicit final leave releases the
+lease. Origin allowlisting and input size/rate limits reduce accidental abuse;
+they are not authentication against arbitrary public HTTP clients. Keep an
+eye on public room admission and Cloudflare usage before release.
+
+The retained `WispRooms` class, `WISP_ROOMS` binding, Worker name and
+`v1-wisp-rooms` migration are unchanged. New object names and storage keys
+(`maze-v2:` / `maze-v2-*`) avoid interpreting retired runner state as new
+rooms. Active matches run a 20 Hz timer; idle lobbies use hibernatable
+WebSockets. Active simulation duration and network traffic may incur costs.
+
+### Local test
+
+```sh
+cd multiplayer
+npm ci
+npm run dev:wisp -- --local --port 8787
+```
+
+In another terminal:
+
+```sh
+npm run dev
+```
+
+Visit `http://localhost:4321/games/wisp/` in two separate browser tabs or
+profiles. Select distinct characters, create a room, join using the code,
+and start from the host. If Astro uses another port, configure the Worker
+`WISP_ALLOWED_ORIGINS` accordingly. Default local backend is
+`http://127.0.0.1:8787`; `PUBLIC_WISP_BACKEND_URL` overrides it.
+
+```sh
+npm run test:wisp
+cd multiplayer
+npm run check:wisp      # tests and Wrangler dry-run bundle
+npm run smoke:wisp      # real WebSocket create/join/input/reconnect, local Worker required
+```
+
+### Deployment
+
+Existing GitHub Actions repository variables:
+
+- `WISP_BACKEND=cloudflare`
+- `PUBLIC_WISP_BACKEND_URL=https://wisp-multiplayer.tiendu107.workers.dev`
+
+The existing deployment environment `cloudflare-wisp` (or repository secrets)
+must provide `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. These credentials
+are never sent to the browser. The GitHub Pages workflow passes only the public
+backend URL. The Wisp Worker workflow checks, bundles and smoke-tests locally
+before deploying to the existing Worker on main if `WISP_BACKEND=cloudflare`.
+Confirm both deployments succeed before testing the hosted preview. `/v2/health`
+reports the protocol version. Solo works even without a backend URL.
 
 ## Next
 
-Solo progression, then authoritative multiplayer and team pings. Re-enable the Games entry only when playable.
+Phase 7: full co-op and competitive lifecycle, ready checks, round scoring,
+rematches and lobby UX. Phase 8: balance, sound, animation, mobile playtesting
+and release. WISP stays absent from the Games catalog throughout development.

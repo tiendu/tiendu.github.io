@@ -64,6 +64,6 @@ test('development route replaces the runner and is absent from Games', async () 
   assert.doesNotMatch(catalog,/href:\s*["']\/games\/wisp\//i);
   assert.match(route,/\/games\/wisp\/play\.html/);
   assert.match(route,/noindex/); assert.match(page,/noindex/);
-  assert.doesNotMatch(route,/PUBLIC_WISP_BACKEND_URL|workers\.dev/);
+  assert.match(route,/PUBLIC_WISP_BACKEND_URL/);
   assert.match(page,/preview\.mjs/);
 });

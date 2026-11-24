@@ -1,0 +1,71 @@
+name: WISP multiplayer backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['multiplayer/wrangler.wisp.jsonc', 'multiplayer/src/wisp-worker.mjs', 'multiplayer/scripts/wisp-smoke.mjs', 'multiplayer/package.json', 'multiplayer/package-lock.json', 'src/games/wisp/**', 'public/games/wisp/core/**', '.github/workflows/wisp-worker.yml']
+  pull_request:
+    paths: ['multiplayer/wrangler.wisp.jsonc', 'multiplayer/src/wisp-worker.mjs', 'multiplayer/scripts/wisp-smoke.mjs', 'multiplayer/package.json', 'multiplayer/package-lock.json', 'src/games/wisp/**', 'public/games/wisp/core/**', '.github/workflows/wisp-worker.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wisp-worker-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: multiplayer/package-lock.json
+      - run: npm ci
+        working-directory: multiplayer
+      - run: npm run check:wisp
+        working-directory: multiplayer
+      - name: Live WebSocket smoke test
+        working-directory: multiplayer
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run dev:wisp -- --local --port 8787 > /tmp/wisp-worker.log 2>&1 &
+          worker=$!
+          trap 'kill "$worker" 2>/dev/null || true; cat /tmp/wisp-worker.log' EXIT
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8787/v2/health >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8787/v2/health
+          npm run smoke:wisp
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.WISP_BACKEND == 'cloudflare'
+    runs-on: ubuntu-latest
+    environment: cloudflare-wisp
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: multiplayer/package-lock.json
+      - name: Check deployment credentials
+        shell: bash
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo 'Configure Cloudflare secrets in cloudflare-wisp or repository secrets.'
+            exit 1
+          fi
+      - run: npm ci
+        working-directory: multiplayer
+      - run: npm run deploy:wisp
+        working-directory: multiplayer

@@ -4,26 +4,34 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>WISP — Development preview</title>
+  <title>WISP — Maze chase</title>
   <link rel="stylesheet" href="./preview.css">
 </head>
 <body>
-  <header><a href="/games/" target="_top">← Games</a><h1>WISP</h1><p>Development preview · Phase 4</p></header>
+  <header><a href="/games/" target="_top">← Games</a><h1>WISP</h1><p>Solo & online development · Phases 5–6</p></header>
   <main>
     <section aria-label="Maze preview" class="arena">
-      <div class="toolbar"><button id="start">Start</button><button id="new">New maze</button><button id="rotate">Rotate</button><button id="tutorial" aria-pressed="false">Tutorial maze</button><label for="difficulty">Bots</label><select id="difficulty"><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select><span id="seed"></span></div>
+      <div class="toolbar"><button id="start">Start solo</button><button id="new">End run</button><button id="rotate">Rotate</button><label><input id="skip" type="checkbox"> Skip tutorial</label></div>
+      <div class="hud"><strong id="level">Level 1</strong><span id="score"></span><span id="record"></span></div>
+      <p id="tutorial-help" class="hint" aria-live="polite"></p>
       <div class="hud"><div><strong id="phase">Ready</strong> <span id="clock"></span></div><span id="alive"></span><div><span id="identity"></span> · <span id="condition"></span></div><progress id="energy" max="100" value="100" aria-label="Energy"></progress></div>
       <canvas id="board" tabindex="0" aria-label="Maze and eight characters"></canvas>
       <div id="controls" aria-label="Movement controls"><button data-d="0,-1" aria-label="Up">↑</button><button data-d="-1,0" aria-label="Left">←</button><button data-d="0,1" aria-label="Down">↓</button><button data-d="1,0" aria-label="Right">→</button><button id="ability" aria-keyshortcuts="Space" disabled>Ability</button></div>
       <p id="ability-help" class="hint"></p>
       <p id="ability-status" class="hint" aria-live="polite"></p>
-      <p class="hint">Arrow keys / WASD, swipe, or buttons. Space activates ability. Tap a cell to preview a ping.</p>
+      <p class="hint">Arrow keys / WASD, swipe, or buttons. Space activates ability. Tap a cell to ping.</p>
       <p id="result" role="status"></p>
     </section>
     <section aria-label="Character gallery" class="gallery">
-      <h2>Wisps</h2><div id="wisps" class="roster"></div>
+      <div id="character-selection"><h2>Wisps</h2><div id="wisps" class="roster"></div>
       <h2>Hunters</h2><div id="hunters" class="roster"></div>
-      <p class="hint">Select a character to inspect it at gameplay scale. All twelve abilities are active. Bots pursue, evade, collect energy and use their abilities. Change bot difficulty to test different decision-making styles.</p>
+      <p class="hint">Choose your character before starting a run. Escape as a Wisp, or eliminate all four Wisps as a hunter. Level 1 teaches the rules.</p></div>
+      <section id="online" aria-label="Online transport test">
+        <h2>Online · WebSocket test</h2>
+        <p class="hint">One authoritative round. Up to four humans; bots fill the remaining slots. Full mode selection and rematches arrive in Phase 7.</p>
+        <div class="toolbar"><button id="create">Create room</button><input id="room-code" inputmode="numeric" maxlength="6" placeholder="Room code" aria-label="Room code"><button id="join">Join</button><button id="online-start" hidden>Start round</button><button id="leave" hidden>Leave</button></div>
+        <p id="online-status" role="status"></p><p id="room-info" class="hint"></p>
+      </section>
     </section>
   </main>
   <script type="module" src="./preview.mjs"></script>

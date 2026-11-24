@@ -1,12 +1,14 @@
 ---
 import '../../../styles/pages/wisp.css';
+const api = (import.meta.env.PUBLIC_WISP_BACKEND_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8787' : '')).trim();
+const gameURL = `/games/wisp/play.html${api ? '?api=' + encodeURIComponent(api) : ''}`;
 ---
 <html lang="en"><head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#090d19" />
   <meta name="robots" content="noindex" />
-  <title>WISP · Development preview</title>
+  <title>WISP · Development</title>
 </head><body>
-  <iframe id="wisp-game" src="/games/wisp/play.html" title="WISP — development preview"></iframe>
+  <iframe id="wisp-game" src={gameURL} title="WISP — development"></iframe>
 </body></html>

@@ -33,3 +33,15 @@ canvas { display: block; width: auto; max-width: 100%; max-height: 54dvh; height
 canvas:focus-visible { outline: 1px solid #8ab7cc; outline-offset: 2px; }
 
 #difficulty { font: inherit; color: inherit; background: #101827; border: 1px solid #354861; border-radius: 6px; min-height: 44px; padding: 7px 10px; }
+
+[hidden] { display: none !important; }
+#room-code { width: 8em; min-height: 44px; padding: 8px; color: inherit; background: #101827; border: 1px solid #354861; border-radius: 6px; font: inherit; }
+#online { border-top: 1px solid #354861; margin-top: 16px; padding-top: 10px; }
+#online-status, #tutorial-help { min-height: 1.2em; }
+button:disabled { cursor: default; opacity: .5; }
+#level { color: #9fffe0; }
+
+body[data-screen="solo"] main { grid-template-columns: minmax(0, 1fr); }
+body[data-screen="solo"] .gallery, body[data-screen="online"] #character-selection { display: none; }
+body[data-screen="solo"] canvas { max-height: 65dvh; }
+@media (max-width: 819px) { body[data-screen="solo"] canvas { max-height: 55dvh; } }

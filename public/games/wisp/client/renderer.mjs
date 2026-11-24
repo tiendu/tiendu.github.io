@@ -27,7 +27,7 @@ export function renderer(canvas) {
   function ring(x,y,r,color,width=1.5) {
     ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
   }
-  function draw(s,landscape,previous,alpha,ping,time) {
+  function draw(s,landscape,previous,alpha,ping,time,localPosition=null) {
     prepare(s.board,landscape);
     ctx.drawImage(walls,0,0,(landscape?HEIGHT:WIDTH)*TILE,(landscape?WIDTH:HEIGHT)*TILE);
     for(const p of s.pickups) if(p.active) {
@@ -39,7 +39,7 @@ export function renderer(canvas) {
       const [x,y]=cell(s.portal.x,s.portal.y,landscape);
       ring(x,y,15+Math.sin(time/250)*2,'#9fffe0',2);ring(x,y,9,'#e7fff7',2);ring(x,y,19,'#286f66');
     }
-    if(ping&&time<ping.until) {
+    for(const ping of (Array.isArray(ping)?ping:[ping])) if(ping&&time<ping.until) {
       const [x,y]=cell(ping.x,ping.y,landscape);
       ring(x,y,8+((time/300)%1)*12,'#e8f6ff');ring(x,y,5,'#e8f6ff');
     }
@@ -55,7 +55,8 @@ export function renderer(canvas) {
     for(const a of actors) {
       if(a.status!=='active')continue;
       const old=previous?.get(a.id),p=old&&old.warp===a.warp?old:a;
-      const [x,y]=cell(p.x+(a.x-p.x)*alpha,p.y+(a.y-p.y)*alpha,landscape);
+      const predicted=a.player==='local'&&localPosition?.warp===a.warp?localPosition:null;
+      const [x,y]=cell(predicted?.x??(p.x+(a.x-p.x)*alpha),predicted?.y??(p.y+(a.y-p.y)*alpha),landscape);
       if(a.player==='local') ring(x,y,18,'#dce9f5',1.3);
       if(s.tick<a.immuneUntil) ring(x,y,15,'#78a6c7',1.3);
       drawStatus(ctx,s,a,x,y,screen,TILE);

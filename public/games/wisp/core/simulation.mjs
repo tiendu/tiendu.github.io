@@ -24,11 +24,11 @@ function spawnPickup(s,p) {
   const roll=random(s);
   Object.assign(p,c,{value:RULES.pickupValues[roll<.72?0:roll<.94?1:2],active:true,readyAt:0});
 }
-export function createRound({seed=0, tutorial=false, humans=[]}={}) {
+export function createRound({seed=0, tutorial=false, humans=[], rosterSeed=seed}={}) {
   const board=maze(seed,tutorial), spawns=spawnCells(board,seed^0x91c119);
   const s={seed:seed>>>0, tutorial, board, cells:openCells(board).map(point), random:(seed^0xcafe1234)>>>0,
     tick:0, phase:'prepare', portal:null, result:null, contacts:[], pickups:[], blocks:[], decoys:[], effects:[],
-    actors:teams(humans,seed,tutorial).map((c,i)=>({...c,...point(spawns[i]),dir:[0,0],wanted:null,
+    actors:teams(humans,rosterSeed,tutorial).map((c,i)=>({...c,...point(spawns[i]),dir:[0,0],wanted:null,
       energy:c.faction==='wisp'?RULES.energy:null,status:'active',immuneUntil:0,recoverUntil:0,reason:null,...abilityState()}))};
   for(let i=0;i<(tutorial?RULES.tutorialPickups:RULES.pickupCount);i++) {
     const p={id:i,active:false,readyAt:0}; s.pickups.push(p); spawnPickup(s,p);
