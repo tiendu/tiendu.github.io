@@ -74,10 +74,7 @@ body.system-interface:has(.ascii-ocean-page)::after {
   z-index: 1;
 }
 
-
-
 @media (max-width: 560px), (max-height: 500px) {
   .ascii-ocean-stage canvas { cursor: default; }
   .ascii-ocean-fallback { font-size: clamp(0.31rem, 1.45vw, 0.52rem); }
 }
-

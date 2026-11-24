@@ -49,10 +49,9 @@ function lobeField(u, v) {
   return best;
 }
 
-// V4.4 bell material. The geometry stays broad enough to feel like the same
-// specimen, but the sides now keep curving all the way into the skirt instead
-// of settling into architectural side walls. The visual bell is also a little
-// narrower/taller than V4.3; tentacle roots still sit safely inside the rim.
+// Keep the bell rounded and organic all the way into the skirt. The visual
+// membrane is slightly narrower/taller than its attachment envelope so roots
+// stay safely inside the rim without creating architectural side walls.
 export function bellProfileAt(v, pulse = 0, phase = 0) {
   if (v < -1.09 || v > 0.06) return 0;
   const t = invLerp(-1.07, 0.035, v);
@@ -155,16 +154,52 @@ export function rootEmergenceScale(item, along) {
   return lerp(start, 1, smoothstep(invLerp(0, end, along)));
 }
 
-// Ghost anatomy is only visible inside the lower bell and only for structures
-// that live behind or within the membrane. It is deliberately subtle: enough
-// to explain origin/depth, never enough to count every strand through the cap.
+// The bell is optically thicker near the crown and increasingly transparent
+// toward the skirt. This transmission curve is shared by the membrane and the
+// ghost anatomy behind it so both materials agree about depth.
+export function bellTransmissionAt(v) {
+  if (v < -1.09 || v > 0.045) return 0;
+  const lower = smoothstep(invLerp(-0.92, 0.02, v));
+  return lerp(0.055, 0.245, lower);
+}
+
+// Rear/mid roots are visible through the lower bell, but only faintly enough to
+// explain where they originate. Foreground anatomy remains in front of it.
 export function internalRootOpacityAt(item, v) {
   const depth = item.layer ?? 0;
   if (depth >= 0.45 || v < -0.46 || v > 0.045) return 0;
-  const lowerBell = smoothstep(invLerp(-0.46, -0.08, v));
+  const rootWindow = smoothstep(invLerp(-0.46, -0.08, v));
   const depthFactor = depth < -0.25 ? 1 : 0.72;
   const tissueFactor = item.arm ? 1 : 0.68;
-  return lowerBell * depthFactor * tissueFactor * 0.22;
+  return rootWindow * depthFactor * tissueFactor * bellTransmissionAt(v);
+}
+
+// Cyan belongs to occasional thin-tentacle highlights, not a repeating stripe.
+// The field is deterministic per strand/segment so accents stay put while the
+// chain moves and do not reveal an obvious modulo pattern.
+export function tentacleAccentStrength(item, along, segmentIndex) {
+  if (along < 0.56) return 0;
+  const seed =
+    (item.phase ?? 0) * 12.9898
+    + ((item.offset ?? 0) + 1.3) * 78.233
+    + segmentIndex * 37.719;
+  const raw = Math.sin(seed) * 43758.5453;
+  const noise = raw - Math.floor(raw);
+  const tip = smoothstep(invLerp(0.56, 0.98, along));
+  const threshold = lerp(0.88, 0.76, tip);
+  if (noise <= threshold) return 0;
+  return smoothstep(invLerp(threshold, 1, noise)) * lerp(0.30, 1, tip);
+}
+
+// Different skirt fragments sit at slightly different apparent depths. This
+// stable field creates bright forward pieces and dim rear pieces without
+// changing the actual skirt geometry or introducing frame-to-frame sparkle.
+export function skirtDepthLightAt(u, phase = 0) {
+  const field =
+    Math.sin((u + 0.31) * 9.7 + phase * 1.13)
+    + Math.cos((u - 0.17) * 17.3 - phase * 0.71) * 0.55;
+  const normalized = clamp((field + 1.55) / 3.10, 0, 1);
+  return lerp(0.58, 1.08, smoothstep(normalized));
 }
 
 export class AsciiRenderer {
@@ -309,10 +344,13 @@ export class AsciiRenderer {
         if ((i * 3 + s) % 8 === 0) {
           const side = Math.sin(item.phase + i * 1.31) >= 0 ? 1 : -1;
           const reach = this.cellW * (along > 0.72 ? 0.92 : 0.58);
-          const accentColor = along > 0.58 && (i + s) % 3 === 0
-            ? jelly.palette.tentacleAccent
-            : jelly.palette.tentacleHot;
-          ctx.fillStyle = rgba(accentColor, alpha * (along > 0.72 ? 0.34 : 0.22));
+          const accent = tentacleAccentStrength(item, along, i);
+          ctx.fillStyle = mixColor(
+            jelly.palette.tentacleHot,
+            jelly.palette.tentacleAccent,
+            accent,
+            alpha * (along > 0.72 ? 0.34 : 0.22),
+          );
           ctx.fillText(along > 0.68 ? (i % 2 ? "," : ".") : ":", x + nx * reach * side, y + ny * this.cellH * 0.12 * side);
         }
       }
@@ -386,7 +424,13 @@ export class AsciiRenderer {
       const ny = dx / distance;
       const tipFade = 1 - smoothstep(invLerp(branch ? 0.75 : 0.84, 1, segmentAlong));
       const rootFade = branch ? 1 : rootEmergenceScale(item, segmentAlong);
-      const alpha = baseAlpha * lerp(1, branch ? 0.32 : 0.45, segmentAlong) * tipFade * rootFade;
+      const pulseLift = branch ? 1 : 1 + jelly.pulse * (1 - segmentAlong) * 0.055;
+      const alpha =
+        baseAlpha
+        * lerp(1, branch ? 0.32 : 0.45, segmentAlong)
+        * tipFade
+        * rootFade
+        * pulseLift;
       if (alpha < 0.012) continue;
 
       for (let s = 0; s < samples; s += 1) {
@@ -434,13 +478,25 @@ export class AsciiRenderer {
           const x = lerp(rightX, leftX, q);
           const y = lerp(rightY, leftY, q);
           const middle = 1 - Math.abs(q - 0.5) * 2;
-          const foldHighlight = Math.max(0, Math.sin((item.phase ?? 0) + along * 14.4 + q * 3.1));
-          const density = clamp(0.10 + middle * 0.38 + foldHighlight * 0.24 + face * 0.16, 0.04, 0.90);
+          const foldHighlight = Math.max(
+            0,
+            Math.sin((item.phase ?? 0) + along * 14.4 + q * 3.1),
+          );
+          const foldAccent =
+            smoothstep(invLerp(0.58, 0.96, foldHighlight))
+            * smoothstep(invLerp(0.22, 0.86, face));
+          const density = clamp(
+            0.10 + middle * 0.38 + foldHighlight * 0.24 + face * 0.16,
+            0.04,
+            0.90,
+          );
+          const foldColor =
+            foldAccent > 0.24 ? jelly.palette.armAccent : jelly.palette.armHot;
           ctx.fillStyle = mixColor(
             jelly.palette.armDark,
-            jelly.palette.armHot,
-            0.18 + foldHighlight * 0.48 + face * 0.12,
-            alpha * (0.42 + middle * 0.25),
+            foldColor,
+            0.16 + foldHighlight * 0.44 + face * 0.12,
+            alpha * (0.34 + middle * 0.22 + face * 0.06),
           );
           ctx.fillText(densityGlyph(density, ASCII.ribbon), x, y);
         }
@@ -453,10 +509,7 @@ export class AsciiRenderer {
           ctx.fillStyle = rgba(jelly.palette.rim, alpha * 0.30);
           ctx.fillText(i % 2 ? "/" : "~", leftX + nx * leftFray, leftY + ny * leftFray * 0.25);
           if ((i + s) % 7 === 0) {
-            ctx.fillStyle = rgba(
-              (i + s) % 11 === 0 ? jelly.palette.armAccent : jelly.palette.armHot,
-              alpha * 0.26,
-            );
+            ctx.fillStyle = rgba(jelly.palette.armHot, alpha * 0.26);
             ctx.fillText(i % 3 ? "\\" : ".", rightX - nx * rightFray, rightY - ny * rightFray * 0.20);
           }
         }
@@ -603,8 +656,8 @@ export class AsciiRenderer {
         const flameStreak = t > 0.09 && t < 0.60
           && Math.abs(Math.sin(flamePhase)) < (0.075 + (1 - t) * 0.018);
 
-        // Only tiny broken arc remnants remain. V4.3's full rings were one of
-        // the things making the bell look engineered rather than gelatinous.
+        // Keep only tiny broken arc remnants. Full rings make the bell look
+        // engineered rather than gelatinous.
         const arcBand = Math.abs(t - (0.60 + Math.sin(u * 4.9 + jelly.anatomyPhase) * 0.010)) < 0.006;
         const arcFragment = arcBand && Math.sin(u * 24 + jelly.twist) > 0.52;
 
@@ -618,8 +671,8 @@ export class AsciiRenderer {
         const grainB = 0.5 + 0.5 * Math.sin(u * 61 - v * 47 + jelly.twist * 0.7)
           * Math.cos(u * 41 + v * 31 - jelly.anatomyPhase * 1.3);
 
-        // V4.4 deliberately has less membrane ink. Bright anatomy should appear
-        // suspended inside a transparent envelope, not printed onto a wall.
+        // Keep membrane ink sparse so bright anatomy appears suspended inside
+        // a transparent envelope rather than printed onto a wall.
         const tissueDensity = clamp(
           0.040
           + membraneDepth * 0.215
@@ -638,7 +691,13 @@ export class AsciiRenderer {
 
         let glyph;
         let color;
-        const alpha = (0.255 + tissueDensity * 0.445) * (this.compact ? 1.12 : 1.03) * lerp(1, 0.78, lowerGlass);
+        const materialOpacity = lerp(1.08, 0.70, lowerGlass);
+        const pulseLight = 1 + jelly.pulse * (1 - lowerGlass) * 0.06;
+        const alpha =
+          (0.255 + tissueDensity * 0.445)
+          * (this.compact ? 1.12 : 1.03)
+          * materialOpacity
+          * pulseLight;
 
         if (boundary) {
           const probe = 0.012;
@@ -751,9 +810,9 @@ export class AsciiRenderer {
       }
     }
 
-    // Broken fluorescent membrane edge. V4.6.2 keeps the underbelly geometry
-    // but removes the continuous two-row neon cord: stable gaps, local intensity
-    // changes and sparse hanging frills make the skirt read as soft tissue.
+    // Broken fluorescent membrane edge: stable gaps, local intensity and
+    // sparse hanging frills make the skirt read as soft tissue rather than a
+    // continuous neon cord.
     const steps = Math.max(42, Math.floor((halfW * 1.80) / (cellW * 0.66)));
     for (let i = 0; i <= steps; i += 1) {
       const q = i / steps;
@@ -776,14 +835,22 @@ export class AsciiRenderer {
       const local = rotate(u * halfW + shift, rim * height, jelly.tilt);
       const x = jelly.x + local.x;
       const y = jelly.y + local.y;
-      const alpha = 0.20 + membrane.intensity * 0.72;
+      const depthLight = skirtDepthLightAt(u, jelly.anatomyPhase);
+      const pulseLift = 1 + jelly.pulse * 0.045;
+      const alpha = (0.16 + membrane.intensity * 0.68) * depthLight * pulseLift;
+      const skirtBase =
+        depthLight < 0.76 ? jelly.palette.bellCool : jelly.palette.rim;
 
-      ctx.shadowColor = rgba(jelly.palette.rim, 0.18 + membrane.intensity * 0.24);
-      ctx.shadowBlur = (0.45 + membrane.intensity * 1.55) * this.shadowScale;
-      ctx.fillStyle = mixColor(
+      ctx.shadowColor = rgba(
         jelly.palette.rim,
+        (0.12 + membrane.intensity * 0.23) * depthLight,
+      );
+      ctx.shadowBlur =
+        (0.35 + membrane.intensity * 1.45) * this.shadowScale * depthLight;
+      ctx.fillStyle = mixColor(
+        skirtBase,
         jelly.palette.rimHot,
-        membrane.intensity,
+        membrane.intensity * depthLight,
         alpha,
       );
       ctx.fillText(
@@ -798,7 +865,10 @@ export class AsciiRenderer {
         + Math.cos(u * 17 - jelly.anatomyPhase) * 0.45;
       if (membrane.intensity > 0.52 && ghostField > 0.38) {
         ctx.shadowBlur = 0;
-        ctx.fillStyle = rgba(jelly.palette.rim, 0.10 + membrane.intensity * 0.16);
+        ctx.fillStyle = rgba(
+          jelly.palette.rim,
+          (0.08 + membrane.intensity * 0.15) * depthLight,
+        );
         ctx.fillText(ghostField > 1.08 ? "." : "~", x, y + cellH * 0.31);
       }
 
@@ -814,7 +884,7 @@ export class AsciiRenderer {
             jelly.palette.rim,
             jelly.palette.rimHot,
             membrane.intensity * 0.55,
-            0.18 + membrane.intensity * 0.25 / k,
+            (0.16 + membrane.intensity * 0.23 / k) * depthLight,
           );
           ctx.fillText(glyph, x + sway, y + cellH * (0.48 + k * 0.48));
         }
@@ -840,8 +910,8 @@ export class AsciiRenderer {
       }
     }
 
-    // No full contraction ring in V4.4. Pulse is communicated by geometry,
-    // fluorescence and motion; a horizontal ring was visually too architectural.
+    // Pulse is communicated by geometry, fluorescence and motion. A full
+    // horizontal contraction ring would make the bell too architectural.
     this.#setFont(this.fontSize);
   }
 

@@ -39,7 +39,6 @@ export function mountJellyfish() {
   let pointerActive = false;
   let running = false;
 
-
   const measure = () => {
     const rect = root.getBoundingClientRect();
     const nextWidth = Math.max(1, rect.width);
@@ -120,7 +119,6 @@ export function mountJellyfish() {
     }
     frame = requestAnimationFrame(tick);
   };
-
 
   const onVisibility = () => {
     if (document.hidden) stop();

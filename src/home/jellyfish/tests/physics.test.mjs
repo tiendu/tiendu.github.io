@@ -6,10 +6,13 @@ import {
   bellPoreThresholdAt,
   bellProfileAt,
   bellRimAt,
-  skirtMembraneAt,
-  tentaclePresenceScale,
-  rootEmergenceScale,
+  bellTransmissionAt,
   internalRootOpacityAt,
+  rootEmergenceScale,
+  skirtDepthLightAt,
+  skirtMembraneAt,
+  tentacleAccentStrength,
+  tentaclePresenceScale,
 } from "../renderer.mjs";
 import { heroSizeFor, topClearanceFor } from "../jellyfish.mjs";
 import { currentWeather, OceanField } from "../ocean.mjs";
@@ -380,6 +383,48 @@ test("V4.7 outer long tentacles recede without dimming central strands", () => {
   assert.equal(central, 1);
   assert.ok(outerLong < 0.76, `outer long scale ${outerLong}`);
   assert.ok(outerShort > outerLong + 0.18, `outer short ${outerShort} vs long ${outerLong}`);
+});
+
+test("material transmission increases toward the lower bell", () => {
+  const crown = bellTransmissionAt(-0.90);
+  const middle = bellTransmissionAt(-0.50);
+  const lower = bellTransmissionAt(-0.10);
+  assert.ok(crown < 0.07, `crown transmission ${crown}`);
+  assert.ok(middle > crown + 0.06, `middle ${middle} crown ${crown}`);
+  assert.ok(lower > 0.22, `lower transmission ${lower}`);
+});
+
+test("thin-tentacle cyan accents are sparse, stable and non-periodic", () => {
+  const item = { phase: 2.3, offset: -0.6 };
+  assert.equal(tentacleAccentStrength(item, 0.40, 30), 0);
+
+  const accents = [];
+  for (let i = 42; i < 76; i += 1) {
+    const along = i / 75;
+    accents.push(tentacleAccentStrength(item, along, i));
+  }
+  const visible = accents.filter((value) => value > 0.10);
+  assert.ok(visible.length >= 2 && visible.length <= 8, `accent count ${visible.length}`);
+  assert.ok(Math.max(...visible) > 0.70, `strongest accent ${Math.max(...visible)}`);
+  assert.equal(
+    tentacleAccentStrength(item, 60 / 75, 60),
+    tentacleAccentStrength(item, 60 / 75, 60),
+  );
+});
+
+test("skirt depth lighting creates stable foreground and rear fragments", () => {
+  const samples = [];
+  for (let i = 0; i <= 120; i += 1) {
+    const u = -0.89 + (1.78 * i) / 120;
+    samples.push(skirtDepthLightAt(u, 1.2));
+  }
+  assert.ok(Math.min(...samples) < 0.66, `minimum depth light ${Math.min(...samples)}`);
+  assert.ok(Math.max(...samples) > 1.02, `maximum depth light ${Math.max(...samples)}`);
+  assert.ok(
+    Math.max(...samples) - Math.min(...samples) > 0.40,
+    "skirt depth field should have visible range",
+  );
+  assert.equal(skirtDepthLightAt(0.31, 1.2), skirtDepthLightAt(0.31, 1.2));
 });
 
 test("V4.8 depth-aware roots emerge from the bell instead of hanging from a point", () => {
