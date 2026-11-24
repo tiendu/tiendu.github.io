@@ -20,7 +20,6 @@ function seedFromSession() {
 export function mountJellyfish() {
   const root = document.querySelector("[data-ascii-ocean]");
   const canvas = root?.querySelector("[data-jelly-canvas]");
-  const pauseButton = root?.querySelector("[data-jelly-pause]");
   if (!(root instanceof HTMLElement) || !(canvas instanceof HTMLCanvasElement)) return () => {};
 
   const fallback = root.querySelector("[data-jelly-fallback]");
@@ -39,14 +38,7 @@ export function mountJellyfish() {
   let pointerTime = performance.now();
   let pointerActive = false;
   let running = false;
-  let userPaused = false;
 
-  const syncPauseButton = () => {
-    if (!(pauseButton instanceof HTMLButtonElement)) return;
-    pauseButton.textContent = userPaused ? "RESUME" : "PAUSE";
-    pauseButton.setAttribute("aria-pressed", userPaused ? "true" : "false");
-    pauseButton.title = userPaused ? "Resume jellyfish animation" : "Pause jellyfish animation";
-  };
 
   const measure = () => {
     const rect = root.getBoundingClientRect();
@@ -89,7 +81,7 @@ export function mountJellyfish() {
   };
 
   const tick = (now) => {
-    if (!running || userPaused || !world) return;
+    if (!running || !world) return;
     const elapsed = Math.min(SIMULATION.maxFrameDelta, Math.max(0, (now - last) / 1000));
     last = now;
     accumulator += elapsed;
@@ -114,7 +106,7 @@ export function mountJellyfish() {
 
   const start = () => {
     cancelAnimationFrame(frame);
-    if (userPaused || document.hidden || !world) {
+    if (document.hidden || !world) {
       running = false;
       return;
     }
@@ -129,12 +121,6 @@ export function mountJellyfish() {
     frame = requestAnimationFrame(tick);
   };
 
-  const togglePause = () => {
-    userPaused = !userPaused;
-    syncPauseButton();
-    if (userPaused) stop();
-    else start();
-  };
 
   const onVisibility = () => {
     if (document.hidden) stop();
@@ -147,14 +133,12 @@ export function mountJellyfish() {
   resizeObserver.observe(root);
   canvas.addEventListener("pointermove", onPointerMove, { passive: true });
   canvas.addEventListener("pointerleave", onPointerLeave, { passive: true });
-  pauseButton?.addEventListener("click", togglePause);
   document.addEventListener("visibilitychange", onVisibility);
   reduced.addEventListener?.("change", onReducedChange);
 
   measure();
   if (fallback instanceof HTMLElement) fallback.hidden = true;
   canvas.hidden = false;
-  syncPauseButton();
   start();
 
   return () => {
@@ -162,7 +146,6 @@ export function mountJellyfish() {
     resizeObserver.disconnect();
     canvas.removeEventListener("pointermove", onPointerMove);
     canvas.removeEventListener("pointerleave", onPointerLeave);
-    pauseButton?.removeEventListener("click", togglePause);
     document.removeEventListener("visibilitychange", onVisibility);
     reduced.removeEventListener?.("change", onReducedChange);
   };

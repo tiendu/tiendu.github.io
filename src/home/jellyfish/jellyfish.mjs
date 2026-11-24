@@ -20,7 +20,7 @@ export function topClearanceFor(height) {
 
 function homeYFor(width, height) {
   if (height < 420) return height * 0.34;
-  return height * (width < 620 ? 0.33 : 0.35);
+  return height * (width < 620 ? 0.31 : 0.35);
 }
 
 function bellAnchor(jelly, offset, yOffset = 0) {

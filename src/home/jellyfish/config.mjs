@@ -21,23 +21,26 @@ export const ASCII = Object.freeze({
 // than randomly rotating palettes. The reference's orange/pink cap and
 // violet/blue underside are part of its identity.
 export const JELLY_PALETTE = Object.freeze({
-  // Fluorescence belongs to the specimen, not the site chrome. The bell moves
-  // from warm cream/coral at the crown into magenta and violet underneath.
-  bellShadow: "#40378f",
-  bellCool: "#7468db",
-  bellSoft: "#d6a0f1",
-  bellGlass: "#efc6ff",
-  bellCoral: "#ff6f68",
-  bellWarm: "#ff963f",
-  bellHot: "#ffe58e",
-  bellCrown: "#fff6c7",
-  rim: "#ff45b5",
-  rimHot: "#ffd1ef",
-  armDark: "#5d64c8",
-  arm: "#8b7ee7",
-  armHot: "#cf8fe9",
-  tentacle: "#766bd6",
-  tentacleHot: "#bca8ff",
+  // Keep the animal fluorescent without turning it into a rainbow. Warm bell
+  // tissue transitions through magenta/lavender into violet strands, with a
+  // few cool cyan accents on the thinnest tentacle details.
+  bellShadow: "#5147a8",
+  bellCool: "#8071e8",
+  bellSoft: "#e0a9f5",
+  bellGlass: "#f3d0ff",
+  bellCoral: "#ff776d",
+  bellWarm: "#ffad55",
+  bellHot: "#ffe6a3",
+  bellCrown: "#fff8d8",
+  rim: "#ff55bd",
+  rimHot: "#ffe0f4",
+  armDark: "#6668d6",
+  arm: "#9985f0",
+  armHot: "#dda1f4",
+  armAccent: "#ff82d8",
+  tentacle: "#7d73dc",
+  tentacleHot: "#b8abff",
+  tentacleAccent: "#7fd9ff",
   white: "#fffaf2",
 });
 

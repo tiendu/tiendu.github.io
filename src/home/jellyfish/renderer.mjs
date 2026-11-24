@@ -220,9 +220,9 @@ export class AsciiRenderer {
       jelly.y + jelly.bellHeight() * 0.58,
       Math.max(jelly.baseSize * 1.72, 210),
     );
-    glow.addColorStop(0, "rgba(117,82,207,0.075)");
-    glow.addColorStop(0.42, "rgba(62,46,145,0.038)");
-    glow.addColorStop(0.76, "rgba(25,24,70,0.014)");
+    glow.addColorStop(0, "rgba(138,102,255,0.090)");
+    glow.addColorStop(0.42, "rgba(106,68,176,0.045)");
+    glow.addColorStop(0.76, "rgba(45,63,112,0.018)");
     glow.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, this.width, this.height);
@@ -268,7 +268,7 @@ export class AsciiRenderer {
     const ctx = this.ctx;
     const layerOpacity = this.#layerOpacity(item, opacity);
     const presence = tentaclePresenceScale(item);
-    const baseAlpha = 0.66 * item.bright * layerOpacity * presence;
+    const baseAlpha = 0.72 * item.bright * layerOpacity * presence * (this.compact ? 1.12 : 1.03);
     ctx.shadowColor = rgba(jelly.palette.tentacleHot, 0.24 * layerOpacity);
     ctx.shadowBlur = (item.layer > 0.6 ? 1.5 : 0.8) * this.shadowScale;
 
@@ -309,7 +309,10 @@ export class AsciiRenderer {
         if ((i * 3 + s) % 8 === 0) {
           const side = Math.sin(item.phase + i * 1.31) >= 0 ? 1 : -1;
           const reach = this.cellW * (along > 0.72 ? 0.92 : 0.58);
-          ctx.fillStyle = rgba(jelly.palette.tentacleHot, alpha * (along > 0.72 ? 0.34 : 0.22));
+          const accentColor = along > 0.58 && (i + s) % 3 === 0
+            ? jelly.palette.tentacleAccent
+            : jelly.palette.tentacleHot;
+          ctx.fillStyle = rgba(accentColor, alpha * (along > 0.72 ? 0.34 : 0.22));
           ctx.fillText(along > 0.68 ? (i % 2 ? "," : ".") : ":", x + nx * reach * side, y + ny * this.cellH * 0.12 * side);
         }
       }
@@ -365,7 +368,7 @@ export class AsciiRenderer {
     const { chain } = item;
     const ctx = this.ctx;
     const layerOpacity = this.#layerOpacity(item, opacity);
-    const baseAlpha = (branch ? 0.66 : 0.79) * (item.bright ?? 0.9) * layerOpacity;
+    const baseAlpha = (branch ? 0.71 : 0.85) * (item.bright ?? 0.9) * layerOpacity * (this.compact ? 1.10 : 1.02);
     ctx.shadowColor = rgba(jelly.palette.armHot, 0.24 * layerOpacity);
     ctx.shadowBlur = ((item.layer ?? 0) > 0.5 ? 1.8 : 1.0) * this.shadowScale;
 
@@ -450,7 +453,10 @@ export class AsciiRenderer {
           ctx.fillStyle = rgba(jelly.palette.rim, alpha * 0.30);
           ctx.fillText(i % 2 ? "/" : "~", leftX + nx * leftFray, leftY + ny * leftFray * 0.25);
           if ((i + s) % 7 === 0) {
-            ctx.fillStyle = rgba(jelly.palette.armHot, alpha * 0.26);
+            ctx.fillStyle = rgba(
+              (i + s) % 11 === 0 ? jelly.palette.armAccent : jelly.palette.armHot,
+              alpha * 0.26,
+            );
             ctx.fillText(i % 3 ? "\\" : ".", rightX - nx * rightFray, rightY - ny * rightFray * 0.20);
           }
         }
@@ -632,7 +638,7 @@ export class AsciiRenderer {
 
         let glyph;
         let color;
-        const alpha = (0.23 + tissueDensity * 0.42) * lerp(1, 0.78, lowerGlass);
+        const alpha = (0.255 + tissueDensity * 0.445) * (this.compact ? 1.12 : 1.03) * lerp(1, 0.78, lowerGlass);
 
         if (boundary) {
           const probe = 0.012;
