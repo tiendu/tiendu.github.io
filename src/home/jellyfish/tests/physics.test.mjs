@@ -1,7 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderFpsFor } from "../config.mjs";
-import { bellGridScaleFor, bellPoreThresholdAt, bellProfileAt, bellRimAt } from "../renderer.mjs";
+import {
+  bellGridScaleFor,
+  bellPoreThresholdAt,
+  bellProfileAt,
+  bellRimAt,
+  skirtMembraneAt,
+} from "../renderer.mjs";
 import { heroSizeFor, topClearanceFor } from "../jellyfish.mjs";
 import { currentWeather, OceanField } from "../ocean.mjs";
 import { VerletChain } from "../physics.mjs";
@@ -345,5 +351,35 @@ test("V4.6 envelope repair keeps segment lengths coherent during hostile current
     worst = Math.max(worst, chain.maxConstraintError());
   }
   assert.ok(worst < 1.2, `worst post-envelope constraint ${worst}`);
+});
+
+test("V4.6.2 skirt is broken, brightness-varied and pulse-responsive", () => {
+  const samples = [];
+  for (let i = 0; i <= 120; i += 1) {
+    const u = -0.89 + (1.78 * i) / 120;
+    samples.push(skirtMembraneAt(u, 0.25, 1.2, 20, 0.08));
+  }
+  const visible = samples.filter((sample) => sample.visible);
+  const ratio = visible.length / samples.length;
+  assert.ok(ratio > 0.62 && ratio < 0.82, `visible ratio ${ratio}`);
+
+  const intensities = visible.map((sample) => sample.intensity);
+  const span = Math.max(...intensities) - Math.min(...intensities);
+  assert.ok(span > 0.32, `intensity span ${span}`);
+  assert.ok(visible.filter((sample) => sample.frill).length >= 3, "expected sparse frills");
+
+  const relaxed = skirtMembraneAt(0.28, 0, 1.2, 20, 0.08);
+  const contracted = skirtMembraneAt(0.28, 1, 1.2, 20, 0.08);
+  assert.ok(
+    contracted.offset < relaxed.offset - 0.007,
+    `pulse offsets ${contracted.offset}, ${relaxed.offset}`,
+  );
+
+  const calm = skirtMembraneAt(0.72, 0.2, 1.2, 20, 0);
+  const current = skirtMembraneAt(0.72, 0.2, 1.2, 20, 0.11);
+  assert.ok(
+    Math.abs(current.offset - calm.offset) > 0.001,
+    `current response ${current.offset - calm.offset}`,
+  );
 });
 

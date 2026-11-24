@@ -101,6 +101,38 @@ export function bellGridScaleFor(compact = false) {
   return compact ? { x: 0.78, y: 0.82 } : { x: 0.62, y: 0.66 };
 }
 
+// The skirt is a translucent membrane edge, not a continuous neon wire. The
+// visibility/intensity pattern is anatomy-stable; only its tiny vertical flutter
+// changes with pulse/current so gaps never sparkle randomly frame to frame.
+export function skirtMembraneAt(u, pulse = 0, phase = 0, time = 0, tilt = 0) {
+  const absU = Math.min(1, Math.abs(u));
+  const grain =
+    Math.sin((u + 1) * Math.PI * 7.1 + phase * 0.83)
+    + Math.sin((u + 0.17) * Math.PI * 15.7 - phase * 1.21) * 0.52;
+  const visible = grain > -0.55 || absU > 0.86;
+  const intensity = clamp(
+    0.42 + grain * 0.18 + (1 - absU) * 0.08 + pulse * 0.06,
+    0.16,
+    0.94,
+  );
+  const frillSeed =
+    Math.sin((u + 0.39) * Math.PI * 9.3 + phase * 1.37)
+    + Math.cos((u - 0.21) * Math.PI * 17.5 - phase * 0.53) * 0.40;
+  const frill = visible && absU < 0.86 && frillSeed > 0.95;
+  const tuck = -pulse * 0.0065 + (1 - pulse) * 0.0025;
+  const flutterAmplitude = 0.0022 + Math.abs(tilt) * 0.022;
+  const flutter = Math.sin(time * 0.34 + u * 6.2 + phase)
+    * flutterAmplitude * (0.55 + absU * 0.45);
+  const currentShear = tilt * u * 0.018;
+  return {
+    visible,
+    intensity,
+    frill,
+    offset: tuck + flutter + currentShear,
+    frillSeed,
+  };
+}
+
 export class AsciiRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -609,34 +641,72 @@ export class AsciiRenderer {
       }
     }
 
-    // Thin two-layer skirt. The underbelly curve comes from bellRimAt itself;
-    // local scallops merely fray the fluorescent membrane rather than drawing
-    // a ruler-straight baseline across the creature.
-    const steps = Math.max(36, Math.floor((halfW * 1.80) / (cellW * 0.72)));
-    for (let row = 0; row < 2; row += 1) {
-      const rowAlpha = row === 0 ? 0.90 : 0.36;
-      const rowOffset = row * cellH * 0.38;
-      ctx.fillStyle = rgba(row === 0 ? jelly.palette.rimHot : jelly.palette.rim, rowAlpha);
-      ctx.shadowColor = rgba(jelly.palette.rim, 0.36);
-      ctx.shadowBlur = (row === 0 ? 2.2 : 1.0) * this.shadowScale;
-      for (let i = 0; i <= steps; i += 1) {
-        const q = i / steps;
-        const u = lerp(-0.89, 0.89, q);
-        const rim = bellRimAt(u, jelly.pulse, jelly.twist);
-        const nextU = clamp(u + 0.012, -0.89, 0.89);
-        const dy = bellRimAt(nextU, jelly.pulse, jelly.twist) - rim;
-        const shift = bellCenterShift(rim, jelly.anatomyPhase, halfW);
-        const local = rotate(u * halfW + shift, rim * height + rowOffset, jelly.tilt);
-        const glyph = row === 0
-          ? directionGlyph(nextU - u, dy * height / Math.max(1, halfW))
-          : (i % 6 === 0 ? "." : "~");
-        ctx.fillText(glyph, jelly.x + local.x, jelly.y + local.y);
+    // Broken fluorescent membrane edge. V4.6.2 keeps the underbelly geometry
+    // but removes the continuous two-row neon cord: stable gaps, local intensity
+    // changes and sparse hanging frills make the skirt read as soft tissue.
+    const steps = Math.max(42, Math.floor((halfW * 1.80) / (cellW * 0.66)));
+    for (let i = 0; i <= steps; i += 1) {
+      const q = i / steps;
+      const u = lerp(-0.89, 0.89, q);
+      const membrane = skirtMembraneAt(u, jelly.pulse, jelly.anatomyPhase, time, jelly.tilt);
+      if (!membrane.visible) continue;
 
-        const broadLow = Math.sin((u + 1) * Math.PI * 5.55 + jelly.twist * 0.80) < -0.84;
-        if (row === 0 && broadLow && i % 4 === 0) {
-          ctx.fillStyle = rgba(jelly.palette.rim, 0.38);
-          ctx.fillText(i % 2 ? ":" : "'", jelly.x + local.x, jelly.y + local.y + cellH * 0.72);
-          ctx.fillStyle = rgba(jelly.palette.rimHot, rowAlpha);
+      const rim = bellRimAt(u, jelly.pulse, jelly.twist) + membrane.offset;
+      const nextU = clamp(u + 0.010, -0.89, 0.89);
+      const nextMembrane = skirtMembraneAt(
+        nextU,
+        jelly.pulse,
+        jelly.anatomyPhase,
+        time,
+        jelly.tilt,
+      );
+      const nextRim = bellRimAt(nextU, jelly.pulse, jelly.twist) + nextMembrane.offset;
+      const dy = nextRim - rim;
+      const shift = bellCenterShift(rim, jelly.anatomyPhase, halfW);
+      const local = rotate(u * halfW + shift, rim * height, jelly.tilt);
+      const x = jelly.x + local.x;
+      const y = jelly.y + local.y;
+      const alpha = 0.20 + membrane.intensity * 0.72;
+
+      ctx.shadowColor = rgba(jelly.palette.rim, 0.18 + membrane.intensity * 0.24);
+      ctx.shadowBlur = (0.45 + membrane.intensity * 1.55) * this.shadowScale;
+      ctx.fillStyle = mixColor(
+        jelly.palette.rim,
+        jelly.palette.rimHot,
+        membrane.intensity,
+        alpha,
+      );
+      ctx.fillText(
+        directionGlyph(nextU - u, dy * height / Math.max(1, halfW)),
+        x,
+        y,
+      );
+
+      // A second membrane layer only appears as occasional ghost fragments,
+      // never as another continuous line.
+      const ghostField = Math.sin(u * 31 + jelly.twist * 1.7)
+        + Math.cos(u * 17 - jelly.anatomyPhase) * 0.45;
+      if (membrane.intensity > 0.52 && ghostField > 0.38) {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = rgba(jelly.palette.rim, 0.10 + membrane.intensity * 0.16);
+        ctx.fillText(ghostField > 1.08 ? "." : "~", x, y + cellH * 0.31);
+      }
+
+      if (membrane.frill) {
+        const length = membrane.frillSeed > 1.22 ? 2 : 1;
+        for (let k = 1; k <= length; k += 1) {
+          const sway = Math.sin(jelly.anatomyPhase + u * 12.4 + k * 1.7)
+            * cellW * 0.24 * k;
+          const glyph = k === 1
+            ? (membrane.frillSeed > 1.30 ? "|" : (u < 0 ? "/" : "\\"))
+            : (membrane.frillSeed > 1.36 ? ":" : "'");
+          ctx.fillStyle = mixColor(
+            jelly.palette.rim,
+            jelly.palette.rimHot,
+            membrane.intensity * 0.55,
+            0.18 + membrane.intensity * 0.25 / k,
+          );
+          ctx.fillText(glyph, x + sway, y + cellH * (0.48 + k * 0.48));
         }
       }
     }
