@@ -202,7 +202,7 @@ export class Jellyfish {
 
     // Oral-arm roots are intentionally not a fan. The uneven placement and
     // depth ordering make the central tissue hard to count at a glance.
-    const armOffsets = [-0.40, -0.27, -0.11, 0.015, 0.15, 0.29, 0.39];
+    const armOffsets = [-0.43, -0.30, -0.125, 0.015, 0.17, 0.32, 0.43];
     const branchingArms = new Set([1, 3, 5]);
     for (let i = 0; i < armCount; i += 1) {
       const offset = armOffsets[i] + range(random, -0.018, 0.018);

@@ -7,6 +7,7 @@ import {
   bellProfileAt,
   bellRimAt,
   skirtMembraneAt,
+  tentaclePresenceScale,
 } from "../renderer.mjs";
 import { heroSizeFor, topClearanceFor } from "../jellyfish.mjs";
 import { currentWeather, OceanField } from "../ocean.mjs";
@@ -110,6 +111,7 @@ test("bell profile rounds into a narrower skirt with a porous lower membrane", (
   const shoulder = bellProfileAt(-0.42, 0.1, 1.2);
   const lower = bellProfileAt(-0.10, 0.1, 1.2);
   const skirt = bellProfileAt(0.015, 0.1, 1.2);
+  assert.equal(bellProfileAt(-1.065, 0.1, 1.2), 0);
   assert.ok(crown > 0.35 && crown < 0.55, `crown ${crown}`);
   assert.ok(shoulder > crown + 0.35, `shoulder ${shoulder}`);
   assert.ok(shoulder < 0.925, `shoulder too wide ${shoulder}`);
@@ -140,6 +142,10 @@ test("world contains one detailed specimen with long tentacles and ribbon oral a
   assert.ok(Math.max(...arms.map((item) => item.chain.count)) >= 30);
   assert.ok(Math.min(...arms.map((item) => item.offset)) < -0.35);
   assert.ok(Math.max(...arms.map((item) => item.offset)) > 0.35);
+  assert.ok(
+    Math.max(...arms.map((item) => item.offset)) - Math.min(...arms.map((item) => item.offset)) > 0.82,
+    "oral-arm roots should spread beyond the central bouquet",
+  );
   assert.equal(arms.reduce((sum, item) => sum + item.branches.length, 0), 3);
   assert.ok(arms.every((item) => item.twistRate > 1));
   assert.ok(arms.every((item) => item.width >= 2.5));
@@ -353,6 +359,27 @@ test("V4.6 envelope repair keeps segment lengths coherent during hostile current
   assert.ok(worst < 1.2, `worst post-envelope constraint ${worst}`);
 });
 
+test("V4.7 outer long tentacles recede without dimming central strands", () => {
+  const central = tentaclePresenceScale({
+    arm: false,
+    offset: 0.18,
+    chain: { count: 76 },
+  });
+  const outerLong = tentaclePresenceScale({
+    arm: false,
+    offset: 0.94,
+    chain: { count: 76 },
+  });
+  const outerShort = tentaclePresenceScale({
+    arm: false,
+    offset: 0.94,
+    chain: { count: 54 },
+  });
+  assert.equal(central, 1);
+  assert.ok(outerLong < 0.76, `outer long scale ${outerLong}`);
+  assert.ok(outerShort > outerLong + 0.18, `outer short ${outerShort} vs long ${outerLong}`);
+});
+
 test("V4.6.2 skirt is broken, brightness-varied and pulse-responsive", () => {
   const samples = [];
   for (let i = 0; i <= 120; i += 1) {
@@ -373,6 +400,13 @@ test("V4.6.2 skirt is broken, brightness-varied and pulse-responsive", () => {
   assert.ok(
     contracted.offset < relaxed.offset - 0.007,
     `pulse offsets ${contracted.offset}, ${relaxed.offset}`,
+  );
+
+  const middleEdge = skirtMembraneAt(0.64, 0.2, 1.2, 20, 0.04);
+  const outerEdge = skirtMembraneAt(0.89, 0.2, 1.2, 20, 0.04);
+  assert.ok(
+    !outerEdge.visible || outerEdge.intensity < middleEdge.intensity * 0.45,
+    `skirt edge did not fade: outer=${outerEdge.intensity} middle=${middleEdge.intensity}`,
   );
 
   const calm = skirtMembraneAt(0.72, 0.2, 1.2, 20, 0);

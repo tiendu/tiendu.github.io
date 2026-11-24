@@ -60,11 +60,15 @@ export function bellProfileAt(v, pulse = 0, phase = 0) {
   const shoulderRise = smoothstep(invLerp(-1.055, -0.34, v));
   const crown = topRound * (0.055 + 0.865 * Math.pow(shoulderRise, 0.39));
   const shoulderSoftening = 1 - smoothstep(invLerp(0.58, 0.86, t)) * 0.028;
-  const lowerTuck = 1 - smoothstep(invLerp(0.64, 1, t)) * (0.105 + pulse * 0.026);
+  const lowerTuck = 1 - smoothstep(invLerp(0.60, 1, t)) * (0.145 + pulse * 0.030);
   const organic = 1
     + Math.sin(phase * 0.71 + v * 4.5) * 0.010
     + Math.sin(phase * 1.29 - v * 8.4) * 0.0045;
-  return clamp(crown * shoulderSoftening * lowerTuck * organic, 0, 0.925);
+  const profile = crown * shoulderSoftening * lowerTuck * organic;
+
+  // Suppress the one-cell apex that can read like an antenna. The first
+  // visible crown row should already have enough width to feel membranous.
+  return profile < 0.050 ? 0 : clamp(profile, 0, 0.925);
 }
 
 export function bellRimAt(u, pulse = 0, phase = 0) {
@@ -109,16 +113,17 @@ export function skirtMembraneAt(u, pulse = 0, phase = 0, time = 0, tilt = 0) {
   const grain =
     Math.sin((u + 1) * Math.PI * 7.1 + phase * 0.83)
     + Math.sin((u + 0.17) * Math.PI * 15.7 - phase * 1.21) * 0.52;
-  const visible = grain > -0.55 || absU > 0.86;
+  const edgeFade = 1 - smoothstep(invLerp(0.76, 0.91, absU));
+  const visible = grain > -0.55 && edgeFade > 0.06;
   const intensity = clamp(
-    0.42 + grain * 0.18 + (1 - absU) * 0.08 + pulse * 0.06,
-    0.16,
+    (0.42 + grain * 0.18 + (1 - absU) * 0.08 + pulse * 0.06) * edgeFade,
+    0.04,
     0.94,
   );
   const frillSeed =
     Math.sin((u + 0.39) * Math.PI * 9.3 + phase * 1.37)
     + Math.cos((u - 0.21) * Math.PI * 17.5 - phase * 0.53) * 0.40;
-  const frill = visible && absU < 0.86 && frillSeed > 0.95;
+  const frill = visible && absU < 0.82 && frillSeed > 0.95;
   const tuck = -pulse * 0.0065 + (1 - pulse) * 0.0025;
   const flutterAmplitude = 0.0022 + Math.abs(tilt) * 0.022;
   const flutter = Math.sin(time * 0.34 + u * 6.2 + phase)
@@ -131,6 +136,13 @@ export function skirtMembraneAt(u, pulse = 0, phase = 0, time = 0, tilt = 0) {
     offset: tuck + flutter + currentShear,
     frillSeed,
   };
+}
+
+export function tentaclePresenceScale(item) {
+  if (item.arm) return 1;
+  const outer = smoothstep(invLerp(0.58, 0.94, Math.abs(item.offset ?? 0)));
+  const long = smoothstep(invLerp(58, 76, item.chain?.count ?? 58));
+  return 1 - outer * long * 0.28;
 }
 
 export class AsciiRenderer {
@@ -233,7 +245,8 @@ export class AsciiRenderer {
     const { chain } = item;
     const ctx = this.ctx;
     const layerOpacity = this.#layerOpacity(item, opacity);
-    const baseAlpha = 0.66 * item.bright * layerOpacity;
+    const presence = tentaclePresenceScale(item);
+    const baseAlpha = 0.66 * item.bright * layerOpacity * presence;
     ctx.shadowColor = rgba(jelly.palette.tentacleHot, 0.24 * layerOpacity);
     ctx.shadowBlur = (item.layer > 0.6 ? 1.5 : 0.8) * this.shadowScale;
 
