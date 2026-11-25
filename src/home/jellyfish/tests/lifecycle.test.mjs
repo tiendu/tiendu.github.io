@@ -34,7 +34,18 @@ test("weather is cached for one water time and invalidated by time or offset", (
 
 // Exercise the real mount/resize/visibility logic without a browser dependency.
 function harness(t, { available = true, reduced = false, width = 390, height = 565 } = {}) {
-  class Element extends EventTarget { hidden = false; }
+  class Element extends EventTarget {
+    hidden = false;
+    attributes = new Set();
+    toggleAttribute(name, force) {
+      const present = force ?? !this.attributes.has(name);
+      if (present) this.attributes.add(name);
+      else this.attributes.delete(name);
+      return present;
+    }
+    removeAttribute(name) { this.attributes.delete(name); }
+    hasAttribute(name) { return this.attributes.has(name); }
+  }
   class Canvas extends Element {
     style = {};
     getContext() { return available ? { setTransform() {} } : null; }
@@ -46,6 +57,11 @@ function harness(t, { available = true, reduced = false, width = 390, height = 5
   doc.querySelector = () => root;
   root.querySelector = selector => selector.includes("canvas") ? canvas : fallback;
   root.getBoundingClientRect = () => ({ width, height });
+  canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width, height });
+  const host = new EventTarget();
+  const viewport = new EventTarget();
+  viewport.scale = 1;
+  host.visualViewport = viewport;
   const motion = new EventTarget();
   motion.matches = reduced;
   const frames = new Map();
@@ -53,6 +69,7 @@ function harness(t, { available = true, reduced = false, width = 390, height = 5
   const draws = [];
   const globals = {
     HTMLElement: Element, HTMLCanvasElement: Canvas, document: doc,
+    window: host, visualViewport: viewport, devicePixelRatio: 3,
     matchMedia: query => query.includes("reduced-motion") ? motion : { matches: true },
     requestAnimationFrame: fn => { frames.set(++next, fn); return next; },
     cancelAnimationFrame: id => frames.delete(id),
@@ -69,12 +86,14 @@ function harness(t, { available = true, reduced = false, width = 390, height = 5
     restore.push(() => previous ? Object.defineProperty(globalThis, name, previous) : delete globalThis[name]);
   }
   t.mock.method(AsciiRenderer.prototype, "render", world => draws.push(world.time));
-  const dispose = mountJellyfish();
+  let dispose = () => {};
   t.after(() => {
     try { dispose(); } finally { restore.forEach(fn => fn()); }
   });
+  dispose = mountJellyfish();
   return { doc, canvas, fallback, motion, frames, draws, dispose,
     resize(w, h) { width = w; height = h; resize(); },
+    zoom(scale) { viewport.scale = scale; viewport.dispatchEvent(new Event("resize")); },
     visible(value) { doc.hidden = !value; doc.dispatchEvent(new Event("visibilitychange")); },
     disconnected: () => disconnected };
 }
@@ -125,4 +144,37 @@ test("zero-sized stages and context loss suspend rendering and resume once", t =
   h.dispose();
   assert.equal(h.frames.size, 0);
   assert.ok(h.disconnected());
+});
+
+
+test("zoom changes backing resolution without advancing reduced-motion simulation", t => {
+  const h = harness(t, { reduced: true });
+  const settled = h.draws[0];
+  assert.equal(h.canvas.width, 390 * 3);
+  assert.equal(h.canvas.height, 565 * 3);
+  h.zoom(2);
+  assert.equal(h.canvas.width, 390 * 4);
+  assert.equal(h.canvas.height, 565 * 4);
+  assert.equal(h.canvas.style.width, "390px");
+  assert.ok(h.canvas.hasAttribute("data-water-zoomed"));
+  h.zoom(1);
+  assert.equal(h.canvas.width, 390 * 3);
+  assert.ok(!h.canvas.hasAttribute("data-water-zoomed"));
+  assert.ok(h.draws.every(time => time === settled));
+  assert.equal(h.frames.size, 0);
+});
+
+test("zoom preserves the running frame loop and listeners are removed on disposal", t => {
+  const h = harness(t);
+  assert.equal(h.frames.size, 1);
+  h.zoom(2);
+  assert.equal(h.frames.size, 1);
+  assert.equal(h.canvas.width, 390 * 4);
+  h.dispose();
+  const count = h.draws.length;
+  h.zoom(1);
+  assert.equal(h.draws.length, count);
+  assert.equal(h.canvas.width, 390 * 4);
+  assert.equal(h.frames.size, 0);
+  assert.ok(!h.canvas.hasAttribute("data-water-zoomed"));
 });
