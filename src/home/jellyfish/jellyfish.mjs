@@ -4,7 +4,8 @@ import { clamp, invLerp, lerp, mulberry32, range, rotate, smoothstep, TAU } from
 import { pulseEnvelope, pulseVelocity } from "./pulse.mjs";
 import { VerletChain } from "./physics.mjs";
 import { addContactForce, buildContactForces } from "./interaction.mjs";
-import { PropulsionWake, appendageFlow } from "./propulsion.mjs";
+import { PropulsionWake } from "./propulsion.mjs";
+import { TissueFlow } from "./hydrodynamics.mjs";
 import { EXTRA_TENTACLE_OFFSETS, TENTACLE_COUNT, tentacleLengthFor, tentaclePlanAt } from "./tentacles.mjs";
 
 export function heroSizeFor(width, height) {
@@ -316,10 +317,10 @@ export class Jellyfish {
     }
   }
 
-  #chainForce(item, anchor, envelope, ocean, time, x, y, along) {
+  #chainForce(item, anchor, envelope, water, time, x, y, along) {
     const armLengthBias = item.arm ? (item.lengthBias ?? 0) : 0;
     const sensitivity = fluidSensitivityFor(item, along);
-    const localFlow = appendageFlow(ocean, this.propulsion, x, y, time, sensitivity);
+    const localFlow = water.sample(item.chain, along, x, y, sensitivity);
     const loosen = along * along;
     const waterDominance = item.arm ? smoothstep(Math.abs(localFlow.x) / 4.5) : 0;
     const shapeWeight = 1 - 0.78 * waterDominance;
@@ -454,6 +455,7 @@ export class Jellyfish {
     // Gather from one pre-integration pose, including branches. No chain
     // observes another chain's partially advanced contact geometry.
     const contacts = buildContactForces(this.chains, this.anatomyScale);
+    const water = new TissueFlow(this.chains, dt, this.anatomyScale, ocean, this.propulsion, time);
     for (const item of this.chains) {
       const anchor = bellAnchor(this, item.offset, item.arm ? 0.052 : 0.014);
       const chainLength = (item.chain.count - 1) * item.chain.segmentLength;
@@ -468,7 +470,7 @@ export class Jellyfish {
         anchor.x,
         anchor.y,
         (x, y, along) => addContactForce(
-          this.#chainForce(item, anchor, envelope, ocean, time, x, y, along),
+          this.#chainForce(item, anchor, envelope, water, time, x, y, along),
           contacts, item.chain, along,
         ),
         SIMULATION.constraintIterations,
@@ -486,7 +488,7 @@ export class Jellyfish {
           bx,
           by,
           (x, y, along) => {
-            const flow = appendageFlow(ocean, this.propulsion, x, y, time,
+            const flow = water.sample(branch.chain, along, x, y,
               lerp(0.30, branch.forceScale, along * along));
             const sideWave =
               branch.side
