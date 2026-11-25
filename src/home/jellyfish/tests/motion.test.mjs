@@ -7,7 +7,8 @@ import {
   ribbonSurfaceBreathAt,
 } from "../fluid.mjs";
 import { ribbonKinematicsAt } from "../renderer.mjs";
-import { currentWeather } from "../ocean.mjs";
+import { currentWeather, OceanField } from "../ocean.mjs";
+import { stepVisualTilt, stepVisualYaw, tiltTargetAt, yawTargetAt } from "../orientation.mjs";
 import { JellyWorld } from "../world.mjs";
 
 test("ribbon surface kinematics respond to real chain bend and retained velocity", () => {
@@ -178,4 +179,50 @@ test("long oral arms remain guarded without becoming frozen", () => {
     assert.ok(arm.chain.maxTurnAngle() < 1.45, `arm turn ${arm.chain.maxTurnAngle()}`);
     assert.ok(Math.abs(arm.chain.signedTurn()) < 4.9, `arm signed turn ${arm.chain.signedTurn()}`);
   }
+});
+
+
+test("ocean starting time varies the entire water field without changing its continuity", () => {
+  const baseline = new OceanField(960, 620);
+  const offsets = [0, 120, 360, 730, 1400, 2300, 3500];
+  const starts = Array.from({ length: 121 }, (_, i) =>
+    new OceanField(960, 620, i * 30).weatherAt(0));
+  assert.ok(starts.some(flow => flow.x > 8));
+  assert.ok(starts.some(flow => flow.x < -8));
+  assert.ok(starts.some(flow => flow.strength < 0.25));
+  for (const offset of offsets) {
+    const ocean = new OceanField(960, 620, offset);
+    for (const time of [0, 0.05, 120, 600]) {
+      assert.deepEqual(ocean.weatherAt(time), currentWeather(time + offset));
+      assert.deepEqual(ocean.sample(310, 210, time), baseline.sample(310, 210, time + offset));
+      const a = ocean.weatherAt(time);
+      const b = ocean.weatherAt(time + 0.05);
+      assert.ok(Math.hypot(b.x - a.x, b.y - a.y) < 0.2);
+    }
+  }
+});
+
+test("world orientation follows the same shifted ocean as the anatomy", () => {
+  const offset = 360;
+  const world = new JellyWorld(960, 620, 991, offset);
+  const same = new JellyWorld(960, 620, 991, offset);
+  const other = new JellyWorld(960, 620, 991, 120);
+  assert.deepEqual(world.jelly.chains[0].chain.x, other.jelly.chains[0].chain.x);
+  assert.notDeepEqual(world.ocean.weatherAt(0), other.ocean.weatherAt(0));
+  const dt = 1 / 60;
+  for (let i = 0; i < 60; i += 1) {
+    const flowX = world.ocean.weatherAt(world.time + dt).x;
+    const expected = {
+      ...stepVisualYaw(world.orientation, yawTargetAt(world.time + dt, flowX, world.jelly.anatomyPhase), dt),
+      ...stepVisualTilt(world.orientation, tiltTargetAt(flowX), dt),
+    };
+    world.step(dt);
+    same.step(dt);
+    assert.deepEqual(world.orientation, expected);
+    assert.deepEqual(world.orientation, same.orientation);
+  }
+  assert.deepEqual(world.jelly.chains[0].chain.x, same.jelly.chains[0].chain.x);
+  const beforeResize = world.ocean.weatherAt(world.time);
+  world.resize(390, 720);
+  assert.deepEqual(world.ocean.weatherAt(world.time), beforeResize);
 });

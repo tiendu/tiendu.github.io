@@ -47,8 +47,12 @@ export function mountJellyfish() {
     width = nextWidth;
     height = nextHeight;
     renderer.resize(width, height);
-    if (!world) world = new JellyWorld(width, height, seedFromSession());
-    else world.resize(width, height);
+    if (!world) {
+      // Keep the session specimen, but enter the ocean at a new time on each load.
+      world = new JellyWorld(width, height, seedFromSession(), Math.random() * 3600);
+    } else {
+      world.resize(width, height);
+    }
     renderer.render(world);
   };
 

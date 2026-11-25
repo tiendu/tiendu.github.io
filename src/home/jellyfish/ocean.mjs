@@ -27,7 +27,8 @@ export function currentWeather(time) {
 }
 
 export class OceanField {
-  constructor(width, height) {
+  constructor(width, height, timeOffset = 0) {
+    this.timeOffset = timeOffset;
     this.width = width;
     this.height = height;
     this.pointer = { x: width * 0.5, y: height * 0.5, vx: 0, vy: 0, strength: 0 };
@@ -52,12 +53,17 @@ export class OceanField {
     this.pointer.vy *= Math.exp(-6.2 * dt);
   }
 
+  weatherAt(time) {
+    return currentWeather(time + this.timeOffset);
+  }
+
   sample(x, y, time, sensitivity = 1) {
     const nx = x / this.width;
     const ny = y / this.height;
-    const slow = time * 0.16;
-    const weather = currentWeather(time);
-    const ambient = ambientEddyAt(nx, ny, time);
+    const waterTime = time + this.timeOffset;
+    const slow = waterTime * 0.16;
+    const weather = this.weatherAt(time);
+    const ambient = ambientEddyAt(nx, ny, waterTime);
 
     // Macro weather sets direction; broad local eddies bend neighboring tissue
     // differently; the weak ambient field prevents perfectly static calm.
