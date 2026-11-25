@@ -1,6 +1,7 @@
 import { renderFpsFor, SIMULATION } from "./config.mjs";
 import { AsciiRenderer } from "./renderer.mjs";
 import { JellyWorld } from "./world.mjs";
+import { bindWaterInput } from "./water-input.mjs";
 
 function seedFromSession() {
   try {
@@ -43,7 +44,6 @@ export function mountJellyfish() {
   }
   if (!renderer.ctx) return () => {};
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const finePointer = matchMedia("(pointer: fine)");
   let world;
   let width = 1;
   let height = 1;
@@ -51,10 +51,6 @@ export function mountJellyfish() {
   let last = performance.now();
   let lastRender = 0;
   let frame = 0;
-  let pointerX = 0;
-  let pointerY = 0;
-  let pointerTime = performance.now();
-  let pointerActive = false;
   let running = false;
   let measurable = false;
   let contextLost = false;
@@ -100,25 +96,10 @@ export function mountJellyfish() {
     }
   };
 
-  const onPointerMove = (event) => {
-    if (!running || !world || !finePointer.matches) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const now = performance.now();
-    const dt = Math.max(16, now - pointerTime) / 1000;
-    const vx = pointerActive ? Math.max(-100, Math.min(100, (x - pointerX) / dt)) : 0;
-    const vy = pointerActive ? Math.max(-100, Math.min(100, (y - pointerY) / dt)) : 0;
-    pointerX = x;
-    pointerY = y;
-    pointerTime = now;
-    pointerActive = true;
-    world.disturb(x, y, vx, vy);
-  };
-
-  const onPointerLeave = () => {
-    pointerActive = false;
-  };
+  const waterInput = bindWaterInput(canvas, {
+    isActive: () => running && !!world,
+    disturb: (...args) => world.disturb(...args),
+  });
 
   const drawReduced = () => {
     if (!world) return;
@@ -150,11 +131,12 @@ export function mountJellyfish() {
 
   const stop = () => {
     running = false;
-    pointerActive = false;
+    waterInput.reset();
     cancelAnimationFrame(frame);
   };
 
   const start = () => {
+    waterInput.reset();
     cancelAnimationFrame(frame);
     if (document.hidden || !world || !measurable || contextLost) {
       running = false;
@@ -193,8 +175,6 @@ export function mountJellyfish() {
 
   const resizeObserver = new ResizeObserver(measure);
   resizeObserver.observe(root);
-  canvas.addEventListener("pointermove", onPointerMove, { passive: true });
-  canvas.addEventListener("pointerleave", onPointerLeave, { passive: true });
   canvas.addEventListener("contextlost", onContextLost);
   canvas.addEventListener("contextrestored", onContextRestored);
   document.addEventListener("visibilitychange", onVisibility);
@@ -205,8 +185,7 @@ export function mountJellyfish() {
   return () => {
     stop();
     resizeObserver.disconnect();
-    canvas.removeEventListener("pointermove", onPointerMove);
-    canvas.removeEventListener("pointerleave", onPointerLeave);
+    waterInput.dispose();
     canvas.removeEventListener("contextlost", onContextLost);
     canvas.removeEventListener("contextrestored", onContextRestored);
     document.removeEventListener("visibilitychange", onVisibility);

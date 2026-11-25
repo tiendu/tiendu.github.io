@@ -36,8 +36,8 @@ export class JellyWorld {
     this.snow.resize(width, height, snowCountFor(width, height));
   }
 
-  disturb(x, y, vx, vy) {
-    this.ocean.disturb(x, y, vx, vy);
+  disturb(x, y, vx, vy, impulse) {
+    this.ocean.disturb(x, y, vx, vy, impulse);
   }
 
   step(dt = SIMULATION.fixedStep) {

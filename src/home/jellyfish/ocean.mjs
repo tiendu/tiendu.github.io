@@ -39,12 +39,12 @@ export class OceanField {
     this.height = Math.max(1, height);
   }
 
-  disturb(x, y, vx = 0, vy = 0) {
+  disturb(x, y, vx = 0, vy = 0, impulse = 0.22) {
     this.pointer.x = x;
     this.pointer.y = y;
     this.pointer.vx = clamp(vx, -100, 100);
     this.pointer.vy = clamp(vy, -100, 100);
-    this.pointer.strength = Math.min(0.55, this.pointer.strength + 0.22);
+    this.pointer.strength = Math.min(0.55, this.pointer.strength + clamp(impulse, 0, 0.55));
   }
 
   step(dt) {

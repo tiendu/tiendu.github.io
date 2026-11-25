@@ -39,9 +39,14 @@ body.system-interface:has(.ascii-ocean-page)::after {
   height: 100%;
   inset: 0;
   position: absolute;
-  touch-action: pan-x pan-y pinch-zoom;
+  touch-action: pinch-zoom;
   width: 100%;
   z-index: 1;
+}
+
+/* Once magnified, reserve one-finger movement for native viewport panning. */
+.ascii-ocean-stage canvas[data-water-zoomed] {
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .ascii-ocean-stage canvas[hidden],
