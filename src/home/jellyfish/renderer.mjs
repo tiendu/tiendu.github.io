@@ -352,16 +352,16 @@ export class AsciiRenderer {
       jelly.y + jelly.bellHeight() * 0.58,
       Math.max(jelly.baseSize * 1.72, 210),
     );
-    glow.addColorStop(0, "rgba(138,102,255,0.090)");
-    glow.addColorStop(0.42, "rgba(106,68,176,0.045)");
-    glow.addColorStop(0.76, "rgba(45,63,112,0.018)");
+    glow.addColorStop(0, "rgba(151,91,255,0.090)");
+    glow.addColorStop(0.42, "rgba(134,56,164,0.045)");
+    glow.addColorStop(0.76, "rgba(51,78,150,0.018)");
     glow.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, this.width, this.height);
 
     ctx.save();
     ctx.globalAlpha = 0.010 + (Math.sin(time * 0.19) * 0.5 + 0.5) * 0.007;
-    ctx.fillStyle = "#ff72c8";
+    ctx.fillStyle = "#ff659b";
     ctx.beginPath();
     const visualTilt = jelly.tilt + this.extraTilt;
     const halo = rotate(0, -jelly.bellHeight() * 0.37, visualTilt);

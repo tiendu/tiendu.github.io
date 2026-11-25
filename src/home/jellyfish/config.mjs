@@ -17,31 +17,27 @@ export const ASCII = Object.freeze({
   snow: Object.freeze([".", ",", "'"]),
 });
 
-// The single specimen deliberately uses a fixed warm-to-cool palette rather
-// than randomly rotating palettes. The reference's orange/pink cap and
-// violet/blue underside are part of its identity.
+// Rose-red crown and canals, violet glass, a magenta rim and cool blue trails.
+// Keep deep tissue tones distinct from the fluorescent highlights.
 export const JELLY_PALETTE = Object.freeze({
-  // Keep the animal fluorescent without turning it into a rainbow. Warm bell
-  // tissue transitions through magenta/lavender into violet strands, with a
-  // few cool cyan accents on the thinnest tentacle details.
-  bellShadow: "#5147a8",
-  bellCool: "#8071e8",
-  bellSoft: "#e0a9f5",
-  bellGlass: "#f3d0ff",
-  bellCoral: "#ff776d",
-  bellWarm: "#ffad55",
-  bellHot: "#ffe6a3",
-  bellCrown: "#fff8d8",
-  rim: "#ff55bd",
-  rimHot: "#ffe0f4",
-  armDark: "#6668d6",
-  arm: "#9985f0",
-  armHot: "#dda1f4",
-  armAccent: "#ff82d8",
-  tentacle: "#7d73dc",
-  tentacleHot: "#b8abff",
-  tentacleAccent: "#7fd9ff",
-  white: "#fffaf2",
+  bellShadow: "#6841b5",
+  bellCool: "#8276ff",
+  bellSoft: "#d6a1ff",
+  bellGlass: "#f3c5ff",
+  bellCoral: "#ff526f",
+  bellWarm: "#ff739d",
+  bellHot: "#ffb2cd",
+  bellCrown: "#ffe1ed",
+  rim: "#ff4fbf",
+  rimHot: "#ffcaed",
+  armDark: "#6452bf",
+  arm: "#b28af8",
+  armHot: "#e4b1ff",
+  armAccent: "#ff83cc",
+  tentacle: "#6e8be9",
+  tentacleHot: "#b4c7ff",
+  tentacleAccent: "#83d9ff",
+  white: "#fff0fa",
 });
 
 export const WORLD = Object.freeze({
