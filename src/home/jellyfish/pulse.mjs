@@ -7,7 +7,9 @@ export function pulseEnvelope(phase) {
   if (p < 0.18) return smoothstep(p / 0.18);
   if (p < 0.62) {
     const release = (p - 0.18) / 0.44;
-    return Math.exp(-3.1 * release) * (1 - 0.08 * Math.sin(release * Math.PI));
+    const eased = release * smoothstep(release / 0.10);
+    const tail = 1 - smoothstep((release - 0.80) / 0.20);
+    return Math.exp(-3.1 * eased) * (1 - 0.08 * Math.sin(eased * Math.PI)) * tail;
   }
   return 0;
 }

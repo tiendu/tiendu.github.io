@@ -289,3 +289,38 @@ test("envelope repair rejects a sharply folded pose even when segment lengths ar
     assert.ok(chain.y[i] <= 220 * (0.12 + along * 0.88) + 0.01);
   }
 });
+
+
+test("pulse is continuous with a smooth tangent at contraction and release boundaries", () => {
+  const h = 1e-5;
+  for (const phase of [0, 0.18, 0.62, 1]) {
+    const value = pulseEnvelope(phase);
+    const leftSlope = (value - pulseEnvelope(phase - h)) / h;
+    const rightSlope = (pulseEnvelope(phase + h) - value) / h;
+    assert.ok(Math.abs(leftSlope) < 0.01, `left slope at ${phase}: ${leftSlope}`);
+    assert.ok(Math.abs(rightSlope) < 0.01, `right slope at ${phase}: ${rightSlope}`);
+  }
+  let previous = 1;
+  for (let i = 0; i <= 440; i += 1) {
+    const value = pulseEnvelope(0.18 + i * 0.001);
+    assert.ok(value >= 0 && value <= previous + 1e-10, `non-monotonic release ${i}`);
+    previous = value;
+  }
+  assert.equal(pulseEnvelope(0.62), 0);
+});
+
+test("a right-angle kink inside the envelope is repaired even with exact segment lengths", () => {
+  const chain = new VerletChain({
+    anchorX: 0, anchorY: 0, segments: 12, segmentLength: 4,
+    maxBendAngle: 0.50, maxTotalTurn: 2.6,
+  });
+  for (let i = 0; i < chain.count; i += 1) {
+    chain.x[i] = chain.px[i] = Math.max(0, i - 6) * 4;
+    chain.y[i] = chain.py[i] = Math.min(i, 6) * 4;
+  }
+  assert.equal(chain.maxConstraintError(), 0);
+  assert.ok(chain.maxTurnAngle() > 1.5);
+  assert.equal(chain.clipTrailEnvelope(0, 0, { maxRise: 20, maxSide: 60, maxDrop: 55 }), false);
+  assert.ok(chain.maxTurnAngle() < 0.65);
+  assert.ok(chain.maxConstraintError() < 0.65);
+});

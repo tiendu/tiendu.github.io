@@ -91,6 +91,10 @@ export class Jellyfish {
       bendStiffness: range(random, 0.028, 0.052),
       bendFrequency: range(random, 0.7, 1.35),
       bendPhase: range(random, 0, TAU),
+      maxBendAngle: 1.05,
+      bendLimitStiffness: 0.55,
+      maxTotalTurn: 3.4,
+      totalTurnStiffness: 0.55,
     });
     return {
       chain,
@@ -345,11 +349,11 @@ export class Jellyfish {
       x:
         -Math.sign(sideDelta)
         * (
-          sideSoft * (item.arm ? 4.2 : 7.5)
+          sideSoft * (item.arm ? 4.2 : 18.0)
           + Math.min(24, sideExcess * (item.arm ? 1.7 : 2.2))
         ),
       y:
-        riseSoft * (item.arm ? 4.5 : 7.5)
+        riseSoft * (item.arm ? 4.5 : 12.0)
         + Math.min(24, riseExcess * (item.arm ? 1.9 : 2.5)),
     };
   }
@@ -449,8 +453,9 @@ export class Jellyfish {
             const riseExcess = Math.max(0, by - y - riseAllowance);
             const sideDelta = x - bx;
             const sideExcess = Math.max(0, Math.abs(sideDelta) - sideAllowance);
+            const shapeWeight = 1 - 0.78 * smoothstep(Math.abs(flow.x) / 4.5);
             return {
-              x: flow.x + sideWave + branch.side * 5.5 * smoothstep(along) * this.anatomyScale
+              x: flow.x + (sideWave + branch.side * 5.5 * smoothstep(along) * this.anatomyScale) * shapeWeight
                 - Math.sign(sideDelta) * Math.min(28, sideExcess * 2.4),
               y: flow.y + Math.max(0, -this.vy) * 0.52 * along + Math.min(28, riseExcess * 2.6),
             };

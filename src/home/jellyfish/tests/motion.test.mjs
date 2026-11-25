@@ -299,8 +299,9 @@ test("ribbon bodies follow a moderate current through reversal without losing th
 test("safety repair preserves tentacle continuity through the previously snapping weather", () => {
   const world = new JellyWorld(390, 565, 991, 1000);
   const strands = world.jelly.chains.filter(item => !item.arm).map(({ chain }) => ({
-    chain, x: new Float32Array(chain.count), y: new Float32Array(chain.count),
+    chain, x: new Float32Array(chain.count), y: new Float32Array(chain.count), stillSteps: 0,
   }));
+  const branches = world.jelly.chains.flatMap(item => item.branches.map(branch => branch.chain));
   let worst = 0;
   let movementAfterRepair = 0;
   for (let n = 0; n < 65 * 60; n += 1) {
@@ -309,15 +310,26 @@ test("safety repair preserves tentacle continuity through the previously snappin
       y.set(chain.y);
     }
     world.step();
-    for (const { chain, x, y } of strands) {
+    for (const state of strands) {
+      const { chain, x, y } = state;
       const dx = chain.x[0] - x[0], dy = chain.y[0] - y[0];
+      let frameMax = 0;
       for (let i = 1; i < chain.count; i += 1) {
         const jump = Math.hypot(chain.x[i] - x[i] - dx, chain.y[i] - y[i] - dy);
+        frameMax = Math.max(frameMax, jump);
         worst = Math.max(worst, jump / chain.segmentLength);
         assert.ok(jump < chain.segmentLength * 2, `strand snap at ${world.time}s: ${jump}px`);
       }
+      state.stillSteps = frameMax < 0.002 ? state.stillSteps + 1 : 0;
+      assert.ok(state.stillSteps < 30, `strand stalled at ${world.time}s`);
       assert.ok(chain.maxConstraintError() < 0.8);
       assert.ok(chain.maxTurnAngle() < chain.maxBendAngle + 0.16);
+    }
+    for (const branch of branches) {
+      assert.ok(branch.maxBendAngle < Math.PI);
+      assert.ok(branch.maxTurnAngle() < branch.maxBendAngle + 0.16,
+        `branch folded at ${world.time}s: ${branch.maxTurnAngle()}`);
+      assert.ok(branch.maxConstraintError() < 0.8);
     }
     if (n >= 59 * 60) {
       const { chain, x, y } = strands[14];

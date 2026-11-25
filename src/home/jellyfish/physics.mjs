@@ -268,10 +268,11 @@ export class VerletChain {
       let x = this.x[i];
       let y = this.y[i];
 
-      if (y < minY) y = minY;
-      if (y > maxY) y = maxY;
+      // Ignore Float32 rounding at the boundary; tiny numerical noise is not a collision.
+      if (y < minY - 0.001) y = minY;
+      if (y > maxY + 0.001) y = maxY;
       const dx = x - anchorX;
-      if (Math.abs(dx) > allowedSide) x = anchorX + Math.sign(dx) * allowedSide;
+      if (Math.abs(dx) > allowedSide + 0.001) x = anchorX + Math.sign(dx) * allowedSide;
 
       if (x !== this.x[i] || y !== this.y[i]) {
         this.x[i] = x;
@@ -282,13 +283,39 @@ export class VerletChain {
     return clipped;
   }
 
+  #badCurvature() {
+    const bendLimit = this.maxBendAngle + 0.15;
+    const totalLimit = this.maxTotalTurn + 0.20;
+    if (bendLimit >= Math.PI && totalLimit >= TAU) return false;
+    let total = 0;
+    for (let i = 1; i < this.count - 1; i += 1) {
+      const ax = this.x[i] - this.x[i - 1], ay = this.y[i] - this.y[i - 1];
+      const bx = this.x[i + 1] - this.x[i], by = this.y[i + 1] - this.y[i];
+      const turn = Math.atan2(ax * by - ay * bx, ax * bx + ay * by);
+      if (!Number.isFinite(turn) || Math.abs(turn) > bendLimit) return true;
+      total += turn;
+      if (Math.abs(total) > totalLimit) return true;
+    }
+    return false;
+  }
+
+  #retainRepairMotion() {
+    // Keep a damped version of the accepted motion, not the rejected impulse.
+    // Limit the retained displacement rather than turning every repair into
+    // a complete stop.
+    for (let i = 1; i < this.count; i += 1) {
+      const vx = this.x[i] - this.beforeX[i];
+      const vy = this.y[i] - this.beforeY[i];
+      this.px[i] = this.x[i] - vx * 0.55;
+      this.py[i] = this.y[i] - vy * 0.55;
+    }
+    this.#limitVelocityHistory();
+  }
+
   #validTrail(anchorX, anchorY, rise, side, drop, errorLimit) {
     const error = this.maxConstraintError();
     if (!Number.isFinite(error) || error > errorLimit) return false;
-    if (this.maxBendAngle < Math.PI && (
-      this.maxTurnAngle() > this.maxBendAngle + 0.15
-      || Math.abs(this.signedTurn()) > this.maxTotalTurn + 0.20
-    )) return false;
+    if (this.#badCurvature()) return false;
     for (let i = 1; i < this.count; i += 1) {
       const t = i / (this.count - 1);
       const x = this.x[i] - anchorX, y = this.y[i] - anchorY;
@@ -320,6 +347,9 @@ export class VerletChain {
       if (fraction > 0) {
         for (let n = 0; n < 4; n += 1) {
           this.#applyDistanceConstraints(anchorX, anchorY);
+          this.#applyBendLimit();
+          this.#applyTotalTurnLimit();
+          this.#applyDistanceConstraints(anchorX, anchorY);
           this.#projectTrailEnvelope(anchorX, anchorY, rise, side, drop);
         }
       }
@@ -329,8 +359,7 @@ export class VerletChain {
         largest = Math.max(largest, hypot2(this.x[i] - this.beforeX[i] - dx, this.y[i] - this.beforeY[i] - dy));
       }
       if (largest > limit * 1.2) continue;
-      this.px.set(this.x);
-      this.py.set(this.y);
+      this.#retainRepairMotion();
       return true;
     }
     return false;
@@ -343,7 +372,8 @@ export class VerletChain {
     // S-curve with exact segment lengths and make it the new Verlet history.
     this.x[0] = anchorX;
     this.y[0] = anchorY;
-    const amplitude = Math.min(side * 0.15, this.segmentLength * 2.5);
+    const amplitude = Math.min(side * 0.15, this.segmentLength * 2.5,
+      this.segmentLength * (this.count - 1) * 0.06);
     const phase = (this.seed * 1.73) % TAU;
 
     for (let i = 1; i < this.count; i += 1) {
@@ -376,7 +406,7 @@ export class VerletChain {
     // Also catch a strained chain that is technically still inside the visual
     // envelope. That is how a nearly straight strand can hide enormous spring
     // energy without looking out of bounds yet.
-    const needsRepair = clipped || !Number.isFinite(error) || error > 1.0;
+    const needsRepair = clipped || !Number.isFinite(error) || error > 1.0 || this.#badCurvature();
     if (needsRepair) {
       // Alternate the two simple, stable constraints. Do not run bend-memory or
       // total-turn corrections here: on a heavily clipped chain those angular
@@ -390,11 +420,8 @@ export class VerletChain {
       const repairLimit = Math.min(0.75, this.segmentLength * 0.16);
       // Length alone cannot certify a repaired pose: a clipped chain may
       // have nearly exact lengths but a sharp fold. Reject that pose rather
-      // than reintroducing angular projections into the safety solver.
-      const badCurvature = this.maxBendAngle < Math.PI && (
-        this.maxTurnAngle() > this.maxBendAngle + 0.15
-        || Math.abs(this.signedTurn()) > this.maxTotalTurn + 0.20
-      );
+      // than applying angular projections to a heavily strained candidate.
+      const badCurvature = this.#badCurvature();
       let excessiveMotion = false;
       if (this.hasBefore) {
         const dx = anchorX - this.beforeX[0], dy = anchorY - this.beforeY[0];
@@ -409,13 +436,12 @@ export class VerletChain {
         if (!this.#continuousRepair(anchorX, anchorY, rise, side, drop)) {
           this.#settleTrail(anchorX, anchorY, side);
         }
+      } else if (this.hasBefore) {
+        this.#retainRepairMotion();
       } else {
-        // Safety intervention is allowed to dissipate momentum. The repaired
-        // pose becomes the new history, so there is no snap-back next frame.
-        for (let i = 0; i < this.count; i += 1) {
-          this.px[i] = this.x[i];
-          this.py[i] = this.y[i];
-        }
+        // A caller without a previous step cannot supply reliable momentum.
+        this.px.set(this.x);
+        this.py.set(this.y);
       }
     }
 
