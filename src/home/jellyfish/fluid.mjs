@@ -1,4 +1,4 @@
-import { clamp, invLerp, lerp, smoothstep } from "./math.mjs";
+import { clamp, invLerp, lerp, smoothstep, TAU } from "./math.mjs";
 
 // A small always-on eddy field keeps calm water alive. It is deliberately
 // weaker and slower than the weather/current field, and spatially coherent so
@@ -28,11 +28,11 @@ export function fluidSensitivityFor(item, along) {
     return lerp(
       0.15,
       distalScale,
-      Math.pow(t, lerp(1.12, 1.30, lengthBias)),
+      Math.pow(t, lerp(0.96, 1.12, lengthBias)),
     );
   }
 
-  return lerp(0.20, forceScale, Math.pow(t, 1.85));
+  return lerp(0.20, forceScale, Math.pow(t, 1.40));
 }
 
 // Broad oral-arm movement should remain alive even when the macro current is
@@ -65,4 +65,50 @@ export function ribbonSurfaceBreathAt(item, time, along) {
     * body
     * tipFade
   );
+}
+
+// The local water field is still an acceleration proxy. Prefer real
+// simulated flow when it is active; retain a small elastic motion in calm water.
+export function proceduralMotionWeight(flow) {
+  const activity = smoothstep(Math.hypot(flow.x, flow.y) / 10);
+  const wake = clamp(flow.wakeWeight ?? 0, 0, 1);
+  return (1 - 0.20 * activity) * (1 - 0.30 * wake);
+}
+
+// Passive shape bias remains separate from local water acceleration.
+export function appendageShapeForce(item, time, along, anatomyScale, localFlow, motion) {
+  const armLengthBias = item.arm ? (item.lengthBias ?? 0) : 0;
+  const loosen = along * along;
+  const waterDominance = item.arm ? smoothstep(Math.abs(localFlow.x) / 4.5) : 0;
+  const shapeWeight = 1 - 0.78 * waterDominance;
+
+  // Water is the primary driver; retain quiet-water motion and elasticity.
+  const distalEase = item.arm
+    ? 1 - armLengthBias * smoothstep(invLerp(0.72, 1, along)) * 0.08
+    : 1;
+  const wake = Math.sin(
+    time * (item.arm ? 0.44 : 0.68)
+      + item.phase
+      + along * (item.arm ? 3.4 : 5.6),
+  ) * (item.arm ? 4.0 : 4.7) * loosen * anatomyScale * distalEase
+    * 0.80 * motion;
+  const billow = oralArmBillowAt(item, time, along, anatomyScale) * 0.90 * motion;
+
+  // Thin tentacles keep a stable broad memory curve. Oral arms instead carry
+  // that memory slowly downstream, so their whole body billows rather than
+  // holding one leaf-like pose indefinitely.
+  const memoryPhase = item.memoryPhase + (item.arm ? time * 0.20 : 0);
+  const memory = Math.sin(memoryPhase + along * item.memoryWaves * TAU)
+    * item.memoryStrength
+    * smoothstep(along)
+    * (0.30 + along * 0.50)
+    * (item.arm ? lerp(1, 0.96, armLengthBias * smoothstep(along)) : 1);
+  const expressiveShape = item.expressiveTentacle
+    ? Math.sin((along - 0.18) * Math.PI * 1.55 + item.memoryPhase * 0.18)
+      * item.expressiveShape * Math.sin(Math.PI * along)
+    : 0;
+  const tip = smoothstep(clamp((along - 0.72) / 0.28, 0, 1));
+  const tipHook = item.tipHook * tip * tip;
+  const curl = item.curl * Math.sin(along * Math.PI) * (item.arm ? 4.3 : 2.2) * anatomyScale;
+  return (wake + billow + memory + expressiveShape + tipHook + curl) * shapeWeight;
 }

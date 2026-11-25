@@ -1,5 +1,5 @@
 import { JELLY_PALETTE, SIMULATION } from "./config.mjs";
-import { fluidSensitivityFor, oralArmBillowAt } from "./fluid.mjs";
+import { appendageShapeForce, fluidSensitivityFor, proceduralMotionWeight } from "./fluid.mjs";
 import { clamp, invLerp, lerp, mulberry32, range, rotate, smoothstep, TAU } from "./math.mjs";
 import { pulseEnvelope, pulseVelocity } from "./pulse.mjs";
 import { VerletChain } from "./physics.mjs";
@@ -149,7 +149,7 @@ export class Jellyfish {
       segments,
       segmentLength,
       damping: arm ? range(random, 0.984, 0.990) : range(random, 0.9885, 0.9925),
-      gravity: arm ? range(random, 7.8, 10.6) : range(random, 13.5, 18.0),
+      gravity: arm ? range(random, 7.8, 10.6) * 1.35 : range(random, 13.5, 18.0) * 1.30,
       seed: this.seed + index * 13.17,
       bend: (arm
         ? range(random, -0.65, 0.65)
@@ -318,52 +318,17 @@ export class Jellyfish {
   }
 
   #chainForce(item, anchor, envelope, water, time, x, y, along) {
-    const armLengthBias = item.arm ? (item.lengthBias ?? 0) : 0;
     const sensitivity = fluidSensitivityFor(item, along);
     const localFlow = water.sample(item.chain, along, x, y, sensitivity);
-    const loosen = along * along;
-    const waterDominance = item.arm ? smoothstep(Math.abs(localFlow.x) / 4.5) : 0;
-    const shapeWeight = 1 - 0.78 * waterDominance;
-
-    // Retain a little procedural motion in quiet water, but avoid stacking
-    // it at full strength on the actual bell-generated wake.
-    const distalEase = item.arm
-      ? 1 - armLengthBias * smoothstep(invLerp(0.72, 1, along)) * 0.08
-      : 1;
-    const wake = Math.sin(
-      time * (item.arm ? 0.44 : 0.68)
-        + item.phase
-        + along * (item.arm ? 3.4 : 5.6),
-    ) * (item.arm ? 4.0 : 4.7) * loosen * this.anatomyScale * distalEase
-      * (1 - 0.45 * localFlow.wakeWeight);
-    const billow = oralArmBillowAt(item, time, along, this.anatomyScale);
-
-    // Thin tentacles keep a stable broad memory curve. Oral arms instead carry
-    // that memory slowly downstream, so their whole body billows rather than
-    // holding one leaf-like pose indefinitely.
-    const memoryPhase = item.memoryPhase + (item.arm ? time * 0.20 : 0);
-    const memory = Math.sin(memoryPhase + along * item.memoryWaves * TAU)
-      * item.memoryStrength
-      * smoothstep(along)
-      * (0.30 + along * 0.50)
-      * (item.arm ? lerp(1, 0.96, armLengthBias * smoothstep(along)) : 1);
-    const expressiveShape = item.expressiveTentacle
-      ? Math.sin((along - 0.18) * Math.PI * 1.55 + item.memoryPhase * 0.18)
-        * item.expressiveShape * Math.sin(Math.PI * along)
-      : 0;
-    const tip = smoothstep(clamp((along - 0.72) / 0.28, 0, 1));
-    const tipHook = item.tipHook * tip * tip;
-    const curl = item.curl * Math.sin(along * Math.PI) * (item.arm ? 4.3 : 2.2) * this.anatomyScale;
+    const motion = proceduralMotionWeight(localFlow);
+    const shape = appendageShapeForce(item, time, along, this.anatomyScale, localFlow, motion);
     const trailingBias = item.arm ? 0 : 3.8 * along * along * this.anatomyScale;
     const guard = this.#trailGuard(item, anchor, envelope, x, y, along);
 
     return {
-      x:
-        localFlow.x
-        + (wake + billow + memory + expressiveShape + tipHook + curl) * shapeWeight
-        + guard.x,
-      y: localFlow.y + Math.max(0, -this.vy) * 0.66 * along
-        * (1 - 0.25 * localFlow.wakeWeight) + trailingBias + guard.y,
+      x: localFlow.x + shape + guard.x,
+      y: localFlow.y + Math.max(0, -this.vy) * 0.56 * along
+        * motion + trailingBias + guard.y,
     };
   }
 
@@ -490,12 +455,13 @@ export class Jellyfish {
           (x, y, along) => {
             const flow = water.sample(branch.chain, along, x, y,
               lerp(0.30, branch.forceScale, along * along));
+            const motion = proceduralMotionWeight(flow);
             const sideWave =
               branch.side
               * Math.sin(branch.phase + time * 0.46 + along * 6.2)
               * 4.5
               * along
-              * this.anatomyScale * (1 - 0.45 * flow.wakeWeight);
+              * this.anatomyScale * 0.80 * motion;
             const riseAllowance = this.baseSize * 0.13 * (0.42 + along * 0.58);
             const sideAllowance = maxSide * (0.20 + Math.pow(along, 0.72) * 0.80);
             const riseExcess = Math.max(0, by - y - riseAllowance);
@@ -505,7 +471,8 @@ export class Jellyfish {
             return addContactForce({
               x: flow.x + (sideWave + branch.side * 5.5 * smoothstep(along) * this.anatomyScale) * shapeWeight
                 - Math.sign(sideDelta) * Math.min(28, sideExcess * 2.4),
-              y: flow.y + Math.max(0, -this.vy) * 0.52 * along + Math.min(28, riseExcess * 2.6),
+              y: flow.y + Math.max(0, -this.vy) * 0.44 * along * motion
+                + Math.min(28, riseExcess * 2.6),
             }, contacts, branch.chain, along);
           },
           Math.max(4, SIMULATION.constraintIterations - 1),

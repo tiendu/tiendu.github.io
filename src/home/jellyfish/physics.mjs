@@ -1,4 +1,5 @@
 import { hypot2, TAU } from "./math.mjs";
+import { exceedsRelativeMotion, relaxTrail } from "./repair.mjs";
 
 export class VerletChain {
   constructor({
@@ -339,7 +340,7 @@ export class VerletChain {
     const errorLimit = Math.min(0.75, this.segmentLength * 0.22);
     // Search from the previous pose toward the candidate, without turning
     // a positional repair into an impulse on the next integration step.
-    for (const fraction of [1, 0.5, 0.25, 0.125, 0.0625, 0]) {
+    for (const fraction of [1, 0.5, 0.25, 0.125, 0.0625]) {
       for (let i = 0; i < this.count; i += 1) {
         const x = this.beforeX[i] + dx, y = this.beforeY[i] + dy;
         const sx = proposedX[i] - x, sy = proposedY[i] - y;
@@ -357,12 +358,16 @@ export class VerletChain {
           this.#projectTrailEnvelope(anchorX, anchorY, rise, side, drop);
         }
       }
-      if (!this.#validTrail(anchorX, anchorY, rise, side, drop, fraction ? errorLimit : 0.8)) continue;
+      if (!this.#validTrail(anchorX, anchorY, rise, side, drop, errorLimit)) continue;
       let largest = 0;
       for (let i = 1; i < this.count; i += 1) {
         largest = Math.max(largest, hypot2(this.x[i] - this.beforeX[i] - dx, this.y[i] - this.beforeY[i] - dy));
       }
       if (largest > limit * 1.2) continue;
+      this.#retainRepairMotion();
+      return true;
+    }
+    if (relaxTrail(this, anchorX, anchorY, () => this.#validTrail(anchorX, anchorY, rise, side, drop, 0.75))) {
       this.#retainRepairMotion();
       return true;
     }
@@ -408,7 +413,8 @@ export class VerletChain {
     // Also catch a strained chain that is technically still inside the visual
     // envelope. That is how a nearly straight strand can hide enormous spring
     // energy without looking out of bounds yet.
-    const needsRepair = clipped || !Number.isFinite(error) || error > 1.0 || this.#badCurvature();
+    const excessiveMotion = exceedsRelativeMotion(this, anchorX, anchorY, 1.5);
+    const needsRepair = clipped || excessiveMotion || !Number.isFinite(error) || error > 0.75 || this.#badCurvature();
     if (needsRepair) {
       // Alternate the two simple, stable constraints. Do not run bend-memory or
       // total-turn corrections here: on a heavily clipped chain those angular
@@ -424,17 +430,8 @@ export class VerletChain {
       // have nearly exact lengths but a sharp fold. Reject that pose rather
       // than applying angular projections to a heavily strained candidate.
       const badCurvature = this.#badCurvature();
-      let excessiveMotion = false;
-      if (this.hasBefore) {
-        const dx = anchorX - this.beforeX[0], dy = anchorY - this.beforeY[0];
-        for (let i = 1; i < this.count; i += 1) {
-          if (hypot2(this.x[i] - this.beforeX[i] - dx, this.y[i] - this.beforeY[i] - dy) > this.segmentLength * 0.8) {
-            excessiveMotion = true;
-            break;
-          }
-        }
-      }
-      if (!Number.isFinite(error) || error > repairLimit || badCurvature || excessiveMotion) {
+      const repairJump = excessiveMotion || exceedsRelativeMotion(this, anchorX, anchorY, 0.8);
+      if (!Number.isFinite(error) || error > repairLimit || badCurvature || repairJump) {
         if (!this.#continuousRepair(anchorX, anchorY, rise, side, drop)) {
           this.#settleTrail(anchorX, anchorY, side);
         }

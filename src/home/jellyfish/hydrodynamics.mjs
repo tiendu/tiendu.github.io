@@ -21,6 +21,7 @@ export class TissueFlow {
     this.scale = clamp(anatomyScale, 0.30, 1.28);
     this.cell = 24 * this.scale;
     this.grid = new Map();
+    this.neighbors = new Map();
     this.bodies = new Map();
     this.ocean = ocean;
     this.propulsion = propulsion;
@@ -67,6 +68,23 @@ export class TissueFlow {
     }
   }
 
+  // All sources are frozen. Cache candidate buckets once per occupied query
+  // cell; preserve the original ix/iy and insertion order.
+  nearby(gx, gy) {
+    const key = `${gx},${gy}`;
+    let sources = this.neighbors.get(key);
+    if (sources) return sources;
+    sources = [];
+    for (let ix = -1; ix <= 1; ix += 1) {
+      for (let iy = -1; iy <= 1; iy += 1) {
+        const bucket = this.grid.get(`${gx + ix},${gy + iy}`);
+        if (bucket) sources.push(...bucket);
+      }
+    }
+    this.neighbors.set(key, sources);
+    return sources;
+  }
+
   // Compact support, approximate depth separation and weighted averaging
   // prevent a dense cluster from multiplying the available fluid energy.
   disturbance(chain, x, y, base) {
@@ -76,26 +94,20 @@ export class TissueFlow {
     if (!Number.isSafeInteger(gx) || !Number.isSafeInteger(gy)) return { x: 0, y: 0, shelter: 0 };
     const speed = Math.hypot(base.x, base.y);
     let vx = 0, vy = 0, total = 0, shelter = 0;
-    for (let ix = -1; ix <= 1; ix += 1) {
-      for (let iy = -1; iy <= 1; iy += 1) {
-        const bucket = this.grid.get(`${gx + ix},${gy + iy}`);
-        if (!bucket) continue;
-        for (const s of bucket) {
-          if (s.body.family === body.family) continue;
-          const depth = 1 - smoothstep((Math.abs(s.body.layer - body.layer) - 0.10) / 0.55);
-          if (!depth) continue;
-          const dx = x - s.x, dy = y - s.y;
-          const r2 = (dx * dx + dy * dy) / (s.radius * s.radius);
-          if (r2 >= 1) continue;
-          const weight = (1 - r2) ** 2 * depth * s.weight;
-          vx += s.slipX * weight;
-          vy += s.slipY * weight;
-          total += weight;
-          if (s.body.arm && speed > 0.01) {
-            const downstream = (dx * base.x + dy * base.y) / (speed * s.radius);
-            shelter = Math.max(shelter, weight * smoothstep(downstream / 0.35));
-          }
-        }
+    for (const s of this.nearby(gx, gy)) {
+      if (s.body.family === body.family) continue;
+      const depth = 1 - smoothstep((Math.abs(s.body.layer - body.layer) - 0.10) / 0.55);
+      if (!depth) continue;
+      const dx = x - s.x, dy = y - s.y;
+      const r2 = (dx * dx + dy * dy) / (s.radius * s.radius);
+      if (r2 >= 1) continue;
+      const weight = (1 - r2) ** 2 * depth * s.weight;
+      vx += s.slipX * weight;
+      vy += s.slipY * weight;
+      total += weight;
+      if (s.body.arm && speed > 0.01) {
+        const downstream = (dx * base.x + dy * base.y) / (speed * s.radius);
+        shelter = Math.max(shelter, weight * smoothstep(downstream / 0.35));
       }
     }
     const velocity = bounded(vx * 0.62 / Math.max(1, total), vy * 0.62 / Math.max(1, total), 10 * this.scale);

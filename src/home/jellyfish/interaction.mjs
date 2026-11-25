@@ -79,6 +79,7 @@ export function buildContactForces(items, anatomyScale = 1) {
   const nearest = new Array(bodies.length);
   const distances = new Float64Array(bodies.length);
   const fractions = new Float64Array(bodies.length);
+  const active = [];
   for (let id = 0; id < bodies.length; id += 1) {
     const a = bodies[id];
     const { chain } = a;
@@ -89,26 +90,29 @@ export function buildContactForces(items, anatomyScale = 1) {
       const x = chain.x[i], y = chain.y[i];
       const bucket = grid.get(key(Math.floor(x / cell), Math.floor(y / cell)));
       if (!bucket) continue;
-      nearest.fill(null);
-      distances.fill(Infinity);
+      // Only reset entries touched by the preceding point.
+      for (const other of active) nearest[other] = null;
+      active.length = 0;
       const r = a.radii[i];
       for (const seg of bucket) {
         if (!weights[seg.id]) continue;
         const t = clamp(((x - seg.ax) * seg.dx + (y - seg.ay) * seg.dy) / seg.length2, 0, 1);
         const dx = x - seg.ax - seg.dx * t, dy = y - seg.ay - seg.dy * t;
         const d2 = dx * dx + dy * dy;
-        if (d2 >= seg.pad2 || d2 >= distances[seg.id]) continue;
+        if (d2 >= seg.pad2 || (nearest[seg.id] && d2 >= distances[seg.id])) continue;
         const b = bodies[seg.id];
         const reach = r + b.radii[seg.j] * (1 - t) + b.radii[seg.j + 1] * t;
         const free = b.freedom[seg.j] * (1 - t) + b.freedom[seg.j + 1] * t;
         if (d2 >= reach * reach || !free) continue;
+        if (!nearest[seg.id]) active.push(seg.id);
         nearest[seg.id] = seg;
         distances[seg.id] = d2;
         fractions[seg.id] = t;
       }
-      for (let other = 0; other < bodies.length; other += 1) {
+      // Preserve accumulation order, including reciprocal reactions.
+      active.sort((a, b) => a - b);
+      for (const other of active) {
         const seg = nearest[other];
-        if (!seg) continue;
         const b = bodies[other];
         const t = fractions[other];
         const dx = x - seg.ax - seg.dx * t, dy = y - seg.ay - seg.dy * t;
