@@ -4,6 +4,7 @@ import { clamp, invLerp, lerp, mulberry32, range, rotate, smoothstep, TAU } from
 import { pulseEnvelope, pulseVelocity } from "./pulse.mjs";
 import { VerletChain } from "./physics.mjs";
 import { addContactForce, buildContactForces } from "./interaction.mjs";
+import { PropulsionWake, appendageFlow } from "./propulsion.mjs";
 import { EXTRA_TENTACLE_OFFSETS, TENTACLE_COUNT, tentacleLengthFor, tentaclePlanAt } from "./tentacles.mjs";
 
 export function heroSizeFor(width, height) {
@@ -61,6 +62,7 @@ export class Jellyfish {
     this.anatomyPhase = range(random, 0, TAU);
     this.palette = JELLY_PALETTE;
     this.chains = [];
+    this.propulsion = new PropulsionWake();
     this.#buildChains(height);
   }
 
@@ -268,6 +270,8 @@ export class Jellyfish {
   }
 
   resize(oldWidth, oldHeight, width, height) {
+    // Old wake packets are in the previous viewport coordinate system.
+    if (oldWidth !== width || oldHeight !== height) this.propulsion.reset();
     const sx = width / Math.max(1, oldWidth);
     const sy = height / Math.max(1, oldHeight);
     const oldX = this.x;
@@ -315,13 +319,13 @@ export class Jellyfish {
   #chainForce(item, anchor, envelope, ocean, time, x, y, along) {
     const armLengthBias = item.arm ? (item.lengthBias ?? 0) : 0;
     const sensitivity = fluidSensitivityFor(item, along);
-    const localFlow = ocean.sample(x, y, time, sensitivity);
+    const localFlow = appendageFlow(ocean, this.propulsion, x, y, time, sensitivity);
     const loosen = along * along;
     const waterDominance = item.arm ? smoothstep(Math.abs(localFlow.x) / 4.5) : 0;
     const shapeWeight = 1 - 0.78 * waterDominance;
 
-    // Wake motion stays broad and slow. The water field provides the fine
-    // variation; this term only preserves a readable trailing rhythm.
+    // Retain a little procedural motion in quiet water, but avoid stacking
+    // it at full strength on the actual bell-generated wake.
     const distalEase = item.arm
       ? 1 - armLengthBias * smoothstep(invLerp(0.72, 1, along)) * 0.08
       : 1;
@@ -329,7 +333,8 @@ export class Jellyfish {
       time * (item.arm ? 0.44 : 0.68)
         + item.phase
         + along * (item.arm ? 3.4 : 5.6),
-    ) * (item.arm ? 4.0 : 4.7) * loosen * this.anatomyScale * distalEase;
+    ) * (item.arm ? 4.0 : 4.7) * loosen * this.anatomyScale * distalEase
+      * (1 - 0.45 * localFlow.wakeWeight);
     const billow = oralArmBillowAt(item, time, along, this.anatomyScale);
 
     // Thin tentacles keep a stable broad memory curve. Oral arms instead carry
@@ -356,7 +361,8 @@ export class Jellyfish {
         localFlow.x
         + (wake + billow + memory + expressiveShape + tipHook + curl) * shapeWeight
         + guard.x,
-      y: localFlow.y + Math.max(0, -this.vy) * 0.66 * along + trailingBias + guard.y,
+      y: localFlow.y + Math.max(0, -this.vy) * 0.66 * along
+        * (1 - 0.25 * localFlow.wakeWeight) + trailingBias + guard.y,
     };
   }
 
@@ -441,6 +447,10 @@ export class Jellyfish {
     }
     if (this.y > maxY) this.vy -= (this.y - maxY) * 0.14 * dt;
 
+    // The bell already receives its thrust above. Only appendages sample
+    // this wake, so propulsion is not counted twice.
+    this.propulsion.step(dt, this, pulseDelta, ocean, time);
+
     // Gather from one pre-integration pose, including branches. No chain
     // observes another chain's partially advanced contact geometry.
     const contacts = buildContactForces(this.chains, this.anatomyScale);
@@ -476,13 +486,14 @@ export class Jellyfish {
           bx,
           by,
           (x, y, along) => {
-            const flow = ocean.sample(x, y, time, lerp(0.30, branch.forceScale, along * along));
+            const flow = appendageFlow(ocean, this.propulsion, x, y, time,
+              lerp(0.30, branch.forceScale, along * along));
             const sideWave =
               branch.side
               * Math.sin(branch.phase + time * 0.46 + along * 6.2)
               * 4.5
               * along
-              * this.anatomyScale;
+              * this.anatomyScale * (1 - 0.45 * flow.wakeWeight);
             const riseAllowance = this.baseSize * 0.13 * (0.42 + along * 0.58);
             const sideAllowance = maxSide * (0.20 + Math.pow(along, 0.72) * 0.80);
             const riseExcess = Math.max(0, by - y - riseAllowance);
