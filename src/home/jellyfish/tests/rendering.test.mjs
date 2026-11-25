@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { bellEdgeOpacityAt } from "../bell.mjs";
 import {
   bellGridScaleFor,
   bellPoreThresholdAt,
@@ -163,4 +164,25 @@ test("skirt membrane stays broken, brightness-varied and pulse-responsive", () =
     Math.abs(current.offset - calm.offset) > 0.001,
     `current response ${current.offset - calm.offset}`,
   );
+});
+
+
+test("bell edge fades into the membrane with stable irregular highlights", () => {
+  for (const phase of [0, 1.2, 3.7, 6.1]) {
+    const samples = [];
+    for (let i = 0; i <= 100; i += 1) {
+      const v = -1 + i * 0.009;
+      for (const side of [-1, 1]) {
+        const u = side * bellProfileAt(v, 0.3, phase);
+        const edge = bellEdgeOpacityAt(0, u, v, phase);
+        samples.push(edge);
+        assert.ok(edge >= 0.10 && edge <= 0.44 + 1e-9);
+        assert.ok(bellEdgeOpacityAt(0.07, u, v, phase) > edge);
+        assert.equal(bellEdgeOpacityAt(0.14, u, v, phase), 1);
+        assert.equal(bellEdgeOpacityAt(0, u, v, phase), edge);
+      }
+    }
+    assert.ok(samples.some(value => value < 0.12));
+    assert.ok(samples.some(value => value > 0.27));
+  }
 });

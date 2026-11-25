@@ -22,6 +22,18 @@ function lobeField(u, v) {
   return best;
 }
 
+// Let the silhouette emerge from sparse membrane glyphs, not a drawn border.
+// The glints are fixed in anatomical coordinates and fade into the tissue.
+export function bellEdgeOpacityAt(gap, u, v, phase = 0) {
+  const depth = smoothstep(gap / 0.14);
+  if (depth === 1) return 1;
+  const grain = Math.sin(v * 21 + u * 5 + phase)
+    + Math.sin(v * 43 - u * 13 - phase * 0.7) * 0.45;
+  const glint = smoothstep(invLerp(0.30, 1.25, grain));
+  const lighting = 0.5 + 0.5 * Math.sin(u * 2.4 + phase * 0.8);
+  return lerp(0.10 + glint * (0.18 + lighting * 0.16), 1, depth);
+}
+
 export function drawEmbeddedRoots(frame, jelly, items, time) {
   const ctx = frame.ctx;
   const width = jelly.bellWidth();
@@ -128,8 +140,6 @@ export function drawBell(frame, jelly, time) {
 
       const t = invLerp(-1.07, 0.035, v);
       const profileGap = profile > 0 ? profile - absU : 0;
-      const boundaryThreshold = Math.max(0.009, (cellW / Math.max(1, halfW)) * 1.16);
-      const boundary = insideDome && profileGap >= 0 && profileGap < boundaryThreshold;
       const lowerEdge = insideSkirt && v > rimV - Math.max(0.008, cellH / height * 0.62);
       const skirt = lowerEdge ? skirtMembraneAt(u, jelly.pulse, jelly.anatomyPhase, time, jelly.tilt) : null;
       if (lowerEdge && !skirt.visible) continue;
@@ -187,8 +197,11 @@ export function drawBell(frame, jelly, time) {
         0.83,
       );
 
-      const structural = boundary || lowerEdge || canalPrimary || canalFine || flameStreak || arcFragment || lobeEdge;
-      if (!structural && grainB > bellPoreThresholdAt(v, tissueDensity, crownGlow)) continue;
+      const edgeOpacity = insideDome && !lowerEdge
+        ? bellEdgeOpacityAt(profileGap, u, v, jelly.anatomyPhase) : 1;
+      const structural = lowerEdge || canalPrimary || canalFine || flameStreak || arcFragment || lobeEdge;
+      const poreThreshold = bellPoreThresholdAt(v, tissueDensity, crownGlow) * lerp(0.48, 1, edgeOpacity);
+      if (!structural && grainB > poreThreshold) continue;
 
       let glyph;
       let color;
@@ -200,18 +213,7 @@ export function drawBell(frame, jelly, time) {
         * materialOpacity
         * pulseLight;
 
-      if (boundary) {
-        const probe = 0.012;
-        const upper = bellProfileAt(v - probe, jelly.pulse, jelly.anatomyPhase);
-        const lower = bellProfileAt(v + probe, jelly.pulse, jelly.anatomyPhase);
-        const dWidth = (lower - upper) / (probe * 2);
-        const side = u < 0 ? -1 : 1;
-        glyph = directionGlyph(side * dWidth, 1);
-        const lowerMix = smoothstep(invLerp(-0.48, 0.02, v));
-        color = lowerMix > 0.44
-          ? mixColor(jelly.palette.bellGlass, jelly.palette.rimHot, lowerMix, 0.82)
-          : mixColor(jelly.palette.bellCrown, jelly.palette.bellSoft, t * 0.74, 0.80);
-      } else if (lowerEdge) {
+      if (lowerEdge) {
         const slopeProbe = 0.012;
         const dy = bellRimAt(clamp(u + slopeProbe, -1, 1), jelly.pulse, jelly.twist)
           - bellRimAt(clamp(u - slopeProbe, -1, 1), jelly.pulse, jelly.twist);
@@ -226,15 +228,15 @@ export function drawBell(frame, jelly, time) {
         color = mixColor(jelly.palette.bellCoral, jelly.palette.rimHot, 0.35, 0.38);
       } else if (flameStreak) {
         glyph = Math.abs(u) < 0.17 ? "|" : (u < 0 ? "/" : "\\");
-        color = mixColor(jelly.palette.bellCoral, jelly.palette.bellHot, 0.60 + crownGlow * 0.32, 0.84 + crownGlow * 0.10);
+        color = mixColor(jelly.palette.bellCoral, jelly.palette.bellHot, 0.60 + crownGlow * 0.32, 0.66 + crownGlow * 0.12);
       } else if (canalPrimary || canalFine) {
         const radialDx = Math.sin(theta);
         const radialDy = -Math.cos(theta);
         glyph = directionGlyph(radialDx, radialDy);
         const canalHeat = clamp(crownGlow * 0.60 + warmZone * 0.36 + (canalFine ? 0.06 : 0.18), 0, 1);
         color = canalFine
-          ? mixColor(jelly.palette.bellSoft, jelly.palette.bellCoral, canalHeat, 0.48)
-          : mixColor(jelly.palette.bellCoral, jelly.palette.bellHot, canalHeat, 0.75 + crownGlow * 0.16);
+          ? mixColor(jelly.palette.bellSoft, jelly.palette.bellCoral, canalHeat, 0.39)
+          : mixColor(jelly.palette.bellCoral, jelly.palette.bellHot, canalHeat, 0.58 + crownGlow * 0.15);
       } else {
         glyph = densityGlyph(tissueDensity, ASCII.tissue);
         if (crownGlow > 0.23) {
@@ -249,7 +251,7 @@ export function drawBell(frame, jelly, time) {
         }
       }
 
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = edgeOpacity;
       ctx.fillStyle = color;
       ctx.fillText(glyph, px, py);
     }
@@ -301,7 +303,7 @@ export function drawBell(frame, jelly, time) {
           jelly.palette.bellCoral,
           jelly.palette.bellHot,
           0.30 + (1 - q) * 0.58,
-          (branchOffset ? 0.30 : 0.44) * (0.62 + fade * 0.38),
+          (branchOffset ? 0.24 : 0.34) * (0.62 + fade * 0.38),
         );
         ctx.fillText(directionGlyph(dx, dy), point.x, point.y);
       }
