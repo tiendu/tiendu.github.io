@@ -31,6 +31,15 @@ export function meridionalStripeAt(u, v, profile, phase = 0) {
   return clamp(stripe * grain * crown * skirt * edge, 0, 1);
 }
 
+// A swimming cycle illuminates the channels from crown to skirt. This is
+// a stylized optical response, independent of contact and water disturbances.
+export function swimChannelLightAt(v, phase = 0) {
+  const p = ((phase % 1) + 1) % 1;
+  const envelope = smoothstep(p / 0.055) * (1 - smoothstep((p - 0.32) / 0.23));
+  const front = -1.02 + 1.10 * smoothstep((p - 0.025) / 0.37);
+  return envelope * Math.exp(-(((v - front) / 0.26) ** 2));
+}
+
 // The existing mechanical wave is unchanged; pigment channels emit more
 // strongly as it passes. Direct contacts still illuminate the surrounding gel.
 export function channelFlashMix(stripe, wave, contact = false) {

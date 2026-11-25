@@ -4,6 +4,7 @@ import { setFont } from "./glyphs.mjs";
 import { buildOcclusionSpans, projectedBellPoint, trailOcclusionFor } from "./occlusion.mjs";
 import { keepTrailDirection, MAX_VISUAL_TILT } from "./orientation.mjs";
 import { clamp } from "./math.mjs";
+import { canvasPixelRatio } from "./render-quality.mjs";
 import { drawRibbon, drawTentacle } from "./tissue.mjs";
 
 export class AsciiRenderer {
@@ -23,15 +24,15 @@ export class AsciiRenderer {
   resize(width, height) {
     this.width = Math.max(1, width);
     this.height = Math.max(1, height);
-    this.dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
+    this.dpr = canvasPixelRatio(this.width, this.height);
     const compact = this.width < 620 || this.height < 500;
     this.compact = compact;
-    this.shadowScale = compact ? 0 : 1;
-    this.cellW = compact ? 3.45 : 3.18;
-    this.cellH = compact ? 5.90 : 5.48;
+    this.shadowScale = compact ? 0.45 : 1;
+    this.cellW = 3.18;
+    this.cellH = 5.48;
     this.fontSize = this.cellH * 0.98;
-    this.canvas.width = Math.round(this.width * this.dpr);
-    this.canvas.height = Math.round(this.height * this.dpr);
+    this.canvas.width = Math.max(1, Math.floor(this.width * this.dpr));
+    this.canvas.height = Math.max(1, Math.floor(this.height * this.dpr));
     this.canvas.style.width = `${this.width}px`;
     this.canvas.style.height = `${this.height}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);

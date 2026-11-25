@@ -1,5 +1,5 @@
 import { ASCII } from "./config.mjs";
-import { channelFlashMix, meridionalStripeAt } from "./channels.mjs";
+import { channelFlashMix, meridionalStripeAt, swimChannelLightAt } from "./channels.mjs";
 import { bellCenterShift, bellGridScaleFor, bellPoreThresholdAt, bellProfileAt,
   internalRootOpacityAt, skirtRimAt } from "./geometry.mjs";
 import { directionGlyph, mixColor, mixMembraneColor, rgba, setFont } from "./glyphs.mjs";
@@ -254,13 +254,15 @@ export function drawBell(frame, jelly, time) {
       // Light changes colour and opacity, never the pore pattern or geometry.
       const emission = jelly.light?.at(u, v) ?? 0;
       const wave = jelly.light?.flashAt?.(u, v) ?? 0;
-      const flash = channelFlashMix(stripe, wave, jelly.light?.flash?.contact);
-      const channelLight = stripe * (0.42 + emission * 0.34);
+      const reactiveFlash = channelFlashMix(stripe, wave, jelly.light?.flash?.contact);
+      const swimLight = swimChannelLightAt(v, jelly.phase);
+      const flash = Math.max(reactiveFlash, stripe * (0.07 + 0.82 * swimLight));
+      const channelLight = stripe * (0.42 + emission * 0.34 + swimLight * 0.25);
       const color = mixMembraneColor(jelly.palette, 0.38 + centerGlass * 0.38,
         coral, clamp(warmth + stripe * 0.22, 0, 1),
         lerp(crown * 0.96, 1, clamp(channelLight + emission * 0.42, 0, 1)),
         alpha + pigment * 0.34 + crown * 0.13 + fluorescence
-          + stripe * 0.17 + emission * (0.23 + stripe * 0.25),
+          + stripe * (0.17 + swimLight * 0.10) + emission * (0.23 + stripe * 0.25),
         flash);
       ctx.globalAlpha = edgeOpacity;
       ctx.fillStyle = color;

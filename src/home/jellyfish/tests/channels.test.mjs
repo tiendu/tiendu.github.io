@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { meridionalStripeAt, channelFlashMix } from "../channels.mjs";
+import { meridionalStripeAt, channelFlashMix, swimChannelLightAt } from "../channels.mjs";
 
 const scan = (v, profile, phase) => Array.from({ length: 801 }, (_, i) =>
   meridionalStripeAt((i / 400 - 1) * profile, v, profile, phase));
@@ -47,5 +47,17 @@ test("mechanical flashes favor channels while contact lights surrounding tissue"
   assert.equal(channelFlashMix(1, 1, true), 1);
   for (const stripe of [0, 0.5, 1]) for (const wave of [0, 0.5, 1]) {
     assert.ok(channelFlashMix(stripe, wave) >= 0 && channelFlashMix(stripe, wave) <= 1);
+  }
+});
+
+test("swimming illuminates the crown first and the skirt later without input", () => {
+  assert.ok(swimChannelLightAt(-0.95, 0.08) > 0.8);
+  assert.ok(swimChannelLightAt(0, 0.08) < 0.05);
+  assert.ok(swimChannelLightAt(0, 0.35) > 0.8);
+  assert.ok(swimChannelLightAt(-0.95, 0.35) < 0.05);
+  assert.equal(swimChannelLightAt(-0.5, 0.65), 0);
+  for (let i = 0; i <= 100; i++) {
+    const value = swimChannelLightAt(-0.5, i / 100);
+    assert.ok(value >= 0 && value <= 1);
   }
 });

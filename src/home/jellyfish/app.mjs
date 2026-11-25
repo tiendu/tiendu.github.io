@@ -2,6 +2,7 @@ import { renderFpsFor, SIMULATION } from "./config.mjs";
 import { AsciiRenderer } from "./renderer.mjs";
 import { JellyWorld } from "./world.mjs";
 import { bindWaterInput } from "./water-input.mjs";
+import { canvasPixelRatio } from "./render-quality.mjs";
 
 function seedFromSession() {
   try {
@@ -73,8 +74,14 @@ export function mountJellyfish() {
     measurable = true;
     const nextWidth = Math.max(1, rect.width);
     const nextHeight = Math.max(1, rect.height);
-    if (world && Math.abs(nextWidth - width) < 1 && Math.abs(nextHeight - height) < 1
-      && renderer.dpr === Math.min(globalThis.devicePixelRatio || 1, 2)) {
+    const sameSize = world && Math.abs(nextWidth - width) < 1
+      && Math.abs(nextHeight - height) < 1;
+    if (sameSize) {
+      if (renderer.dpr !== canvasPixelRatio(width, height)) {
+        renderer.resize(width, height);
+        draw();
+        lastRender = performance.now();
+      }
       if (!wasMeasurable) start();
       return;
     }
@@ -176,6 +183,8 @@ export function mountJellyfish() {
 
   const resizeObserver = new ResizeObserver(measure);
   resizeObserver.observe(root);
+  const viewport = globalThis.visualViewport;
+  viewport?.addEventListener("resize", measure, { passive: true });
   canvas.addEventListener("contextlost", onContextLost);
   canvas.addEventListener("contextrestored", onContextRestored);
   document.addEventListener("visibilitychange", onVisibility);
@@ -186,6 +195,7 @@ export function mountJellyfish() {
   return () => {
     stop();
     resizeObserver.disconnect();
+    viewport?.removeEventListener("resize", measure);
     waterInput.dispose();
     canvas.removeEventListener("contextlost", onContextLost);
     canvas.removeEventListener("contextrestored", onContextRestored);

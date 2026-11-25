@@ -42,7 +42,7 @@ test("bell uses a denser sub-grid without increasing the whole-scene grid", () =
   const desktop = bellGridScaleFor(false);
   const compact = bellGridScaleFor(true);
   assert.ok(desktop.x <= 0.64 && desktop.y <= 0.68, `desktop grid ${desktop.x},${desktop.y}`);
-  assert.ok(compact.x <= 0.80 && compact.y <= 0.84, `compact grid ${compact.x},${compact.y}`);
+  assert.deepEqual(compact, desktop, "compact screens keep the same bell grid");
   assert.ok(0.84 / desktop.x > 1.30, `desktop horizontal density ${0.84 / desktop.x}`);
   assert.ok(0.89 / desktop.y > 1.30, `desktop vertical density ${0.89 / desktop.y}`);
 });

@@ -53,7 +53,7 @@ export function bellCenterShift(v, phase, halfW) {
 // The bell gets its own denser text lattice. Ribbons and tentacles stay on the
 // normal scene grid so extra detail is spent only on the translucent membrane.
 export function bellGridScaleFor(compact = false) {
-  return compact ? { x: 0.78, y: 0.82 } : { x: 0.62, y: 0.66 };
+  return { x: 0.62, y: 0.66 };
 }
 
 // The skirt is a translucent membrane edge, not a continuous neon wire. The
