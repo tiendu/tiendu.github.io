@@ -1,16 +1,23 @@
 import { ASCII } from "./config.mjs";
 import { ribbonSurfaceBreathAt } from "./fluid.mjs";
+import { buildOcclusionSpans, projectedBellPoint, trailOcclusionFor } from "./occlusion.mjs";
 import {
   appendageProjectionFor, bellScaleFor, bellSideLightAt,
-  keepTrailDirection, MAX_VISUAL_TILT, visualDepthFor,
+  keepTrailDirection, MAX_VISUAL_TILT,
 } from "./orientation.mjs";
 import { ribbonMaterialAt, skirtLobeAt, tissuePresence } from "./material.mjs";
 import { clamp, invLerp, lerp, rotate, smoothstep, TAU } from "./math.mjs";
 
+const rgbCache = new Map();
+
 function rgb(hex) {
+  const cached = rgbCache.get(hex);
+  if (cached) return cached;
   const clean = hex.replace("#", "");
   const value = Number.parseInt(clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean, 16);
-  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+  const color = { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+  rgbCache.set(hex, color);
+  return color;
 }
 
 function rgba(hex, alpha) {
@@ -391,14 +398,22 @@ export class AsciiRenderer {
   }
 
   #drawProjectedItem(jelly, item, opacity, time) {
-    const projection = visibleAttachmentFor(jelly, item, this.yaw, time);
+    const projection = this.attachments.get(item);
     const ctx = this.ctx;
+    this.tissueOcclusion = trailOcclusionFor(jelly, item, projection, this.yaw,
+      jelly.tilt + this.extraTilt, this.bellOcclusion);
     ctx.save();
     ctx.translate(projection.x, projection.y);
     keepTrailDirection(ctx, jelly, item, this.yaw, this.extraTilt);
     if (item.arm) this.#drawRibbon(jelly, item, opacity * projection.light, time, projection.width);
     else this.#drawTentacle(jelly, item, opacity * projection.light);
     ctx.restore();
+  }
+
+  #tissueGlyph(glyph, x, y) {
+    if (!this.tissueOcclusion.glyph(x, y, this.cellH * 0.38)) {
+      this.ctx.fillText(glyph, x, y);
+    }
   }
 
   #drawTentacle(jelly, item, opacity = 1) {
@@ -440,7 +455,7 @@ export class AsciiRenderer {
           rootGlow * 0.42 + tipGlow,
           alpha,
         );
-        ctx.fillText(glyph, x, y);
+        this.#tissueGlyph(glyph, x, y);
 
         // Punctuation makes the strand taper and break into the darkness. Near
         // the tips it also exaggerates hooks/loops without turning them thick.
@@ -454,7 +469,7 @@ export class AsciiRenderer {
             accent,
             alpha * (along > 0.72 ? 0.34 : 0.22),
           );
-          ctx.fillText(along > 0.68 ? (i % 2 ? "," : ".") : ":", x + nx * reach * side, y + ny * this.cellH * 0.12 * side);
+          this.#tissueGlyph(along > 0.68 ? (i % 2 ? "," : ".") : ":", x + nx * reach * side, y + ny * this.cellH * 0.12 * side);
         }
       }
     }
@@ -538,7 +553,10 @@ export class AsciiRenderer {
       const motion = ribbonKinematicsAt(chain, i);
       const geometry = this.#ribbonSample(item, along, time, widthScale, motion);
       ctx.globalAlpha = rootEmergenceScale(item, along) * clamp(opacity, 0, 1);
-      ctx.lineWidth = Math.max(this.cellW * 1.4, geometry.projected * 1.45);
+      const lineWidth = Math.max(this.cellW * 1.4, geometry.projected * 1.45);
+      if (this.tissueOcclusion.stroke(chain.x[i - 1], chain.y[i - 1],
+        chain.x[i], chain.y[i], lineWidth * 0.5)) continue;
+      ctx.lineWidth = lineWidth;
       ctx.beginPath();
       ctx.moveTo(chain.x[i - 1], chain.y[i - 1]);
       ctx.lineTo(chain.x[i], chain.y[i]);
@@ -577,13 +595,13 @@ export class AsciiRenderer {
         * rootFade
         * pulseLift * tissuePresence(item, segmentAlong);
       if (alpha < 0.012) continue;
+      const motion = ribbonKinematicsAt(chain, i);
 
       for (let s = 0; s < samples; s += 1) {
         const t = s / samples;
         const along = clamp((i + t) / Math.max(1, chain.count - 1), 0, 1);
         const centerX = lerp(x0, x1, t);
         const centerY = lerp(y0, y1, t);
-        const motion = ribbonKinematicsAt(chain, i);
         const g = this.#ribbonSample(item, along, time, widthScale, motion);
         const leftOffset = g.torsionOffset + g.projected + g.leftRuffle;
         const rightOffset = g.torsionOffset - g.projected - g.rightRuffle;
@@ -603,14 +621,14 @@ export class AsciiRenderer {
           leftFront ? 0.78 : 0.38,
           alpha * (leftFront ? 0.90 : 0.40),
         );
-        ctx.fillText(edgeGlyph, leftX, leftY);
+        this.#tissueGlyph(edgeGlyph, leftX, leftY);
         ctx.fillStyle = mixColor(
           jelly.palette.armDark,
           jelly.palette.armHot,
           leftFront ? 0.34 : 0.72,
           alpha * (leftFront ? 0.36 : 0.90),
         );
-        ctx.fillText(edgeGlyph, rightX, rightY);
+        this.#tissueGlyph(edgeGlyph, rightX, rightY);
 
         // Broad faces get translucent tissue between the edges. When the
         // ribbon turns edge-on the fill collapses naturally to almost nothing.
@@ -646,7 +664,7 @@ export class AsciiRenderer {
             0.16 + foldHighlight * 0.44 + face * 0.12,
             alpha * (0.44 + middle * 0.34 + face * 0.08),
           );
-          ctx.fillText(densityGlyph(density, ASCII.ribbon), x, y);
+          this.#tissueGlyph(densityGlyph(density, ASCII.ribbon), x, y);
         }
 
         // Ruffled lace protrudes independently from each edge, rather than as
@@ -656,27 +674,14 @@ export class AsciiRenderer {
           const leftFray = Math.min(g.projected, this.cellW * (0.7 + (item.ruffleLeft ?? 1) * 0.75)) * fray;
           const rightFray = Math.min(g.projected, this.cellW * (0.7 + (item.ruffleRight ?? 1) * 0.75)) * fray;
           ctx.fillStyle = rgba(jelly.palette.rim, alpha * 0.30);
-          ctx.fillText(i % 2 ? "/" : "~", leftX + nx * leftFray, leftY + ny * leftFray * 0.25);
+          this.#tissueGlyph(i % 2 ? "/" : "~", leftX + nx * leftFray, leftY + ny * leftFray * 0.25);
           if ((i + s) % 7 === 0) {
             ctx.fillStyle = rgba(jelly.palette.armHot, alpha * 0.26);
-            ctx.fillText(i % 3 ? "\\" : ".", rightX - nx * rightFray, rightY - ny * rightFray * 0.20);
+            this.#tissueGlyph(i % 3 ? "\\" : ".", rightX - nx * rightFray, rightY - ny * rightFray * 0.20);
           }
         }
       }
     }
-  }
-
-  #clipOutsideBell(jelly, time) {
-    const ctx = this.ctx;
-    const contour = bellOcclusionContour(jelly, time);
-    // A generous outer rectangle keeps the whole stage drawable after yaw.
-    const extent = Math.max(this.width, this.height) * 4 + jelly.baseSize * 4;
-    ctx.beginPath();
-    ctx.rect(jelly.x - extent, jelly.y - extent, extent * 2, extent * 2);
-    ctx.moveTo(contour[0].x, contour[0].y);
-    for (const point of contour.slice(1)) ctx.lineTo(point.x, point.y);
-    ctx.closePath();
-    ctx.clip("evenodd");
   }
 
   #drawEmbeddedRoots(jelly, items, time) {
@@ -689,7 +694,7 @@ export class AsciiRenderer {
 
     for (const item of items) {
       if ((item.layer ?? 0) >= 0.45 || !item.chain || item.chain.count < 2) continue;
-      const projection = visibleAttachmentFor(jelly, item, this.yaw, time);
+      const projection = this.attachments.get(item);
       const rootX = projection.rootX;
       const rootY = projection.rootY;
       const targetLocal = {
@@ -785,9 +790,10 @@ export class AsciiRenderer {
         const u = (raw.x - shift) / halfW;
         const absU = Math.abs(u);
         const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
-        const rimV = skirtRimAt(jelly, u, time);
+        const nearSkirt = absU <= 0.90 && v > -0.026;
+        const rimV = nearSkirt ? skirtRimAt(jelly, u, time) : 0;
         const insideDome = v <= 0.020 && profile > 0 && absU <= profile;
-        const insideSkirt = absU <= 0.90 && v > -0.026 && v <= rimV;
+        const insideSkirt = nearSkirt && v <= rimV;
         if (!insideDome && !insideSkirt) continue;
 
         const t = invLerp(-1.07, 0.035, v);
@@ -994,7 +1000,7 @@ export class AsciiRenderer {
       if (!membrane.visible) continue;
 
       const lobe = skirtLobeAt(u, jelly.anatomyPhase);
-      const rim = skirtRimAt(jelly, u, time);
+      const rim = bellRimAt(u, jelly.pulse, jelly.twist) + lobe.drop + membrane.offset;
       const nextU = clamp(u + 0.010, -0.89, 0.89);
       const nextRim = skirtRimAt(jelly, nextU, time);
       const dy = nextRim - rim;
@@ -1114,19 +1120,20 @@ export class AsciiRenderer {
     ctx.scale(bellScaleFor(this.yaw), 1);
     ctx.rotate(-jelly.tilt);
     ctx.translate(-jelly.x, -jelly.y);
-    const byDepth = (a, b) => visualDepthFor(a, this.yaw) - visualDepthFor(b, this.yaw);
+    this.attachments = new Map(jelly.chains.map(item =>
+      [item, visibleAttachmentFor(jelly, item, this.yaw, time)]));
+    this.bellOcclusion = buildOcclusionSpans(bellOcclusionContour(jelly, time).map(point =>
+      projectedBellPoint(jelly, point, this.yaw, visualTilt)));
+    const byDepth = (a, b) => this.attachments.get(a).depth - this.attachments.get(b).depth;
 
     const back = jelly.chains.filter((item) => item.layer < -0.25).sort(byDepth);
     const middle = jelly.chains.filter((item) => item.layer >= -0.25 && item.layer < 0.45).sort(byDepth);
     const front = jelly.chains.filter((item) => item.layer >= 0.45).sort(byDepth);
 
-    // Rear anatomy disappears under the bell exactly as it would in a photo.
-    ctx.save();
-    this.#clipOutsideBell(jelly, time);
+    // External tissue is culled against one shared projected contour.
     for (const item of back) {
       this.#drawProjectedItem(jelly, item, item.arm ? 0.76 : 0.70, time);
     }
-    ctx.restore();
 
     // A faint continuation of rear/mid anatomy is drawn before the bell so
     // membrane glyphs naturally sit on top of it. This visually connects roots
@@ -1137,15 +1144,12 @@ export class AsciiRenderer {
     // Mid and foreground layers are progressively brighter. Foreground ribbons
     // lay a small dark mask before their ASCII, producing real occlusion of
     // strands behind them without painting any visible non-ASCII surface.
-    ctx.save();
-    this.#clipOutsideBell(jelly, time);
     for (const item of middle) {
       this.#drawProjectedItem(jelly, item, item.arm ? 0.90 : 0.86, time);
     }
     for (const item of front) {
       this.#drawProjectedItem(jelly, item, item.arm ? 1 : 0.98, time);
     }
-    ctx.restore();
     ctx.restore();
   }
 

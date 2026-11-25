@@ -100,7 +100,8 @@ test("the complete renderer turns at both viewport sizes without touching chain 
       recorder.calls.length = 0;
       renderer.render({ ...world, orientation: { yaw, velocity: 0, tilt, tiltVelocity: 0 } });
       assert.ok(recorder.balanced());
-      assert.equal(recorder.calls.filter(call => call[0] === "clip" && call[1] === "evenodd").length, 2);
+      assert.equal(recorder.calls.filter(call => call[0] === "clip").length, 0,
+        "external tissue must not use Canvas clipping");
       assert.ok(recorder.calls.filter(call => call[0] === "fillText").length > 100);
       frames.push(JSON.stringify(recorder.calls));
       assert.deepEqual(snapshot(world), before);
