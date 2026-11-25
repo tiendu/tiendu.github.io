@@ -84,6 +84,8 @@ test("debug overlay is opt-in, pointer-transparent and removable", () => {
   assert.equal(count, 0);
   const overlay = createPerformanceOverlay(root, "?debug=1");
   assert.equal(node.style.pointerEvents, "none");
+  assert.equal(node.style.background, "transparent");
+  assert.equal(node.style.bottom, "8px");
   overlay.update({ ...fast, steps: 60, raf: 60, physicsMs: 2 }, 24, 3, { hits: 99, misses: 1 }, "atlas");
   assert.match(node.textContent, /24\.0\/24 fps/);
   assert.match(node.textContent, /ATLAS 99% hit/);

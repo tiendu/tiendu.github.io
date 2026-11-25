@@ -103,8 +103,9 @@ export function createPerformanceOverlay(root, search = globalThis.location?.sea
   if (!node) return null;
   node.setAttribute("aria-hidden", "true");
   Object.assign(node.style, {
-    position: "absolute", top: "8px", left: "8px", zIndex: "3", margin: "0",
-    padding: "6px 8px", background: "rgba(0,2,4,.78)", color: "#a7d7bc",
+    position: "absolute", bottom: "8px", left: "8px", zIndex: "3", margin: "0",
+    padding: "6px 8px", background: "transparent", color: "#a7d7bc",
+    textShadow: "0 1px 2px #000",
     font: "11px/1.4 monospace", pointerEvents: "none", userSelect: "none",
   });
   root.append(node);
