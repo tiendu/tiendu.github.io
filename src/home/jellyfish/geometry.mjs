@@ -110,13 +110,22 @@ export function visibleAttachmentFor(jelly, item, time) {
   const local = rotate(root.x - jelly.x,
     root.y - jelly.y, -jelly.tilt);
   const halfW = jelly.bellWidth() * 0.5;
-  const u = item.arm
-    ? clamp(local.x / halfW * 0.78, -0.29, 0.29)
-    : clamp(local.x / halfW * 0.92, -0.76, 0.76);
-  const rim = skirtRimAt(jelly, u, time);
-  // Marginal tentacles begin just inside the membrane; oral arms emerge
-  // in the central subumbrella rather than from the outer rim.
-  const v = rim + (item.arm ? 0.035 : -0.018);
+  let u, v;
+  if (item.arm) {
+    // Oral arms retain their central subumbrella attachment.
+    u = clamp(local.x / halfW * 0.78, -0.29, 0.29);
+    v = skirtRimAt(jelly, u, time) + 0.035;
+  } else {
+    // Project the marginal attachment band as a shallow ellipse instead
+    // of placing every strand on the same flat skirt line. Layer is a
+    // signed depth proxy: rear roots sit farther inside the membrane.
+    const lateral = clamp(local.x / (halfW * 0.86), -1, 1);
+    const depth = clamp(item.layer ?? 0, -1, 1);
+    u = lateral * 0.70 * Math.sqrt(1 - 0.38 * depth * depth);
+    const arc = Math.sqrt(1 - 0.70 * lateral * lateral);
+    const inset = 0.045 - depth * 0.035 * arc;
+    v = skirtRimAt(jelly, u, time) - inset;
+  }
   const point = bellPoint(jelly, u, v);
   return { x: point.x - root.x, y: point.y - root.y,
     rootX: point.x, rootY: point.y, u, v };

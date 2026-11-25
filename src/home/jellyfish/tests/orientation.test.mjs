@@ -194,12 +194,17 @@ test("visible tentacle origins stay tucked inside the scalloped skirt and oral a
           const local = rotate(root.rootX - jelly.x, root.rootY - jelly.y, -jelly.tilt);
           const v = local.y / jelly.bellHeight();
           assert.ok(Math.abs(v - root.v) < 1e-9);
-          assert.ok(Math.abs(root.u) <= (item.arm ? 0.29 : 0.76) + 1e-9);
+          assert.ok(Math.abs(root.u) <= (item.arm ? 0.29 : 0.70) + 1e-9);
           assert.ok(Math.abs(item.chain.x[0] + root.x - root.rootX) < 1e-9);
           assert.ok(Math.abs(item.chain.y[0] + root.y - root.rootY) < 1e-9);
           const rim = skirtRimAt(jelly, root.u, time);
-          assert.ok(Math.abs(v - rim - (item.arm ? 0.035 : -0.018)) < 1e-9);
-          if (!item.arm) assert.ok(insideContour({ x: root.rootX, y: root.rootY }, contour), `seed ${seed} u ${root.u} v ${v}`);
+          if (item.arm) {
+            assert.ok(Math.abs(v - rim - 0.035) < 1e-9);
+          } else {
+            const inset = rim - v;
+            assert.ok(inset >= 0.010 - 1e-9 && inset <= 0.080 + 1e-9);
+            assert.ok(insideContour({ x: root.rootX, y: root.rootY }, contour), `seed ${seed} u ${root.u} v ${v}`);
+          }
         }
         assert.deepEqual(snapshot(world), before);
       }
