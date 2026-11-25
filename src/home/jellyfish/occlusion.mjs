@@ -1,10 +1,9 @@
-import { bellScaleFor } from "./orientation.mjs";
 import { rotate } from "./math.mjs";
 
 // Coordinates are in CSS pixels relative to the bell centre, before DPR.
-export function projectedBellPoint(jelly, point, yaw, visualTilt) {
+export function projectedBellPoint(jelly, point, visualTilt) {
   const local = rotate(point.x - jelly.x, point.y - jelly.y, -jelly.tilt);
-  return rotate(local.x * bellScaleFor(yaw), local.y, visualTilt);
+  return rotate(local.x, local.y, visualTilt);
 }
 
 // Each horizontal slab conservatively covers the polygon's occupied span.
@@ -44,28 +43,22 @@ export function buildOcclusionSpans(points, step = 2) {
   };
 }
 
-// keepTrailDirection preserves the baseline linear transform R(t) S R(-t).
+// keepTrailDirection preserves world-space trail vectors.
 // The corrected root follows the visual bell; all other points keep their
 // projected displacement from that root. Precompute the affine coefficients
 // once per appendage, including its branches and dark ribbon mask.
-export function trailOcclusionFor(jelly, item, attachment, yaw, visualTilt, overlaps) {
-  const root = projectedBellPoint(jelly, { x: attachment.rootX, y: attachment.rootY }, yaw, visualTilt);
-  const c = Math.cos(jelly.tilt), s = Math.sin(jelly.tilt);
-  const scale = bellScaleFor(yaw);
-  const a = scale * c * c + s * s;
-  const b = (scale - 1) * c * s;
-  const d = scale * s * s + c * c;
-  const x = item.chain.x[0], y = item.chain.y[0];
-  const tx = root.x - a * x - b * y;
-  const ty = root.y - b * x - d * y;
+export function trailOcclusionFor(jelly, item, attachment, visualTilt, overlaps) {
+  const root = projectedBellPoint(jelly, { x: attachment.rootX, y: attachment.rootY }, visualTilt);
+  const tx = root.x - item.chain.x[0];
+  const ty = root.y - item.chain.y[0];
   return {
     glyph(x, y, pad) {
-      const px = a * x + b * y + tx, py = b * x + d * y + ty;
+      const px = x + tx, py = y + ty;
       return overlaps(px - pad, py - pad, px + pad, py + pad);
     },
     stroke(x0, y0, x1, y1, pad) {
-      const ax = a * x0 + b * y0 + tx, ay = b * x0 + d * y0 + ty;
-      const bx = a * x1 + b * y1 + tx, by = b * x1 + d * y1 + ty;
+      const ax = x0 + tx, ay = y0 + ty;
+      const bx = x1 + tx, by = y1 + ty;
       return overlaps(Math.min(ax, bx) - pad, Math.min(ay, by) - pad,
         Math.max(ax, bx) + pad, Math.max(ay, by) + pad);
     },

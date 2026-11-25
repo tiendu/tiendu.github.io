@@ -1,7 +1,7 @@
 import { SIMULATION, snowCountFor } from "./config.mjs";
 import { Jellyfish } from "./jellyfish.mjs";
 import { mulberry32 } from "./math.mjs";
-import { stepVisualTilt, stepVisualYaw, tiltTargetAt, yawTargetAt } from "./orientation.mjs";
+import { stepVisualTilt, tiltTargetAt } from "./orientation.mjs";
 import { MarineSnow, OceanField } from "./ocean.mjs";
 
 export class JellyWorld {
@@ -9,7 +9,7 @@ export class JellyWorld {
     this.width = Math.max(1, width);
     this.height = Math.max(1, height);
     this.time = 0;
-    this.orientation = { yaw: 0, velocity: 0, tilt: 0, tiltVelocity: 0 };
+    this.orientation = { tilt: 0, tiltVelocity: 0 };
     this.seed = seed >>> 0;
     this.random = mulberry32(this.seed);
     this.ocean = new OceanField(this.width, this.height, oceanTimeOffset);
@@ -44,9 +44,6 @@ export class JellyWorld {
     this.snow.step(dt, this.time, this.ocean);
     this.jelly.step(dt, this.time, this.ocean, this.width, this.height);
     const flowX = this.ocean.weatherAt(this.time).x;
-    this.orientation = {
-      ...stepVisualYaw(this.orientation, yawTargetAt(this.time, flowX, this.jelly.anatomyPhase), dt),
-      ...stepVisualTilt(this.orientation, tiltTargetAt(flowX), dt),
-    };
+    this.orientation = stepVisualTilt(this.orientation, tiltTargetAt(flowX), dt);
   }
 }

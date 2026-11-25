@@ -24,11 +24,11 @@ export function fluidSensitivityFor(item, along) {
 
   if (item?.arm) {
     const lengthBias = clamp(item.lengthBias ?? 0, 0, 1);
-    const distalScale = forceScale * lerp(1, 0.92, lengthBias);
+    const distalScale = forceScale * lerp(1.12, 1.04, lengthBias);
     return lerp(
       0.15,
       distalScale,
-      Math.pow(t, lerp(1.45, 1.62, lengthBias)),
+      Math.pow(t, lerp(1.12, 1.30, lengthBias)),
     );
   }
 

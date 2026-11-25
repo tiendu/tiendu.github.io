@@ -277,6 +277,8 @@ export class Jellyfish {
     const sensitivity = fluidSensitivityFor(item, along);
     const localFlow = ocean.sample(x, y, time, sensitivity);
     const loosen = along * along;
+    const waterDominance = item.arm ? smoothstep(Math.abs(localFlow.x) / 4.5) : 0;
+    const shapeWeight = 1 - 0.78 * waterDominance;
 
     // Wake motion stays broad and slow. The water field provides the fine
     // variation; this term only preserves a readable trailing rhythm.
@@ -312,12 +314,7 @@ export class Jellyfish {
     return {
       x:
         localFlow.x
-        + wake
-        + billow
-        + memory
-        + expressiveShape
-        + tipHook
-        + curl
+        + (wake + billow + memory + expressiveShape + tipHook + curl) * shapeWeight
         + guard.x,
       y: localFlow.y + Math.max(0, -this.vy) * 0.66 * along + trailingBias + guard.y,
     };

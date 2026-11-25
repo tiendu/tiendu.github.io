@@ -4,8 +4,7 @@ import { JellyWorld } from "../world.mjs";
 import { AsciiRenderer, bellOcclusionContour, skirtRimAt, visibleAttachmentFor } from "../renderer.mjs";
 import { rotate } from "../math.mjs";
 import {
-  appendageProjectionFor, bellScaleFor, keepTrailDirection, MAX_VISUAL_TILT,
-  MAX_VISUAL_YAW, stepVisualTilt, stepVisualYaw, tiltTargetAt, visualDepthFor,
+  keepTrailDirection, MAX_VISUAL_TILT, stepVisualTilt, tiltTargetAt,
 } from "../orientation.mjs";
 import { ribbonMaterialAt, skirtLobeAt, tissuePresence } from "../material.mjs";
 
@@ -19,45 +18,11 @@ function snapshot(world) {
   };
 }
 
-test("orientation has a neutral projection and mirrored depth parallax", () => {
-  const world = new JellyWorld(960, 620, 1234);
-  assert.equal(bellScaleFor(0), 1);
-  assert.ok(bellScaleFor(MAX_VISUAL_YAW) > 0.85);
-  assert.equal(bellScaleFor(MAX_VISUAL_YAW), bellScaleFor(-MAX_VISUAL_YAW));
-  for (const item of world.jelly.chains) {
-    const neutral = appendageProjectionFor(world.jelly, item, 0);
-    assert.ok(Math.abs(neutral.x) + Math.abs(neutral.y) < 1e-9);
-    assert.equal(neutral.light, 1);
-    assert.equal(neutral.width, 1);
-    assert.equal(neutral.depth, item.layer);
-    const left = appendageProjectionFor(world.jelly, item, -0.78);
-    const right = appendageProjectionFor(world.jelly, item, 0.78);
-    assert.ok(Math.abs(left.x + right.x) + Math.abs(left.y + right.y) < 1e-9);
-    assert.ok(Math.hypot(right.x, right.y) <= world.jelly.bellWidth() * 0.12);
-  }
-  assert.ok(visualDepthFor({ layer: 0, offset: 1 }, 0.5) > visualDepthFor({ layer: 0, offset: -1 }, 0.5));
-});
-
-test("turning has inertia and reverses without snapping", () => {
-  let state = { yaw: 0, velocity: 0 };
-  for (let i = 0; i < 20 * 60; i += 1) {
-    const previous = state.yaw;
-    state = stepVisualYaw(state, 0.7, 1 / 60);
-    assert.ok(Math.abs(state.yaw - previous) <= 0.001000001);
-  }
-  assert.ok(state.yaw > 0.45 && state.yaw < 0.72, `yaw ${state.yaw}`);
-  const before = state.yaw;
-  state = stepVisualYaw(state, -0.7, 1 / 60);
-  assert.ok(Math.abs(state.yaw - before) < 0.002);
-  for (let i = 0; i < 60 * 60; i += 1) state = stepVisualYaw(state, -10, 1 / 60);
-  assert.ok(state.yaw < -0.6 && state.yaw >= -MAX_VISUAL_YAW);
-});
-
 test("visual orientation never changes the fluid simulation or its random stream", () => {
   const a = new JellyWorld(960, 620, 1234);
   const b = new JellyWorld(960, 620, 1234);
   for (let i = 0; i < 180; i += 1) {
-    b.orientation = { yaw: i % 2 ? -0.78 : 0.78, velocity: 0, tilt: i % 2 ? -0.31 : 0.31, tiltVelocity: 0 };
+    b.orientation = { tilt: i % 2 ? -0.31 : 0.31, tiltVelocity: 0 };
     if (i === 60) {
       a.resize(390, 720);
       b.resize(390, 720);
@@ -88,7 +53,7 @@ function recordingCanvas() {
   return { canvas: { style: {}, getContext: () => ctx }, calls, balanced: () => depth === 0 };
 }
 
-test("the complete renderer turns at both viewport sizes without touching chain history", () => {
+test("the complete renderer leans at both viewport sizes without touching chain history", () => {
   for (const [width, height] of [[960, 620], [390, 720]]) {
     const world = new JellyWorld(width, height, 1234);
     const before = snapshot(world);
@@ -96,9 +61,9 @@ test("the complete renderer turns at both viewport sizes without touching chain 
     const renderer = new AsciiRenderer(recorder.canvas);
     renderer.resize(width, height);
     const frames = [];
-    for (const [yaw, tilt] of [[0, 0], [-0.78, 0], [0.78, 0], [0.78, -0.31], [0.78, 0.31]]) {
+    for (const tilt of [0, -0.15, 0.15, -0.31, 0.31]) {
       recorder.calls.length = 0;
-      renderer.render({ ...world, orientation: { yaw, velocity: 0, tilt, tiltVelocity: 0 } });
+      renderer.render({ ...world, orientation: { tilt, tiltVelocity: 0 } });
       assert.ok(recorder.balanced());
       assert.equal(recorder.calls.filter(call => call[0] === "clip").length, 0,
         "external tissue must not use Canvas clipping");
@@ -167,39 +132,34 @@ function affineRecorder() {
   };
 }
 
-test("extra lean rotates the root with the skirt but preserves the entire trail vector under yaw", () => {
+test("extra lean rotates the root with the skirt but preserves the entire trail vector", () => {
   const { jelly } = new JellyWorld(960, 620, 1234);
   const near = (a, b) => assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) < 1e-8);
-  for (const yaw of [-0.78, 0, 0.78]) {
-    for (const extra of [-0.35, 0, 0.35]) {
-      for (const item of jelly.chains) {
-        const projection = appendageProjectionFor(jelly, item, yaw);
-        const frame = tilt => {
-          const ctx = affineRecorder();
-          ctx.translate(jelly.x, jelly.y);
-          ctx.rotate(jelly.tilt + tilt);
-          ctx.scale(bellScaleFor(yaw), 1);
-          ctx.rotate(-jelly.tilt);
-          ctx.translate(-jelly.x, -jelly.y);
-          ctx.translate(projection.x, projection.y);
-          return ctx;
-        };
-        const baseline = frame(0);
-        const tilted = frame(extra);
-        const root = [item.chain.x[0], item.chain.y[0]];
-        const skirtRoot = tilted.point(...root);
-        keepTrailDirection(tilted, jelly, item, yaw, extra);
-        near(tilted.point(...root), skirtRoot);
-        const delta = (ctx, x, y) => {
-          const p = ctx.point(x, y), r = ctx.point(...root);
-          return [p[0] - r[0], p[1] - r[1]];
-        };
-        const tail = [item.chain.x.at(-1), item.chain.y.at(-1)];
-        near(delta(tilted, ...tail), delta(baseline, ...tail));
-        for (const branch of item.branches) {
-          const end = [branch.chain.x.at(-1), branch.chain.y.at(-1)];
-          near(delta(tilted, ...end), delta(baseline, ...end));
-        }
+  for (const extra of [-0.35, 0, 0.35]) {
+    for (const item of jelly.chains) {
+      const frame = tilt => {
+        const ctx = affineRecorder();
+        ctx.translate(jelly.x, jelly.y);
+        ctx.rotate(jelly.tilt + tilt);
+        ctx.rotate(-jelly.tilt);
+        ctx.translate(-jelly.x, -jelly.y);
+        return ctx;
+      };
+      const baseline = frame(0);
+      const tilted = frame(extra);
+      const root = [item.chain.x[0], item.chain.y[0]];
+      const skirtRoot = tilted.point(...root);
+      keepTrailDirection(tilted, item, extra);
+      near(tilted.point(...root), skirtRoot);
+      const delta = (ctx, x, y) => {
+        const p = ctx.point(x, y), r = ctx.point(...root);
+        return [p[0] - r[0], p[1] - r[1]];
+      };
+      const tail = [item.chain.x.at(-1), item.chain.y.at(-1)];
+      near(delta(tilted, ...tail), delta(baseline, ...tail));
+      for (const branch of item.branches) {
+        const end = [branch.chain.x.at(-1), branch.chain.y.at(-1)];
+        near(delta(tilted, ...end), delta(baseline, ...end));
       }
     }
   }
@@ -228,19 +188,17 @@ test("visible tentacle origins stay tucked inside the scalloped skirt and oral a
         jelly.tilt = physicalTilt;
         const before = snapshot(world);
         const contour = bellOcclusionContour(jelly, time);
-        for (const yaw of [-MAX_VISUAL_YAW, 0, MAX_VISUAL_YAW]) {
-          for (const item of jelly.chains) {
-            const root = visibleAttachmentFor(jelly, item, yaw, time);
-            const local = rotate(root.rootX - jelly.x, root.rootY - jelly.y, -jelly.tilt);
-            const v = local.y / jelly.bellHeight();
-            assert.ok(Math.abs(v - root.v) < 1e-9);
-            assert.ok(Math.abs(root.u) <= (item.arm ? 0.29 : 0.76) + 1e-9);
-            assert.ok(Math.abs(item.chain.x[0] + root.x - root.rootX) < 1e-9);
-            assert.ok(Math.abs(item.chain.y[0] + root.y - root.rootY) < 1e-9);
-            const rim = skirtRimAt(jelly, root.u, time);
-            assert.ok(Math.abs(v - rim - (item.arm ? 0.035 : -0.018)) < 1e-9);
-            if (!item.arm) assert.ok(insideContour({ x: root.rootX, y: root.rootY }, contour), `seed ${seed} u ${root.u} v ${v}`);
-          }
+        for (const item of jelly.chains) {
+          const root = visibleAttachmentFor(jelly, item, time);
+          const local = rotate(root.rootX - jelly.x, root.rootY - jelly.y, -jelly.tilt);
+          const v = local.y / jelly.bellHeight();
+          assert.ok(Math.abs(v - root.v) < 1e-9);
+          assert.ok(Math.abs(root.u) <= (item.arm ? 0.29 : 0.76) + 1e-9);
+          assert.ok(Math.abs(item.chain.x[0] + root.x - root.rootX) < 1e-9);
+          assert.ok(Math.abs(item.chain.y[0] + root.y - root.rootY) < 1e-9);
+          const rim = skirtRimAt(jelly, root.u, time);
+          assert.ok(Math.abs(v - rim - (item.arm ? 0.035 : -0.018)) < 1e-9);
+          if (!item.arm) assert.ok(insideContour({ x: root.rootX, y: root.rootY }, contour), `seed ${seed} u ${root.u} v ${v}`);
         }
         assert.deepEqual(snapshot(world), before);
       }
@@ -248,36 +206,33 @@ test("visible tentacle origins stay tucked inside the scalloped skirt and oral a
   }
 });
 
-test("corrected visible roots follow the skirt under yaw and lean without rotating their trails", () => {
+test("corrected visible roots follow the skirt and lean without rotating their trails", () => {
   const { jelly } = new JellyWorld(390, 720, 1234);
   const near = (a, b) => assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) < 1e-8);
-  for (const yaw of [-MAX_VISUAL_YAW, 0, MAX_VISUAL_YAW]) {
-    for (const extra of [-0.35, 0, 0.35]) {
-      for (const item of jelly.chains) {
-        const attachment = visibleAttachmentFor(jelly, item, yaw, 17);
-        const frame = tilt => {
-          const ctx = affineRecorder();
-          ctx.translate(jelly.x, jelly.y);
-          ctx.rotate(jelly.tilt + tilt);
-          ctx.scale(bellScaleFor(yaw), 1);
-          ctx.rotate(-jelly.tilt);
-          ctx.translate(-jelly.x, -jelly.y);
-          return ctx;
-        };
-        const skirt = frame(extra);
-        const trail = frame(extra);
-        trail.translate(attachment.x, attachment.y);
-        keepTrailDirection(trail, jelly, item, yaw, extra);
-        const base = frame(0);
-        const root = [item.chain.x[0], item.chain.y[0]];
-        const end = [item.chain.x.at(-1), item.chain.y.at(-1)];
-        near(trail.point(...root), skirt.point(attachment.rootX, attachment.rootY));
-        const delta = ctx => {
-          const a = ctx.point(...root), b = ctx.point(...end);
-          return [b[0] - a[0], b[1] - a[1]];
-        };
-        near(delta(trail), delta(base));
-      }
+  for (const extra of [-0.35, 0, 0.35]) {
+    for (const item of jelly.chains) {
+      const attachment = visibleAttachmentFor(jelly, item, 17);
+      const frame = tilt => {
+        const ctx = affineRecorder();
+        ctx.translate(jelly.x, jelly.y);
+        ctx.rotate(jelly.tilt + tilt);
+        ctx.rotate(-jelly.tilt);
+        ctx.translate(-jelly.x, -jelly.y);
+        return ctx;
+      };
+      const skirt = frame(extra);
+      const trail = frame(extra);
+      trail.translate(attachment.x, attachment.y);
+      keepTrailDirection(trail, item, extra);
+      const base = frame(0);
+      const root = [item.chain.x[0], item.chain.y[0]];
+      const end = [item.chain.x.at(-1), item.chain.y.at(-1)];
+      near(trail.point(...root), skirt.point(attachment.rootX, attachment.rootY));
+      const delta = ctx => {
+        const a = ctx.point(...root), b = ctx.point(...end);
+        return [b[0] - a[0], b[1] - a[1]];
+      };
+      near(delta(trail), delta(base));
     }
   }
 });

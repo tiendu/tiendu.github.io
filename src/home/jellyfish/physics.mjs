@@ -37,6 +37,9 @@ export class VerletChain {
     this.y = new Float32Array(this.count);
     this.px = new Float32Array(this.count);
     this.py = new Float32Array(this.count);
+    this.beforeX = new Float32Array(this.count);
+    this.beforeY = new Float32Array(this.count);
+    this.hasBefore = false;
 
     for (let i = 0; i < this.count; i += 1) {
       const sway = Math.sin(seed * 1.73 + i * 0.58)
@@ -64,6 +67,7 @@ export class VerletChain {
 
   scaleAround(cx, cy, factor) {
     if (!Number.isFinite(factor) || factor <= 0 || factor === 1) return;
+    this.hasBefore = false;
     this.segmentLength *= factor;
     this.bend *= factor;
     for (let i = 0; i < this.count; i += 1) {
@@ -209,6 +213,9 @@ export class VerletChain {
   }
 
   step(dt, anchorX, anchorY, forceAt, iterations = 4) {
+    this.beforeX.set(this.x);
+    this.beforeY.set(this.y);
+    this.hasBefore = true;
     this.setAnchor(anchorX, anchorY);
     const dt2 = dt * dt;
 
@@ -275,6 +282,60 @@ export class VerletChain {
     return clipped;
   }
 
+  #validTrail(anchorX, anchorY, rise, side, drop, errorLimit) {
+    const error = this.maxConstraintError();
+    if (!Number.isFinite(error) || error > errorLimit) return false;
+    if (this.maxBendAngle < Math.PI && (
+      this.maxTurnAngle() > this.maxBendAngle + 0.15
+      || Math.abs(this.signedTurn()) > this.maxTotalTurn + 0.20
+    )) return false;
+    for (let i = 1; i < this.count; i += 1) {
+      const t = i / (this.count - 1);
+      const x = this.x[i] - anchorX, y = this.y[i] - anchorY;
+      if (!Number.isFinite(x) || !Number.isFinite(y)
+        || Math.abs(x) > side * (0.20 + Math.pow(t, 0.72) * 0.80) + 0.002
+        || y < -rise * (0.42 + t * 0.58) - 0.002
+        || y > drop * (0.12 + t * 0.88) + 0.002) return false;
+    }
+    return true;
+  }
+
+  #continuousRepair(anchorX, anchorY, rise, side, drop) {
+    if (!this.hasBefore) return false;
+    const dx = anchorX - this.beforeX[0], dy = anchorY - this.beforeY[0];
+    const proposedX = this.x.slice(), proposedY = this.y.slice();
+    const limit = this.segmentLength * 0.65;
+    const errorLimit = Math.min(0.75, this.segmentLength * 0.22);
+    // Search from the previous pose toward the candidate, without turning
+    // a positional repair into an impulse on the next integration step.
+    for (const fraction of [1, 0.5, 0.25, 0.125, 0.0625, 0]) {
+      for (let i = 0; i < this.count; i += 1) {
+        const x = this.beforeX[i] + dx, y = this.beforeY[i] + dy;
+        const sx = proposedX[i] - x, sy = proposedY[i] - y;
+        const distance = hypot2(sx, sy);
+        const scale = Number.isFinite(distance) ? Math.min(fraction, limit / (distance || 1)) : 0;
+        this.x[i] = scale ? x + sx * scale : x;
+        this.y[i] = scale ? y + sy * scale : y;
+      }
+      if (fraction > 0) {
+        for (let n = 0; n < 4; n += 1) {
+          this.#applyDistanceConstraints(anchorX, anchorY);
+          this.#projectTrailEnvelope(anchorX, anchorY, rise, side, drop);
+        }
+      }
+      if (!this.#validTrail(anchorX, anchorY, rise, side, drop, fraction ? errorLimit : 0.8)) continue;
+      let largest = 0;
+      for (let i = 1; i < this.count; i += 1) {
+        largest = Math.max(largest, hypot2(this.x[i] - this.beforeX[i] - dx, this.y[i] - this.beforeY[i] - dy));
+      }
+      if (largest > limit * 1.2) continue;
+      this.px.set(this.x);
+      this.py.set(this.y);
+      return true;
+    }
+    return false;
+  }
+
   #settleTrail(anchorX, anchorY, side) {
     // This is an emergency pose, not normal animation. If a chain reaches the
     // safety envelope with too much stored strain, preserving that momentum is
@@ -334,8 +395,20 @@ export class VerletChain {
         this.maxTurnAngle() > this.maxBendAngle + 0.15
         || Math.abs(this.signedTurn()) > this.maxTotalTurn + 0.20
       );
-      if (!Number.isFinite(error) || error > repairLimit || badCurvature) {
-        this.#settleTrail(anchorX, anchorY, side);
+      let excessiveMotion = false;
+      if (this.hasBefore) {
+        const dx = anchorX - this.beforeX[0], dy = anchorY - this.beforeY[0];
+        for (let i = 1; i < this.count; i += 1) {
+          if (hypot2(this.x[i] - this.beforeX[i] - dx, this.y[i] - this.beforeY[i] - dy) > this.segmentLength * 0.8) {
+            excessiveMotion = true;
+            break;
+          }
+        }
+      }
+      if (!Number.isFinite(error) || error > repairLimit || badCurvature || excessiveMotion) {
+        if (!this.#continuousRepair(anchorX, anchorY, rise, side, drop)) {
+          this.#settleTrail(anchorX, anchorY, side);
+        }
       } else {
         // Safety intervention is allowed to dissipate momentum. The repaired
         // pose becomes the new history, so there is no snap-back next frame.
@@ -348,6 +421,7 @@ export class VerletChain {
 
     this.x[0] = this.px[0] = anchorX;
     this.y[0] = this.py[0] = anchorY;
+    this.hasBefore = false;
     return clipped;
   }
 

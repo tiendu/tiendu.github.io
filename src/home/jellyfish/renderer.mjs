@@ -2,7 +2,6 @@ import { ASCII } from "./config.mjs";
 import { ribbonSurfaceBreathAt } from "./fluid.mjs";
 import { buildOcclusionSpans, projectedBellPoint, trailOcclusionFor } from "./occlusion.mjs";
 import {
-  appendageProjectionFor, bellScaleFor, bellSideLightAt,
   keepTrailDirection, MAX_VISUAL_TILT,
 } from "./orientation.mjs";
 import { ribbonMaterialAt, skirtLobeAt, tissuePresence } from "./material.mjs";
@@ -166,11 +165,10 @@ function bellPoint(jelly, u, v) {
 
 // Only the drawn origin moves. The same translation is applied to the whole
 // trail (including branches and masks), so no chain is stretched or bent.
-export function visibleAttachmentFor(jelly, item, yaw, time) {
-  const projection = appendageProjectionFor(jelly, item, yaw);
+export function visibleAttachmentFor(jelly, item, time) {
   const root = { x: item.chain.x[0], y: item.chain.y[0] };
-  const local = rotate(root.x + projection.x - jelly.x,
-    root.y + projection.y - jelly.y, -jelly.tilt);
+  const local = rotate(root.x - jelly.x,
+    root.y - jelly.y, -jelly.tilt);
   const halfW = jelly.bellWidth() * 0.5;
   const u = item.arm
     ? clamp(local.x / halfW * 0.78, -0.29, 0.29)
@@ -180,7 +178,7 @@ export function visibleAttachmentFor(jelly, item, yaw, time) {
   // in the central subumbrella rather than from the outer rim.
   const v = rim + (item.arm ? 0.035 : -0.018);
   const point = bellPoint(jelly, u, v);
-  return { ...projection, x: point.x - root.x, y: point.y - root.y,
+  return { x: point.x - root.x, y: point.y - root.y,
     rootX: point.x, rootY: point.y, u, v };
 }
 
@@ -368,7 +366,7 @@ export class AsciiRenderer {
     ctx.ellipse(
       jelly.x + halo.x,
       jelly.y + halo.y,
-      jelly.bellWidth() * 0.49 * bellScaleFor(this.yaw),
+      jelly.bellWidth() * 0.49,
       jelly.bellHeight() * 0.63,
       visualTilt,
       0,
@@ -400,13 +398,13 @@ export class AsciiRenderer {
   #drawProjectedItem(jelly, item, opacity, time) {
     const projection = this.attachments.get(item);
     const ctx = this.ctx;
-    this.tissueOcclusion = trailOcclusionFor(jelly, item, projection, this.yaw,
+    this.tissueOcclusion = trailOcclusionFor(jelly, item, projection,
       jelly.tilt + this.extraTilt, this.bellOcclusion);
     ctx.save();
     ctx.translate(projection.x, projection.y);
-    keepTrailDirection(ctx, jelly, item, this.yaw, this.extraTilt);
-    if (item.arm) this.#drawRibbon(jelly, item, opacity * projection.light, time, projection.width);
-    else this.#drawTentacle(jelly, item, opacity * projection.light);
+    keepTrailDirection(ctx, item, this.extraTilt);
+    if (item.arm) this.#drawRibbon(jelly, item, opacity, time);
+    else this.#drawTentacle(jelly, item, opacity);
     ctx.restore();
   }
 
@@ -519,7 +517,7 @@ export class AsciiRenderer {
     const twistAngle = (item.twistPhase ?? item.phase ?? 0)
       + twistProgress * twistRate * TAU
       + Math.sin(time * 0.10 + (item.phase ?? 0)) * 0.24
-      + motionRoll + (this.yaw ?? 0);
+      + motionRoll;
     const face = Math.cos(twistAngle);
     const projected = baseWidth * (0.22 + Math.abs(face) * 0.78)
       * (1 + motion.speed * lerp(0.12, 0.09, lengthBias) * motionEnvelope);
@@ -719,7 +717,7 @@ export class AsciiRenderer {
         const shift = bellCenterShift(v, jelly.anatomyPhase, halfW);
         const u = (raw.x - shift) / halfW;
         const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
-        const opacity = internalRootOpacityAt(item, v) * projection.light;
+        const opacity = internalRootOpacityAt(item, v);
         if (!(profile > 0 && Math.abs(u) < profile * 0.92
           && v <= skirtRimAt(jelly, u, time) && opacity > 0.004)) {
           previous = null;
@@ -803,7 +801,7 @@ export class AsciiRenderer {
         const lowerEdge = insideSkirt && v > rimV - Math.max(0.008, cellH / height * 0.62);
         const skirt = lowerEdge ? skirtMembraneAt(u, jelly.pulse, jelly.anatomyPhase, time, jelly.tilt) : null;
         if (lowerEdge && !skirt.visible) continue;
-        const detailU = u - Math.sin(this.yaw) * 0.15 * (1 - smoothstep(invLerp(-0.4, 0.04, v)));
+        const detailU = u;
         const membraneDepth = insideDome
           ? clamp(profileGap / Math.max(0.075, profile * 0.68), 0, 1)
           : clamp((rimV - v) / 0.068, 0, 1);
@@ -920,7 +918,7 @@ export class AsciiRenderer {
           }
         }
 
-        ctx.globalAlpha = clamp(bellSideLightAt(u, this.yaw), 0, 1);
+        ctx.globalAlpha = 1;
         ctx.fillStyle = color;
         ctx.fillText(glyph, px, py);
       }
@@ -958,8 +956,7 @@ export class AsciiRenderer {
         const wander = Math.sin(q * (5.4 + rayIndex * 0.17) + rayIndex * 1.33 + jelly.anatomyPhase)
           * (0.012 + Math.abs(ray.bend) * 0.36);
         const u = clamp(
-          (ray.x + ray.bend * q * q + wander + branchOffset * smoothstep(q)) * profile * spread
-            + Math.sin(this.yaw) * 0.075 * profile * (1 - q * 0.4),
+          (ray.x + ray.bend * q * q + wander + branchOffset * smoothstep(q)) * profile * spread,
           -profile * 0.96, profile * 0.96,
         );
         const shift = bellCenterShift(v, jelly.anatomyPhase, halfW);
@@ -1008,7 +1005,7 @@ export class AsciiRenderer {
       const local = rotate(u * halfW + shift, rim * height, jelly.tilt);
       const x = jelly.x + local.x;
       const y = jelly.y + local.y;
-      const depthLight = skirtDepthLightAt(u, jelly.anatomyPhase) * bellSideLightAt(u, this.yaw);
+      const depthLight = skirtDepthLightAt(u, jelly.anatomyPhase);
       const pulseLift = 1 + jelly.pulse * 0.045;
       const alpha = (0.20 + membrane.intensity * 0.78) * depthLight * pulseLift;
       const skirtBase =
@@ -1108,7 +1105,6 @@ export class AsciiRenderer {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     this.#setFont(this.fontSize);
-    this.yaw = orientation?.yaw ?? 0;
     const visualTilt = clamp(orientation?.tilt ?? jelly.tilt, -MAX_VISUAL_TILT, MAX_VISUAL_TILT);
     this.extraTilt = visualTilt - jelly.tilt;
     this.#background(jelly, time);
@@ -1117,14 +1113,13 @@ export class AsciiRenderer {
     // appendages keep their fluid direction via root-relative compensation.
     ctx.translate(jelly.x, jelly.y);
     ctx.rotate(visualTilt);
-    ctx.scale(bellScaleFor(this.yaw), 1);
     ctx.rotate(-jelly.tilt);
     ctx.translate(-jelly.x, -jelly.y);
     this.attachments = new Map(jelly.chains.map(item =>
-      [item, visibleAttachmentFor(jelly, item, this.yaw, time)]));
+      [item, visibleAttachmentFor(jelly, item, time)]));
     this.bellOcclusion = buildOcclusionSpans(bellOcclusionContour(jelly, time).map(point =>
-      projectedBellPoint(jelly, point, this.yaw, visualTilt)));
-    const byDepth = (a, b) => this.attachments.get(a).depth - this.attachments.get(b).depth;
+      projectedBellPoint(jelly, point, visualTilt)));
+    const byDepth = (a, b) => a.layer - b.layer;
 
     const back = jelly.chains.filter((item) => item.layer < -0.25).sort(byDepth);
     const middle = jelly.chains.filter((item) => item.layer >= -0.25 && item.layer < 0.45).sort(byDepth);

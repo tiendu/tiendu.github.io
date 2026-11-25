@@ -8,7 +8,7 @@ import {
 } from "../fluid.mjs";
 import { ribbonKinematicsAt } from "../renderer.mjs";
 import { currentWeather, OceanField } from "../ocean.mjs";
-import { stepVisualTilt, stepVisualYaw, tiltTargetAt, yawTargetAt } from "../orientation.mjs";
+import { stepVisualTilt, tiltTargetAt } from "../orientation.mjs";
 import { JellyWorld } from "../world.mjs";
 
 test("ribbon surface kinematics respond to real chain bend and retained velocity", () => {
@@ -212,10 +212,7 @@ test("world orientation follows the same shifted ocean as the anatomy", () => {
   const dt = 1 / 60;
   for (let i = 0; i < 60; i += 1) {
     const flowX = world.ocean.weatherAt(world.time + dt).x;
-    const expected = {
-      ...stepVisualYaw(world.orientation, yawTargetAt(world.time + dt, flowX, world.jelly.anatomyPhase), dt),
-      ...stepVisualTilt(world.orientation, tiltTargetAt(flowX), dt),
-    };
+    const expected = stepVisualTilt(world.orientation, tiltTargetAt(flowX), dt);
     world.step(dt);
     same.step(dt);
     assert.deepEqual(world.orientation, expected);
@@ -273,4 +270,62 @@ test("tentacle curvature stays healthy throughout varied ocean conditions", () =
       }
     }
   }
+});
+
+test("ribbon bodies follow a moderate current through reversal without losing their lag", () => {
+  const world = new JellyWorld(390, 565, 991, 1000);
+  let flow = 7;
+  world.ocean.sample = (_x, _y, _time, sensitivity = 1) => ({ x: flow * sensitivity, y: 0 });
+  world.ocean.weatherAt = () => ({ x: flow, y: 0, strength: Math.abs(flow) });
+  const ribbons = world.jelly.chains.filter(item => item.arm);
+  const strands = world.jelly.chains.filter(item => !item.arm);
+  const displacement = items => items.reduce((sum, { chain }) =>
+    sum + chain.x[Math.floor(chain.count * 0.65)] - chain.x[0], 0) / items.length;
+  const advance = seconds => {
+    for (let i = 0; i < seconds * 60; i += 1) world.step();
+  };
+  advance(20);
+  assert.ok(displacement(ribbons) > 15, "ribbons follow established current");
+  flow = -7;
+  advance(6);
+  assert.ok(displacement(strands) < 0, "thin strands lead the reversal");
+  assert.ok(displacement(ribbons) > 0, "ribbons retain their broad delayed bend");
+  advance(6);
+  assert.ok(displacement(ribbons) < -0.5, `ribbons still opposing water: ${displacement(ribbons)}`);
+  advance(8);
+  assert.ok(displacement(ribbons) < -8, "ribbons continue following the new current");
+});
+
+test("safety repair preserves tentacle continuity through the previously snapping weather", () => {
+  const world = new JellyWorld(390, 565, 991, 1000);
+  const strands = world.jelly.chains.filter(item => !item.arm).map(({ chain }) => ({
+    chain, x: new Float32Array(chain.count), y: new Float32Array(chain.count),
+  }));
+  let worst = 0;
+  let movementAfterRepair = 0;
+  for (let n = 0; n < 65 * 60; n += 1) {
+    for (const { chain, x, y } of strands) {
+      x.set(chain.x);
+      y.set(chain.y);
+    }
+    world.step();
+    for (const { chain, x, y } of strands) {
+      const dx = chain.x[0] - x[0], dy = chain.y[0] - y[0];
+      for (let i = 1; i < chain.count; i += 1) {
+        const jump = Math.hypot(chain.x[i] - x[i] - dx, chain.y[i] - y[i] - dy);
+        worst = Math.max(worst, jump / chain.segmentLength);
+        assert.ok(jump < chain.segmentLength * 2, `strand snap at ${world.time}s: ${jump}px`);
+      }
+      assert.ok(chain.maxConstraintError() < 0.8);
+      assert.ok(chain.maxTurnAngle() < chain.maxBendAngle + 0.16);
+    }
+    if (n >= 59 * 60) {
+      const { chain, x, y } = strands[14];
+      const tip = chain.count - 1;
+      movementAfterRepair += Math.hypot(chain.x[tip] - x[tip] - chain.x[0] + x[0],
+        chain.y[tip] - y[tip] - chain.y[0] + y[0]);
+    }
+  }
+  assert.ok(worst < 2);
+  assert.ok(movementAfterRepair > 3, `strand stopped moving after repair: ${movementAfterRepair}`);
 });
