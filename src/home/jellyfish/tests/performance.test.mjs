@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { AdaptiveResolution, PerformanceWindow, createPerformanceOverlay } from "../performance.mjs";
+import { AdaptiveResolution, PerformanceWindow, SimulationProfile, createPerformanceOverlay } from "../performance.mjs";
 
-const slow = { fps: 12, physicsLoad: 0.20, renderMs: 60 };
-const fast = { fps: 24, physicsLoad: 0.20, renderMs: 8 };
+const slow = { fps: 12, physicsLoad: 0.20, steps: 60, renderMs: 60 };
+const fast = { fps: 24, physicsLoad: 0.20, steps: 60, renderMs: 8 };
 
 test("performance window reports draw submissions, steps and average CPU timings", () => {
   const monitor = new PerformanceWindow(0);
@@ -22,20 +22,41 @@ test("performance window reports draw submissions, steps and average CPU timings
   assert.equal(monitor.record(6010, 1, 1, false, 0), null);
 });
 
-test("adaptive backing resolution uses hysteresis, recovers slowly and stays bounded", () => {
+test("ineffective resolution trials restore the previous ratio", () => {
   const quality = new AdaptiveResolution();
   quality.observe(slow, 24, 3, 3);
-  assert.equal(quality.cap, Infinity);
   quality.observe(slow, 24, 3, 3);
   assert.equal(quality.cap, 2.75);
-  for (let i = 0; i < 20; i++) quality.observe(slow, 24, quality.cap, 3);
-  assert.equal(quality.cap, 1.5);
-  for (let i = 0; i < 5; i++) quality.observe(fast, 24, quality.cap, 3);
-  assert.equal(quality.cap, 1.5);
-  quality.observe(fast, 24, quality.cap, 3);
-  assert.equal(quality.cap, 1.75);
-  for (let i = 0; i < 30; i++) quality.observe(fast, 24, quality.cap, 3);
+  quality.observe(slow, 24, 2.75, 3);
+  quality.observe(slow, 24, 2.75, 3);
   assert.equal(quality.cap, Infinity);
+  for (let i = 0; i < 8; i++) quality.observe(slow, 24, 3, 3);
+  assert.equal(quality.cap, Infinity);
+});
+
+test("successful pixel trial is retained and healthy rendering recovers native DPR", () => {
+  const quality = new AdaptiveResolution();
+  quality.observe(slow, 24, 3, 3);
+  quality.observe(slow, 24, 3, 3);
+  const improved = { ...slow, fps: 15, renderMs: 42 };
+  quality.observe(improved, 24, 2.75, 3);
+  quality.observe(improved, 24, 2.75, 3);
+  assert.equal(quality.cap, 2.75);
+  for (let i = 0; i < 6; i++) quality.observe(fast, 24, 2.75, 3);
+  assert.equal(quality.cap, Infinity);
+});
+
+test("recorded iPhone physics-bound metrics do not sacrifice Retina quality", () => {
+  const quality = new AdaptiveResolution();
+  for (let i = 0; i < 20; i++) quality.observe({ fps: 20, steps: 60, physicsLoad: 0.48, renderMs: 14.5 }, 24, 3, 3);
+  assert.equal(quality.cap, Infinity);
+});
+
+test("simulation profile reports stage means and clears window counters", () => {
+  const profile = new SimulationProfile();
+  Object.assign(profile, { steps: 4, contact: 4, field: 2, solver: 12, repairs: 2, skipped: 8, rebuilds: 3 });
+  assert.deepEqual(profile.take(), { contact: 1, field: 0.5, solver: 3, repairs: 2, skipped: 8, rebuilt: 0.75 });
+  assert.equal(profile.steps, 0);
 });
 
 test("one slow interval or a physics-bound interval does not reduce resolution", () => {

@@ -45,12 +45,12 @@ export class JellyWorld {
     this.jelly.light.stimulate(x, y, this.jelly, this.orientation.tilt);
   }
 
-  step(dt = SIMULATION.fixedStep) {
+  step(dt = SIMULATION.fixedStep, profile) {
     this.time += dt;
     this.ocean.step(dt);
     this.snow.step(dt, this.time, this.ocean);
     const previousPulse = this.jelly.pulse;
-    this.jelly.step(dt, this.time, this.ocean, this.width, this.height);
+    this.jelly.step(dt, this.time, this.ocean, this.width, this.height, profile);
     const flowX = this.ocean.weatherAt(this.time).x;
     this.orientation = stepVisualTilt(this.orientation, tiltTargetAt(flowX), dt);
     this.jelly.light.step(dt, this.jelly, previousPulse, this.ocean, this.time, this.orientation.tilt);

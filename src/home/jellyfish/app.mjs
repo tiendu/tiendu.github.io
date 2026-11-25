@@ -3,7 +3,7 @@ import { AsciiRenderer } from "./renderer.mjs";
 import { JellyWorld } from "./world.mjs";
 import { bindWaterInput } from "./water-input.mjs";
 import { canvasPixelRatio } from "./render-quality.mjs";
-import { AdaptiveResolution, PerformanceWindow, createPerformanceOverlay } from "./performance.mjs";
+import { AdaptiveResolution, PerformanceWindow, SimulationProfile, createPerformanceOverlay } from "./performance.mjs";
 
 function seedFromSession() {
   try {
@@ -59,6 +59,7 @@ export function mountJellyfish() {
   const quality = new AdaptiveResolution();
   const stats = new PerformanceWindow();
   const overlay = createPerformanceOverlay(root);
+  const detail = overlay ? new SimulationProfile() : null;
 
   const draw = () => {
     renderer.render(world);
@@ -131,7 +132,7 @@ export function mountJellyfish() {
     const physicsStart = performance.now();
     let steps = 0;
     while (accumulator >= SIMULATION.fixedStep) {
-      world.step(SIMULATION.fixedStep);
+      world.step(SIMULATION.fixedStep, detail);
       accumulator -= SIMULATION.fixedStep;
       steps++;
     }
@@ -149,6 +150,7 @@ export function mountJellyfish() {
     }
     const sample = stats.record(now, steps, physicsMs, deadline !== null, renderMs);
     if (sample) {
+      if (detail) sample.simulation = detail.take();
       overlay?.update(sample, target, renderer.dpr, renderer.atlas, renderer.glyphMode);
       quality.observe(sample, target, renderer.dpr, canvasPixelRatio(width, height));
     }
@@ -175,6 +177,7 @@ export function mountJellyfish() {
     accumulator = 0;
     lastRender = last;
     stats.reset(last);
+    detail?.reset();
     quality.resetStreak();
     if (reduced.matches) {
       drawReduced();
@@ -207,7 +210,8 @@ export function mountJellyfish() {
   const resizeObserver = new ResizeObserver(measure);
   resizeObserver.observe(root);
   const viewport = globalThis.visualViewport;
-  viewport?.addEventListener("resize", measure, { passive: true });
+  const onViewportResize = () => { quality.resetStreak(); measure(); };
+  viewport?.addEventListener("resize", onViewportResize, { passive: true });
   canvas.addEventListener("contextlost", onContextLost);
   canvas.addEventListener("contextrestored", onContextRestored);
   document.addEventListener("visibilitychange", onVisibility);
@@ -218,7 +222,7 @@ export function mountJellyfish() {
   return () => {
     stop();
     resizeObserver.disconnect();
-    viewport?.removeEventListener("resize", measure);
+    viewport?.removeEventListener("resize", onViewportResize);
     waterInput.dispose();
     overlay?.dispose();
     renderer.dispose();

@@ -43,6 +43,8 @@ export class VerletChain {
     this.repairX = new Float32Array(this.count);
     this.repairY = new Float32Array(this.count);
     this.hasBefore = false;
+    this.sideFactors = Float64Array.from({ length: this.count }, (_, i) =>
+      0.20 + Math.pow(i / (this.count - 1), 0.72) * 0.80);
 
     for (let i = 0; i < this.count; i += 1) {
       const sway = Math.sin(seed * 1.73 + i * 0.58)
@@ -142,19 +144,20 @@ export class VerletChain {
   #applyBendLimit() {
     if (!(this.maxBendAngle > 0 && this.maxBendAngle < Math.PI) || this.count < 3) return;
 
+    let incoming = Math.atan2(this.y[1] - this.y[0], this.x[1] - this.x[0]);
     for (let i = 1; i < this.count - 1; i += 1) {
-      const prevX = this.x[i - 1];
-      const prevY = this.y[i - 1];
       const x = this.x[i];
       const y = this.y[i];
       const nextX = this.x[i + 1];
       const nextY = this.y[i + 1];
-      const incoming = Math.atan2(y - prevY, x - prevX);
       const outgoing = Math.atan2(nextY - y, nextX - x);
       let delta = outgoing - incoming;
       while (delta > Math.PI) delta -= TAU;
       while (delta < -Math.PI) delta += TAU;
-      if (Math.abs(delta) <= this.maxBendAngle) continue;
+      if (Math.abs(delta) <= this.maxBendAngle) {
+        incoming = outgoing;
+        continue;
+      }
 
       const length = hypot2(nextX - x, nextY - y) || this.segmentLength;
       const targetAngle = incoming + Math.sign(delta) * this.maxBendAngle;
@@ -162,6 +165,7 @@ export class VerletChain {
       const targetY = y + Math.sin(targetAngle) * length;
       this.x[i + 1] += (targetX - nextX) * this.bendLimitStiffness;
       this.y[i + 1] += (targetY - nextY) * this.bendLimitStiffness;
+      incoming = Math.atan2(this.y[i + 1] - y, this.x[i + 1] - x);
     }
   }
 
@@ -221,6 +225,7 @@ export class VerletChain {
     this.hasBefore = true;
     this.setAnchor(anchorX, anchorY);
     const dt2 = dt * dt;
+    this.lastSkipped = 0; this.lastRepair = false;
 
     for (let i = 1; i < this.count; i += 1) {
       const x = this.x[i];
@@ -248,6 +253,13 @@ export class VerletChain {
       if (n < 2) this.#applyBendMemory();
       if (n < 3) this.#applyBendLimit();
       if (n < 3) this.#applyTotalTurnLimit();
+      // Only omit remaining distance-only passes on a nearly exact pose.
+      // The final angular passes and all emergency repairs still run.
+      if (n === 2 && iterations > 3 && this.maxConstraintError() < Math.min(0.015, this.segmentLength * 0.005)
+        && !this.#badCurvature(true)) {
+        this.lastSkipped = iterations - n - 1;
+        break;
+      }
     }
 
     // Re-tighten after angular corrections so the anti-loop constraints never
@@ -267,7 +279,7 @@ export class VerletChain {
       const along = i / (this.count - 1);
       const minY = anchorY - rise * (0.42 + along * 0.58);
       const maxY = anchorY + drop * (0.12 + along * 0.88);
-      const allowedSide = side * (0.20 + Math.pow(along, 0.72) * 0.80);
+      const allowedSide = side * this.sideFactors[i];
       let x = this.x[i];
       let y = this.y[i];
 
@@ -286,9 +298,9 @@ export class VerletChain {
     return clipped;
   }
 
-  #badCurvature() {
-    const bendLimit = this.maxBendAngle + 0.15;
-    const totalLimit = this.maxTotalTurn + 0.20;
+  #badCurvature(strict = false) {
+    const bendLimit = this.maxBendAngle + (strict ? 0 : 0.15);
+    const totalLimit = this.maxTotalTurn + (strict ? 0 : 0.20);
     if (bendLimit >= Math.PI && totalLimit >= TAU) return false;
     let total = 0;
     for (let i = 1; i < this.count - 1; i += 1) {
@@ -323,7 +335,7 @@ export class VerletChain {
       const t = i / (this.count - 1);
       const x = this.x[i] - anchorX, y = this.y[i] - anchorY;
       if (!Number.isFinite(x) || !Number.isFinite(y)
-        || Math.abs(x) > side * (0.20 + Math.pow(t, 0.72) * 0.80) + 0.002
+        || Math.abs(x) > side * this.sideFactors[i] + 0.002
         || y < -rise * (0.42 + t * 0.58) - 0.002
         || y > drop * (0.12 + t * 0.88) + 0.002) return false;
     }
@@ -415,6 +427,7 @@ export class VerletChain {
     // energy without looking out of bounds yet.
     const excessiveMotion = exceedsRelativeMotion(this, anchorX, anchorY, 1.5);
     const needsRepair = clipped || excessiveMotion || !Number.isFinite(error) || error > 0.75 || this.#badCurvature();
+    this.lastRepair = needsRepair;
     if (needsRepair) {
       // Alternate the two simple, stable constraints. Do not run bend-memory or
       // total-turn corrections here: on a heavily clipped chain those angular

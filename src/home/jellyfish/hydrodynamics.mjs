@@ -18,28 +18,77 @@ function bounded(x, y, limit) {
 // The bell's persistent wake remains owned by PropulsionWake.
 export class TissueFlow {
   constructor(items, dt, anatomyScale, ocean, propulsion, time) {
-    this.scale = clamp(anatomyScale, 0.30, 1.28);
-    this.cell = 24 * this.scale;
     this.grid = new Map();
     this.neighbors = new Map();
     this.bodies = new Map();
+    this.sources = [];
+    this.buckets = [];
+    this.candidates = [];
+    this.update(items, dt, anatomyScale, ocean, propulsion, time);
+  }
+
+  // Reuse only the displaced-water sources, never ambient flow, wake or
+  // retained tissue velocities. A cached field is at most one step old.
+  update(items, dt, anatomyScale, ocean, propulsion, time, allowReuse = false) {
+    const scale = clamp(anatomyScale, 0.30, 1.28);
+    const changed = this.items !== items || this.scale !== scale || this.bodies.size === 0;
+    this.items = items;
+    this.scale = scale;
+    this.cell = 24 * scale;
     this.ocean = ocean;
     this.propulsion = propulsion;
     this.time = time;
-    if (!(dt > 0) || !Number.isFinite(dt)) return;
+    if (changed) this.bodies.clear();
+    let reuse = allowReuse && !changed && this.rebuilt;
+    if (!(dt > 0) || !Number.isFinite(dt)) {
+      this.bodies.clear();
+      this.grid.clear();
+      this.neighbors.clear();
+      this.rebuilt = false;
+      return this;
+    }
+    if (reuse) {
+      const limit2 = Math.max(0.35, 1.2 * scale) ** 2;
+      outer: for (const { chain } of this.bodies.values()) {
+        for (let i = 1; i < chain.count; i++) {
+          const dx = chain.x[i] - chain.px[i], dy = chain.y[i] - chain.py[i];
+          if (!(dx * dx + dy * dy <= limit2)) { reuse = false; break outer; }
+        }
+      }
+    }
+    this.rebuilt = !reuse;
+    if (!reuse) {
+      this.grid.clear();
+      this.neighbors.clear();
+      this.sourceCount = this.bucketCount = this.candidateCount = 0;
+    }
     for (const item of items) {
       this.add(item, item, item.arm, dt);
       for (const branch of item.branches ?? []) this.add(branch, item, true, dt);
     }
+    if (!reuse) {
+      for (let i = this.bucketCount; i < this.buckets.length; i++) this.buckets[i].length = 0;
+      for (let i = 0; i < this.candidates.length; i++) this.candidates[i].length = 0;
+    }
+    if (changed) {
+      for (const body of this.bodies.values()) {
+        body.depth = Array.from(this.bodies.values(), other => other.family === body.family ? 0
+          : 1 - smoothstep((Math.abs(other.layer - body.layer) - 0.10) / 0.55));
+      }
+    }
+    return this;
   }
 
   add(item, family, arm, dt) {
     const { chain } = item;
     if (!chain || chain.count < 2) return;
     const { scale } = this;
-    const body = { family, arm, layer: item.layer ?? family.layer ?? 0,
-      vx: new Float64Array(chain.count), vy: new Float64Array(chain.count) };
-    this.bodies.set(chain, body);
+    let body = this.bodies.get(chain);
+    if (!body) {
+      body = { chain, id: this.bodies.size, family, arm, layer: item.layer ?? family.layer ?? 0,
+        vx: new Float64Array(chain.count), vy: new Float64Array(chain.count) };
+      this.bodies.set(chain, body);
+    }
     const radius = arm ? clamp((item.width ?? 3 * scale) * 3.6, 10 * scale, 22 * scale) : 7 * scale;
     const spacing = Math.max(radius * 0.46, 1);
     let next = 0;
@@ -48,6 +97,7 @@ export class TissueFlow {
       const v = bounded((x - chain.px[i]) / dt, (y - chain.py[i]) / dt, 36 * scale);
       body.vx[i] = v.x;
       body.vy[i] = v.y;
+      if (!this.rebuilt) continue;
       const along = i / (chain.count - 1);
       const distance = i * chain.segmentLength;
       if (along < 0.12 || distance < next || !Number.isFinite(x + y)) continue;
@@ -59,11 +109,18 @@ export class TissueFlow {
       const freedom = smoothstep((along - 0.12) / 0.18);
       const area = arm ? (0.45 + 0.55 * Math.sin(Math.PI * along)) : 0.12;
       const coverage = clamp(Math.max(spacing, chain.segmentLength) / radius, 0.35, 1);
-      const source = { body, x, y, radius, slipX: slip.x, slipY: slip.y,
-        weight: freedom * area * coverage };
+      const source = this.sources[this.sourceCount] ?? (this.sources[this.sourceCount] = {});
+      this.sourceCount++;
+      source.body = body; source.x = x; source.y = y; source.radius = radius;
+      source.slipX = slip.x; source.slipY = slip.y; source.weight = freedom * area * coverage;
       const key = `${gx},${gy}`;
       let bucket = this.grid.get(key);
-      if (!bucket) this.grid.set(key, bucket = []);
+      if (!bucket) {
+        bucket = this.buckets[this.bucketCount] ?? (this.buckets[this.bucketCount] = []);
+        this.bucketCount++;
+        bucket.length = 0;
+        this.grid.set(key, bucket);
+      }
       bucket.push(source);
     }
   }
@@ -74,7 +131,9 @@ export class TissueFlow {
     const key = `${gx},${gy}`;
     let sources = this.neighbors.get(key);
     if (sources) return sources;
-    sources = [];
+    sources = this.candidates[this.candidateCount] ?? (this.candidates[this.candidateCount] = []);
+    this.candidateCount++;
+    sources.length = 0;
     for (let ix = -1; ix <= 1; ix += 1) {
       for (let iy = -1; iy <= 1; iy += 1) {
         const bucket = this.grid.get(`${gx + ix},${gy + iy}`);
@@ -95,8 +154,7 @@ export class TissueFlow {
     const speed = Math.hypot(base.x, base.y);
     let vx = 0, vy = 0, total = 0, shelter = 0;
     for (const s of this.nearby(gx, gy)) {
-      if (s.body.family === body.family) continue;
-      const depth = 1 - smoothstep((Math.abs(s.body.layer - body.layer) - 0.10) / 0.55);
+      const depth = body.depth[s.body.id];
       if (!depth) continue;
       const dx = x - s.x, dy = y - s.y;
       const r2 = (dx * dx + dy * dy) / (s.radius * s.radius);

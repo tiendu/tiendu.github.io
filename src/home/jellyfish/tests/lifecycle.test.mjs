@@ -33,7 +33,7 @@ test("weather is cached for one water time and invalidated by time or offset", (
 });
 
 // Exercise the real mount/resize/visibility logic without a browser dependency.
-function harness(t, { available = true, reduced = false, width = 390, height = 565 } = {}) {
+function harness(t, { available = true, reduced = false, width = 390, height = 565, renderMs = () => 0 } = {}) {
   class Element extends EventTarget {
     hidden = false;
     attributes = new Set();
@@ -65,7 +65,7 @@ function harness(t, { available = true, reduced = false, width = 390, height = 5
   const motion = new EventTarget();
   motion.matches = reduced;
   const frames = new Map();
-  let next = 0, resize, disconnected = false, clock = 0;
+  let next = 0, resize, disconnected = false, clock = 0, frameClock = 0;
   const draws = [];
   const globals = {
     HTMLElement: Element, HTMLCanvasElement: Canvas, document: doc,
@@ -86,7 +86,10 @@ function harness(t, { available = true, reduced = false, width = 390, height = 5
     Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
     restore.push(() => previous ? Object.defineProperty(globalThis, name, previous) : delete globalThis[name]);
   }
-  t.mock.method(AsciiRenderer.prototype, "render", world => draws.push(world.time));
+  t.mock.method(AsciiRenderer.prototype, "render", world => {
+    draws.push(world.time);
+    clock += renderMs(canvas.width);
+  });
   let dispose = () => {};
   t.after(() => {
     try { dispose(); } finally { restore.forEach(fn => fn()); }
@@ -97,8 +100,9 @@ function harness(t, { available = true, reduced = false, width = 390, height = 5
       assert.equal(frames.size, 1);
       const [id, callback] = frames.entries().next().value;
       frames.delete(id);
-      clock += ms;
-      callback(clock);
+      frameClock += ms;
+      clock = frameClock;
+      callback(frameClock);
     },
     resize(w, h) { width = w; height = h; resize(); },
     zoom(scale) { viewport.scale = scale; viewport.dispatchEvent(new Event("resize")); },
@@ -188,12 +192,10 @@ test("zoom preserves the running frame loop and listeners are removed on disposa
 });
 
 
-test("sustained slow frames reduce backing resolution without restarting the world", t => {
+test("slow callbacks without expensive draws preserve native resolution", t => {
   const h = harness(t);
-  for (let i = 0; i < 20; i++) h.advance(100);
+  for (let i = 0; i < 21; i++) h.advance(100);
   assert.equal(h.canvas.width, 390 * 3);
-  h.advance(100);
-  assert.equal(h.canvas.width, Math.floor(390 * 2.75));
   assert.equal(h.canvas.style.width, "390px");
   assert.equal(h.frames.size, 1);
   assert.ok(Math.abs(h.draws.at(-1) - 1.05) < 1e-9);
@@ -201,5 +203,35 @@ test("sustained slow frames reduce backing resolution without restarting the wor
   assert.equal(h.frames.size, 0);
   h.visible(true);
   assert.equal(h.frames.size, 1);
+  assert.equal(h.canvas.width, 390 * 3);
+});
+
+test("a beneficial resolution trial keeps the lower DPR without restarting the world", t => {
+  const h = harness(t, { renderMs: width => width === 390 * 3 ? 25 : 10 });
+  for (let i = 0; i < 40; i++) h.advance(50);
+  assert.equal(h.canvas.width, 390 * 3);
+  h.advance(50);
   assert.equal(h.canvas.width, Math.floor(390 * 2.75));
+  for (let i = 0; i < 55; i++) h.advance(40);
+  assert.equal(h.canvas.width, Math.floor(390 * 2.75));
+  assert.equal(h.canvas.style.width, "390px");
+  assert.equal(h.frames.size, 1);
+  assert.ok(h.draws.at(-1) > 4.1);
+  assert.ok(h.draws.every((time, i) => i === 0 || time >= h.draws[i - 1]));
+  h.visible(false);
+  assert.equal(h.frames.size, 0);
+  h.visible(true);
+  assert.equal(h.frames.size, 1);
+  assert.equal(h.canvas.width, Math.floor(390 * 2.75));
+});
+
+test("a resolution trial with no FPS gain restores native DPR", t => {
+  const h = harness(t, { renderMs: () => 25 });
+  for (let i = 0; i < 41; i++) h.advance(50);
+  assert.equal(h.canvas.width, Math.floor(390 * 2.75));
+  for (let i = 0; i < 40; i++) h.advance(50);
+  assert.equal(h.canvas.width, 390 * 3);
+  assert.equal(h.frames.size, 1);
+  assert.ok(h.draws.at(-1) > 4);
+  assert.ok(h.draws.every((time, i) => i === 0 || time >= h.draws[i - 1]));
 });

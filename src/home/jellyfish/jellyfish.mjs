@@ -3,9 +3,9 @@ import { appendageShapeForce, fluidSensitivityFor, proceduralMotionWeight } from
 import { clamp, invLerp, lerp, mulberry32, range, rotate, smoothstep, TAU } from "./math.mjs";
 import { pulseEnvelope, pulseVelocity } from "./pulse.mjs";
 import { VerletChain } from "./physics.mjs";
-import { addContactForce, buildContactForces } from "./interaction.mjs";
+import { addContactForce } from "./interaction.mjs";
 import { PropulsionWake } from "./propulsion.mjs";
-import { TissueFlow } from "./hydrodynamics.mjs";
+import { SimulationWorkspace } from "./simulation-workspace.mjs";
 import { EXTRA_TENTACLE_OFFSETS, TENTACLE_COUNT, tentacleLengthFor, tentaclePlanAt } from "./tentacles.mjs";
 
 export function heroSizeFor(width, height) {
@@ -271,6 +271,7 @@ export class Jellyfish {
   }
 
   resize(oldWidth, oldHeight, width, height) {
+    this.simulation = null;
     // Old wake packets are in the previous viewport coordinate system.
     if (oldWidth !== width || oldHeight !== height) this.propulsion.reset();
     const sx = width / Math.max(1, oldWidth);
@@ -360,7 +361,7 @@ export class Jellyfish {
     };
   }
 
-  step(dt, time, ocean, width, height) {
+  step(dt, time, ocean, width, height, profile) {
     this.phase = (this.phase + dt / this.period) % 1;
     const pulse = pulseEnvelope(this.phase);
     const pulseDelta = pulseVelocity(this.previousPulse, pulse);
@@ -419,8 +420,9 @@ export class Jellyfish {
 
     // Gather from one pre-integration pose, including branches. No chain
     // observes another chain's partially advanced contact geometry.
-    const contacts = buildContactForces(this.chains, this.anatomyScale);
-    const water = new TissueFlow(this.chains, dt, this.anatomyScale, ocean, this.propulsion, time);
+    const workspace = this.simulation ??= new SimulationWorkspace();
+    const { contacts, water } = workspace.prepare(this.chains, dt, this.anatomyScale,
+      ocean, this.propulsion, time, pulseDelta, flow, profile);
     for (const item of this.chains) {
       const anchor = bellAnchor(this, item.offset, item.arm ? 0.052 : 0.014);
       const chainLength = (item.chain.count - 1) * item.chain.segmentLength;
@@ -441,6 +443,7 @@ export class Jellyfish {
         SIMULATION.constraintIterations,
       );
       item.chain.clipTrailEnvelope(anchor.x, anchor.y, envelope);
+      if (profile) workspace.record(item.chain, profile);
 
       for (const branch of item.branches) {
         const i = Math.min(item.chain.count - 1, branch.anchorIndex);
@@ -482,7 +485,9 @@ export class Jellyfish {
           maxSide,
           maxDrop: branchLength * 1.05,
         });
+        if (profile) workspace.record(branch.chain, profile);
       }
     }
+    if (profile) workspace.finish(profile);
   }
 }
