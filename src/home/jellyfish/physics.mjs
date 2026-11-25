@@ -327,7 +327,14 @@ export class VerletChain {
 
       error = this.maxConstraintError();
       const repairLimit = Math.min(0.75, this.segmentLength * 0.16);
-      if (!Number.isFinite(error) || error > repairLimit) {
+      // Length alone cannot certify a repaired pose: a clipped chain may
+      // have nearly exact lengths but a sharp fold. Reject that pose rather
+      // than reintroducing angular projections into the safety solver.
+      const badCurvature = this.maxBendAngle < Math.PI && (
+        this.maxTurnAngle() > this.maxBendAngle + 0.15
+        || Math.abs(this.signedTurn()) > this.maxTotalTurn + 0.20
+      );
+      if (!Number.isFinite(error) || error > repairLimit || badCurvature) {
         this.#settleTrail(anchorX, anchorY, side);
       } else {
         // Safety intervention is allowed to dissipate momentum. The repaired

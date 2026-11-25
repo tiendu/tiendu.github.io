@@ -226,3 +226,51 @@ test("world orientation follows the same shifted ocean as the anatomy", () => {
   world.resize(390, 720);
   assert.deepEqual(world.ocean.weatherAt(world.time), beforeResize);
 });
+
+test("prevailing currents stay coherent while calm water retains local eddies", () => {
+  const ocean = new OceanField(390, 565);
+  let left = 0;
+  let right = 0;
+  let calmVariation = false;
+  for (let time = 0; time <= 3600; time += 5) {
+    const macro = ocean.weatherAt(time).x;
+    const samples = [];
+    for (const x of [0, 97.5, 195, 292.5, 390]) {
+      for (const y of [0, 141.25, 282.5, 423.75, 565]) {
+        samples.push(ocean.sample(x, y, time).x);
+      }
+    }
+    if (Math.abs(macro) >= 7.5) {
+      assert.ok(samples.every(x => x * macro > 0), `opposing local flow at ${time}: ${macro}`);
+      if (macro < 0) left += 1;
+      else right += 1;
+      assert.ok(Math.max(...samples) - Math.min(...samples) > 0.1, `flat field at ${time}`);
+    } else if (Math.abs(macro) < 0.5) {
+      calmVariation ||= Math.min(...samples) < -1 && Math.max(...samples) > 1;
+    }
+  }
+  assert.ok(left > 0 && right > 0 && calmVariation);
+});
+
+test("tentacle curvature stays healthy throughout varied ocean conditions", () => {
+  const cases = [
+    [390, 565, 991, 1000], // previously reproduced a sharp post-repair kink
+    [390, 700, 42, 360],
+    [320, 420, 123456, 730],
+    [1200, 760, 991, 2300],
+    [844, 270, 444, 1400],
+  ];
+  for (const [width, height, seed, offset] of cases) {
+    const world = new JellyWorld(width, height, seed, offset);
+    const strands = world.jelly.chains.filter(item => !item.arm);
+    for (let n = 0; n < 1500; n += 1) {
+      world.step(1 / 60);
+      for (const { chain } of strands) {
+        const angle = chain.maxTurnAngle();
+        assert.ok(angle < chain.maxBendAngle + 0.16,
+          `bend ${angle} at ${width}x${height}, seed ${seed}, offset ${offset}, step ${n}`);
+        assert.ok(chain.maxConstraintError() < 0.8);
+      }
+    }
+  }
+});

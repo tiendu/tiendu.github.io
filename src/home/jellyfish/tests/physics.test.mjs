@@ -265,3 +265,27 @@ test("envelope repair keeps segment lengths coherent during hostile current", ()
   }
   assert.ok(worst < 1.2, `worst post-envelope constraint ${worst}`);
 });
+
+test("envelope repair rejects a sharply folded pose even when segment lengths are valid", () => {
+  const chain = new VerletChain({
+    anchorX: 0, anchorY: 0, segments: 60, segmentLength: 3.5,
+    maxBendAngle: 0.45, maxTotalTurn: 2.6,
+  });
+  for (let i = 1; i < chain.count; i += 1) {
+    const angle = 0.6 + i * 0.01;
+    chain.x[i] = chain.px[i] = chain.x[i - 1] + 3.5 * Math.sin(angle);
+    chain.y[i] = chain.py[i] = chain.y[i - 1] + 3.5 * Math.cos(angle);
+  }
+  assert.ok(chain.maxTurnAngle() < 0.02);
+  assert.equal(chain.clipTrailEnvelope(0, 0, { maxRise: 18, maxSide: 50, maxDrop: 220 }), true);
+  assert.ok(chain.maxConstraintError() < 0.56);
+  assert.ok(chain.maxTurnAngle() < 0.60, `repaired bend ${chain.maxTurnAngle()}`);
+  assert.deepEqual(chain.x, chain.px);
+  assert.deepEqual(chain.y, chain.py);
+  for (let i = 1; i < chain.count; i += 1) {
+    const along = i / (chain.count - 1);
+    assert.ok(Math.abs(chain.x[i]) <= 50 * (0.20 + Math.pow(along, 0.72) * 0.80) + 0.01);
+    assert.ok(chain.y[i] >= -18 * (0.42 + along * 0.58) - 0.01);
+    assert.ok(chain.y[i] <= 220 * (0.12 + along * 0.88) + 0.01);
+  }
+});

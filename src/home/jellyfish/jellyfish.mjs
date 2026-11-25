@@ -336,8 +336,8 @@ export class Jellyfish {
     const sideDelta = x - anchor.x;
     const riseRatio = Math.max(0, riseDelta) / Math.max(1, riseAllowance);
     const sideRatio = Math.abs(sideDelta) / Math.max(1, sideAllowance);
-    const riseSoft = smoothstep(invLerp(0.72, 1.02, riseRatio));
-    const sideSoft = smoothstep(invLerp(0.74, 1.02, sideRatio));
+    const riseSoft = smoothstep(invLerp(item.arm ? 0.72 : 0.58, 1.02, riseRatio));
+    const sideSoft = smoothstep(invLerp(item.arm ? 0.74 : 0.58, 1.02, sideRatio));
     const riseExcess = Math.max(0, riseDelta - riseAllowance);
     const sideExcess = Math.max(0, Math.abs(sideDelta) - sideAllowance);
 
@@ -348,11 +348,11 @@ export class Jellyfish {
       x:
         -Math.sign(sideDelta)
         * (
-          sideSoft * (item.arm ? 4.2 : 5.2)
+          sideSoft * (item.arm ? 4.2 : 7.5)
           + Math.min(24, sideExcess * (item.arm ? 1.7 : 2.2))
         ),
       y:
-        riseSoft * (item.arm ? 4.5 : 5.8)
+        riseSoft * (item.arm ? 4.5 : 7.5)
         + Math.min(24, riseExcess * (item.arm ? 1.9 : 2.5)),
     };
   }

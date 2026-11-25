@@ -68,12 +68,15 @@ export class OceanField {
     // Macro weather sets direction; broad local eddies bend neighboring tissue
     // differently; the weak ambient field prevents perfectly static calm.
     // Amplitudes remain bounded so none of these layers overwhelms the others.
-    let fx =
-      weather.x
-      + Math.sin(ny * 7.8 + slow * 1.2) * 6.4
+    const eddyX =
+      Math.sin(ny * 7.8 + slow * 1.2) * 6.4
       + Math.sin((nx + ny) * 5.4 - slow * 0.7) * 4.1
       + Math.cos(ny * 2.9 - slow * 0.31) * 2.8
       + ambient.x;
+    // Calm water keeps its local circulation. As prevailing flow builds,
+    // attenuate eddies smoothly so they cannot reverse a sustained current.
+    const coherence = smoothstep(Math.abs(weather.x) / 8);
+    let fx = weather.x + eddyX * (1 - 0.65 * coherence);
     let fy =
       weather.y
       + Math.cos(nx * 7.1 - slow) * 3.4
