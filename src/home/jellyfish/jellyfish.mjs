@@ -276,7 +276,7 @@ export class Jellyfish {
     }
   }
 
-  #chainForce(item, anchor, ocean, time, x, y, along) {
+  #chainForce(item, anchor, envelope, ocean, time, x, y, along) {
     const armLengthBias = item.arm ? (item.lengthBias ?? 0) : 0;
     const sensitivity = fluidSensitivityFor(item, along);
     const localFlow = ocean.sample(x, y, time, sensitivity);
@@ -313,7 +313,7 @@ export class Jellyfish {
     const tipHook = item.tipHook * tip * tip;
     const curl = item.curl * Math.sin(along * Math.PI) * (item.arm ? 4.3 : 2.2) * this.anatomyScale;
     const trailingBias = item.arm ? 0 : 3.8 * along * along * this.anatomyScale;
-    const guard = this.#trailGuard(item, anchor, x, y, along);
+    const guard = this.#trailGuard(item, anchor, envelope, x, y, along);
 
     return {
       x:
@@ -324,13 +324,7 @@ export class Jellyfish {
     };
   }
 
-  #trailGuard(item, anchor, x, y, along) {
-    const length = (item.chain.count - 1) * item.chain.segmentLength;
-    const maxRise = this.baseSize * (item.arm ? 0.15 : 0.11);
-    const maxSide = Math.min(
-      length * (item.arm ? 0.68 : 0.76),
-      this.baseSize * (item.arm ? 0.96 : 1.14),
-    );
+  #trailGuard(item, anchor, { maxRise, maxSide }, x, y, along) {
     const riseAllowance = maxRise * (0.42 + along * 0.58);
     const sideAllowance = maxSide * (0.20 + Math.pow(along, 0.72) * 0.80);
     const riseDelta = anchor.y - y;
@@ -413,27 +407,28 @@ export class Jellyfish {
 
     for (const item of this.chains) {
       const anchor = bellAnchor(this, item.offset, item.arm ? 0.052 : 0.014);
+      const chainLength = (item.chain.count - 1) * item.chain.segmentLength;
+      const envelope = {
+        maxRise: this.baseSize * (item.arm ? 0.15 : 0.11),
+        maxSide: Math.min(chainLength * (item.arm ? 0.68 : 0.76),
+          this.baseSize * (item.arm ? 0.96 : 1.14)),
+        maxDrop: chainLength * 1.05,
+      };
       item.chain.step(
         dt,
         anchor.x,
         anchor.y,
-        (x, y, along) => this.#chainForce(item, anchor, ocean, time, x, y, along),
+        (x, y, along) => this.#chainForce(item, anchor, envelope, ocean, time, x, y, along),
         SIMULATION.constraintIterations,
       );
-      const chainLength = (item.chain.count - 1) * item.chain.segmentLength;
-      item.chain.clipTrailEnvelope(anchor.x, anchor.y, {
-        maxRise: this.baseSize * (item.arm ? 0.15 : 0.11),
-        maxSide: Math.min(
-          chainLength * (item.arm ? 0.68 : 0.76),
-          this.baseSize * (item.arm ? 0.96 : 1.14),
-        ),
-        maxDrop: chainLength * 1.05,
-      });
+      item.chain.clipTrailEnvelope(anchor.x, anchor.y, envelope);
 
       for (const branch of item.branches) {
         const i = Math.min(item.chain.count - 1, branch.anchorIndex);
         const bx = item.chain.x[i];
         const by = item.chain.y[i];
+        const branchLength = (branch.chain.count - 1) * branch.chain.segmentLength;
+        const maxSide = Math.min(branchLength * 0.74, this.baseSize * 0.62);
         branch.chain.step(
           dt,
           bx,
@@ -446,8 +441,6 @@ export class Jellyfish {
               * 4.5
               * along
               * this.anatomyScale;
-            const branchLength = (branch.chain.count - 1) * branch.chain.segmentLength;
-            const maxSide = Math.min(branchLength * 0.74, this.baseSize * 0.62);
             const riseAllowance = this.baseSize * 0.13 * (0.42 + along * 0.58);
             const sideAllowance = maxSide * (0.20 + Math.pow(along, 0.72) * 0.80);
             const riseExcess = Math.max(0, by - y - riseAllowance);
@@ -462,10 +455,9 @@ export class Jellyfish {
           },
           Math.max(4, SIMULATION.constraintIterations - 1),
         );
-        const branchLength = (branch.chain.count - 1) * branch.chain.segmentLength;
         branch.chain.clipTrailEnvelope(bx, by, {
           maxRise: this.baseSize * 0.13,
-          maxSide: Math.min(branchLength * 0.74, this.baseSize * 0.62),
+          maxSide,
           maxDrop: branchLength * 1.05,
         });
       }

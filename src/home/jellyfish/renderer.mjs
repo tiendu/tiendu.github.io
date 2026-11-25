@@ -45,15 +45,16 @@ function densityGlyph(value, ramp = ASCII.density) {
   return ramp[Math.min(index, ramp.length - 1)];
 }
 
-function lobeField(u, v) {
-  const lobes = [
+const LOBES = [
     [-0.27, -0.30, 0.17, 0.15],
     [0.27, -0.30, 0.17, 0.15],
     [-0.20, -0.09, 0.15, 0.11],
     [0.20, -0.09, 0.15, 0.11],
   ];
+
+function lobeField(u, v) {
   let best = Infinity;
-  for (const [x, y, rx, ry] of lobes) {
+  for (const [x, y, rx, ry] of LOBES) {
     const dx = (u - x) / rx;
     const dy = (v - y) / ry;
     best = Math.min(best, dx * dx + dy * dy);
@@ -281,8 +282,6 @@ export function ribbonKinematicsAt(chain, index) {
   const ay = chain.y[i] - chain.y[i - 1];
   const bx = chain.x[i + 1] - chain.x[i];
   const by = chain.y[i + 1] - chain.y[i];
-  const aLength = Math.hypot(ax, ay) || 1;
-  const bLength = Math.hypot(bx, by) || 1;
   const cross = ax * by - ay * bx;
   const dot = ax * bx + ay * by;
   const bend = Math.atan2(cross, dot);
@@ -440,19 +439,16 @@ export class AsciiRenderer {
       const nx = -dy / distance;
       const ny = dx / distance;
 
+      const glyph = directionGlyph(dx, dy);
+      const rootGlow = 1 - smoothstep(invLerp(0.0, 0.34, along));
+      const tipGlow = smoothstep(invLerp(0.70, 0.95, along)) * 0.14;
+      const color = mixColor(jelly.palette.tentacle, jelly.palette.tentacleHot,
+        rootGlow * 0.42 + tipGlow, alpha);
       for (let s = 0; s < samples; s += 1) {
         const t = s / samples;
         const x = lerp(x0, x1, t);
         const y = lerp(y0, y1, t);
-        const glyph = directionGlyph(dx, dy);
-        const rootGlow = 1 - smoothstep(invLerp(0.0, 0.34, along));
-        const tipGlow = smoothstep(invLerp(0.70, 0.95, along)) * 0.14;
-        ctx.fillStyle = mixColor(
-          jelly.palette.tentacle,
-          jelly.palette.tentacleHot,
-          rootGlow * 0.42 + tipGlow,
-          alpha,
-        );
+        ctx.fillStyle = color;
         this.#tissueGlyph(glyph, x, y);
 
         // Punctuation makes the strand taper and break into the darkness. Near
@@ -536,6 +532,7 @@ export class AsciiRenderer {
       leftRuffle: clamp(leftRuffle, -projected * 0.65, projected * 0.85),
       rightRuffle: clamp(rightRuffle, -projected * 0.65, projected * 0.85),
       face,
+      fray: material.fray,
     };
   }
 
@@ -668,7 +665,7 @@ export class AsciiRenderer {
         // Ruffled lace protrudes independently from each edge, rather than as
         // mirrored hairs. This is what makes the oral arms look torn/leafy.
         if ((i + s) % (branch ? 5 : 4) === 0 && along > 0.10 && along < 0.88) {
-          const fray = ribbonMaterialAt(item, along).fray;
+          const fray = g.fray;
           const leftFray = Math.min(g.projected, this.cellW * (0.7 + (item.ruffleLeft ?? 1) * 0.75)) * fray;
           const rightFray = Math.min(g.projected, this.cellW * (0.7 + (item.ruffleRight ?? 1) * 0.75)) * fray;
           ctx.fillStyle = rgba(jelly.palette.rim, alpha * 0.30);
@@ -779,13 +776,14 @@ export class AsciiRenderer {
     ctx.shadowColor = rgba(jelly.palette.rim, 0.24);
     ctx.shadowBlur = 1.0 * this.shadowScale;
 
+    const c = Math.cos(-jelly.tilt), s = Math.sin(-jelly.tilt);
     for (let py = startY; py <= yMax; py += cellH) {
       for (let px = startX; px <= xMax; px += cellW) {
-        const raw = rotate(px - jelly.x, py - jelly.y, -jelly.tilt);
-        const v = raw.y / height;
+        const dx = px - jelly.x, dy = py - jelly.y;
+        const v = (dx * s + dy * c) / height;
         if (v < -1.09 || v > 0.095) continue;
         const shift = bellCenterShift(v, jelly.anatomyPhase, halfW);
-        const u = (raw.x - shift) / halfW;
+        const u = (dx * c - dy * s - shift) / halfW;
         const absU = Math.abs(u);
         const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
         const nearSkirt = absU <= 0.90 && v > -0.026;
@@ -1119,11 +1117,16 @@ export class AsciiRenderer {
       [item, visibleAttachmentFor(jelly, item, time)]));
     this.bellOcclusion = buildOcclusionSpans(bellOcclusionContour(jelly, time).map(point =>
       projectedBellPoint(jelly, point, visualTilt)));
-    const byDepth = (a, b) => a.layer - b.layer;
-
-    const back = jelly.chains.filter((item) => item.layer < -0.25).sort(byDepth);
-    const middle = jelly.chains.filter((item) => item.layer >= -0.25 && item.layer < 0.45).sort(byDepth);
-    const front = jelly.chains.filter((item) => item.layer >= 0.45).sort(byDepth);
+    // Layers are assigned once when a specimen is built.
+    if (this.depthChains !== jelly.chains) {
+      this.depthChains = jelly.chains;
+      const sorted = [...jelly.chains].sort((a, b) => a.layer - b.layer);
+      this.back = sorted.filter(item => item.layer < -0.25);
+      this.middle = sorted.filter(item => item.layer >= -0.25 && item.layer < 0.45);
+      this.front = sorted.filter(item => item.layer >= 0.45);
+      this.embedded = [...this.back, ...this.middle];
+    }
+    const { back, middle, front } = this;
 
     // External tissue is culled against one shared projected contour.
     for (const item of back) {
@@ -1133,7 +1136,7 @@ export class AsciiRenderer {
     // A faint continuation of rear/mid anatomy is drawn before the bell so
     // membrane glyphs naturally sit on top of it. This visually connects roots
     // to the subumbrella without changing any physics anchors.
-    this.#drawEmbeddedRoots(jelly, [...back, ...middle], time);
+    this.#drawEmbeddedRoots(jelly, this.embedded, time);
     this.#drawBell(jelly, time);
 
     // Mid and foreground layers are progressively brighter. Foreground ribbons

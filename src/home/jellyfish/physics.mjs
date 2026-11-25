@@ -39,6 +39,8 @@ export class VerletChain {
     this.py = new Float32Array(this.count);
     this.beforeX = new Float32Array(this.count);
     this.beforeY = new Float32Array(this.count);
+    this.repairX = new Float32Array(this.count);
+    this.repairY = new Float32Array(this.count);
     this.hasBefore = false;
 
     for (let i = 0; i < this.count; i += 1) {
@@ -330,7 +332,9 @@ export class VerletChain {
   #continuousRepair(anchorX, anchorY, rise, side, drop) {
     if (!this.hasBefore) return false;
     const dx = anchorX - this.beforeX[0], dy = anchorY - this.beforeY[0];
-    const proposedX = this.x.slice(), proposedY = this.y.slice();
+    const proposedX = this.repairX, proposedY = this.repairY;
+    proposedX.set(this.x);
+    proposedY.set(this.y);
     const limit = this.segmentLength * 0.65;
     const errorLimit = Math.min(0.75, this.segmentLength * 0.22);
     // Search from the previous pose toward the candidate, without turning

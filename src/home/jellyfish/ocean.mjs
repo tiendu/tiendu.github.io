@@ -53,8 +53,16 @@ export class OceanField {
     this.pointer.vy *= Math.exp(-6.2 * dt);
   }
 
+  #weatherTime = NaN;
+  #weather;
+
   weatherAt(time) {
-    return currentWeather(time + this.timeOffset);
+    const waterTime = time + this.timeOffset;
+    if (waterTime !== this.#weatherTime || !this.#weather) {
+      this.#weatherTime = waterTime;
+      this.#weather = Object.freeze(currentWeather(waterTime));
+    }
+    return this.#weather;
   }
 
   sample(x, y, time, sensitivity = 1) {

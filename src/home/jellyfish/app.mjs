@@ -17,13 +17,31 @@ function seedFromSession() {
   }
 }
 
+// Preserve the cadence remainder without issuing catch-up draws.
+export function nextRenderTime(now, previous, fps) {
+  const interval = 1000 / fps;
+  const periods = Math.floor((now - previous + 0.000001) / interval);
+  return periods > 0 ? previous + periods * interval : null;
+}
+
 export function mountJellyfish() {
   const root = document.querySelector("[data-ascii-ocean]");
   const canvas = root?.querySelector("[data-jelly-canvas]");
   if (!(root instanceof HTMLElement) || !(canvas instanceof HTMLCanvasElement)) return () => {};
 
   const fallback = root.querySelector("[data-jelly-fallback]");
-  const renderer = new AsciiRenderer(canvas);
+  const showFallback = () => {
+    canvas.hidden = true;
+    if (fallback instanceof HTMLElement) fallback.hidden = false;
+  };
+  showFallback();
+  let renderer;
+  try {
+    renderer = new AsciiRenderer(canvas);
+  } catch {
+    return () => {};
+  }
+  if (!renderer.ctx) return () => {};
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const finePointer = matchMedia("(pointer: fine)");
   let world;
@@ -38,12 +56,32 @@ export function mountJellyfish() {
   let pointerTime = performance.now();
   let pointerActive = false;
   let running = false;
+  let measurable = false;
+  let contextLost = false;
+
+  const draw = () => {
+    renderer.render(world);
+    if (canvas.hidden) canvas.hidden = false;
+    if (fallback instanceof HTMLElement && !fallback.hidden) fallback.hidden = true;
+  };
 
   const measure = () => {
     const rect = root.getBoundingClientRect();
+    if (contextLost) return;
+    if (rect.width <= 0 || rect.height <= 0) {
+      measurable = false;
+      stop();
+      return;
+    }
+    const wasMeasurable = measurable;
+    measurable = true;
     const nextWidth = Math.max(1, rect.width);
     const nextHeight = Math.max(1, rect.height);
-    if (Math.abs(nextWidth - width) < 1 && Math.abs(nextHeight - height) < 1) return;
+    if (world && Math.abs(nextWidth - width) < 1 && Math.abs(nextHeight - height) < 1
+      && renderer.dpr === Math.min(globalThis.devicePixelRatio || 1, 2)) {
+      if (!wasMeasurable) start();
+      return;
+    }
     width = nextWidth;
     height = nextHeight;
     renderer.resize(width, height);
@@ -53,11 +91,17 @@ export function mountJellyfish() {
     } else {
       world.resize(width, height);
     }
-    renderer.render(world);
+    if (!wasMeasurable) {
+      start();
+      if (document.hidden) draw();
+    } else {
+      draw();
+      lastRender = performance.now();
+    }
   };
 
   const onPointerMove = (event) => {
-    if (!world || !finePointer.matches) return;
+    if (!running || !world || !finePointer.matches) return;
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -79,8 +123,10 @@ export function mountJellyfish() {
   const drawReduced = () => {
     if (!world) return;
     // Advance just enough to settle the initial hanging chains, then stay still.
-    for (let i = 0; i < 24; i += 1) world.step(SIMULATION.fixedStep);
-    renderer.render(world);
+    if (world.time === 0) {
+      for (let i = 0; i < 24; i += 1) world.step(SIMULATION.fixedStep);
+    }
+    draw();
   };
 
   const tick = (now) => {
@@ -94,33 +140,36 @@ export function mountJellyfish() {
       accumulator -= SIMULATION.fixedStep;
     }
 
-    const renderInterval = 1000 / renderFpsFor(width, height);
-    if (now - lastRender >= renderInterval) {
-      renderer.render(world);
-      lastRender = now;
+    const deadline = nextRenderTime(now, lastRender, renderFpsFor(width, height));
+    if (deadline !== null) {
+      draw();
+      lastRender = deadline;
     }
     frame = requestAnimationFrame(tick);
   };
 
   const stop = () => {
     running = false;
+    pointerActive = false;
     cancelAnimationFrame(frame);
   };
 
   const start = () => {
     cancelAnimationFrame(frame);
-    if (document.hidden || !world) {
+    if (document.hidden || !world || !measurable || contextLost) {
       running = false;
       return;
     }
     running = true;
     last = performance.now();
     accumulator = 0;
+    lastRender = last;
     if (reduced.matches) {
       drawReduced();
       running = false;
       return;
     }
+    draw();
     frame = requestAnimationFrame(tick);
   };
 
@@ -130,24 +179,36 @@ export function mountJellyfish() {
   };
 
   const onReducedChange = () => start();
+  const onContextLost = () => {
+    contextLost = true;
+    stop();
+    showFallback();
+  };
+  const onContextRestored = () => {
+    contextLost = false;
+    measurable = false;
+    if (world) renderer.resize(width, height);
+    measure();
+  };
 
   const resizeObserver = new ResizeObserver(measure);
   resizeObserver.observe(root);
   canvas.addEventListener("pointermove", onPointerMove, { passive: true });
   canvas.addEventListener("pointerleave", onPointerLeave, { passive: true });
+  canvas.addEventListener("contextlost", onContextLost);
+  canvas.addEventListener("contextrestored", onContextRestored);
   document.addEventListener("visibilitychange", onVisibility);
   reduced.addEventListener?.("change", onReducedChange);
 
   measure();
-  if (fallback instanceof HTMLElement) fallback.hidden = true;
-  canvas.hidden = false;
-  start();
 
   return () => {
     stop();
     resizeObserver.disconnect();
     canvas.removeEventListener("pointermove", onPointerMove);
     canvas.removeEventListener("pointerleave", onPointerLeave);
+    canvas.removeEventListener("contextlost", onContextLost);
+    canvas.removeEventListener("contextrestored", onContextRestored);
     document.removeEventListener("visibilitychange", onVisibility);
     reduced.removeEventListener?.("change", onReducedChange);
   };

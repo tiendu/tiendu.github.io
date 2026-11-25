@@ -44,6 +44,11 @@ body.system-interface:has(.ascii-ocean-page)::after {
   z-index: 1;
 }
 
+.ascii-ocean-stage canvas[hidden],
+.ascii-ocean-fallback[hidden] {
+  display: none;
+}
+
 .ascii-ocean-stage::before {
   background: radial-gradient(
     ellipse at 50% 43%,
