@@ -28,6 +28,5 @@ export function ribbonMaterialAt(item, along) {
   return {
     width: clamp(1 + irregularity * 0.20 * body, 0.70, 1.28) * lerp(1, 0.55, terminal),
     fray: lerp(1, 0.12, terminal),
-    proximal: 1 - smoothstep(invLerp(0.04, 0.32, along)),
   };
 }

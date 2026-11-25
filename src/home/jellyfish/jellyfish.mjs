@@ -10,8 +10,6 @@ export function heroSizeFor(width, height) {
     return clamp(Math.min(width * widthFactor, height * 0.38), 64, 296);
   }
   const widthFactor = width < 620 ? 0.47 : 0.245;
-  // V4.5 backs the specimen off by roughly 7–8% in normal viewports while
-  // preserving the already-stable compact-landscape anatomy scale.
   return clamp(Math.min(width * widthFactor, height * 0.355), 64, 296);
 }
 

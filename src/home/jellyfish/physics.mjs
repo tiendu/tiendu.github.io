@@ -370,10 +370,8 @@ export class VerletChain {
   }
 
   #settleTrail(anchorX, anchorY, side) {
-    // This is an emergency pose, not normal animation. If a chain reaches the
-    // safety envelope with too much stored strain, preserving that momentum is
-    // exactly what causes the explosive V4.6 failure. Rebuild a gentle hanging
-    // S-curve with exact segment lengths and make it the new Verlet history.
+    // Last-resort recovery: rebuild a hanging S-curve with exact segment
+    // lengths and discard the unstable Verlet history.
     this.x[0] = anchorX;
     this.y[0] = anchorY;
     const amplitude = Math.min(side * 0.15, this.segmentLength * 2.5,

@@ -1,0 +1,45 @@
+import { ASCII } from "./config.mjs";
+import { clamp, lerp } from "./math.mjs";
+
+const rgbCache = new Map();
+
+function rgb(hex) {
+  const cached = rgbCache.get(hex);
+  if (cached) return cached;
+  const clean = hex.replace("#", "");
+  const value = Number.parseInt(clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean, 16);
+  const color = { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+  rgbCache.set(hex, color);
+  return color;
+}
+
+export function rgba(hex, alpha) {
+  const c = rgb(hex);
+  return `rgba(${c.r}, ${c.g}, ${c.b}, ${clamp(alpha, 0, 1)})`;
+}
+
+export function mixColor(a, b, t, alpha = 1) {
+  const ca = rgb(a);
+  const cb = rgb(b);
+  const k = clamp(t, 0, 1);
+  return `rgba(${Math.round(lerp(ca.r, cb.r, k))}, ${Math.round(lerp(ca.g, cb.g, k))}, ${Math.round(lerp(ca.b, cb.b, k))}, ${clamp(alpha, 0, 1)})`;
+}
+
+export function directionGlyph(dx, dy, table = ASCII.edge) {
+  const ax = Math.abs(dx);
+  const ay = Math.abs(dy);
+  if (ay < ax * 0.42) return table.horizontal;
+  if (ax < ay * 0.42) return table.vertical;
+  return dx * dy < 0 ? table.rising : table.falling;
+}
+
+export function densityGlyph(value, ramp = ASCII.density) {
+  const t = clamp(value, 0, 0.9999);
+  const index = Math.floor(t * ramp.length);
+  return ramp[Math.min(index, ramp.length - 1)];
+}
+
+
+export function setFont(ctx, fontSize) {
+  ctx.font = `${fontSize}px "Source Code Pro Variable", "Source Code Pro", ui-monospace, monospace`;
+}

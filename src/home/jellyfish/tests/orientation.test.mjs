@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { JellyWorld } from "../world.mjs";
-import { AsciiRenderer, bellOcclusionContour, skirtRimAt, visibleAttachmentFor } from "../renderer.mjs";
+import { AsciiRenderer } from "../renderer.mjs";
+import { bellOcclusionContour, skirtRimAt, visibleAttachmentFor } from "../geometry.mjs";
 import { rotate } from "../math.mjs";
 import {
   keepTrailDirection, MAX_VISUAL_TILT, stepVisualTilt, tiltTargetAt,

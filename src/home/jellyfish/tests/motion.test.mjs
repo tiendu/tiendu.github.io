@@ -6,7 +6,7 @@ import {
   oralArmBillowAt,
   ribbonSurfaceBreathAt,
 } from "../fluid.mjs";
-import { ribbonKinematicsAt } from "../renderer.mjs";
+import { ribbonKinematicsAt } from "../tissue.mjs";
 import { currentWeather, OceanField } from "../ocean.mjs";
 import { stepVisualTilt, tiltTargetAt } from "../orientation.mjs";
 import { JellyWorld } from "../world.mjs";

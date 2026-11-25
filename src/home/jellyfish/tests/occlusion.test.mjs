@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { JellyWorld } from "../world.mjs";
-import { bellOcclusionContour, visibleAttachmentFor } from "../renderer.mjs";
+import { bellOcclusionContour, visibleAttachmentFor } from "../geometry.mjs";
 import { buildOcclusionSpans, projectedBellPoint, trailOcclusionFor } from "../occlusion.mjs";
 import { keepTrailDirection } from "../orientation.mjs";
 

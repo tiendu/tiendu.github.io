@@ -12,7 +12,7 @@ import {
   skirtMembraneAt,
   tentacleAccentStrength,
   tentaclePresenceScale,
-} from "../renderer.mjs";
+} from "../geometry.mjs";
 
 test("bell profile rounds into a narrower skirt with a porous lower membrane", () => {
   const crown = bellProfileAt(-0.90, 0.1, 1.2);
