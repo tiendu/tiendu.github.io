@@ -1,4 +1,5 @@
 import { ASCII } from "./config.mjs";
+import { channelFlashMix, meridionalStripeAt } from "./channels.mjs";
 import { bellCenterShift, bellGridScaleFor, bellPoreThresholdAt, bellProfileAt,
   internalRootOpacityAt, skirtRimAt } from "./geometry.mjs";
 import { directionGlyph, mixColor, mixMembraneColor, rgba, setFont } from "./glyphs.mjs";
@@ -204,6 +205,7 @@ export function drawBell(frame, jelly, time) {
       const grainA = 0.5 + 0.5 * Math.sin(u * 29 + v * 19 + jelly.anatomyPhase)
         * Math.cos(u * 15 - v * 35 + jelly.twist);
       const fineGrain = membraneGrainAt(u, v, jelly.anatomyPhase);
+      const stripe = meridionalStripeAt(u, v, silhouette, jelly.anatomyPhase);
 
       // Keep membrane ink sparse so bright anatomy appears suspended inside
       // a transparent envelope rather than printed onto a wall.
@@ -216,7 +218,8 @@ export function drawBell(frame, jelly, time) {
         + fineGrain * 0.030
         + pulseGlow * 0.050
         + internal * 0.055
-        + pigment * 0.32,
+        + pigment * 0.32
+        + stripe * 0.10,
         0.020,
         0.83,
       );
@@ -225,7 +228,7 @@ export function drawBell(frame, jelly, time) {
       const lipOpacity = nearMargin ? lerp(0.26, 1, smoothstep(rimGap / 0.038)) : 1;
       const edgeOpacity = sideOpacity * lipOpacity;
       const poreThreshold = clamp(bellPoreThresholdAt(v, tissueDensity, crownGlow)
-        + pigment * 0.29 + membraneDepth * 0.055 + crownGlow * 0.045,
+        + pigment * 0.29 + membraneDepth * 0.055 + crownGlow * 0.045 + stripe * 0.11,
         0, 0.86) * lerp(0.48, 1, edgeOpacity);
       // Mix independent micro-pores with the broader tissue field. The lower
       // glass stays porous, while crown highlights remain softly granular.
@@ -247,13 +250,18 @@ export function drawBell(frame, jelly, time) {
       const crown = crownGlow * (0.65 + sample.glyph * 0.35);
       // Diffuse emission follows the membrane depth, not a separate halo.
       const fluorescence = membraneDepth * (0.035 + 0.055 * centerGlass);
-      // Modulate existing marks only: no changing pores or new halo.
+      // Static pigment channels and reactive light share the existing marks.
+      // Light changes colour and opacity, never the pore pattern or geometry.
       const emission = jelly.light?.at(u, v) ?? 0;
-      const touchFlash = jelly.light?.flash?.touch ? jelly.light.flashAt(u, v) : 0;
+      const wave = jelly.light?.flashAt?.(u, v) ?? 0;
+      const flash = channelFlashMix(stripe, wave, jelly.light?.flash?.touch);
+      const channelLight = stripe * (0.42 + emission * 0.34);
       const color = mixMembraneColor(jelly.palette, 0.38 + centerGlass * 0.38,
-        coral, warmth, lerp(crown * 0.96, 1, emission * 0.42),
-        alpha + pigment * 0.34 + crown * 0.13 + fluorescence + emission * 0.23,
-        touchFlash * 0.92);
+        coral, clamp(warmth + stripe * 0.22, 0, 1),
+        lerp(crown * 0.96, 1, clamp(channelLight + emission * 0.42, 0, 1)),
+        alpha + pigment * 0.34 + crown * 0.13 + fluorescence
+          + stripe * 0.17 + emission * (0.23 + stripe * 0.25),
+        flash);
       ctx.globalAlpha = edgeOpacity;
       ctx.fillStyle = color;
       const local = rotate(u * halfW + bellCenterShift(v, jelly.anatomyPhase, halfW), v * height, jelly.tilt);
