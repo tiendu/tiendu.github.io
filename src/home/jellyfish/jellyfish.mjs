@@ -3,6 +3,7 @@ import { fluidSensitivityFor, oralArmBillowAt } from "./fluid.mjs";
 import { clamp, invLerp, lerp, mulberry32, range, rotate, smoothstep, TAU } from "./math.mjs";
 import { pulseEnvelope, pulseVelocity } from "./pulse.mjs";
 import { VerletChain } from "./physics.mjs";
+import { addContactForce, buildContactForces } from "./interaction.mjs";
 import { EXTRA_TENTACLE_OFFSETS, TENTACLE_COUNT, tentacleLengthFor, tentaclePlanAt } from "./tentacles.mjs";
 
 export function heroSizeFor(width, height) {
@@ -440,6 +441,9 @@ export class Jellyfish {
     }
     if (this.y > maxY) this.vy -= (this.y - maxY) * 0.14 * dt;
 
+    // Gather from one pre-integration pose, including branches. No chain
+    // observes another chain's partially advanced contact geometry.
+    const contacts = buildContactForces(this.chains, this.anatomyScale);
     for (const item of this.chains) {
       const anchor = bellAnchor(this, item.offset, item.arm ? 0.052 : 0.014);
       const chainLength = (item.chain.count - 1) * item.chain.segmentLength;
@@ -453,7 +457,10 @@ export class Jellyfish {
         dt,
         anchor.x,
         anchor.y,
-        (x, y, along) => this.#chainForce(item, anchor, envelope, ocean, time, x, y, along),
+        (x, y, along) => addContactForce(
+          this.#chainForce(item, anchor, envelope, ocean, time, x, y, along),
+          contacts, item.chain, along,
+        ),
         SIMULATION.constraintIterations,
       );
       item.chain.clipTrailEnvelope(anchor.x, anchor.y, envelope);
@@ -482,11 +489,11 @@ export class Jellyfish {
             const sideDelta = x - bx;
             const sideExcess = Math.max(0, Math.abs(sideDelta) - sideAllowance);
             const shapeWeight = 1 - 0.78 * smoothstep(Math.abs(flow.x) / 4.5);
-            return {
+            return addContactForce({
               x: flow.x + (sideWave + branch.side * 5.5 * smoothstep(along) * this.anatomyScale) * shapeWeight
                 - Math.sign(sideDelta) * Math.min(28, sideExcess * 2.4),
               y: flow.y + Math.max(0, -this.vy) * 0.52 * along + Math.min(28, riseExcess * 2.6),
-            };
+            }, contacts, branch.chain, along);
           },
           Math.max(4, SIMULATION.constraintIterations - 1),
         );
