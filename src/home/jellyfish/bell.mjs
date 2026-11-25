@@ -208,15 +208,15 @@ export function drawBell(frame, jelly, time) {
       // Keep membrane ink sparse so bright anatomy appears suspended inside
       // a transparent envelope rather than printed onto a wall.
       const tissueDensity = clamp(
-        0.040
-        + membraneDepth * 0.215
-        + crownGlow * 0.19
+        0.055
+        + membraneDepth * 0.235
+        + crownGlow * 0.21
         + centerGlass * 0.045
         + grainA * 0.055
         + fineGrain * 0.030
         + pulseGlow * 0.050
         + internal * 0.055
-        + pigment * 0.27,
+        + pigment * 0.32,
         0.020,
         0.83,
       );
@@ -225,15 +225,16 @@ export function drawBell(frame, jelly, time) {
       const lipOpacity = nearMargin ? lerp(0.26, 1, smoothstep(rimGap / 0.038)) : 1;
       const edgeOpacity = sideOpacity * lipOpacity;
       const poreThreshold = clamp(bellPoreThresholdAt(v, tissueDensity, crownGlow)
-        + pigment * 0.26, 0, 0.82) * lerp(0.48, 1, edgeOpacity);
+        + pigment * 0.29 + membraneDepth * 0.055 + crownGlow * 0.045,
+        0, 0.86) * lerp(0.48, 1, edgeOpacity);
       // Mix independent micro-pores with the broader tissue field. The lower
       // glass stays porous, while crown highlights remain softly granular.
       if (lerp(sample.grain, fineGrain, 0.32) > poreThreshold) continue;
 
-      const materialOpacity = lerp(1.08, 0.70, lowerGlass);
+      const materialOpacity = lerp(1.12, 0.82, lowerGlass);
       const pulseLight = 1 + jelly.pulse * (1 - lowerGlass) * 0.06;
       const alpha =
-        (0.29 + tissueDensity * 0.49)
+        (0.34 + tissueDensity * 0.54)
         * (frame.compact ? 1.62 : 1.49)
         * materialOpacity
         * pulseLight;
@@ -244,8 +245,11 @@ export function drawBell(frame, jelly, time) {
       const coral = clamp(0.18 + warmZone * 0.36 + internal * 0.12 + pigment * 0.88, 0, 0.94);
       const warmth = smoothstep(clamp(warmZone * 0.9 + pigment * 1.22, 0, 1));
       const crown = crownGlow * (0.65 + sample.glyph * 0.35);
-      const color = mixMembraneColor(jelly.palette, 0.32 + centerGlass * 0.38,
-        coral, warmth, crown * 0.88, alpha + pigment * 0.28 + crown * 0.09);
+      // Diffuse emission follows the membrane depth, not a separate halo.
+      const fluorescence = membraneDepth * (0.035 + 0.055 * centerGlass);
+      const color = mixMembraneColor(jelly.palette, 0.38 + centerGlass * 0.38,
+        coral, warmth, crown * 0.96,
+        alpha + pigment * 0.34 + crown * 0.13 + fluorescence);
       ctx.globalAlpha = edgeOpacity;
       ctx.fillStyle = color;
       const local = rotate(u * halfW + bellCenterShift(v, jelly.anatomyPhase, halfW), v * height, jelly.tilt);

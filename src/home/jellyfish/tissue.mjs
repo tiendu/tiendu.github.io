@@ -46,7 +46,9 @@ export function drawTentacle(frame, occlusion, jelly, item, opacity = 1) {
   const ctx = frame.ctx;
   const layerOpacity = opacityForLayer(item, opacity);
   const presence = tentaclePresenceScale(item);
-  const baseAlpha = 0.72 * item.bright * layerOpacity * presence * (frame.compact ? 1.12 : 1.03);
+  const faintLift = lerp(1.16, 1, smoothstep(invLerp(0.40, 1, item.bright * layerOpacity)));
+  const baseAlpha = 0.72 * item.bright * layerOpacity * presence
+    * (frame.compact ? 1.12 : 1.03) * faintLift;
   ctx.shadowColor = rgba(jelly.palette.tentacleHot, 0.24 * layerOpacity);
   ctx.shadowBlur = (item.layer > 0.6 ? 1.5 : 0.8) * frame.shadowScale;
 
