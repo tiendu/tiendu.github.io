@@ -2,6 +2,7 @@ import { ASCII } from "./config.mjs";
 import { ribbonSurfaceBreathAt } from "./fluid.mjs";
 import { rootEmergenceScale, tentacleAccentStrength, tentaclePresenceScale } from "./geometry.mjs";
 import { densityGlyph, directionGlyph, mixColor, rgba } from "./glyphs.mjs";
+import { drawGlyph } from "./glyph-atlas.mjs";
 import { ribbonMaterialAt, tissuePresence } from "./material.mjs";
 import { clamp, invLerp, lerp, smoothstep, TAU } from "./math.mjs";
 
@@ -37,7 +38,7 @@ function opacityForLayer(item, opacity) {
 
 function tissueGlyph(frame, occlusion, glyph, x, y) {
   if (!occlusion.glyph(x, y, frame.cellH * 0.38)) {
-    frame.ctx.fillText(glyph, x, y);
+    drawGlyph(frame, glyph, x, y);
   }
 }
 

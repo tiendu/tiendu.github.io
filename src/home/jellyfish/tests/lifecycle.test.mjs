@@ -65,11 +65,12 @@ function harness(t, { available = true, reduced = false, width = 390, height = 5
   const motion = new EventTarget();
   motion.matches = reduced;
   const frames = new Map();
-  let next = 0, resize, disconnected = false;
+  let next = 0, resize, disconnected = false, clock = 0;
   const draws = [];
   const globals = {
     HTMLElement: Element, HTMLCanvasElement: Canvas, document: doc,
     window: host, visualViewport: viewport, devicePixelRatio: 3,
+    performance: { now: () => clock },
     matchMedia: query => query.includes("reduced-motion") ? motion : { matches: true },
     requestAnimationFrame: fn => { frames.set(++next, fn); return next; },
     cancelAnimationFrame: id => frames.delete(id),
@@ -92,6 +93,13 @@ function harness(t, { available = true, reduced = false, width = 390, height = 5
   });
   dispose = mountJellyfish();
   return { doc, canvas, fallback, motion, frames, draws, dispose,
+    advance(ms) {
+      assert.equal(frames.size, 1);
+      const [id, callback] = frames.entries().next().value;
+      frames.delete(id);
+      clock += ms;
+      callback(clock);
+    },
     resize(w, h) { width = w; height = h; resize(); },
     zoom(scale) { viewport.scale = scale; viewport.dispatchEvent(new Event("resize")); },
     visible(value) { doc.hidden = !value; doc.dispatchEvent(new Event("visibilitychange")); },
@@ -177,4 +185,21 @@ test("zoom preserves the running frame loop and listeners are removed on disposa
   assert.equal(h.canvas.width, 390 * 4);
   assert.equal(h.frames.size, 0);
   assert.ok(!h.canvas.hasAttribute("data-water-zoomed"));
+});
+
+
+test("sustained slow frames reduce backing resolution without restarting the world", t => {
+  const h = harness(t);
+  for (let i = 0; i < 20; i++) h.advance(100);
+  assert.equal(h.canvas.width, 390 * 3);
+  h.advance(100);
+  assert.equal(h.canvas.width, Math.floor(390 * 2.75));
+  assert.equal(h.canvas.style.width, "390px");
+  assert.equal(h.frames.size, 1);
+  assert.ok(Math.abs(h.draws.at(-1) - 1.05) < 1e-9);
+  h.visible(false);
+  assert.equal(h.frames.size, 0);
+  h.visible(true);
+  assert.equal(h.frames.size, 1);
+  assert.equal(h.canvas.width, Math.floor(390 * 2.75));
 });

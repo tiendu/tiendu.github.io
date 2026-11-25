@@ -70,12 +70,12 @@ export class Bioluminescence {
     }
   }
 
-  at(u, v) {
+  at(u, v, wave = this.flashAt(u, v)) {
     // Muscle-associated glow is an artistic interpretation; the mechanical
     // disturbance wave is independent and propagates in material coordinates.
     const margin = Math.exp(-(((v + 0.075) / 0.19) ** 2));
     const squeeze = this.contraction * margin * 0.42;
-    return clamp(squeeze + this.flashAt(u, v), 0, 1);
+    return clamp(squeeze + wave, 0, 1);
   }
 
   flashAt(u, v) {

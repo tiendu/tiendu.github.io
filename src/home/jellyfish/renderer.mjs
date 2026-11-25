@@ -1,6 +1,7 @@
 import { drawBell, drawEmbeddedRoots } from "./bell.mjs";
 import { bellOcclusionContour, visibleAttachmentFor } from "./geometry.mjs";
 import { setFont } from "./glyphs.mjs";
+import { GlyphAtlas, drawGlyph, glyphModeFor } from "./glyph-atlas.mjs";
 import { buildOcclusionSpans, projectedBellPoint, trailOcclusionFor } from "./occlusion.mjs";
 import { keepTrailDirection, MAX_VISUAL_TILT } from "./orientation.mjs";
 import { clamp } from "./math.mjs";
@@ -19,15 +20,23 @@ export class AsciiRenderer {
     this.fontSize = 5.4;
     this.compact = false;
     this.shadowScale = 1;
+    const doc = canvas.ownerDocument;
+    this.glyphMode = glyphModeFor();
+    this.atlas = this.glyphMode === "atlas" && this.ctx?.drawImage && doc?.createElement
+      ? new GlyphAtlas(() => doc.createElement("canvas")) : null;
+    this.fonts = doc?.fonts;
+    this.onFontLoad = () => this.atlas?.clear();
+    if (this.atlas) this.fonts?.addEventListener?.("loadingdone", this.onFontLoad);
   }
 
-  resize(width, height) {
+  resize(width, height, ratio = canvasPixelRatio(width, height)) {
     this.width = Math.max(1, width);
     this.height = Math.max(1, height);
-    this.dpr = canvasPixelRatio(this.width, this.height);
+    this.dpr = ratio;
+    this.atlas?.reset(ratio);
     const compact = this.width < 620 || this.height < 500;
     this.compact = compact;
-    this.shadowScale = compact ? 0.45 : 1;
+    this.shadowScale = this.glyphMode === "shadow" ? (compact ? 0.45 : 1) : 0;
     this.cellW = 3.18;
     this.cellH = 5.48;
     this.fontSize = this.cellH * 0.98;
@@ -39,6 +48,11 @@ export class AsciiRenderer {
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
     setFont(this.ctx, this.fontSize);
+  }
+
+  dispose() {
+    this.fonts?.removeEventListener?.("loadingdone", this.onFontLoad);
+    this.atlas?.clear();
   }
 
   #background(jelly) {
@@ -72,7 +86,7 @@ export class AsciiRenderer {
     for (const p of snow.items) {
       ctx.globalAlpha = p.alpha;
       ctx.fillStyle = p.depth > 0.72 ? "#a8a9c2" : "#626a7d";
-      ctx.fillText(p.glyph, p.x, p.y);
+      drawGlyph(this, p.glyph, p.x, p.y, false);
     }
     ctx.restore();
   }
@@ -93,6 +107,8 @@ export class AsciiRenderer {
   render({ time, jelly, snow, orientation }) {
     const ctx = this.ctx;
     if (!jelly) return;
+    // Native glyph colors carry the fluorescence without per-glyph shadow work.
+    this.shadowScale = this.glyphMode === "shadow" ? (this.compact ? 0.45 : 1) : 0;
     ctx.save();
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.textAlign = "center";

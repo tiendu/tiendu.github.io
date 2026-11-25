@@ -3,6 +3,7 @@ import { AsciiRenderer } from "./renderer.mjs";
 import { JellyWorld } from "./world.mjs";
 import { bindWaterInput } from "./water-input.mjs";
 import { canvasPixelRatio } from "./render-quality.mjs";
+import { AdaptiveResolution, PerformanceWindow, createPerformanceOverlay } from "./performance.mjs";
 
 function seedFromSession() {
   try {
@@ -55,6 +56,9 @@ export function mountJellyfish() {
   let running = false;
   let measurable = false;
   let contextLost = false;
+  const quality = new AdaptiveResolution();
+  const stats = new PerformanceWindow();
+  const overlay = createPerformanceOverlay(root);
 
   const draw = () => {
     renderer.render(world);
@@ -77,8 +81,8 @@ export function mountJellyfish() {
     const sameSize = world && Math.abs(nextWidth - width) < 1
       && Math.abs(nextHeight - height) < 1;
     if (sameSize) {
-      if (renderer.dpr !== canvasPixelRatio(width, height)) {
-        renderer.resize(width, height);
+      if (renderer.dpr !== quality.ratio(width, height)) {
+        renderer.resize(width, height, quality.ratio(width, height));
         draw();
         lastRender = performance.now();
       }
@@ -87,7 +91,7 @@ export function mountJellyfish() {
     }
     width = nextWidth;
     height = nextHeight;
-    renderer.resize(width, height);
+    renderer.resize(width, height, quality.ratio(width, height));
     if (!world) {
       // Keep the session specimen, but enter the ocean at a new time on each load.
       world = new JellyWorld(width, height, seedFromSession(), Math.random() * 3600);
@@ -124,21 +128,37 @@ export function mountJellyfish() {
     last = now;
     accumulator += elapsed;
 
+    const physicsStart = performance.now();
+    let steps = 0;
     while (accumulator >= SIMULATION.fixedStep) {
       world.step(SIMULATION.fixedStep);
       accumulator -= SIMULATION.fixedStep;
+      steps++;
     }
-
-    const deadline = nextRenderTime(now, lastRender, renderFpsFor(width, height));
+    const physicsMs = performance.now() - physicsStart;
+    const target = renderFpsFor(width, height);
+    const deadline = nextRenderTime(now, lastRender, target);
+    let renderMs = 0;
     if (deadline !== null) {
+      const renderStart = performance.now();
+      const ratio = quality.ratio(width, height);
+      if (renderer.dpr !== ratio) renderer.resize(width, height, ratio);
       draw();
+      renderMs = performance.now() - renderStart;
       lastRender = deadline;
+    }
+    const sample = stats.record(now, steps, physicsMs, deadline !== null, renderMs);
+    if (sample) {
+      overlay?.update(sample, target, renderer.dpr, renderer.atlas, renderer.glyphMode);
+      quality.observe(sample, target, renderer.dpr, canvasPixelRatio(width, height));
     }
     frame = requestAnimationFrame(tick);
   };
 
   const stop = () => {
     running = false;
+    quality.resetStreak();
+    overlay?.pause();
     waterInput.reset();
     cancelAnimationFrame(frame);
   };
@@ -154,8 +174,11 @@ export function mountJellyfish() {
     last = performance.now();
     accumulator = 0;
     lastRender = last;
+    stats.reset(last);
+    quality.resetStreak();
     if (reduced.matches) {
       drawReduced();
+      overlay?.pause();
       running = false;
       return;
     }
@@ -177,7 +200,7 @@ export function mountJellyfish() {
   const onContextRestored = () => {
     contextLost = false;
     measurable = false;
-    if (world) renderer.resize(width, height);
+    if (world) renderer.resize(width, height, quality.ratio(width, height));
     measure();
   };
 
@@ -197,6 +220,8 @@ export function mountJellyfish() {
     resizeObserver.disconnect();
     viewport?.removeEventListener("resize", measure);
     waterInput.dispose();
+    overlay?.dispose();
+    renderer.dispose();
     canvas.removeEventListener("contextlost", onContextLost);
     canvas.removeEventListener("contextrestored", onContextRestored);
     document.removeEventListener("visibilitychange", onVisibility);
