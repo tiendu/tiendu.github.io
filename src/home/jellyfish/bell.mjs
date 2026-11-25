@@ -17,7 +17,17 @@ export function marginalPigmentAt(u, gap, pulse = 0, phase = 0) {
   const mottling = 0.5 + 0.5 * Math.sin(u * 18.7 + gap * 38 + phase
     + Math.sin(u * 7.1 - gap * 22) * 0.9);
   const broken = 0.5 + 0.5 * Math.cos(u * 33.1 - gap * 51 + phase * 1.6);
-  return side * fadeIn * fadeOut * (0.24 + mottling * 0.49 + broken * 0.22);
+  return side * fadeIn * fadeOut * (0.26 + mottling * 0.49 + broken * 0.22);
+}
+
+// Aperiodic tissue grain in anatomical coordinates. Avoid long aligned bands
+// without introducing screen-space or per-frame random noise.
+export function membraneGrainAt(u, v, phase = 0) {
+  const a = Math.sin(u * 83.1 + v * 117.7 + phase
+    + Math.sin(u * 39.7 - v * 29.3) * 1.6);
+  const b = Math.cos(u * 131.9 - v * 73.3 - phase * 0.7
+    + Math.sin(v * 61.1 + u * 17.3) * 1.2);
+  return 0.5 + 0.5 * a * b;
 }
 
 function internalPigmentAt(u, v, phase) {
@@ -177,10 +187,11 @@ export function drawBell(frame, jelly, time) {
         + membraneDepth * 0.215
         + crownGlow * 0.19
         + centerGlass * 0.045
-        + grainA * 0.070
+        + grainA * 0.055
+        + membraneGrainAt(u, v, jelly.anatomyPhase) * 0.030
         + pulseGlow * 0.050
         + internal * 0.055
-        + pigment * 0.23,
+        + pigment * 0.27,
         0.020,
         0.83,
       );
@@ -190,17 +201,17 @@ export function drawBell(frame, jelly, time) {
       const edgeOpacity = sideOpacity * lipOpacity;
       const poreThreshold = clamp(bellPoreThresholdAt(v, tissueDensity, crownGlow)
         + pigment * 0.26, 0, 0.82) * lerp(0.48, 1, edgeOpacity);
-      // Break up the aligned lattice texture near the margin without adding a line.
-      const marginGrain = 0.5 + 0.5 * Math.sin(u * 87.3 + v * 113.1 + jelly.anatomyPhase)
-        * Math.cos(u * 57.7 - v * 91.3 + jelly.anatomyPhase * 0.7);
-      if (lerp(grainB, marginGrain, smoothstep(pigment * 2)) > poreThreshold) continue;
+      // Break up brick-like repetition throughout the bell, while leaving
+      // pores and highlights fixed to the moving anatomical coordinates.
+      const fineGrain = membraneGrainAt(u, v, jelly.anatomyPhase);
+      if (lerp(grainB, fineGrain, 0.62 + 0.26 * pigment) > poreThreshold) continue;
 
       let color;
       const materialOpacity = lerp(1.08, 0.70, lowerGlass);
       const pulseLight = 1 + jelly.pulse * (1 - lowerGlass) * 0.06;
       const alpha =
         (0.29 + tissueDensity * 0.49)
-        * (frame.compact ? 1.12 : 1.03)
+        * (frame.compact ? 1.43 : 1.29)
         * materialOpacity
         * pulseLight;
 
@@ -213,9 +224,9 @@ export function drawBell(frame, jelly, time) {
       } else if (coolZone > 0.42) {
         // The pigment changes the same glyphs as the rest of the membrane.
         // No extra rim strokes, filled ellipses or overlaid bands.
-        const coral = clamp(0.12 + internal * 0.16 + pigment * 0.85, 0, 0.88);
+        const coral = clamp(0.12 + internal * 0.16 + pigment * 0.96, 0, 0.90);
         color = mixColor(jelly.palette.bellCool, jelly.palette.bellCoral,
-          coral, alpha + pigment * 0.23);
+          coral, alpha + pigment * 0.28);
       } else {
         color = mixColor(jelly.palette.bellShadow, jelly.palette.bellSoft,
           0.40 + centerGlass * 0.30 + internal * 0.08, alpha);

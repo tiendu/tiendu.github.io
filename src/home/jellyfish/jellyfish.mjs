@@ -3,6 +3,7 @@ import { fluidSensitivityFor, oralArmBillowAt } from "./fluid.mjs";
 import { clamp, invLerp, lerp, mulberry32, range, rotate, smoothstep, TAU } from "./math.mjs";
 import { pulseEnvelope, pulseVelocity } from "./pulse.mjs";
 import { VerletChain } from "./physics.mjs";
+import { EXTRA_TENTACLE_OFFSETS, TENTACLE_COUNT, tentacleLengthFor, tentaclePlanAt } from "./tentacles.mjs";
 
 export function heroSizeFor(width, height) {
   if (height < 420) {
@@ -59,7 +60,7 @@ export class Jellyfish {
     this.anatomyPhase = range(random, 0, TAU);
     this.palette = JELLY_PALETTE;
     this.chains = [];
-    this.#buildChains();
+    this.#buildChains(height);
   }
 
   bellWidth() {
@@ -111,14 +112,23 @@ export class Jellyfish {
     };
   }
 
-  #addChain({ arm, offset, index, layer, branch = false }) {
+  #addChain({ arm, offset, index, layer, branch = false, tentacleIndex = 0, height }) {
     const random = this.random;
-    const segments = arm
+    let segments = arm
       ? Math.round(range(random, 30, 43))
       : Math.round(range(random, 50, 76));
-    const segmentLength = (arm
+    let segmentLength = (arm
       ? range(random, 4.6, 6.1)
       : range(random, 4.35, 5.55)) * this.anatomyScale;
+    // Reuse the existing two random draws, so the original oral-arm seeds
+    // and shape parameters stay unchanged.
+    const plan = arm ? null : tentaclePlanAt(tentacleIndex, (segments - 50) / 26,
+      (segmentLength / this.anatomyScale - 4.35) / 1.20);
+    if (plan) {
+      segments = plan.segments;
+      segmentLength = tentacleLengthFor(this.baseSize, this.aspect, height,
+        this.homeY, plan.ratio) / segments;
+    }
     const armLengthBias = arm
       ? smoothstep(invLerp(
           this.baseSize * 0.58,
@@ -200,12 +210,19 @@ export class Jellyfish {
       edgePhaseRight: arm ? range(random, 0, TAU) : 0,
       branches: [],
     };
+    if (plan) {
+      item.tentacleTier = plan.tier;
+      item.tentacleRatio = plan.ratio;
+      item.bright *= plan.brightness;
+      // Extra-long filaments are delicate, but still follow current changes.
+      item.forceScale *= plan.response;
+    }
     this.chains.push(item);
     if (arm && branch) item.branches.push(this.#makeBranch(item, index));
     return item;
   }
 
-  #buildChains() {
+  #buildChains(height) {
     const random = this.random;
     const tentacleCount = 15 + Math.floor(random() * 2);
     const armCount = 7;
@@ -218,7 +235,7 @@ export class Jellyfish {
       const patternIndex = Math.min(TENTACLE_PATTERN.length - 1, i + start);
       const offset = TENTACLE_PATTERN[patternIndex] + range(random, -0.018, 0.018);
       const layer = DEPTH_PATTERN[i % DEPTH_PATTERN.length] + range(random, -0.10, 0.10);
-      this.#addChain({ arm: false, offset, index: index++, layer });
+      this.#addChain({ arm: false, offset, index: index++, layer, tentacleIndex: i, height });
     }
 
     // Oral-arm roots are intentionally not a fan. The uneven placement and
@@ -229,6 +246,15 @@ export class Jellyfish {
       const offset = armOffsets[i] + range(random, -0.018, 0.018);
       const layer = [-0.42, 0.74, -0.08, 0.96, 0.18, -0.62, 0.52][i];
       this.#addChain({ arm: true, offset, index: index++, layer, branch: branchingArms.has(i) });
+    }
+
+    // Add the wisps after the original seven arms so their seeded morphology
+    // is unaffected by the additional random draws.
+    for (let i = tentacleCount; i < TENTACLE_COUNT; i += 1) {
+      const extra = i - tentacleCount;
+      const offset = EXTRA_TENTACLE_OFFSETS[extra] + range(random, -0.012, 0.012);
+      const layer = [-0.64, 0.12, -0.34, 0.52, -0.82, 0.30, -0.15, 0.68, -0.48][extra];
+      this.#addChain({ arm: false, offset, index: index++, layer, tentacleIndex: i, height });
     }
   }
 
@@ -271,6 +297,17 @@ export class Jellyfish {
       }
       this.baseSize *= factor;
       this.anatomyScale = clamp(this.baseSize / 250, 0.30, 1.28);
+    }
+    // Restore the viewport-specific length budget after a resize, scaling
+    // current and previous positions together rather than recreating chains.
+    for (const item of this.chains) {
+      if (item.arm) continue;
+      const { chain } = item;
+      const length = (chain.count - 1) * chain.segmentLength;
+      const desired = tentacleLengthFor(this.baseSize, this.aspect, height,
+        this.homeY, item.tentacleRatio);
+      const scale = desired / length;
+      if (Math.abs(scale - 1) > 0.005) chain.scaleAround(chain.x[0], chain.y[0], scale);
     }
   }
 

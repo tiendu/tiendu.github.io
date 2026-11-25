@@ -60,7 +60,8 @@ export function drawTentacle(frame, occlusion, jelly, item, opacity = 1) {
     const distance = Math.hypot(dx, dy) || 1;
     const along = i / Math.max(1, chain.count - 2);
     const samples = Math.max(1, Math.ceil(distance / (frame.cellH * 0.48)));
-    const tipFade = 1 - smoothstep(invLerp(0.84, 1, along));
+    const fadeStart = item.tentacleTier === "extra" ? 0.70 : item.tentacleTier === "long" ? 0.79 : 0.84;
+    const tipFade = 1 - smoothstep(invLerp(fadeStart, 1, along));
     const rootFade = rootEmergenceScale(item, along);
     const alpha = baseAlpha * lerp(1, 0.34, along) * tipFade * rootFade * tissuePresence(item, along);
     if (alpha < 0.010) continue;

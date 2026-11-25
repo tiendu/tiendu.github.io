@@ -3,7 +3,7 @@ import { bellOcclusionContour, visibleAttachmentFor } from "./geometry.mjs";
 import { setFont } from "./glyphs.mjs";
 import { buildOcclusionSpans, projectedBellPoint, trailOcclusionFor } from "./occlusion.mjs";
 import { keepTrailDirection, MAX_VISUAL_TILT } from "./orientation.mjs";
-import { clamp, rotate, TAU } from "./math.mjs";
+import { clamp } from "./math.mjs";
 import { drawRibbon, drawTentacle } from "./tissue.mjs";
 
 export class AsciiRenderer {
@@ -40,7 +40,7 @@ export class AsciiRenderer {
     setFont(this.ctx, this.fontSize);
   }
 
-  #background(jelly, time) {
+  #background(jelly) {
     const ctx = this.ctx;
     ctx.fillStyle = "#000204";
     ctx.fillRect(0, 0, this.width, this.height);
@@ -61,24 +61,6 @@ export class AsciiRenderer {
     glow.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, this.width, this.height);
-
-    ctx.save();
-    ctx.globalAlpha = 0.010 + (Math.sin(time * 0.19) * 0.5 + 0.5) * 0.007;
-    ctx.fillStyle = "#ff659b";
-    ctx.beginPath();
-    const visualTilt = jelly.tilt + this.extraTilt;
-    const halo = rotate(0, -jelly.bellHeight() * 0.37, visualTilt);
-    ctx.ellipse(
-      jelly.x + halo.x,
-      jelly.y + halo.y,
-      jelly.bellWidth() * 0.49,
-      jelly.bellHeight() * 0.63,
-      visualTilt,
-      0,
-      TAU,
-    );
-    ctx.fill();
-    ctx.restore();
   }
 
   #drawSnow(snow) {
@@ -117,7 +99,7 @@ export class AsciiRenderer {
     setFont(this.ctx, this.fontSize);
     const visualTilt = clamp(orientation?.tilt ?? jelly.tilt, -MAX_VISUAL_TILT, MAX_VISUAL_TILT);
     this.extraTilt = visualTilt - jelly.tilt;
-    this.#background(jelly, time);
+    this.#background(jelly);
     this.#drawSnow(snow);
     // Bell, skirt and embedded roots share the visible attitude. External
     // appendages keep their fluid direction via root-relative compensation.

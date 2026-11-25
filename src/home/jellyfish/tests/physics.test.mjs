@@ -104,7 +104,10 @@ test("world contains one detailed specimen with long tentacles and ribbon oral a
   const tentacles = jelly.chains.filter((item) => !item.arm);
   const arms = jelly.chains.filter((item) => item.arm);
   assert.ok(jelly.bellWidth() > 220, `bell width ${jelly.bellWidth()}`);
-  assert.ok(tentacles.length >= 14, `tentacles ${tentacles.length}`);
+  assert.equal(tentacles.length, 24);
+  for (const [tier, count] of Object.entries({ short: 6, medium: 8, long: 7, extra: 3 })) {
+    assert.equal(tentacles.filter(item => item.tentacleTier === tier).length, count);
+  }
   assert.equal(arms.length, 7);
   assert.ok(Math.max(...tentacles.map((item) => item.chain.count)) >= 50);
   assert.ok(Math.max(...arms.map((item) => item.chain.count)) >= 30);
