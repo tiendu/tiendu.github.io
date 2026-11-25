@@ -143,6 +143,64 @@ export function skirtMembraneAt(u, pulse = 0, phase = 0, time = 0, tilt = 0) {
   };
 }
 
+// The skirt, visible anchors and occlusion contour use the same membrane.
+export function skirtRimAt(jelly, u, time) {
+  const membrane = skirtMembraneAt(u, jelly.pulse, jelly.anatomyPhase, time, jelly.tilt);
+  return bellRimAt(u, jelly.pulse, jelly.twist)
+    + skirtLobeAt(u, jelly.anatomyPhase).drop + membrane.offset;
+}
+
+function bellPoint(jelly, u, v) {
+  const halfW = jelly.bellWidth() * 0.5;
+  const local = rotate(u * halfW + bellCenterShift(v, jelly.anatomyPhase, halfW),
+    v * jelly.bellHeight(), jelly.tilt);
+  return { x: jelly.x + local.x, y: jelly.y + local.y };
+}
+
+// Only the drawn origin moves. The same translation is applied to the whole
+// trail (including branches and masks), so no chain is stretched or bent.
+export function visibleAttachmentFor(jelly, item, yaw, time) {
+  const projection = appendageProjectionFor(jelly, item, yaw);
+  const root = { x: item.chain.x[0], y: item.chain.y[0] };
+  const local = rotate(root.x + projection.x - jelly.x,
+    root.y + projection.y - jelly.y, -jelly.tilt);
+  const halfW = jelly.bellWidth() * 0.5;
+  const u = item.arm
+    ? clamp(local.x / halfW * 0.78, -0.29, 0.29)
+    : clamp(local.x / halfW * 0.92, -0.76, 0.76);
+  const rim = skirtRimAt(jelly, u, time);
+  // Marginal tentacles begin just inside the membrane; oral arms emerge
+  // in the central subumbrella rather than from the outer rim.
+  const v = rim + (item.arm ? 0.035 : -0.018);
+  const point = bellPoint(jelly, u, v);
+  return { ...projection, x: point.x - root.x, y: point.y - root.y,
+    rootX: point.x, rootY: point.y, u, v };
+}
+
+// A continuous anatomical contour ignores the decorative holes in the ASCII
+// membrane. Only the faint embedded-root pass may draw inside it.
+export function bellOcclusionContour(jelly, time) {
+  const points = [];
+  for (const side of [1, -1]) {
+    const edge = [];
+    for (let i = 0; i <= 64; i += 1) {
+      const v = lerp(-1.09, -0.026, i / 64);
+      edge.push(bellPoint(jelly, side * bellProfileAt(v, jelly.pulse, jelly.anatomyPhase), v));
+    }
+    edge.push(bellPoint(jelly, side * 0.90, -0.026));
+    if (side === 1) {
+      points.push(...edge);
+      for (let i = 0; i <= 90; i += 1) {
+        const u = lerp(0.90, -0.90, i / 90);
+        points.push(bellPoint(jelly, u, Math.max(-0.026, skirtRimAt(jelly, u, time))));
+      }
+    } else {
+      points.push(...edge.reverse());
+    }
+  }
+  return points;
+}
+
 export function tentaclePresenceScale(item) {
   if (item.arm) return 1;
   const outer = smoothstep(invLerp(0.58, 0.94, Math.abs(item.offset ?? 0)));
@@ -333,7 +391,7 @@ export class AsciiRenderer {
   }
 
   #drawProjectedItem(jelly, item, opacity, time) {
-    const projection = appendageProjectionFor(jelly, item, this.yaw);
+    const projection = visibleAttachmentFor(jelly, item, this.yaw, time);
     const ctx = this.ctx;
     ctx.save();
     ctx.translate(projection.x, projection.y);
@@ -608,7 +666,20 @@ export class AsciiRenderer {
     }
   }
 
-  #drawEmbeddedRoots(jelly, items) {
+  #clipOutsideBell(jelly, time) {
+    const ctx = this.ctx;
+    const contour = bellOcclusionContour(jelly, time);
+    // A generous outer rectangle keeps the whole stage drawable after yaw.
+    const extent = Math.max(this.width, this.height) * 4 + jelly.baseSize * 4;
+    ctx.beginPath();
+    ctx.rect(jelly.x - extent, jelly.y - extent, extent * 2, extent * 2);
+    ctx.moveTo(contour[0].x, contour[0].y);
+    for (const point of contour.slice(1)) ctx.lineTo(point.x, point.y);
+    ctx.closePath();
+    ctx.clip("evenodd");
+  }
+
+  #drawEmbeddedRoots(jelly, items, time) {
     const ctx = this.ctx;
     const width = jelly.bellWidth();
     const height = jelly.bellHeight();
@@ -618,14 +689,11 @@ export class AsciiRenderer {
 
     for (const item of items) {
       if ((item.layer ?? 0) >= 0.45 || !item.chain || item.chain.count < 2) continue;
-      const projection = appendageProjectionFor(jelly, item, this.yaw);
-      ctx.save();
-      ctx.translate(projection.x, projection.y);
-
-      const rootX = item.chain.x[0];
-      const rootY = item.chain.y[0];
+      const projection = visibleAttachmentFor(jelly, item, this.yaw, time);
+      const rootX = projection.rootX;
+      const rootY = projection.rootY;
       const targetLocal = {
-        x: (item.offset ?? 0) * width * (item.arm ? 0.30 : 0.33),
+        x: projection.u * halfW * (item.arm ? 0.65 : 0.78),
         y: -height * (item.arm ? 0.30 : 0.19),
       };
       const target = rotate(targetLocal.x, targetLocal.y, jelly.tilt);
@@ -647,7 +715,8 @@ export class AsciiRenderer {
         const u = (raw.x - shift) / halfW;
         const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
         const opacity = internalRootOpacityAt(item, v) * projection.light;
-        if (!(profile > 0 && Math.abs(u) < profile * 0.92 && opacity > 0.004)) {
+        if (!(profile > 0 && Math.abs(u) < profile * 0.92
+          && v <= skirtRimAt(jelly, u, time) && opacity > 0.004)) {
           previous = null;
           continue;
         }
@@ -672,7 +741,6 @@ export class AsciiRenderer {
         }
         previous = { x, y };
       }
-      ctx.restore();
     }
 
     this.#setFont(this.fontSize);
@@ -717,7 +785,7 @@ export class AsciiRenderer {
         const u = (raw.x - shift) / halfW;
         const absU = Math.abs(u);
         const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
-        const rimV = bellRimAt(u, jelly.pulse, jelly.twist) + skirtLobeAt(u, jelly.anatomyPhase).drop;
+        const rimV = skirtRimAt(jelly, u, time);
         const insideDome = v <= 0.020 && profile > 0 && absU <= profile;
         const insideSkirt = absU <= 0.90 && v > -0.026 && v <= rimV;
         if (!insideDome && !insideSkirt) continue;
@@ -926,17 +994,9 @@ export class AsciiRenderer {
       if (!membrane.visible) continue;
 
       const lobe = skirtLobeAt(u, jelly.anatomyPhase);
-      const rim = bellRimAt(u, jelly.pulse, jelly.twist) + membrane.offset + lobe.drop;
+      const rim = skirtRimAt(jelly, u, time);
       const nextU = clamp(u + 0.010, -0.89, 0.89);
-      const nextMembrane = skirtMembraneAt(
-        nextU,
-        jelly.pulse,
-        jelly.anatomyPhase,
-        time,
-        jelly.tilt,
-      );
-      const nextRim = bellRimAt(nextU, jelly.pulse, jelly.twist) + nextMembrane.offset
-        + skirtLobeAt(nextU, jelly.anatomyPhase).drop;
+      const nextRim = skirtRimAt(jelly, nextU, time);
       const dy = nextRim - rim;
       const shift = bellCenterShift(rim, jelly.anatomyPhase, halfW);
       const local = rotate(u * halfW + shift, rim * height, jelly.tilt);
@@ -1061,26 +1121,31 @@ export class AsciiRenderer {
     const front = jelly.chains.filter((item) => item.layer >= 0.45).sort(byDepth);
 
     // Rear anatomy disappears under the bell exactly as it would in a photo.
+    ctx.save();
+    this.#clipOutsideBell(jelly, time);
     for (const item of back) {
       this.#drawProjectedItem(jelly, item, item.arm ? 0.76 : 0.70, time);
     }
+    ctx.restore();
 
     // A faint continuation of rear/mid anatomy is drawn before the bell so
     // membrane glyphs naturally sit on top of it. This visually connects roots
     // to the subumbrella without changing any physics anchors.
-    this.#drawEmbeddedRoots(jelly, [...back, ...middle]);
+    this.#drawEmbeddedRoots(jelly, [...back, ...middle], time);
     this.#drawBell(jelly, time);
 
     // Mid and foreground layers are progressively brighter. Foreground ribbons
     // lay a small dark mask before their ASCII, producing real occlusion of
     // strands behind them without painting any visible non-ASCII surface.
+    ctx.save();
+    this.#clipOutsideBell(jelly, time);
     for (const item of middle) {
       this.#drawProjectedItem(jelly, item, item.arm ? 0.90 : 0.86, time);
     }
     for (const item of front) {
       this.#drawProjectedItem(jelly, item, item.arm ? 1 : 0.98, time);
     }
-
+    ctx.restore();
     ctx.restore();
   }
 
