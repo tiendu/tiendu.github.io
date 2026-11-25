@@ -25,6 +25,19 @@ export function mixColor(a, b, t, alpha = 1) {
   return `rgba(${Math.round(lerp(ca.r, cb.r, k))}, ${Math.round(lerp(ca.g, cb.g, k))}, ${Math.round(lerp(ca.b, cb.b, k))}, ${clamp(alpha, 0, 1)})`;
 }
 
+// Continuous glass / rose / crown blend. Cache only static palette entries;
+// creating intermediate hex colours would grow rgbCache on every frame.
+export function mixMembraneColor(palette, glassLight, coral, warmth, crown, alpha) {
+  const cool = rgb(palette.bellCool), soft = rgb(palette.bellSoft);
+  const glass = rgb(palette.bellGlass), rose = rgb(palette.bellCoral);
+  const hot = rgb(palette.bellCrown);
+  const channel = key => Math.round(lerp(
+    lerp(lerp(cool[key], soft[key], glassLight), lerp(glass[key], rose[key], coral), warmth),
+    hot[key], crown,
+  ));
+  return `rgba(${channel("r")}, ${channel("g")}, ${channel("b")}, ${clamp(alpha, 0, 1)})`;
+}
+
 export function directionGlyph(dx, dy, table = ASCII.edge) {
   const ax = Math.abs(dx);
   const ay = Math.abs(dy);

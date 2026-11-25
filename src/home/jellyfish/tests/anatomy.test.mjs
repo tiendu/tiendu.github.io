@@ -1,14 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { drawBell, marginalPigmentAt } from "../bell.mjs";
+import { drawBell, marginalPigmentAt, membraneSampleAt, membraneGlyphAt } from "../bell.mjs";
 import { JELLY_PALETTE } from "../config.mjs";
-import { bellCenterShift, bellGridScaleFor, skirtRimAt } from "../geometry.mjs";
+import { bellCenterShift, skirtRimAt } from "../geometry.mjs";
+import { rgba } from "../glyphs.mjs";
 import { rotate } from "../math.mjs";
 
 function captureBell(size, pulse, phase, compact, tilt = 0) {
   const marks = [];
   const ctx = { globalAlpha: 1, fillText(glyph, x, y) {
-    marks.push({ glyph, x, y, color: this.fillStyle, alpha: this.globalAlpha });
+    marks.push({ glyph, x, y, color: this.fillStyle, alpha: this.globalAlpha, shadow: this.shadowColor, font: this.font });
   } };
   const jelly = { x: 240, y: 230, pulse, anatomyPhase: phase, twist: 1.3, tilt,
     bellWidth: () => size * 1.16 * (1 - 0.18 * pulse),
@@ -45,18 +46,14 @@ test("full bell keeps warm porous tissue inside the shared rim at multiple sizes
       for (const phase of [0, 1.2, 3.7]) {
         for (const tilt of [-0.12, 0.12]) {
           const { marks, jelly, frame } = captureBell(size, pulse, phase, compact, tilt);
-          const grid = bellGridScaleFor(compact);
-          const cellW = frame.cellW * grid.x;
-          const cellH = frame.cellH * grid.y;
-          const onGrid = (value, cell) => Math.abs(value / cell - 0.5 - Math.round(value / cell - 0.5)) < 1e-7;
-          const margin = marks.filter(mark => {
+          const membrane = marks.filter(mark => mark.shadow === rgba(JELLY_PALETTE.rim, 0.18));
+          const margin = membrane.filter(mark => {
             const local = rotate(mark.x - jelly.x, mark.y - jelly.y, -tilt);
             const v = local.y / jelly.bellHeight();
             const halfW = jelly.bellWidth() * 0.5;
             const u = (local.x - bellCenterShift(v, phase, halfW)) / halfW;
             const gap = skirtRimAt(jelly, u, 20) - v;
-            return onGrid(mark.x, cellW) && onGrid(mark.y, cellH)
-              && Math.abs(u) < 0.70 && gap >= 0 && gap < 0.16;
+            return Math.abs(u) < 0.70 && gap >= 0 && gap < 0.16;
           });
           const warm = margin.filter(mark => {
             const [r, , b] = mark.color.match(/[\d.]+/g).map(Number);
@@ -71,4 +68,39 @@ test("full bell keeps warm porous tissue inside the shared rim at multiple sizes
       }
     }
   }
+});
+
+
+test("material samples are deterministic, jittered within cells and use fine glyphs", () => {
+  const samples = [];
+  for (let row = -12; row < 0; row += 1) {
+    for (let col = -12; col < 12; col += 1) {
+      const a = membraneSampleAt(col, row, 1.2);
+      assert.deepEqual(a, membraneSampleAt(col, row, 1.2));
+      assert.ok(a.x > col && a.x < col + 1 && a.y > row && a.y < row + 1);
+      samples.push(a);
+      for (const density of [0.12, 0.28, 0.45, 0.83]) {
+        assert.ok(".,'`:;irsovxac".includes(membraneGlyphAt(density, a.glyph)));
+      }
+    }
+  }
+  assert.ok(new Set(samples.map(a => a.y % 1)).size > 250);
+  assert.notDeepEqual(membraneSampleAt(1, 2, 1.2), membraneSampleAt(1, 2, 2.3));
+});
+
+test("bell marks retain material coordinates through contraction and tilt", () => {
+  const coordinates = (pulse, tilt) => {
+    const { marks, jelly } = captureBell(190, pulse, 1.2, true, tilt);
+    return new Set(marks.filter(mark => mark.shadow === rgba(JELLY_PALETTE.rim, 0.18))
+      .map(mark => {
+        const local = rotate(mark.x - jelly.x, mark.y - jelly.y, -tilt);
+        const v = local.y / jelly.bellHeight();
+        const half = jelly.bellWidth() * 0.5;
+        const u = (local.x - bellCenterShift(v, 1.2, half)) / half;
+        return `${u.toFixed(7)},${v.toFixed(7)}`;
+      }));
+  };
+  const a = coordinates(0, 0), b = coordinates(1, 0.12);
+  const shared = [...a].filter(key => b.has(key)).length;
+  assert.ok(shared / Math.min(a.size, b.size) > 0.75, `shared ${shared}, ${a.size}/${b.size}`);
 });

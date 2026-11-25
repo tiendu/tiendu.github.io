@@ -1,7 +1,7 @@
 import { ASCII } from "./config.mjs";
 import { bellCenterShift, bellGridScaleFor, bellPoreThresholdAt, bellProfileAt,
   internalRootOpacityAt, skirtRimAt } from "./geometry.mjs";
-import { densityGlyph, directionGlyph, mixColor, rgba, setFont } from "./glyphs.mjs";
+import { directionGlyph, mixColor, mixMembraneColor, rgba, setFont } from "./glyphs.mjs";
 import { clamp, invLerp, lerp, rotate, smoothstep } from "./math.mjs";
 
 // Pigment belongs to the membrane, not to separate outlined organs or blobs.
@@ -28,6 +28,31 @@ export function membraneGrainAt(u, v, phase = 0) {
   const b = Math.cos(u * 131.9 - v * 73.3 - phase * 0.7
     + Math.sin(v * 61.1 + u * 17.3) * 1.2);
   return 0.5 + 0.5 * a * b;
+}
+
+// A deterministic jittered lattice in the relaxed bell's material space.
+// Positions and glyph seeds are stable across translation, tilt and pulse.
+function grainSeed(col, row, salt) {
+  let h = Math.imul(col, 374761393) ^ Math.imul(row, 668265263) ^ salt;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+export function membraneSampleAt(col, row, phase = 0) {
+  const salt = Math.round(phase * 4096);
+  return {
+    x: col + 0.5 + (grainSeed(col, row, salt) - 0.5) * 0.78,
+    y: row + 0.5 + (grainSeed(col, row, salt ^ 0x54e31c97) - 0.5) * 0.78,
+    grain: grainSeed(col, row, salt ^ 0x6ac690c5),
+    glyph: grainSeed(col, row, salt ^ 0x28d91f37),
+  };
+}
+
+// Small marks and mixed silhouettes read as suspended granules and short
+// fibres instead of rows of equally wide blocks. No bars or solid glyphs.
+export function membraneGlyphAt(density, grain) {
+  const family = density < 0.23 ? ".,'`:i" : density < 0.38 ? ":;iirsov" : "irsovxac";
+  return family[Math.min(family.length - 1, Math.floor(clamp(grain, 0, 0.9999) * family.length))];
 }
 
 function internalPigmentAt(u, v, phase) {
@@ -124,29 +149,31 @@ export function drawBell(frame, jelly, time) {
   const halfW = width * 0.5;
 
   const bellGrid = bellGridScaleFor(frame.compact);
-  const cellW = frame.cellW * bellGrid.x;
-  const cellH = frame.cellH * bellGrid.y;
-  const bellFont = cellH * 0.97;
-  const xMin = jelly.x - halfW - cellW * 2;
-  const xMax = jelly.x + halfW + cellW * 2;
-  const tiltReach = halfW * Math.abs(Math.sin(jelly.tilt));
-  const yMin = jelly.y - height * 1.10 - cellH - tiltReach;
-  const yMax = jelly.y + height * 0.105 + cellH + tiltReach;
-  const startX = Math.floor(xMin / cellW) * cellW + cellW * 0.5;
-  const startY = Math.floor(yMin / cellH) * cellH + cellH * 0.5;
+  // Use a slightly finer lattice, but smaller marks and less shadow overlap.
+  // The reference dimensions remove the pulse-dependent scale so the same
+  // material samples move with the membrane instead of being resampled.
+  const cellW = frame.cellW * bellGrid.x * 0.88;
+  const cellH = frame.cellH * bellGrid.y * 0.86;
+  const bellFont = cellH * 0.99;
+  const relaxedHalfW = halfW / (1 - 0.18 * jelly.pulse);
+  const relaxedH = height / (1 + 0.19 * jelly.pulse);
+  const stepU = cellW / relaxedHalfW;
+  const stepV = cellH / relaxedH;
+  const colMin = Math.floor(-1 / stepU) - 1;
+  const colMax = Math.ceil(1 / stepU);
+  const rowMin = Math.floor(-1.09 / stepV) - 1;
+  const rowMax = Math.ceil(0.095 / stepV);
 
   setFont(ctx, bellFont);
-  ctx.shadowColor = rgba(jelly.palette.rim, 0.24);
-  ctx.shadowBlur = 1.0 * frame.shadowScale;
+  ctx.shadowColor = rgba(jelly.palette.rim, 0.18);
+  ctx.shadowBlur = 0.65 * frame.shadowScale;
 
-  const c = Math.cos(-jelly.tilt), s = Math.sin(-jelly.tilt);
-  for (let py = startY; py <= yMax; py += cellH) {
-    for (let px = startX; px <= xMax; px += cellW) {
-      const dx = px - jelly.x, dy = py - jelly.y;
-      const v = (dx * s + dy * c) / height;
+  for (let row = rowMin; row <= rowMax; row += 1) {
+    for (let col = colMin; col <= colMax; col += 1) {
+      const sample = membraneSampleAt(col, row, jelly.anatomyPhase);
+      const v = sample.y * stepV;
       if (v < -1.09 || v > 0.095) continue;
-      const shift = bellCenterShift(v, jelly.anatomyPhase, halfW);
-      const u = (dx * c - dy * s - shift) / halfW;
+      const u = sample.x * stepU;
       const absU = Math.abs(u);
       const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
       // One continuous envelope. Avoid a wider, detached skirt below the dome.
@@ -167,7 +194,6 @@ export function drawBell(frame, jelly, time) {
       const crownDistance = Math.hypot(u / 0.46, (v + 0.78) / 0.30);
       const crownGlow = 1 - smoothstep(invLerp(0.18, 1.04, crownDistance));
       const warmZone = 1 - smoothstep(invLerp(-0.66, -0.19, v));
-      const coolZone = smoothstep(invLerp(-0.45, 0.035, v));
       const lowerGlass = smoothstep(invLerp(-0.46, 0.025, v));
       const centerGlass = Math.max(0, 1 - Math.abs(u) / Math.max(0.17, profile))
         * (0.28 + 0.72 * Math.sin(Math.PI * clamp(t, 0, 1)));
@@ -177,8 +203,7 @@ export function drawBell(frame, jelly, time) {
 
       const grainA = 0.5 + 0.5 * Math.sin(u * 29 + v * 19 + jelly.anatomyPhase)
         * Math.cos(u * 15 - v * 35 + jelly.twist);
-      const grainB = 0.5 + 0.5 * Math.sin(u * 61 - v * 47 + jelly.twist * 0.7)
-        * Math.cos(u * 41 + v * 31 - jelly.anatomyPhase * 1.3);
+      const fineGrain = membraneGrainAt(u, v, jelly.anatomyPhase);
 
       // Keep membrane ink sparse so bright anatomy appears suspended inside
       // a transparent envelope rather than printed onto a wall.
@@ -188,7 +213,7 @@ export function drawBell(frame, jelly, time) {
         + crownGlow * 0.19
         + centerGlass * 0.045
         + grainA * 0.055
-        + membraneGrainAt(u, v, jelly.anatomyPhase) * 0.030
+        + fineGrain * 0.030
         + pulseGlow * 0.050
         + internal * 0.055
         + pigment * 0.27,
@@ -201,44 +226,35 @@ export function drawBell(frame, jelly, time) {
       const edgeOpacity = sideOpacity * lipOpacity;
       const poreThreshold = clamp(bellPoreThresholdAt(v, tissueDensity, crownGlow)
         + pigment * 0.26, 0, 0.82) * lerp(0.48, 1, edgeOpacity);
-      // Break up brick-like repetition throughout the bell, while leaving
-      // pores and highlights fixed to the moving anatomical coordinates.
-      const fineGrain = membraneGrainAt(u, v, jelly.anatomyPhase);
-      if (lerp(grainB, fineGrain, 0.62 + 0.26 * pigment) > poreThreshold) continue;
+      // Mix independent micro-pores with the broader tissue field. The lower
+      // glass stays porous, while crown highlights remain softly granular.
+      if (lerp(sample.grain, fineGrain, 0.32) > poreThreshold) continue;
 
-      let color;
       const materialOpacity = lerp(1.08, 0.70, lowerGlass);
       const pulseLight = 1 + jelly.pulse * (1 - lowerGlass) * 0.06;
       const alpha =
         (0.29 + tissueDensity * 0.49)
-        * (frame.compact ? 1.43 : 1.29)
+        * (frame.compact ? 1.62 : 1.49)
         * materialOpacity
         * pulseLight;
 
-      const glyph = densityGlyph(tissueDensity, ASCII.tissue);
-      if (crownGlow > 0.23) {
-        color = mixColor(jelly.palette.bellWarm, jelly.palette.bellCrown, 0.42 + crownGlow * 0.52, alpha + 0.13);
-      } else if (warmZone > 0.25 && coolZone < 0.58) {
-        const coral = clamp(0.22 + t * 0.40 + grainA * 0.11, 0, 0.84);
-        color = mixColor(jelly.palette.bellGlass, jelly.palette.bellCoral, coral, alpha);
-      } else if (coolZone > 0.42) {
-        // The pigment changes the same glyphs as the rest of the membrane.
-        // No extra rim strokes, filled ellipses or overlaid bands.
-        const coral = clamp(0.12 + internal * 0.16 + pigment * 0.96, 0, 0.90);
-        color = mixColor(jelly.palette.bellCool, jelly.palette.bellCoral,
-          coral, alpha + pigment * 0.28);
-      } else {
-        color = mixColor(jelly.palette.bellShadow, jelly.palette.bellSoft,
-          0.40 + centerGlass * 0.30 + internal * 0.08, alpha);
-      }
-
+      const glyph = membraneGlyphAt(tissueDensity, sample.glyph);
+      // Blend the zones continuously rather than cutting across the tissue
+      // at a hard colour boundary. The skirt remains integrated pigment.
+      const coral = clamp(0.18 + warmZone * 0.36 + internal * 0.12 + pigment * 0.88, 0, 0.94);
+      const warmth = smoothstep(clamp(warmZone * 0.9 + pigment * 1.22, 0, 1));
+      const crown = crownGlow * (0.65 + sample.glyph * 0.35);
+      const color = mixMembraneColor(jelly.palette, 0.32 + centerGlass * 0.38,
+        coral, warmth, crown * 0.88, alpha + pigment * 0.28 + crown * 0.09);
       ctx.globalAlpha = edgeOpacity;
       ctx.fillStyle = color;
-      ctx.fillText(glyph, px, py);
+      const local = rotate(u * halfW + bellCenterShift(v, jelly.anatomyPhase, halfW), v * height, jelly.tilt);
+      ctx.fillText(glyph, jelly.x + local.x, jelly.y + local.y);
     }
   }
 
   ctx.globalAlpha = 1;
+  setFont(ctx, cellH * 0.96);
   // Irregular internal canals. Each one has its own start/end, wander and
   // occasional fork so the anatomy cannot be read as evenly spaced spokes.
   ctx.shadowColor = rgba(jelly.palette.bellHot, 0.36);
@@ -304,6 +320,7 @@ export function drawBell(frame, jelly, time) {
   // It dissolves into the existing oral arms rather than ending in a line.
   ctx.shadowColor = rgba(jelly.palette.armHot, 0.14);
   ctx.shadowBlur = 0.9 * frame.shadowScale;
+  setFont(ctx, bellFont);
   const rows = Math.max(5, Math.ceil(height * 0.23 / cellH));
   for (let row = 0; row < rows; row += 1) {
     const t = row / rows;
@@ -315,9 +332,10 @@ export function drawBell(frame, jelly, time) {
         + Math.cos(x * 0.19 - row * 1.8);
       if (grain > 0.36 + center * 0.65 - t * 0.6) continue;
       const local = rotate(x + drift, height * (0.025 + t * 0.23), jelly.tilt);
-      const alpha = (0.15 + center * 0.32) * (1 - smoothstep(t));
-      ctx.fillStyle = mixColor(jelly.palette.arm, jelly.palette.bellGlass, center * 0.55, alpha);
-      ctx.fillText(densityGlyph(0.16 + center * 0.45, ASCII.ribbon), jelly.x + local.x, jelly.y + local.y);
+      const alpha = (0.14 + center * 0.29) * (1 - smoothstep(t));
+      ctx.fillStyle = mixColor(jelly.palette.arm, jelly.palette.bellGlass, center * 0.45, alpha);
+      ctx.fillText(membraneGlyphAt(0.16 + center * 0.30,
+        grainSeed(Math.round(x / cellW), row, 0x50a8f)), jelly.x + local.x, jelly.y + local.y);
     }
   }
 
