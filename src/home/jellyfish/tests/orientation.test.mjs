@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { JellyWorld } from "../world.mjs";
 import { AsciiRenderer } from "../renderer.mjs";
-import { appendageProjectionFor, bellScaleFor, MAX_VISUAL_YAW, stepVisualYaw, visualDepthFor } from "../orientation.mjs";
+import {
+  appendageProjectionFor, bellScaleFor, keepTrailDirection, MAX_VISUAL_TILT,
+  MAX_VISUAL_YAW, stepVisualTilt, stepVisualYaw, tiltTargetAt, visualDepthFor,
+} from "../orientation.mjs";
 import { ribbonMaterialAt, skirtLobeAt, tissuePresence } from "../material.mjs";
 
 function snapshot(world) {
@@ -53,7 +56,7 @@ test("visual orientation never changes the fluid simulation or its random stream
   const a = new JellyWorld(960, 620, 1234);
   const b = new JellyWorld(960, 620, 1234);
   for (let i = 0; i < 180; i += 1) {
-    b.orientation = { yaw: i % 2 ? -0.78 : 0.78, velocity: 0 };
+    b.orientation = { yaw: i % 2 ? -0.78 : 0.78, velocity: 0, tilt: i % 2 ? -0.31 : 0.31, tiltVelocity: 0 };
     if (i === 60) {
       a.resize(390, 720);
       b.resize(390, 720);
@@ -78,7 +81,7 @@ function recordingCanvas() {
   for (const name of ["setTransform", "translate", "rotate", "scale", "ellipse", "fillRect", "moveTo", "lineTo", "fillText", "beginPath", "fill", "stroke"]) {
     ctx[name] = (...args) => {
       for (const arg of args) if (typeof arg === "number") assert.ok(Number.isFinite(arg), name);
-      if (name === "translate" || name === "scale" || name === "fillText") calls.push([name, ...args]);
+      if (name === "translate" || name === "rotate" || name === "scale" || name === "fillText") calls.push([name, ...args]);
     };
   }
   return { canvas: { style: {}, getContext: () => ctx }, calls, balanced: () => depth === 0 };
@@ -92,9 +95,9 @@ test("the complete renderer turns at both viewport sizes without touching chain 
     const renderer = new AsciiRenderer(recorder.canvas);
     renderer.resize(width, height);
     const frames = [];
-    for (const yaw of [0, -0.78, 0.78]) {
+    for (const [yaw, tilt] of [[0, 0], [-0.78, 0], [0.78, 0], [0.78, -0.31], [0.78, 0.31]]) {
       recorder.calls.length = 0;
-      renderer.render({ ...world, orientation: { yaw, velocity: 0 } });
+      renderer.render({ ...world, orientation: { yaw, velocity: 0, tilt, tiltVelocity: 0 } });
       assert.ok(recorder.balanced());
       assert.ok(recorder.calls.filter(call => call[0] === "fillText").length > 100);
       frames.push(JSON.stringify(recorder.calls));
@@ -102,6 +105,8 @@ test("the complete renderer turns at both viewport sizes without touching chain 
     }
     assert.notEqual(frames[0], frames[1]);
     assert.notEqual(frames[1], frames[2]);
+    assert.notEqual(frames[2], frames[3]);
+    assert.notEqual(frames[3], frames[4]);
   }
 });
 
@@ -118,4 +123,81 @@ test("material variation leaves soft scallops, varied visibility and delicate ti
   const item = world.jelly.chains.find(item => item.arm);
   assert.ok(ribbonMaterialAt(item, 1).fray < ribbonMaterialAt(item, 0.5).fray);
   assert.ok(ribbonMaterialAt(item, 1).width < ribbonMaterialAt(item, 0).width);
+});
+
+
+test("visual lean follows current strength, retains inertia and settles in calm", () => {
+  assert.equal(Math.abs(tiltTargetAt(0)), 0);
+  assert.ok(tiltTargetAt(18) < tiltTargetAt(5));
+  assert.equal(tiltTargetAt(18), -tiltTargetAt(-18));
+  let state = { tilt: 0, tiltVelocity: 0 };
+  const advance = (flow, seconds) => {
+    for (let i = 0; i < seconds * 60; i++) {
+      const previous = state.tilt;
+      state = stepVisualTilt(state, tiltTargetAt(flow), 1 / 60);
+      assert.ok(Math.abs(state.tilt) <= MAX_VISUAL_TILT);
+      assert.ok(Math.abs(state.tilt - previous) < 0.0015);
+    }
+  };
+  advance(18, 8);
+  assert.ok(state.tilt < -0.24);
+  advance(-18, 2);
+  assert.ok(state.tilt < -0.08, "bell retains old attitude after reversal");
+  advance(-18, 10);
+  assert.ok(state.tilt > 0.24);
+  advance(0, 16);
+  assert.ok(Math.abs(state.tilt) < 0.005);
+});
+
+// Minimal affine Canvas model: the multiplication order matches Canvas 2D.
+function affineRecorder() {
+  let a = 1, b = 0, c = 0, d = 1, e = 0, f = 0;
+  return {
+    translate(x, y) { e += a * x + c * y; f += b * x + d * y; },
+    rotate(t) {
+      const cos = Math.cos(t), sin = Math.sin(t);
+      [a, b, c, d] = [a * cos + c * sin, b * cos + d * sin,
+        c * cos - a * sin, d * cos - b * sin];
+    },
+    scale(x, y) { a *= x; b *= x; c *= y; d *= y; },
+    point(x, y) { return [a * x + c * y + e, b * x + d * y + f]; },
+  };
+}
+
+test("extra lean rotates the root with the skirt but preserves the entire trail vector under yaw", () => {
+  const { jelly } = new JellyWorld(960, 620, 1234);
+  const near = (a, b) => assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) < 1e-8);
+  for (const yaw of [-0.78, 0, 0.78]) {
+    for (const extra of [-0.35, 0, 0.35]) {
+      for (const item of jelly.chains) {
+        const projection = appendageProjectionFor(jelly, item, yaw);
+        const frame = tilt => {
+          const ctx = affineRecorder();
+          ctx.translate(jelly.x, jelly.y);
+          ctx.rotate(jelly.tilt + tilt);
+          ctx.scale(bellScaleFor(yaw), 1);
+          ctx.rotate(-jelly.tilt);
+          ctx.translate(-jelly.x, -jelly.y);
+          ctx.translate(projection.x, projection.y);
+          return ctx;
+        };
+        const baseline = frame(0);
+        const tilted = frame(extra);
+        const root = [item.chain.x[0], item.chain.y[0]];
+        const skirtRoot = tilted.point(...root);
+        keepTrailDirection(tilted, jelly, item, yaw, extra);
+        near(tilted.point(...root), skirtRoot);
+        const delta = (ctx, x, y) => {
+          const p = ctx.point(x, y), r = ctx.point(...root);
+          return [p[0] - r[0], p[1] - r[1]];
+        };
+        const tail = [item.chain.x.at(-1), item.chain.y.at(-1)];
+        near(delta(tilted, ...tail), delta(baseline, ...tail));
+        for (const branch of item.branches) {
+          const end = [branch.chain.x.at(-1), branch.chain.y.at(-1)];
+          near(delta(tilted, ...end), delta(baseline, ...end));
+        }
+      }
+    }
+  }
 });

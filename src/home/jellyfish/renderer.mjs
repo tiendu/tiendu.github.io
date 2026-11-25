@@ -1,6 +1,9 @@
 import { ASCII } from "./config.mjs";
 import { ribbonSurfaceBreathAt } from "./fluid.mjs";
-import { appendageProjectionFor, bellScaleFor, bellSideLightAt, visualDepthFor } from "./orientation.mjs";
+import {
+  appendageProjectionFor, bellScaleFor, bellSideLightAt,
+  keepTrailDirection, MAX_VISUAL_TILT, visualDepthFor,
+} from "./orientation.mjs";
 import { ribbonMaterialAt, skirtLobeAt, tissuePresence } from "./material.mjs";
 import { clamp, invLerp, lerp, rotate, smoothstep, TAU } from "./math.mjs";
 
@@ -295,12 +298,14 @@ export class AsciiRenderer {
     ctx.globalAlpha = 0.010 + (Math.sin(time * 0.19) * 0.5 + 0.5) * 0.007;
     ctx.fillStyle = "#ff72c8";
     ctx.beginPath();
+    const visualTilt = jelly.tilt + this.extraTilt;
+    const halo = rotate(0, -jelly.bellHeight() * 0.37, visualTilt);
     ctx.ellipse(
-      jelly.x,
-      jelly.y - jelly.bellHeight() * 0.37,
-      jelly.bellWidth() * 0.49,
+      jelly.x + halo.x,
+      jelly.y + halo.y,
+      jelly.bellWidth() * 0.49 * bellScaleFor(this.yaw),
       jelly.bellHeight() * 0.63,
-      jelly.tilt,
+      visualTilt,
       0,
       TAU,
     );
@@ -332,6 +337,7 @@ export class AsciiRenderer {
     const ctx = this.ctx;
     ctx.save();
     ctx.translate(projection.x, projection.y);
+    keepTrailDirection(ctx, jelly, item, this.yaw, this.extraTilt);
     if (item.arm) this.#drawRibbon(jelly, item, opacity * projection.light, time, projection.width);
     else this.#drawTentacle(jelly, item, opacity * projection.light);
     ctx.restore();
@@ -1036,12 +1042,15 @@ export class AsciiRenderer {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     this.#setFont(this.fontSize);
+    this.yaw = orientation?.yaw ?? 0;
+    const visualTilt = clamp(orientation?.tilt ?? jelly.tilt, -MAX_VISUAL_TILT, MAX_VISUAL_TILT);
+    this.extraTilt = visualTilt - jelly.tilt;
     this.#background(jelly, time);
     this.#drawSnow(snow);
-    this.yaw = orientation?.yaw ?? 0;
-    // All anatomical passes share the same tilted, mildly foreshortened frame.
+    // Bell, skirt and embedded roots share the visible attitude. External
+    // appendages keep their fluid direction via root-relative compensation.
     ctx.translate(jelly.x, jelly.y);
-    ctx.rotate(jelly.tilt);
+    ctx.rotate(visualTilt);
     ctx.scale(bellScaleFor(this.yaw), 1);
     ctx.rotate(-jelly.tilt);
     ctx.translate(-jelly.x, -jelly.y);
