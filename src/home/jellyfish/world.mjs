@@ -1,5 +1,6 @@
 import { SIMULATION, snowCountFor } from "./config.mjs";
 import { Jellyfish } from "./jellyfish.mjs";
+import { Bioluminescence } from "./bioluminescence.mjs";
 import { mulberry32 } from "./math.mjs";
 import { stepVisualTilt, tiltTargetAt } from "./orientation.mjs";
 import { MarineSnow, OceanField } from "./ocean.mjs";
@@ -19,6 +20,7 @@ export class JellyWorld {
       seed: this.seed,
       random: this.random,
     });
+    this.jelly.light = new Bioluminescence();
     this.snow = new MarineSnow(this.width, this.height, snowCountFor(this.width, this.height), this.random);
   }
 
@@ -42,8 +44,10 @@ export class JellyWorld {
     this.time += dt;
     this.ocean.step(dt);
     this.snow.step(dt, this.time, this.ocean);
+    const previousPulse = this.jelly.pulse;
     this.jelly.step(dt, this.time, this.ocean, this.width, this.height);
     const flowX = this.ocean.weatherAt(this.time).x;
     this.orientation = stepVisualTilt(this.orientation, tiltTargetAt(flowX), dt);
+    this.jelly.light.step(dt, this.jelly, previousPulse, this.ocean, this.time, this.orientation.tilt);
   }
 }

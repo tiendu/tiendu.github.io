@@ -73,8 +73,9 @@ export function drawTentacle(frame, occlusion, jelly, item, opacity = 1) {
     const glyph = directionGlyph(dx, dy);
     const rootGlow = 1 - smoothstep(invLerp(0.0, 0.34, along));
     const tipGlow = smoothstep(invLerp(0.70, 0.95, along)) * 0.14;
+    const emission = jelly.light?.rootAt(item, along) ?? 0;
     const color = mixColor(jelly.palette.tentacle, jelly.palette.tentacleHot,
-      rootGlow * 0.42 + tipGlow, alpha);
+      rootGlow * 0.42 + tipGlow + emission * 0.30, alpha * (1 + emission * 0.28));
     for (let s = 0; s < samples; s += 1) {
       const t = s / samples;
       const x = lerp(x0, x1, t);
@@ -213,12 +214,13 @@ function drawRibbonStructure(frame, occlusion, jelly, item, opacity, time, width
     const tipFade = 1 - smoothstep(invLerp(branch ? 0.75 : 0.84, 1, segmentAlong));
     const rootFade = branch ? 1 : rootEmergenceScale(item, segmentAlong);
     const pulseLift = branch ? 1 : 1 + jelly.pulse * (1 - segmentAlong) * 0.055;
+    const emission = branch ? 0 : (jelly.light?.rootAt(item, segmentAlong) ?? 0);
     const alpha =
       baseAlpha
       * lerp(1, branch ? 0.32 : 0.45, segmentAlong)
       * tipFade
       * rootFade
-      * pulseLift * tissuePresence(item, segmentAlong);
+      * pulseLift * tissuePresence(item, segmentAlong) * (1 + emission * 0.24);
     if (alpha < 0.012) continue;
     const motion = ribbonKinematicsAt(chain, i);
 
