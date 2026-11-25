@@ -249,9 +249,11 @@ export function drawBell(frame, jelly, time) {
       const fluorescence = membraneDepth * (0.035 + 0.055 * centerGlass);
       // Modulate existing marks only: no changing pores or new halo.
       const emission = jelly.light?.at(u, v) ?? 0;
+      const touchFlash = jelly.light?.flash?.touch ? jelly.light.flashAt(u, v) : 0;
       const color = mixMembraneColor(jelly.palette, 0.38 + centerGlass * 0.38,
         coral, warmth, lerp(crown * 0.96, 1, emission * 0.42),
-        alpha + pigment * 0.34 + crown * 0.13 + fluorescence + emission * 0.23);
+        alpha + pigment * 0.34 + crown * 0.13 + fluorescence + emission * 0.23,
+        touchFlash * 0.92);
       ctx.globalAlpha = edgeOpacity;
       ctx.fillStyle = color;
       const local = rotate(u * halfW + bellCenterShift(v, jelly.anatomyPhase, halfW), v * height, jelly.tilt);

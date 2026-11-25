@@ -6,6 +6,26 @@ export class Bioluminescence {
     this.contraction = 0;
     this.flash = null;
     this.cooldown = 0;
+    this.touchCooldown = 0;
+  }
+
+  // Direct contact is a distinct mechanical stimulus, not an accumulated
+  // ocean impulse. A forgiving hit region covers the bell and its margin.
+  stimulate(x, y, jelly, visualTilt = jelly.tilt) {
+    if (this.touchCooldown > 0) return false;
+    const width = Math.max(1, jelly.bellWidth());
+    const height = Math.max(1, jelly.bellHeight());
+    const local = rotate(x - jelly.x, y - jelly.y, -visualTilt);
+    const distance = Math.hypot(local.x / (width * 0.66),
+      (local.y + height * 0.45) / (height * 0.78));
+    if (!(distance <= 1)) return false;
+    this.flash = {
+      u: clamp(local.x / (width * 0.5), -0.85, 0.85),
+      v: clamp(local.y / height, -1.04, 0.035),
+      strength: 1, age: 0, touch: true,
+    };
+    this.cooldown = this.touchCooldown = 1.8;
+    return true;
   }
 
   step(dt, jelly, previousPulse, ocean, time, visualTilt = jelly.tilt) {
@@ -15,6 +35,7 @@ export class Bioluminescence {
     const response = target > this.contraction ? 0.085 : 0.42;
     this.contraction += (target - this.contraction) * (1 - Math.exp(-dt / response));
     this.cooldown = Math.max(0, this.cooldown - dt);
+    this.touchCooldown = Math.max(0, this.touchCooldown - dt);
     if (this.flash) {
       this.flash.age += dt;
       if (this.flash.age >= 1.6) this.flash = null;
@@ -54,13 +75,17 @@ export class Bioluminescence {
     // disturbance wave is independent and propagates in material coordinates.
     const margin = Math.exp(-(((v + 0.075) / 0.19) ** 2));
     const squeeze = this.contraction * margin * 0.42;
+    return clamp(squeeze + this.flashAt(u, v), 0, 1);
+  }
+
+  flashAt(u, v) {
     const f = this.flash;
-    if (!f) return squeeze;
-    const distance = Math.hypot((u - f.u) * 0.72, (v + 0.07) * 0.86);
-    const front = f.age * 1.5;
-    const arrival = Math.exp(-(((distance - front) / 0.24) ** 2));
+    if (!f) return 0;
+    const distance = Math.hypot((u - f.u) * 0.72, (v - (f.v ?? -0.07)) * 0.86);
+    const front = f.age * (f.touch ? 1.0 : 1.5);
+    const arrival = Math.exp(-(((distance - front) / (f.touch ? 0.34 : 0.24)) ** 2));
     const envelope = smoothstep(f.age / 0.07) * (1 - smoothstep((f.age - 0.55) / 1.05));
-    return clamp(squeeze + f.strength * arrival * envelope * 0.85, 0, 1);
+    return f.strength * arrival * envelope * (f.touch ? 1 : 0.85);
   }
 
   rootAt(item, along) {

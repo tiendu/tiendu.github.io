@@ -132,3 +132,15 @@ test("reset and dispose remove pending gestures and all event listeners", () => 
   assert.equal(f.calls.length, 0);
   assert.equal(f.attrs.size, 0);
 });
+
+test("a stationary tap while zoomed still interacts, but panning does not", () => {
+  const f = fixture();
+  f.zoom(2);
+  f.send("pointerdown");
+  f.send("pointerup", 1, 107, 140);
+  assert.deepEqual(f.calls, [[87, 100, 0, 0, 0.32]]);
+  f.send("pointerdown");
+  f.send("pointermove", 1, 150, 140);
+  f.send("pointerup", 1, 150, 140);
+  assert.equal(f.calls.length, 1);
+});

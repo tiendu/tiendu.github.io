@@ -1,10 +1,11 @@
-const TAP_DISTANCE = 6;
+const TAP_DISTANCE = 10;
 const TAP_IMPULSE = 0.32;
 const limitSpeed = value => Math.max(-100, Math.min(100, value));
 
 // Pointer events share one water input path. A touch gesture is owned by the
 // first finger until release; another finger cancels that ownership for good.
 export function bindWaterInput(canvas, { isActive, disturb,
+  tap = (x, y) => disturb(x, y, 0, 0, TAP_IMPULSE),
   host = window, viewport = host.visualViewport, now = () => performance.now() }) {
   const touches = new Set();
   let gesture = null;
@@ -48,20 +49,21 @@ export function bindWaterInput(canvas, { isActive, disturb,
       gesture = null;
       return;
     }
-    if (event.target !== canvas || zoomed || !isActive()) return;
+    if (event.target !== canvas || !isActive()) return;
     const p = point(event);
     if (p) gesture = { id: event.pointerId, start: p, previous: p, dragged: false };
   };
 
   const touchMove = event => {
     if (event.pointerType !== "touch" || gesture?.id !== event.pointerId) return;
-    if (zoomed || !isActive()) { gesture = null; return; }
+    if (!isActive()) { gesture = null; return; }
     const p = point(event);
     if (!p) { gesture = null; return; }
     if (!gesture.dragged) {
       if (Math.hypot(p.x - gesture.start.x, p.y - gesture.start.y) < TAP_DISTANCE) return;
       gesture.dragged = true;
     }
+    if (zoomed) return;
     // Keep very high-rate touch streams from accumulating extra impulses.
     if (p.time - gesture.previous.time < 16) return;
     if (Math.hypot(p.x - gesture.previous.x, p.y - gesture.previous.y) < 0.75) return;
@@ -72,12 +74,12 @@ export function bindWaterInput(canvas, { isActive, disturb,
   const finish = event => {
     if (event.pointerType !== "touch") return;
     if (gesture?.id === event.pointerId) {
-      if (event.type === "pointerup" && !gesture.dragged && !zoomed && isActive()) {
+      if (event.type === "pointerup" && !gesture.dragged && isActive()) {
         const p = point(event);
         if (p && Math.hypot(p.x - gesture.start.x, p.y - gesture.start.y) < TAP_DISTANCE) {
           // A deliberate tap is one slightly stronger, still bounded impulse.
           // Wait for release so a pinch's first finger never fires a tap.
-          disturb(p.x, p.y, 0, 0, TAP_IMPULSE);
+          tap(p.x, p.y);
         }
       }
       gesture = null;

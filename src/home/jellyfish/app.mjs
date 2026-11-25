@@ -99,6 +99,7 @@ export function mountJellyfish() {
   const waterInput = bindWaterInput(canvas, {
     isActive: () => running && !!world,
     disturb: (...args) => world.disturb(...args),
+    tap: (x, y) => world.tap(x, y),
   });
 
   const drawReduced = () => {

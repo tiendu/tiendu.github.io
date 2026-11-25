@@ -27,14 +27,15 @@ export function mixColor(a, b, t, alpha = 1) {
 
 // Continuous glass / rose / crown blend. Cache only static palette entries;
 // creating intermediate hex colours would grow rgbCache on every frame.
-export function mixMembraneColor(palette, glassLight, coral, warmth, crown, alpha) {
+export function mixMembraneColor(palette, glassLight, coral, warmth, crown, alpha, flash = 0) {
   const cool = rgb(palette.bellCool), soft = rgb(palette.bellSoft);
   const glass = rgb(palette.bellGlass), rose = rgb(palette.bellCoral);
   const hot = rgb(palette.bellCrown);
-  const channel = key => Math.round(lerp(
+  const flashColor = flash > 0 ? rgb(palette.tentacleAccent) : hot;
+  const channel = key => Math.round(lerp(lerp(
     lerp(lerp(cool[key], soft[key], glassLight), lerp(glass[key], rose[key], coral), warmth),
     hot[key], crown,
-  ));
+  ), flashColor[key], clamp(flash, 0, 1)));
   return `rgba(${channel("r")}, ${channel("g")}, ${channel("b")}, ${clamp(alpha, 0, 1)})`;
 }
 

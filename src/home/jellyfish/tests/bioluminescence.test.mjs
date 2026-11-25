@@ -72,3 +72,28 @@ test("near-pointer origin follows the visible bell tilt", () => {
   light.step(dt, j, 0, ocean, 0, Math.PI / 2);
   assert.ok(light.flash.u > 0.4);
 });
+
+test("a crown tap launches a visible wave even during an ambient cooldown", () => {
+  const light = new Bioluminescence(), j = jelly();
+  light.step(dt, j, 0, { ...calm, pointer: { x: 100, y: 82, strength: 0.55 } }, 0);
+  assert.ok(light.flash);
+  assert.ok(light.stimulate(100, 50, j));
+  assert.equal(light.flash.v, -1);
+  assert.equal(light.flash.touch, true);
+  advance(light, j, calm, 6);
+  assert.ok(light.flashAt(0, -1) > 0.8);
+  assert.ok(light.flashAt(0, 0) < 0.05);
+  advance(light, j, calm, 48);
+  assert.ok(light.flashAt(0, 0) > light.flashAt(0, -1));
+  assert.equal(light.stimulate(100, 50, j), false);
+  advance(light, j, calm, 60);
+  assert.ok(light.stimulate(100, 50, j));
+});
+
+test("contact is bounded to the visible bell and follows tilt", () => {
+  const light = new Bioluminescence(), j = jelly();
+  assert.equal(light.stimulate(900, 900, j), false);
+  assert.equal(light.stimulate(100, 180, j), false);
+  assert.ok(light.stimulate(150, 100, j, Math.PI / 2));
+  assert.ok(Math.abs(light.flash.v + 1) < 1e-8);
+});

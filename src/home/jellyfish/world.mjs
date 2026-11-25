@@ -40,6 +40,11 @@ export class JellyWorld {
     this.ocean.disturb(x, y, vx, vy, impulse);
   }
 
+  tap(x, y) {
+    this.disturb(x, y, 0, 0, 0.32);
+    this.jelly.light.stimulate(x, y, this.jelly, this.orientation.tilt);
+  }
+
   step(dt = SIMULATION.fixedStep) {
     this.time += dt;
     this.ocean.step(dt);
