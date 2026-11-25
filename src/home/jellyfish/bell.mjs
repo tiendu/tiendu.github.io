@@ -254,7 +254,7 @@ export function drawBell(frame, jelly, time) {
       // Light changes colour and opacity, never the pore pattern or geometry.
       const emission = jelly.light?.at(u, v) ?? 0;
       const wave = jelly.light?.flashAt?.(u, v) ?? 0;
-      const flash = channelFlashMix(stripe, wave, jelly.light?.flash?.touch);
+      const flash = channelFlashMix(stripe, wave, jelly.light?.flash?.contact);
       const channelLight = stripe * (0.42 + emission * 0.34);
       const color = mixMembraneColor(jelly.palette, 0.38 + centerGlass * 0.38,
         coral, clamp(warmth + stripe * 0.22, 0, 1),

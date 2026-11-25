@@ -2,8 +2,8 @@ const TAP_DISTANCE = 10;
 const TAP_IMPULSE = 0.32;
 const limitSpeed = value => Math.max(-100, Math.min(100, value));
 
-// Pointer events share one water input path. A touch gesture is owned by the
-// first finger until release; another finger cancels that ownership for good.
+// A primary click or tap shares one contact path. A second finger cancels
+// the pending contact, leaving pinch and zoomed panning to the browser.
 export function bindWaterInput(canvas, { isActive, disturb,
   tap = (x, y) => disturb(x, y, 0, 0, TAP_IMPULSE),
   host = window, viewport = host.visualViewport, now = () => performance.now() }) {
@@ -42,20 +42,24 @@ export function bindWaterInput(canvas, { isActive, disturb,
   };
 
   const down = event => {
-    if (event.pointerType !== "touch") return;
-    touches.add(event.pointerId);
-    mouse = null;
-    if (touches.size !== 1 || event.isPrimary === false) {
+    const type = event.pointerType;
+    if (type === "touch") {
+      touches.add(event.pointerId);
+      mouse = null;
       gesture = null;
-      return;
+      if (touches.size !== 1 || event.isPrimary === false) return;
+    } else {
+      if ((type !== "mouse" && type !== "pen") || touches.size
+        || event.button !== 0 || event.isPrimary === false) return;
+      gesture = null;
     }
     if (event.target !== canvas || !isActive()) return;
     const p = point(event);
-    if (p) gesture = { id: event.pointerId, start: p, previous: p, dragged: false };
+    if (p) gesture = { id: event.pointerId, type, start: p, previous: p, dragged: false };
   };
 
-  const touchMove = event => {
-    if (event.pointerType !== "touch" || gesture?.id !== event.pointerId) return;
+  const gestureMove = event => {
+    if (!gesture || gesture.id !== event.pointerId || gesture.type !== event.pointerType) return;
     if (!isActive()) { gesture = null; return; }
     const p = point(event);
     if (!p) { gesture = null; return; }
@@ -63,7 +67,8 @@ export function bindWaterInput(canvas, { isActive, disturb,
       if (Math.hypot(p.x - gesture.start.x, p.y - gesture.start.y) < TAP_DISTANCE) return;
       gesture.dragged = true;
     }
-    if (zoomed) return;
+    // Mouse and pen motion is already handled by the canvas hover listener.
+    if (gesture.type !== "touch" || zoomed) return;
     // Keep very high-rate touch streams from accumulating extra impulses.
     if (p.time - gesture.previous.time < 16) return;
     if (Math.hypot(p.x - gesture.previous.x, p.y - gesture.previous.y) < 0.75) return;
@@ -72,19 +77,20 @@ export function bindWaterInput(canvas, { isActive, disturb,
   };
 
   const finish = event => {
-    if (event.pointerType !== "touch") return;
-    if (gesture?.id === event.pointerId) {
-      if (event.type === "pointerup" && !gesture.dragged && isActive()) {
+    const type = event.pointerType;
+    if (gesture?.id === event.pointerId && gesture.type === type) {
+      if (event.type === "pointerup" && !gesture.dragged && isActive()
+        && (type === "touch" || (event.button === 0 && event.target === canvas))) {
         const p = point(event);
         if (p && Math.hypot(p.x - gesture.start.x, p.y - gesture.start.y) < TAP_DISTANCE) {
-          // A deliberate tap is one slightly stronger, still bounded impulse.
-          // Wait for release so a pinch's first finger never fires a tap.
+          // Click and tap use the same contact response. Commit on release
+          // so a drag or the first finger of a pinch cannot fire a contact.
           tap(p.x, p.y);
         }
       }
       gesture = null;
     }
-    touches.delete(event.pointerId);
+    if (type === "touch") touches.delete(event.pointerId);
   };
 
   const mouseMove = event => {
@@ -102,7 +108,7 @@ export function bindWaterInput(canvas, { isActive, disturb,
   // Capture touch starts anywhere, including a second finger outside the
   // canvas. All listeners are passive; the browser owns pinch and zoomed pan.
   host.addEventListener("pointerdown", down, capture);
-  host.addEventListener("pointermove", touchMove, capture);
+  host.addEventListener("pointermove", gestureMove, capture);
   host.addEventListener("pointerup", finish, capture);
   host.addEventListener("pointercancel", finish, capture);
   host.addEventListener("blur", reset);
@@ -114,7 +120,7 @@ export function bindWaterInput(canvas, { isActive, disturb,
   return { reset, dispose() {
     reset();
     host.removeEventListener("pointerdown", down, capture);
-    host.removeEventListener("pointermove", touchMove, capture);
+    host.removeEventListener("pointermove", gestureMove, capture);
     host.removeEventListener("pointerup", finish, capture);
     host.removeEventListener("pointercancel", finish, capture);
     host.removeEventListener("blur", reset);

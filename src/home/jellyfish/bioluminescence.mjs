@@ -6,13 +6,13 @@ export class Bioluminescence {
     this.contraction = 0;
     this.flash = null;
     this.cooldown = 0;
-    this.touchCooldown = 0;
+    this.contactCooldown = 0;
   }
 
   // Direct contact is a distinct mechanical stimulus, not an accumulated
   // ocean impulse. A forgiving hit region covers the bell and its margin.
   stimulate(x, y, jelly, visualTilt = jelly.tilt) {
-    if (this.touchCooldown > 0) return false;
+    if (this.contactCooldown > 0) return false;
     const width = Math.max(1, jelly.bellWidth());
     const height = Math.max(1, jelly.bellHeight());
     const local = rotate(x - jelly.x, y - jelly.y, -visualTilt);
@@ -22,9 +22,9 @@ export class Bioluminescence {
     this.flash = {
       u: clamp(local.x / (width * 0.5), -0.85, 0.85),
       v: clamp(local.y / height, -1.04, 0.035),
-      strength: 1, age: 0, touch: true,
+      strength: 1, age: 0, contact: true,
     };
-    this.cooldown = this.touchCooldown = 1.8;
+    this.cooldown = this.contactCooldown = 1.8;
     return true;
   }
 
@@ -35,7 +35,7 @@ export class Bioluminescence {
     const response = target > this.contraction ? 0.085 : 0.42;
     this.contraction += (target - this.contraction) * (1 - Math.exp(-dt / response));
     this.cooldown = Math.max(0, this.cooldown - dt);
-    this.touchCooldown = Math.max(0, this.touchCooldown - dt);
+    this.contactCooldown = Math.max(0, this.contactCooldown - dt);
     if (this.flash) {
       this.flash.age += dt;
       if (this.flash.age >= 1.6) this.flash = null;
@@ -82,10 +82,10 @@ export class Bioluminescence {
     const f = this.flash;
     if (!f) return 0;
     const distance = Math.hypot((u - f.u) * 0.72, (v - (f.v ?? -0.07)) * 0.86);
-    const front = f.age * (f.touch ? 1.0 : 1.5);
-    const arrival = Math.exp(-(((distance - front) / (f.touch ? 0.34 : 0.24)) ** 2));
+    const front = f.age * (f.contact ? 1.0 : 1.5);
+    const arrival = Math.exp(-(((distance - front) / (f.contact ? 0.34 : 0.24)) ** 2));
     const envelope = smoothstep(f.age / 0.07) * (1 - smoothstep((f.age - 0.55) / 1.05));
-    return f.strength * arrival * envelope * (f.touch ? 1 : 0.85);
+    return f.strength * arrival * envelope * (f.contact ? 1 : 0.85);
   }
 
   rootAt(item, along) {

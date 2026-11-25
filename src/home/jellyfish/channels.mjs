@@ -32,7 +32,7 @@ export function meridionalStripeAt(u, v, profile, phase = 0) {
 }
 
 // The existing mechanical wave is unchanged; pigment channels emit more
-// strongly as it passes. Direct touches still illuminate the surrounding gel.
-export function channelFlashMix(stripe, wave, touch = false) {
-  return clamp(wave * (touch ? 0.68 + 0.32 * stripe : 0.12 + 0.83 * stripe), 0, 1);
+// strongly as it passes. Direct contacts still illuminate the surrounding gel.
+export function channelFlashMix(stripe, wave, contact = false) {
+  return clamp(wave * (contact ? 0.68 + 0.32 * stripe : 0.12 + 0.83 * stripe), 0, 1);
 }

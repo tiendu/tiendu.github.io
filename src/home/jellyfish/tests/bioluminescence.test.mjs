@@ -79,7 +79,7 @@ test("a crown tap launches a visible wave even during an ambient cooldown", () =
   assert.ok(light.flash);
   assert.ok(light.stimulate(100, 50, j));
   assert.equal(light.flash.v, -1);
-  assert.equal(light.flash.touch, true);
+  assert.equal(light.flash.contact, true);
   advance(light, j, calm, 6);
   assert.ok(light.flashAt(0, -1) > 0.8);
   assert.ok(light.flashAt(0, 0) < 0.05);

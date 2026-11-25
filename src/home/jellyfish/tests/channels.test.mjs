@@ -40,7 +40,7 @@ test("channels fade inside the crown and never escape the membrane", () => {
   assert.ok(Math.max(...scan(-1.04, 0.3, 0)) < 0.15);
 });
 
-test("mechanical flashes favor channels while touch lights surrounding tissue", () => {
+test("mechanical flashes favor channels while contact lights surrounding tissue", () => {
   assert.equal(channelFlashMix(1, 0), 0);
   assert.ok(channelFlashMix(1, 0.8) > 6 * channelFlashMix(0, 0.8));
   assert.ok(channelFlashMix(0, 1, true) >= 0.65);

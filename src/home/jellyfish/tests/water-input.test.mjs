@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { bindWaterInput } from "../water-input.mjs";
+import { Bioluminescence } from "../bioluminescence.mjs";
 
-function fixture() {
+function fixture(tap) {
   const host = new EventTarget();
   const canvas = new EventTarget();
   const viewport = new EventTarget();
@@ -14,16 +15,19 @@ function fixture() {
   let time = 0, active = true;
   const calls = [];
   const input = bindWaterInput(canvas, { host, viewport, now: () => time,
-    isActive: () => active, disturb: (...args) => calls.push(args) });
-  const send = (type, id = 1, x = 100, y = 140, target = canvas, pointerType = "touch", isPrimary = id === 1) => {
+    isActive: () => active, disturb: (...args) => calls.push(args), tap });
+  const send = (type, id = 1, x = 100, y = 140, target = canvas, pointerType = "touch", isPrimary = id === 1, button = 0) => {
     time += 20;
     const event = new Event(type, { cancelable: true });
     Object.defineProperties(event, {
       target: { value: target }, pointerType: { value: pointerType },
       pointerId: { value: id }, clientX: { value: x }, clientY: { value: y },
-      isPrimary: { value: isPrimary },
+      isPrimary: { value: isPrimary }, button: { value: button },
     });
-    (pointerType === "touch" ? host : canvas).dispatchEvent(event);
+    // Model window capture before canvas listeners for all pointer types.
+    if (type !== "pointerleave") host.dispatchEvent(event);
+    if (pointerType !== "touch" && target === canvas
+      && (type === "pointermove" || type === "pointerleave")) canvas.dispatchEvent(event);
     assert.equal(event.defaultPrevented, false);
   };
   return { input, send, calls, attrs, host, viewport, canvas,
@@ -143,4 +147,59 @@ test("a stationary tap while zoomed still interacts, but panning does not", () =
   f.send("pointermove", 1, 150, 140);
   f.send("pointerup", 1, 150, 140);
   assert.equal(f.calls.length, 1);
+});
+
+
+test("primary mouse click, pen contact and touch tap launch identical light waves", () => {
+  const jelly = { x: 80, y: 150, tilt: 0, pulse: 0,
+    bellWidth: () => 100, bellHeight: () => 50 };
+  const calm = { sample: () => ({ x: 0, y: 0 }) };
+  const run = type => {
+    const light = new Bioluminescence();
+    const contacts = [];
+    const f = fixture((x, y) => {
+      contacts.push([x, y]);
+      assert.ok(light.stimulate(x, y, jelly));
+    });
+    f.send("pointerdown", 1, 100, 150, f.canvas, type);
+    assert.equal(contacts.length, 0);
+    f.send("pointerup", 1, 100, 150, f.canvas, type);
+    assert.deepEqual(contacts, [[80, 110]]);
+    const flash = { ...light.flash };
+    const samples = [];
+    for (let i = 0; i < 120; i++) {
+      light.step(1 / 60, jelly, 0, calm, i / 60);
+      samples.push([light.at(0, -0.8), light.at(0, 0), light.contactCooldown]);
+    }
+    f.input.dispose();
+    return { flash, samples };
+  };
+  const touch = run("touch");
+  assert.equal(touch.flash.contact, true);
+  assert.deepEqual(run("mouse"), touch);
+  assert.deepEqual(run("pen"), touch);
+});
+
+test("mouse drag returning to its origin is not a click", () => {
+  const contacts = [];
+  const f = fixture((...args) => contacts.push(args));
+  f.send("pointerdown", 1, 100, 140, f.canvas, "mouse");
+  f.send("pointermove", 1, 160, 140, f.canvas, "mouse");
+  f.send("pointermove", 1, 100, 140, f.canvas, "mouse");
+  f.send("pointerup", 1, 100, 140, f.canvas, "mouse");
+  assert.equal(contacts.length, 0);
+  assert.equal(f.calls.length, 2);
+});
+
+test("non-primary buttons, outside release and cancelled mouse gestures do not stimulate", () => {
+  const contacts = [];
+  const f = fixture((...args) => contacts.push(args));
+  f.send("pointerdown", 1, 100, 140, f.canvas, "mouse", true, 2);
+  f.send("pointerup", 1, 100, 140, f.canvas, "mouse", true, 2);
+  f.send("pointerdown", 1, 100, 140, f.canvas, "mouse");
+  f.send("pointerup", 1, 100, 140, f.host, "mouse");
+  f.send("pointerdown", 1, 100, 140, f.canvas, "mouse");
+  f.send("pointercancel", 1, 100, 140, f.canvas, "mouse");
+  f.send("pointerup", 1, 100, 140, f.canvas, "mouse");
+  assert.equal(contacts.length, 0);
 });
