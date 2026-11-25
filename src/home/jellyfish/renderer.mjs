@@ -1,5 +1,7 @@
 import { ASCII } from "./config.mjs";
 import { ribbonSurfaceBreathAt } from "./fluid.mjs";
+import { appendageProjectionFor, bellScaleFor, bellSideLightAt, visualDepthFor } from "./orientation.mjs";
+import { ribbonMaterialAt, skirtLobeAt, tissuePresence } from "./material.mjs";
 import { clamp, invLerp, lerp, rotate, smoothstep, TAU } from "./math.mjs";
 
 function rgb(hex) {
@@ -325,6 +327,16 @@ export class AsciiRenderer {
     return opacity * depthFactor;
   }
 
+  #drawProjectedItem(jelly, item, opacity, time) {
+    const projection = appendageProjectionFor(jelly, item, this.yaw);
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(projection.x, projection.y);
+    if (item.arm) this.#drawRibbon(jelly, item, opacity * projection.light, time, projection.width);
+    else this.#drawTentacle(jelly, item, opacity * projection.light);
+    ctx.restore();
+  }
+
   #drawTentacle(jelly, item, opacity = 1) {
     const { chain } = item;
     const ctx = this.ctx;
@@ -346,7 +358,7 @@ export class AsciiRenderer {
       const samples = Math.max(1, Math.ceil(distance / (this.cellH * 0.48)));
       const tipFade = 1 - smoothstep(invLerp(0.84, 1, along));
       const rootFade = rootEmergenceScale(item, along);
-      const alpha = baseAlpha * lerp(1, 0.34, along) * tipFade * rootFade;
+      const alpha = baseAlpha * lerp(1, 0.34, along) * tipFade * rootFade * tissuePresence(item, along);
       if (alpha < 0.010) continue;
       const nx = -dy / distance;
       const ny = dx / distance;
@@ -404,7 +416,9 @@ export class AsciiRenderer {
       smoothstep(invLerp(0.76, 1, along)),
     );
     const taper = bodyTaper * tipTaper;
-    const baseWidth = this.cellW * (item.width ?? 2.4) * foldEnvelope * taper * widthScale;
+    const material = ribbonMaterialAt(item, along);
+    const baseWidth = this.cellW * (item.width ?? 2.4) * foldEnvelope * taper * widthScale
+      * material.width;
 
     const surfaceBreath = ribbonSurfaceBreathAt(item, time, along);
     const motionRoll =
@@ -420,20 +434,20 @@ export class AsciiRenderer {
 
     // Long sheets twist normally near the root/middle, then stop accumulating
     // extra rotations toward the tip. The progress correction stays monotonic.
-    const twistRate = (item.twistRate ?? 3.4) * lerp(1, 0.88, lengthBias);
+    const twistRate = (item.twistRate ?? 3.4) * lerp(0.82, 0.70, lengthBias);
     const twistProgress =
       along - lengthBias * 0.08 * smoothstep(invLerp(0.62, 1, along));
     const twistAngle = (item.twistPhase ?? item.phase ?? 0)
       + twistProgress * twistRate * TAU
       + Math.sin(time * 0.10 + (item.phase ?? 0)) * 0.24
-      + motionRoll;
+      + motionRoll + (this.yaw ?? 0);
     const face = Math.cos(twistAngle);
-    const projected = baseWidth * (0.10 + Math.abs(face) * 0.90)
+    const projected = baseWidth * (0.22 + Math.abs(face) * 0.78)
       * (1 + motion.speed * lerp(0.12, 0.09, lengthBias) * motionEnvelope);
     const torsionOffset = Math.sin(twistAngle) * baseWidth * 0.24;
     const ruffleEnvelope = (0.24 + smoothstep(along) * 0.76)
       * (1 + motion.speed * lerp(0.32, 0.23, lengthBias) * motionEnvelope)
-      * (1 - lengthBias * terminal * 0.30);
+      * (1 - lengthBias * terminal * 0.30) * material.fray;
     const leftRuffle = Math.sin((item.edgePhaseLeft ?? item.phase ?? 0) + along * 29.0 + time * 0.29)
       * this.cellW * (item.ruffleLeft ?? 1) * ruffleEnvelope;
     const rightRuffle = Math.sin((item.edgePhaseRight ?? (item.phase ?? 0) + 1.7) + along * 33.0 - time * 0.26)
@@ -442,14 +456,14 @@ export class AsciiRenderer {
       baseWidth,
       projected,
       torsionOffset,
-      leftRuffle,
-      rightRuffle,
+      leftRuffle: clamp(leftRuffle, -projected * 0.65, projected * 0.85),
+      rightRuffle: clamp(rightRuffle, -projected * 0.65, projected * 0.85),
       face,
     };
   }
 
   #maskRibbon(item, opacity, time, widthScale = 1) {
-    if ((item.layer ?? 0) < 0.25 || opacity < 0.5) return;
+    if ((item.layer ?? 0) < 0.25) return;
     const { chain } = item;
     const ctx = this.ctx;
     ctx.save();
@@ -459,7 +473,7 @@ export class AsciiRenderer {
       const along = i / Math.max(1, chain.count - 2);
       const motion = ribbonKinematicsAt(chain, i);
       const geometry = this.#ribbonSample(item, along, time, widthScale, motion);
-      ctx.globalAlpha = rootEmergenceScale(item, along);
+      ctx.globalAlpha = rootEmergenceScale(item, along) * clamp(opacity, 0, 1);
       ctx.lineWidth = Math.max(this.cellW * 1.4, geometry.projected * 1.45);
       ctx.beginPath();
       ctx.moveTo(chain.x[i - 1], chain.y[i - 1]);
@@ -497,7 +511,7 @@ export class AsciiRenderer {
         * lerp(1, branch ? 0.32 : 0.45, segmentAlong)
         * tipFade
         * rootFade
-        * pulseLift;
+        * pulseLift * tissuePresence(item, segmentAlong);
       if (alpha < 0.012) continue;
 
       for (let s = 0; s < samples; s += 1) {
@@ -523,21 +537,21 @@ export class AsciiRenderer {
           jelly.palette.arm,
           jelly.palette.armHot,
           leftFront ? 0.78 : 0.38,
-          alpha * (leftFront ? 1 : 0.66),
+          alpha * (leftFront ? 0.90 : 0.40),
         );
         ctx.fillText(edgeGlyph, leftX, leftY);
         ctx.fillStyle = mixColor(
           jelly.palette.armDark,
           jelly.palette.armHot,
           leftFront ? 0.34 : 0.72,
-          alpha * (leftFront ? 0.62 : 0.96),
+          alpha * (leftFront ? 0.36 : 0.90),
         );
         ctx.fillText(edgeGlyph, rightX, rightY);
 
         // Broad faces get translucent tissue between the edges. When the
         // ribbon turns edge-on the fill collapses naturally to almost nothing.
         const span = Math.hypot(leftX - rightX, leftY - rightY);
-        const bands = face < 0.16 ? 0 : Math.min(6, Math.max(1, Math.floor(span / (this.cellW * 1.05))));
+        const bands = face < 0.13 ? 0 : Math.min(7, Math.max(1, Math.floor(span / (this.cellW * 0.90))));
         for (let band = 1; band < bands; band += 1) {
           const q = band / bands;
           const tear = Math.sin((i + 1) * 2.21 + q * 9.7 + (item.phase ?? 0))
@@ -558,13 +572,15 @@ export class AsciiRenderer {
             0.04,
             0.90,
           );
-          const foldColor =
-            foldAccent > 0.24 ? jelly.palette.armAccent : jelly.palette.armHot;
+          const proximal = 1 - smoothstep(invLerp(0.04, 0.33, along));
+          const foldColor = proximal * foldHighlight > 0.40
+            ? jelly.palette.bellGlass
+            : foldAccent > 0.24 ? jelly.palette.armAccent : jelly.palette.armHot;
           ctx.fillStyle = mixColor(
             jelly.palette.armDark,
             foldColor,
             0.16 + foldHighlight * 0.44 + face * 0.12,
-            alpha * (0.34 + middle * 0.22 + face * 0.06),
+            alpha * (0.44 + middle * 0.34 + face * 0.08),
           );
           ctx.fillText(densityGlyph(density, ASCII.ribbon), x, y);
         }
@@ -572,8 +588,9 @@ export class AsciiRenderer {
         // Ruffled lace protrudes independently from each edge, rather than as
         // mirrored hairs. This is what makes the oral arms look torn/leafy.
         if ((i + s) % (branch ? 5 : 4) === 0 && along > 0.10 && along < 0.88) {
-          const leftFray = this.cellW * (0.7 + (item.ruffleLeft ?? 1) * 0.75);
-          const rightFray = this.cellW * (0.7 + (item.ruffleRight ?? 1) * 0.75);
+          const fray = ribbonMaterialAt(item, along).fray;
+          const leftFray = Math.min(g.projected, this.cellW * (0.7 + (item.ruffleLeft ?? 1) * 0.75)) * fray;
+          const rightFray = Math.min(g.projected, this.cellW * (0.7 + (item.ruffleRight ?? 1) * 0.75)) * fray;
           ctx.fillStyle = rgba(jelly.palette.rim, alpha * 0.30);
           ctx.fillText(i % 2 ? "/" : "~", leftX + nx * leftFray, leftY + ny * leftFray * 0.25);
           if ((i + s) % 7 === 0) {
@@ -595,6 +612,9 @@ export class AsciiRenderer {
 
     for (const item of items) {
       if ((item.layer ?? 0) >= 0.45 || !item.chain || item.chain.count < 2) continue;
+      const projection = appendageProjectionFor(jelly, item, this.yaw);
+      ctx.save();
+      ctx.translate(projection.x, projection.y);
 
       const rootX = item.chain.x[0];
       const rootY = item.chain.y[0];
@@ -620,7 +640,7 @@ export class AsciiRenderer {
         const shift = bellCenterShift(v, jelly.anatomyPhase, halfW);
         const u = (raw.x - shift) / halfW;
         const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
-        const opacity = internalRootOpacityAt(item, v);
+        const opacity = internalRootOpacityAt(item, v) * projection.light;
         if (!(profile > 0 && Math.abs(u) < profile * 0.92 && opacity > 0.004)) {
           previous = null;
           continue;
@@ -646,17 +666,18 @@ export class AsciiRenderer {
         }
         previous = { x, y };
       }
+      ctx.restore();
     }
 
     this.#setFont(this.fontSize);
   }
 
-  #drawRibbon(jelly, item, opacity = 1, time = 0) {
-    this.#maskRibbon(item, opacity, time, 1);
-    this.#drawRibbonStructure(jelly, item, opacity, time, 1, false);
+  #drawRibbon(jelly, item, opacity = 1, time = 0, widthScale = 1) {
+    this.#maskRibbon(item, opacity, time, widthScale);
+    this.#drawRibbonStructure(jelly, item, opacity, time, widthScale, false);
     for (const branch of item.branches ?? []) {
-      this.#maskRibbon(branch, opacity * 0.86, time, 0.8);
-      this.#drawRibbonStructure(jelly, branch, opacity * 0.86, time, 0.8, true);
+      this.#maskRibbon(branch, opacity * 0.86, time, widthScale * 0.8);
+      this.#drawRibbonStructure(jelly, branch, opacity * 0.86, time, widthScale * 0.8, true);
     }
   }
 
@@ -690,7 +711,7 @@ export class AsciiRenderer {
         const u = (raw.x - shift) / halfW;
         const absU = Math.abs(u);
         const profile = bellProfileAt(v, jelly.pulse, jelly.anatomyPhase);
-        const rimV = bellRimAt(u, jelly.pulse, jelly.twist);
+        const rimV = bellRimAt(u, jelly.pulse, jelly.twist) + skirtLobeAt(u, jelly.anatomyPhase).drop;
         const insideDome = v <= 0.020 && profile > 0 && absU <= profile;
         const insideSkirt = absU <= 0.90 && v > -0.026 && v <= rimV;
         if (!insideDome && !insideSkirt) continue;
@@ -700,11 +721,14 @@ export class AsciiRenderer {
         const boundaryThreshold = Math.max(0.009, (cellW / Math.max(1, halfW)) * 1.16);
         const boundary = insideDome && profileGap >= 0 && profileGap < boundaryThreshold;
         const lowerEdge = insideSkirt && v > rimV - Math.max(0.008, cellH / height * 0.62);
+        const skirt = lowerEdge ? skirtMembraneAt(u, jelly.pulse, jelly.anatomyPhase, time, jelly.tilt) : null;
+        if (lowerEdge && !skirt.visible) continue;
+        const detailU = u - Math.sin(this.yaw) * 0.15 * (1 - smoothstep(invLerp(-0.4, 0.04, v)));
         const membraneDepth = insideDome
           ? clamp(profileGap / Math.max(0.075, profile * 0.68), 0, 1)
           : clamp((rimV - v) / 0.068, 0, 1);
 
-        const crownDistance = Math.hypot(u / 0.46, (v + 0.78) / 0.30);
+        const crownDistance = Math.hypot(detailU / 0.46, (v + 0.78) / 0.30);
         const crownGlow = 1 - smoothstep(invLerp(0.18, 1.04, crownDistance));
         const warmZone = 1 - smoothstep(invLerp(-0.66, -0.19, v));
         const coolZone = smoothstep(invLerp(-0.45, 0.035, v));
@@ -712,13 +736,13 @@ export class AsciiRenderer {
         const centerGlass = Math.max(0, 1 - Math.abs(u) / Math.max(0.17, profile))
           * (0.28 + 0.72 * Math.sin(Math.PI * clamp(t, 0, 1)));
 
-        const theta = Math.atan2(u * 0.93, -(v + 1.055));
+        const theta = Math.atan2(detailU * 0.93, -(v + 1.055));
         const canalPrimary = Math.abs(Math.sin(theta * 6.5 + jelly.anatomyPhase + t * 1.31))
           < (0.057 + t * 0.017)
           && t > 0.08 && t < 0.82;
         const canalFine = Math.abs(Math.sin(theta * 12.7 - jelly.twist * 0.57 - t * 1.73)) < 0.022
           && t > 0.14 && t < 0.68;
-        const flamePhase = u * 11.7 + t * 3.4
+        const flamePhase = detailU * 11.7 + t * 3.4
           + Math.sin(t * 7.4 + jelly.anatomyPhase) * 0.44
           + jelly.twist * 0.31;
         const flameStreak = t > 0.09 && t < 0.60
@@ -762,7 +786,7 @@ export class AsciiRenderer {
         const materialOpacity = lerp(1.08, 0.70, lowerGlass);
         const pulseLight = 1 + jelly.pulse * (1 - lowerGlass) * 0.06;
         const alpha =
-          (0.255 + tissueDensity * 0.445)
+          (0.29 + tissueDensity * 0.49)
           * (this.compact ? 1.12 : 1.03)
           * materialOpacity
           * pulseLight;
@@ -783,7 +807,8 @@ export class AsciiRenderer {
           const dy = bellRimAt(clamp(u + slopeProbe, -1, 1), jelly.pulse, jelly.twist)
             - bellRimAt(clamp(u - slopeProbe, -1, 1), jelly.pulse, jelly.twist);
           glyph = directionGlyph(slopeProbe * 2, dy * height / Math.max(1, halfW));
-          color = rgba(jelly.palette.rimHot, 0.92);
+          color = mixColor(jelly.palette.bellCoral, jelly.palette.rimHot,
+            skirt.intensity * 0.75, skirt.intensity * 0.74);
         } else if (lobeEdge) {
           glyph = densityGlyph(0.40 + (1 - lobeDistance) * 0.20, ASCII.tissue);
           color = mixColor(jelly.palette.bellCool, jelly.palette.armHot, 0.42, 0.56);
@@ -804,7 +829,7 @@ export class AsciiRenderer {
         } else {
           glyph = densityGlyph(tissueDensity, ASCII.tissue);
           if (crownGlow > 0.23) {
-            color = mixColor(jelly.palette.bellWarm, jelly.palette.bellCrown, 0.42 + crownGlow * 0.52, alpha + 0.09);
+            color = mixColor(jelly.palette.bellWarm, jelly.palette.bellCrown, 0.42 + crownGlow * 0.52, alpha + 0.13);
           } else if (warmZone > 0.25 && coolZone < 0.58) {
             const coral = clamp(0.22 + t * 0.40 + grainA * 0.11, 0, 0.84);
             color = mixColor(jelly.palette.bellGlass, jelly.palette.bellCoral, coral, alpha);
@@ -815,11 +840,13 @@ export class AsciiRenderer {
           }
         }
 
+        ctx.globalAlpha = clamp(bellSideLightAt(u, this.yaw), 0, 1);
         ctx.fillStyle = color;
         ctx.fillText(glyph, px, py);
       }
     }
 
+    ctx.globalAlpha = 1;
     // Irregular internal canals. Each one has its own start/end, wander and
     // occasional fork so the anatomy cannot be read as evenly spaced spokes.
     ctx.shadowColor = rgba(jelly.palette.bellHot, 0.36);
@@ -850,7 +877,11 @@ export class AsciiRenderer {
         const spread = lerp(0.24, 0.94, clamp(progress, 0, 1));
         const wander = Math.sin(q * (5.4 + rayIndex * 0.17) + rayIndex * 1.33 + jelly.anatomyPhase)
           * (0.012 + Math.abs(ray.bend) * 0.36);
-        const u = (ray.x + ray.bend * q * q + wander + branchOffset * smoothstep(q)) * profile * spread;
+        const u = clamp(
+          (ray.x + ray.bend * q * q + wander + branchOffset * smoothstep(q)) * profile * spread
+            + Math.sin(this.yaw) * 0.075 * profile * (1 - q * 0.4),
+          -profile * 0.96, profile * 0.96,
+        );
         const shift = bellCenterShift(v, jelly.anatomyPhase, halfW);
         const local = rotate(u * halfW + shift, v * height, jelly.tilt);
         const point = { x: jelly.x + local.x, y: jelly.y + local.y };
@@ -888,7 +919,8 @@ export class AsciiRenderer {
       const membrane = skirtMembraneAt(u, jelly.pulse, jelly.anatomyPhase, time, jelly.tilt);
       if (!membrane.visible) continue;
 
-      const rim = bellRimAt(u, jelly.pulse, jelly.twist) + membrane.offset;
+      const lobe = skirtLobeAt(u, jelly.anatomyPhase);
+      const rim = bellRimAt(u, jelly.pulse, jelly.twist) + membrane.offset + lobe.drop;
       const nextU = clamp(u + 0.010, -0.89, 0.89);
       const nextMembrane = skirtMembraneAt(
         nextU,
@@ -897,17 +929,18 @@ export class AsciiRenderer {
         time,
         jelly.tilt,
       );
-      const nextRim = bellRimAt(nextU, jelly.pulse, jelly.twist) + nextMembrane.offset;
+      const nextRim = bellRimAt(nextU, jelly.pulse, jelly.twist) + nextMembrane.offset
+        + skirtLobeAt(nextU, jelly.anatomyPhase).drop;
       const dy = nextRim - rim;
       const shift = bellCenterShift(rim, jelly.anatomyPhase, halfW);
       const local = rotate(u * halfW + shift, rim * height, jelly.tilt);
       const x = jelly.x + local.x;
       const y = jelly.y + local.y;
-      const depthLight = skirtDepthLightAt(u, jelly.anatomyPhase);
+      const depthLight = skirtDepthLightAt(u, jelly.anatomyPhase) * bellSideLightAt(u, this.yaw);
       const pulseLift = 1 + jelly.pulse * 0.045;
-      const alpha = (0.16 + membrane.intensity * 0.68) * depthLight * pulseLift;
+      const alpha = (0.20 + membrane.intensity * 0.78) * depthLight * pulseLift;
       const skirtBase =
-        depthLight < 0.76 ? jelly.palette.bellCool : jelly.palette.rim;
+        depthLight < 0.76 ? jelly.palette.bellCool : jelly.palette.bellCoral;
 
       ctx.shadowColor = rgba(
         jelly.palette.rim,
@@ -927,6 +960,16 @@ export class AsciiRenderer {
         y,
       );
 
+      // Scallops catch a warmer highlight above the ragged edge. Their bright
+      // centers fade into gaps instead of forming a second continuous cord.
+      if (lobe.weight > 0.52 && membrane.intensity > 0.45) {
+        const crest = lobe.weight * membrane.intensity;
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = mixColor(jelly.palette.bellCoral, jelly.palette.bellGlass,
+          crest * 0.72, crest * 0.78 * depthLight);
+        ctx.fillText(densityGlyph(0.26 + crest * 0.32, ASCII.tissue), x, y - cellH * 0.62);
+      }
+
       // A second membrane layer only appears as occasional ghost fragments,
       // never as another continuous line.
       const ghostField = Math.sin(u * 31 + jelly.twist * 1.7)
@@ -940,8 +983,8 @@ export class AsciiRenderer {
         ctx.fillText(ghostField > 1.08 ? "." : "~", x, y + cellH * 0.31);
       }
 
-      if (membrane.frill) {
-        const length = membrane.frillSeed > 1.22 ? 2 : 1;
+      if (membrane.frill || (lobe.weight > 0.78 && membrane.intensity > 0.52)) {
+        const length = membrane.frillSeed > 1.22 ? 3 : 1;
         for (let k = 1; k <= length; k += 1) {
           const sway = Math.sin(jelly.anatomyPhase + u * 12.4 + k * 1.7)
             * cellW * 0.24 * k;
@@ -959,22 +1002,24 @@ export class AsciiRenderer {
       }
     }
 
-    // Ghostly subumbrella only. The lower bell should reveal the existing oral
-    // arms rather than hide them behind a second dense plug of text.
+    // A small asymmetric mass of tissue obscures the individual root origins.
+    // It dissolves into the existing oral arms rather than ending in a line.
     ctx.shadowColor = rgba(jelly.palette.armHot, 0.14);
     ctx.shadowBlur = 0.9 * this.shadowScale;
-    for (let row = 0; row < 10; row += 1) {
-      const y = jelly.y + height * 0.050 + row * cellH * 0.70;
-      const taper = lerp(0.27, 0.13, row / 9);
-      const half = halfW * taper * (0.86 + 0.14 * Math.sin(row * 1.23 + jelly.twist));
-      for (let x = -half; x <= half; x += cellW * 1.20) {
-        const hole = Math.sin(x * 0.19 + row * 2.8 + jelly.anatomyPhase) > 0.48;
-        if (hole && row > 0) continue;
-        const local = rotate(x, y - jelly.y, jelly.tilt);
+    const rows = Math.max(5, Math.ceil(height * 0.23 / cellH));
+    for (let row = 0; row < rows; row += 1) {
+      const t = row / rows;
+      const half = halfW * lerp(0.31, 0.14, smoothstep(t));
+      const drift = halfW * Math.sin(t * 3.5 + jelly.anatomyPhase) * 0.065 * t;
+      for (let x = -half; x <= half; x += cellW * 1.2) {
         const center = 1 - Math.abs(x) / Math.max(1, half);
-        const glyph = densityGlyph(0.12 + center * 0.30 + (row % 3) * 0.035, ASCII.ribbon);
-        ctx.fillStyle = mixColor(jelly.palette.armDark, jelly.palette.armHot, center * 0.48, 0.24 + center * 0.18);
-        ctx.fillText(glyph, jelly.x + local.x, jelly.y + local.y);
+        const grain = Math.sin(x * 0.32 + row * 2.1 + jelly.anatomyPhase)
+          + Math.cos(x * 0.19 - row * 1.8);
+        if (grain > 0.36 + center * 0.65 - t * 0.6) continue;
+        const local = rotate(x + drift, height * (0.025 + t * 0.23), jelly.tilt);
+        const alpha = (0.15 + center * 0.32) * (1 - smoothstep(t));
+        ctx.fillStyle = mixColor(jelly.palette.arm, jelly.palette.bellGlass, center * 0.55, alpha);
+        ctx.fillText(densityGlyph(0.16 + center * 0.45, ASCII.ribbon), jelly.x + local.x, jelly.y + local.y);
       }
     }
 
@@ -983,7 +1028,7 @@ export class AsciiRenderer {
     this.#setFont(this.fontSize);
   }
 
-  render({ time, jelly, snow }) {
+  render({ time, jelly, snow, orientation }) {
     const ctx = this.ctx;
     if (!jelly) return;
     ctx.save();
@@ -993,15 +1038,22 @@ export class AsciiRenderer {
     this.#setFont(this.fontSize);
     this.#background(jelly, time);
     this.#drawSnow(snow);
+    this.yaw = orientation?.yaw ?? 0;
+    // All anatomical passes share the same tilted, mildly foreshortened frame.
+    ctx.translate(jelly.x, jelly.y);
+    ctx.rotate(jelly.tilt);
+    ctx.scale(bellScaleFor(this.yaw), 1);
+    ctx.rotate(-jelly.tilt);
+    ctx.translate(-jelly.x, -jelly.y);
+    const byDepth = (a, b) => visualDepthFor(a, this.yaw) - visualDepthFor(b, this.yaw);
 
-    const back = jelly.chains.filter((item) => item.layer < -0.25).sort((a, b) => a.layer - b.layer);
-    const middle = jelly.chains.filter((item) => item.layer >= -0.25 && item.layer < 0.45).sort((a, b) => a.layer - b.layer);
-    const front = jelly.chains.filter((item) => item.layer >= 0.45).sort((a, b) => a.layer - b.layer);
+    const back = jelly.chains.filter((item) => item.layer < -0.25).sort(byDepth);
+    const middle = jelly.chains.filter((item) => item.layer >= -0.25 && item.layer < 0.45).sort(byDepth);
+    const front = jelly.chains.filter((item) => item.layer >= 0.45).sort(byDepth);
 
     // Rear anatomy disappears under the bell exactly as it would in a photo.
     for (const item of back) {
-      if (item.arm) this.#drawRibbon(jelly, item, 0.76, time);
-      else this.#drawTentacle(jelly, item, 0.70);
+      this.#drawProjectedItem(jelly, item, item.arm ? 0.76 : 0.70, time);
     }
 
     // A faint continuation of rear/mid anatomy is drawn before the bell so
@@ -1014,12 +1066,10 @@ export class AsciiRenderer {
     // lay a small dark mask before their ASCII, producing real occlusion of
     // strands behind them without painting any visible non-ASCII surface.
     for (const item of middle) {
-      if (item.arm) this.#drawRibbon(jelly, item, 0.90, time);
-      else this.#drawTentacle(jelly, item, 0.86);
+      this.#drawProjectedItem(jelly, item, item.arm ? 0.90 : 0.86, time);
     }
     for (const item of front) {
-      if (item.arm) this.#drawRibbon(jelly, item, 1, time);
-      else this.#drawTentacle(jelly, item, 0.98);
+      this.#drawProjectedItem(jelly, item, item.arm ? 1 : 0.98, time);
     }
 
     ctx.restore();

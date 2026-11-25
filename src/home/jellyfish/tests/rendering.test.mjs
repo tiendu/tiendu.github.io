@@ -1,12 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { renderFpsFor } from "../config.mjs";
-import {
-  ambientEddyAt,
-  fluidSensitivityFor,
-  oralArmBillowAt,
-  ribbonSurfaceBreathAt,
-} from "../fluid.mjs";
 import {
   bellGridScaleFor,
   bellPoreThresholdAt,
@@ -14,59 +7,12 @@ import {
   bellRimAt,
   bellTransmissionAt,
   internalRootOpacityAt,
-  ribbonKinematicsAt,
   rootEmergenceScale,
   skirtDepthLightAt,
   skirtMembraneAt,
   tentacleAccentStrength,
   tentaclePresenceScale,
 } from "../renderer.mjs";
-import { heroSizeFor, topClearanceFor } from "../jellyfish.mjs";
-import { currentWeather, OceanField } from "../ocean.mjs";
-import { VerletChain } from "../physics.mjs";
-import { pulseEnvelope } from "../pulse.mjs";
-import { JellyWorld } from "../world.mjs";
-
-function anatomyBounds(jelly) {
-  let minX = jelly.x - jelly.bellWidth() * 0.5;
-  let maxX = jelly.x + jelly.bellWidth() * 0.5;
-  let minY = jelly.y - jelly.bellHeight();
-  let maxY = jelly.y;
-  for (const item of jelly.chains) {
-    for (let i = 0; i < item.chain.count; i += 1) {
-      minX = Math.min(minX, item.chain.x[i]);
-      maxX = Math.max(maxX, item.chain.x[i]);
-      minY = Math.min(minY, item.chain.y[i]);
-      maxY = Math.max(maxY, item.chain.y[i]);
-    }
-    for (const branch of item.branches) {
-      for (let i = 0; i < branch.chain.count; i += 1) {
-        minX = Math.min(minX, branch.chain.x[i]);
-        maxX = Math.max(maxX, branch.chain.x[i]);
-        minY = Math.min(minY, branch.chain.y[i]);
-        maxY = Math.max(maxY, branch.chain.y[i]);
-      }
-    }
-  }
-  return { minX, maxX, minY, maxY };
-}
-
-function assertFiniteAnatomy(jelly) {
-  assert.ok(Number.isFinite(jelly.x));
-  assert.ok(Number.isFinite(jelly.y));
-  for (const item of jelly.chains) {
-    for (let i = 0; i < item.chain.count; i += 1) {
-      assert.ok(Number.isFinite(item.chain.x[i]));
-      assert.ok(Number.isFinite(item.chain.y[i]));
-    }
-    for (const branch of item.branches) {
-      for (let i = 0; i < branch.chain.count; i += 1) {
-        assert.ok(Number.isFinite(branch.chain.x[i]));
-        assert.ok(Number.isFinite(branch.chain.y[i]));
-      }
-    }
-  }
-}
 
 test("bell profile rounds into a narrower skirt with a porous lower membrane", () => {
   const crown = bellProfileAt(-0.90, 0.1, 1.2);
@@ -218,4 +164,3 @@ test("skirt membrane stays broken, brightness-varied and pulse-responsive", () =
     `current response ${current.offset - calm.offset}`,
   );
 });
-

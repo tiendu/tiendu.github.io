@@ -1,28 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderFpsFor } from "../config.mjs";
-import {
-  ambientEddyAt,
-  fluidSensitivityFor,
-  oralArmBillowAt,
-  ribbonSurfaceBreathAt,
-} from "../fluid.mjs";
-import {
-  bellGridScaleFor,
-  bellPoreThresholdAt,
-  bellProfileAt,
-  bellRimAt,
-  bellTransmissionAt,
-  internalRootOpacityAt,
-  ribbonKinematicsAt,
-  rootEmergenceScale,
-  skirtDepthLightAt,
-  skirtMembraneAt,
-  tentacleAccentStrength,
-  tentaclePresenceScale,
-} from "../renderer.mjs";
 import { heroSizeFor, topClearanceFor } from "../jellyfish.mjs";
-import { currentWeather, OceanField } from "../ocean.mjs";
+import { OceanField } from "../ocean.mjs";
 import { VerletChain } from "../physics.mjs";
 import { pulseEnvelope } from "../pulse.mjs";
 import { JellyWorld } from "../world.mjs";
@@ -285,4 +265,3 @@ test("envelope repair keeps segment lengths coherent during hostile current", ()
   }
   assert.ok(worst < 1.2, `worst post-envelope constraint ${worst}`);
 });
-
