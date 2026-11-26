@@ -39,6 +39,36 @@ export function mixMembraneColor(palette, glassLight, coral, warmth, crown, alph
   return `rgba(${channel("r")}, ${channel("g")}, ${channel("b")}, ${clamp(alpha, 0, 1)})`;
 }
 
+// Anatomy-specific ink families, from fine marks to broader letterforms.
+export const MATERIAL_GLYPHS = Object.freeze({
+  membrane: Object.freeze([".,'\x60:;i!l", "i;:jrtfcsuv", "aceosuvnxyz"]),
+  pigment: Object.freeze([".,:;ir", "ceosuvCJS", "OCGQS023568"]),
+  ribbon: Object.freeze([".,:;!il", "rftjzsvyn", "xXAwmbdphkMNHK"]),
+  fiber: Object.freeze({ horizontal: "~~~--_", vertical: "||||!il:", rising: "/////(", falling: "\\\\\\\\\\)" }),
+  edge: Object.freeze({ horizontal: "===-~", vertical: "||||!I", rising: "/////<", falling: "\\\\\\\\\\>" }),
+  canal: Object.freeze({ horizontal: "~~-=", vertical: "|||:;!", rising: "///{(", falling: "\\\\\\})" }),
+});
+
+// Stable material coordinates, never a frame counter or random stream.
+export function glyphSeedAt(index, lane, phase = 0) {
+  let h = Math.imul(index + 1, 374761393) ^ Math.imul(lane + 1, 668265263)
+    ^ Math.round(phase * 4096);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+export function pickGlyph(family, seed) {
+  return family[Math.floor(clamp(seed, 0, 0.9999) * family.length)];
+}
+
+export function materialGlyphAt(density, seed, families) {
+  return pickGlyph(families[density < 0.23 ? 0 : density < 0.38 ? 1 : 2], seed);
+}
+
+export function fiberGlyphAt(dx, dy, table, seed) {
+  return pickGlyph(directionGlyph(dx, dy, table), seed);
+}
+
 export function directionGlyph(dx, dy, table = ASCII.edge) {
   const ax = Math.abs(dx);
   const ay = Math.abs(dy);

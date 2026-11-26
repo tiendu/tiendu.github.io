@@ -1,7 +1,6 @@
-import { ASCII } from "./config.mjs";
 import { ribbonSurfaceBreathAt } from "./fluid.mjs";
 import { rootEmergenceScale, tentacleAccentStrength, tentaclePresenceScale } from "./geometry.mjs";
-import { densityGlyph, directionGlyph, mixColor, rgba } from "./glyphs.mjs";
+import { fiberGlyphAt, glyphSeedAt, materialGlyphAt, MATERIAL_GLYPHS, mixColor, rgba } from "./glyphs.mjs";
 import { drawGlyph } from "./glyph-atlas.mjs";
 import { ribbonMaterialAt, tissuePresence } from "./material.mjs";
 import { clamp, invLerp, lerp, smoothstep, TAU } from "./math.mjs";
@@ -71,7 +70,7 @@ export function drawTentacle(frame, occlusion, jelly, item, opacity = 1) {
     const nx = -dy / distance;
     const ny = dx / distance;
 
-    const glyph = directionGlyph(dx, dy);
+    const glyph = fiberGlyphAt(dx, dy, MATERIAL_GLYPHS.fiber, glyphSeedAt(i, 0, item.phase));
     const rootGlow = 1 - smoothstep(invLerp(0.0, 0.34, along));
     const tipGlow = smoothstep(invLerp(0.70, 0.95, along)) * 0.14;
     const emission = jelly.light?.rootAt(item, along) ?? 0;
@@ -297,7 +296,7 @@ function drawRibbonStructure(frame, occlusion, jelly, item, opacity, time, width
       // Two independent edges are always rendered. One becomes brighter as
       // the ribbon twists toward us, while the opposite edge falls away.
       const leftFront = smoothstep(invLerp(-0.24, 0.24, g.face));
-      const edgeGlyph = directionGlyph(dx, dy, ASCII.arm);
+      const edgeGlyph = fiberGlyphAt(dx, dy, MATERIAL_GLYPHS.edge, glyphSeedAt(i, 1, item.phase));
       ctx.fillStyle = mixColor(
         jelly.palette.arm,
         jelly.palette.armHot,
@@ -333,7 +332,7 @@ function drawRibbonStructure(frame, occlusion, jelly, item, opacity, time, width
           smoothstep(invLerp(0.58, 0.96, foldHighlight))
           * smoothstep(invLerp(0.22, 0.86, face));
         const density = clamp(
-          0.10 + middle * 0.38 + foldHighlight * 0.24 + face * 0.16,
+          0.20 + middle * 0.38 + foldHighlight * 0.24,
           0.04,
           0.90,
         );
@@ -347,7 +346,9 @@ function drawRibbonStructure(frame, occlusion, jelly, item, opacity, time, width
           0.16 + foldHighlight * 0.44 + face * 0.12,
           alpha * (0.44 + middle * 0.34 + face * 0.08) * interior.opacity,
         );
-        tissueGlyph(frame, occlusion, densityGlyph(density * interior.density, ASCII.ribbon), x, y);
+        const glyph = materialGlyphAt(density * interior.density,
+          glyphSeedAt(i, Math.round(q * 12), item.phase), MATERIAL_GLYPHS.ribbon);
+        tissueGlyph(frame, occlusion, glyph, x, y);
       }
 
       // Ruffled lace protrudes independently from each edge, rather than as

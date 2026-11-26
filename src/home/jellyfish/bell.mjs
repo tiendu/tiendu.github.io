@@ -3,7 +3,8 @@ import { channelFlashMix, meridionalStripeAt, swimChannelLightField } from "./ch
 import { drawGlyph } from "./glyph-atlas.mjs";
 import { bellCenterShift, bellGridScaleFor, bellPoreThresholdAt, bellProfileAt,
   internalRootOpacityAt, skirtRimAt } from "./geometry.mjs";
-import { directionGlyph, mixColor, mixMembraneColor, rgba, setFont } from "./glyphs.mjs";
+import { directionGlyph, fiberGlyphAt, glyphSeedAt, materialGlyphAt, MATERIAL_GLYPHS,
+  mixColor, mixMembraneColor, rgba, setFont } from "./glyphs.mjs";
 import { clamp, invLerp, lerp, rotate, smoothstep } from "./math.mjs";
 
 // Pigment belongs to the membrane, not to separate outlined organs or blobs.
@@ -50,11 +51,9 @@ export function membraneSampleAt(col, row, phase = 0) {
   };
 }
 
-// Small marks and mixed silhouettes read as suspended granules and short
-// fibres instead of rows of equally wide blocks. No bars or solid glyphs.
-export function membraneGlyphAt(density, grain) {
-  const family = density < 0.23 ? ".,'`:i" : density < 0.38 ? ":;iirsov" : "irsovxac";
-  return family[Math.min(family.length - 1, Math.floor(clamp(grain, 0, 0.9999) * family.length))];
+// Pigment has rounder, broader letterforms; clear glass stays finely marked.
+export function membraneGlyphAt(density, grain, pigment = false) {
+  return materialGlyphAt(density, grain, pigment ? MATERIAL_GLYPHS.pigment : MATERIAL_GLYPHS.membrane);
 }
 
 function internalPigmentAt(u, v, phase) {
@@ -160,8 +159,13 @@ export function membraneRowsFor(frame, stepU, stepV, phase) {
       const u = sample.x * stepU, v = sample.y * stepV;
       if (v < -1.09 || v > 0.095) continue;
       const crownDistance = Math.hypot(u / 0.46, (v + 0.78) / 0.30);
-      samples.push({ ...sample, u, v, absU: Math.abs(u),
-        crownGlow: 1 - smoothstep(invLerp(0.18, 1.04, crownDistance)),
+      const crownGlow = 1 - smoothstep(invLerp(0.18, 1.04, crownDistance));
+      const fineGrain = membraneGrainAt(u, v, phase);
+      const pigment = marginalPigmentAt(u, 0.035 - v, 0, phase);
+      const inkDensity = 0.08 + crownGlow * 0.35 + (1 - Math.min(1, Math.abs(u))) * 0.16
+        + fineGrain * 0.14 + pigment * 0.22;
+      samples.push({ ...sample, u, v, absU: Math.abs(u), crownGlow,
+        inkGlyph: membraneGlyphAt(inkDensity, sample.glyph, crownGlow > 0.35 || pigment > 0.35),
         warmZone: 1 - smoothstep(invLerp(-0.66, -0.19, v)),
         lowerGlass: smoothstep(invLerp(-0.46, 0.025, v)),
         centerFactor: 0.28 + 0.72 * Math.sin(Math.PI * clamp(invLerp(-1.07, 0.035, v), 0, 1)),
@@ -169,7 +173,7 @@ export function membraneRowsFor(frame, stepU, stepV, phase) {
         pulseFactor: smoothstep(invLerp(-0.44, 0.02, v)),
         grainSin: Math.sin(u * 29 + v * 19 + phase),
         grainAngle: u * 15 - v * 35,
-        fineGrain: membraneGrainAt(u, v, phase),
+        fineGrain,
         nearMargin: v > -0.28,
       });
     }
@@ -268,7 +272,7 @@ export function drawBell(frame, jelly, time) {
         * materialOpacity
         * pulseLight;
 
-      const glyph = membraneGlyphAt(tissueDensity, sample.glyph);
+      const glyph = sample.inkGlyph;
       // Blend the zones continuously rather than cutting across the tissue
       // at a hard colour boundary. The skirt remains integrated pigment.
       const coral = clamp(0.18 + warmZone * 0.36 + internal * 0.12 + pigment * 0.88, 0, 0.94);
@@ -346,7 +350,8 @@ export function drawBell(frame, jelly, time) {
           0.30 + (1 - q) * 0.58,
           (branchOffset ? 0.15 : 0.23) * (0.62 + fade * 0.38),
         );
-        drawGlyph(frame, directionGlyph(dx, dy), point.x, point.y);
+        drawGlyph(frame, fiberGlyphAt(dx, dy, MATERIAL_GLYPHS.canal,
+          glyphSeedAt(rayIndex, step + (branchOffset ? 32 : 0), jelly.anatomyPhase)), point.x, point.y);
       }
       previous = point;
     }

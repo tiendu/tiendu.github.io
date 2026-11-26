@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { drawBell, marginalPigmentAt, membraneSampleAt, membraneGlyphAt } from "../bell.mjs";
 import { JELLY_PALETTE } from "../config.mjs";
 import { bellCenterShift, skirtRimAt } from "../geometry.mjs";
-import { rgba } from "../glyphs.mjs";
+import { MATERIAL_GLYPHS, rgba } from "../glyphs.mjs";
 import { rotate } from "../math.mjs";
 
 function captureBell(size, pulse, phase, compact, tilt = 0) {
@@ -80,7 +80,7 @@ test("material samples are deterministic, jittered within cells and use fine gly
       assert.ok(a.x > col && a.x < col + 1 && a.y > row && a.y < row + 1);
       samples.push(a);
       for (const density of [0.12, 0.28, 0.45, 0.83]) {
-        assert.ok(".,'`:;irsovxac".includes(membraneGlyphAt(density, a.glyph)));
+        assert.ok(MATERIAL_GLYPHS.membrane.join("").includes(membraneGlyphAt(density, a.glyph)));
       }
     }
   }
