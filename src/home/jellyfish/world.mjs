@@ -9,6 +9,7 @@ export class JellyWorld {
   constructor(width, height, seed = 0x7a11f15, oceanTimeOffset = 0) {
     this.width = Math.max(1, width);
     this.height = Math.max(1, height);
+    this.origin = [this.width, this.height];
     this.time = 0;
     this.orientation = { tilt: 0, tiltVelocity: 0 };
     this.seed = seed >>> 0;

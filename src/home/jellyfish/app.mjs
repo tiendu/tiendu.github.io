@@ -1,6 +1,7 @@
 import { renderFpsFor, SIMULATION } from "./config.mjs";
 import { AsciiRenderer } from "./renderer.mjs";
 import { JellyWorld } from "./world.mjs";
+import { restoreWorld, saveWorld } from "./persistence.mjs";
 import { bindWaterInput } from "./water-input.mjs";
 import { canvasPixelRatio } from "./render-quality.mjs";
 import { AdaptiveResolution, PerformanceWindow, SimulationProfile, createPerformanceOverlay } from "./performance.mjs";
@@ -47,6 +48,8 @@ export function mountJellyfish() {
   if (!renderer.ctx) return () => {};
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   let world;
+  let disposed = false;
+  const save = () => { if (world && !disposed) saveWorld(world); };
   let width = 1;
   let height = 1;
   let accumulator = 0;
@@ -94,8 +97,8 @@ export function mountJellyfish() {
     height = nextHeight;
     renderer.resize(width, height, quality.ratio(width, height));
     if (!world) {
-      // Keep the session specimen, but enter the ocean at a new time on each load.
-      world = new JellyWorld(width, height, seedFromSession(), Math.random() * 3600);
+      world = restoreWorld(width, height)
+        ?? new JellyWorld(width, height, seedFromSession(), Math.random() * 3600);
     } else {
       world.resize(width, height);
     }
@@ -190,8 +193,10 @@ export function mountJellyfish() {
   };
 
   const onVisibility = () => {
-    if (document.hidden) stop();
-    else start();
+    if (document.hidden) {
+      save();
+      stop();
+    } else start();
   };
 
   const onReducedChange = () => start();
@@ -215,11 +220,18 @@ export function mountJellyfish() {
   canvas.addEventListener("contextlost", onContextLost);
   canvas.addEventListener("contextrestored", onContextRestored);
   document.addEventListener("visibilitychange", onVisibility);
+  window.addEventListener("pagehide", save);
   reduced.addEventListener?.("change", onReducedChange);
 
   measure();
+  // Storage is synchronous; never serialize from a render or simulation step.
+  const checkpoint = setInterval(() => { if (running && !document.hidden) save(); }, 10000);
 
   return () => {
+    if (disposed) return;
+    save();
+    disposed = true;
+    clearInterval(checkpoint);
     stop();
     resizeObserver.disconnect();
     viewport?.removeEventListener("resize", onViewportResize);
@@ -229,6 +241,7 @@ export function mountJellyfish() {
     canvas.removeEventListener("contextlost", onContextLost);
     canvas.removeEventListener("contextrestored", onContextRestored);
     document.removeEventListener("visibilitychange", onVisibility);
+    window.removeEventListener("pagehide", save);
     reduced.removeEventListener?.("change", onReducedChange);
   };
 }
