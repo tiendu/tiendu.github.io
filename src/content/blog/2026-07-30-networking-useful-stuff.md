@@ -1,8 +1,8 @@
 ---
 title: "Networking, But Only the Useful Stuff"
 date: 2026-07-30
-updatedDate: 2026-11-16
-description: "Understand IP addresses, CIDR, gateways, NAT, DNS, TCP, cloud VPCs and security rules, then diagnose failures with practical Linux and macOS commands."
+updatedDate: 2026-11-27
+description: "A practical guide to CIDR, routing, ARP, DNS, TCP, NAT, firewalls and cloud networking, with packet captures and Linux, macOS and PowerShell troubleshooting commands."
 topic: "Systems & Reliability"
 keywords:
   - "networking"
@@ -21,6 +21,7 @@ keywords:
   - "TLS"
   - "Linux"
   - "troubleshooting"
+  - "PowerShell"
 urlSlug: "networking-useful-stuff"
 pinned: true
 ---
@@ -28,373 +29,91 @@ Networking is often taught backward: here are fifty commands, memorize what they
 
 I prefer three questions:
 
-1. **Where is the destination?** IP address, subnet, and DNS.
-2. **How does the packet get there?** The local interface, next hop, route table, and maybe NAT.
-3. **What allows the conversation?** Firewall rules, a listening port, TLS, and the application.
+1. **Where is the destination?** The name, address, and port.
+2. **How does the packet get there?** The interface, route, next hop, and possibly NAT.
+3. **What allows the conversation?** Network policy, a listening socket, the return path, TLS, and the application.
 
-This is a field guide for answering those questions on a laptop, a Linux server, or a cloud VM. We will build a mental model first, translate it into cloud terminology, and finish with the actual commands. There is no need to memorize every networking protocol.
+Most of what follows is an attempt to answer those questions. The examples use IPv4 and Linux where convenient, but the reasoning applies to laptops, containers, Windows servers, and cloud VMs.
 
-## Start here: quick diagnosis
+The addresses, terminal outputs and packet captures are illustrative. Replace them with values from your own environment. `example.com`, `203.0.113.0/24` and `198.51.100.0/24` are reserved for documentation, not test services.
 
-When something cannot connect, begin with the failure **as seen from the failing client**. Run one test at a time. A successful check tells you where to investigate next, not that the entire network is healthy.
+## Start here: the last thing that worked
 
-| Symptom | First useful check | Next question |
-|---|---|---|
-| Hostname does not resolve | `getent ahosts HOST` | Wrong resolver, VPN, search domain, or DNS record? |
-| No usable path to IP | `ip route get IP` | Correct subnet, gateway, and route table? |
-| TCP connection times out | `nc -vz -w 3 HOST PORT` | Route, filter, listener, or return path? |
-| Connection is refused | `ss -lntp` on server | Is the service listening on the expected IP and port? |
-| TCP works, HTTPS fails | `curl -v https://HOST/` | TLS version, SNI, certificate, or proxy? |
-| Localhost works, remote client fails | `ss -lntp` on server | Bound to `127.0.0.1` or blocked by security rules? |
-| Cloud VM has no outbound internet | `ip route`; `getent ahosts HOST` | NAT gateway, proxy, DNS, or egress policy? |
-| One computer works, another fails | Compare DNS, route, and proxy settings | What is different between the two clients? |
+Suppose an application cannot reach `https://api.example.com/health`. Do not start by changing firewall rules. Start on the machine where the failure occurs.
 
-`HOST`, `IP`, and `PORT` above are placeholders. If you only remember one rule: **find the last boundary that worked, then test the next one**.
-
----
-
-## The packet's journey
-
-Suppose a browser opens `https://api.example.com/users`. The application may need to resolve the hostname first. Once it has an address, the operating system chooses a route, establishes a transport connection, negotiates TLS, and sends HTTP traffic. DNS is a *dependency*, not necessarily the first network hop: resolving a name itself sends packets, and connecting to a literal IP may skip DNS.
-
-```mermaid
-sequenceDiagram
-    accTitle: A simplified HTTPS request
-    accDescr: The application resolves a name, opens a TCP connection, negotiates TLS, and sends an HTTP request.
-    participant App as Application
-    participant DNS as DNS resolver
-    participant Net as Network stack
-    participant Srv as Server
-    App->>DNS: Resolve api.example.com
-    DNS-->>App: Destination IP
-    App->>Net: Connect to IP:443
-    Net->>Srv: TCP handshake (via chosen route)
-    Srv-->>Net: Connection established
-    App->>Srv: TLS handshake
-    Srv-->>App: TLS established
-    App->>Srv: GET /users
-    Srv-->>App: HTTP response
-```
-
-The diagram deliberately hides the routers, firewalls, and load balancers along the path. Those are the places where things often fail.
-
-## IP addresses and subnets
-
-An **IP address** identifies a network interface at the IP layer. A VM can have more than one IP address. A laptop's Wi-Fi and VPN can have different addresses. The address alone doesn't tell you whether the host is reachable or what service it runs.
-
-IPv4 addresses such as `192.168.1.20` have 32 bits; IPv6 addresses such as `2001:db8::20` have 128. The examples below use IPv4 because it is still what many cloud troubleshooting tickets start with. IPv6 follows similar routing ideas but has different address and neighbor-discovery rules.
-
-### CIDR: the slash is part of the address
-
-Consider `192.168.1.20/24`:
-
-- `192.168.1.20` is an address on the interface.
-- `/24` says the first 24 bits identify the network, leaving 8 bits for addresses within it.
-- The network is `192.168.1.0/24`, with 256 addresses (`192.168.1.0` through `192.168.1.255`).
-- The equivalent subnet mask is `255.255.255.0`.
-
-In a conventional IPv4 LAN, `.0` identifies that network and `.255` is its broadcast address; `.1` through `.254` are typical host addresses. **A cloud subnet is different**: providers reserve additional addresses. AWS and Azure typically reserve five IPv4 addresses per subnet. Don't confuse *total addresses* with *assignable VM addresses*.
-
-| Prefix | Addresses | Example network | Useful intuition |
-|---|---:|---|---|
-| `/16` | 65,536 | `10.20.0.0/16` | Large private network |
-| `/24` | 256 | `10.20.2.0/24` | Common small subnet |
-| `/26` | 64 | `10.20.2.0/26` | Smaller subnet |
-| `/28` | 16 | `10.20.2.0/28` | Very small subnet |
-| `/32` | 1 | `10.20.2.15/32` | Exactly one IPv4 address |
-| `/0` | All IPv4 | `0.0.0.0/0` | Default-route destination |
-
-The calculation is `2^(32 - prefix)`. A `/26`, for example, splits the first `/24` into four blocks: `.0–.63`, `.64–.127`, `.128–.191`, and `.192–.255`. `192.168.1.20` and `192.168.1.70` are in the same `/24`, but **not** in the same `/26`.
-
-CIDR is also how we describe routes, firewall source ranges, VPN networks, and VPC address spaces. A poorly planned CIDR range becomes painful when you later connect two networks that overlap.
-
-### What makes a subnet useful?
-
-In a normal Ethernet LAN, interfaces on the same IP subnet can send packets to each other through the local link. For an IPv4 destination outside that subnet, the host normally hands the packet to a **default gateway** (usually a router). The destination IP stays the final destination; the Ethernet frame goes to the gateway's MAC address.
-
-```mermaid
-flowchart TB
-    accTitle: Local delivery versus routed delivery
-    accDescr: A laptop reaches a server in the same subnet directly, but sends other destinations through its gateway.
-    Laptop["Laptop 192.168.1.20/24"]
-    Local["Server 192.168.1.40"]
-    Gateway["Gateway 192.168.1.1"]
-    Remote["Remote server 10.20.2.15"]
-    Laptop -->|"Same subnet: local delivery"| Local
-    Laptop -->|"Other subnet: next hop"| Gateway
-    Gateway -->|"Routes the packet"| Remote
-```
-
-The gateway is not always `192.168.1.1`: that is just a familiar home-network convention. Check the real default route with `ip route`. And do not think of a cloud subnet as literally one shared Ethernet cable: the provider implements routing and neighbor resolution through virtual networking.
-
-### MAC, ARP, and the next hop
-
-A MAC address matters for **local-link delivery**; an IP address matters for **routing toward the destination**. ARP finds the local-link MAC for an IPv4 next hop. It does not discover the MAC of a server across the internet. IPv6 uses Neighbor Discovery rather than ARP.
-
-For an off-subnet IPv4 connection:
-
-```text
-Destination IP:    203.0.113.42
-Selected next hop: 192.168.1.1
-Next-hop MAC:      the gateway's MAC, not the remote server's
-```
-
-Try `ip neigh` to see known local neighbors. Cloud VM neighbor tables may expose virtualized addresses instead of physical hardware details.
-
-## Routes, gateways, and NAT
-
-A route is an instruction: *for this destination prefix, send traffic through this interface or next hop*. Linux selects the most specific matching prefix (subject to routing policy, metrics, and the available tables).
-
-```text
-default via 192.168.1.1 dev eth0
-10.20.0.0/16 via 192.168.1.2 dev eth0
-10.20.2.0/24 via 192.168.1.3 dev eth0
-```
-
-Traffic for `10.20.2.15` matches all three routes, but the `/24` wins. A `default` route (`0.0.0.0/0`) catches destinations with no more specific match. Inspect the choice rather than guess:
-
-```bash
-ip route get 10.20.2.15
-```
-
-This shows the route the kernel *would* select. It does not prove that a firewall will allow the packet, that the gateway is alive, or that the remote service is listening.
-
-### Public and private IPs
-
-Private IPv4 networks are defined by RFC 1918:
-
-| Range | CIDR |
+| Question | Linux command |
 |---|---|
-| `10.0.0.0` to `10.255.255.255` | `10.0.0.0/8` |
-| `172.16.0.0` to `172.31.255.255` | `172.16.0.0/12` |
-| `192.168.0.0` to `192.168.255.255` | `192.168.0.0/16` |
+| Does the system resolve the name? | `getent ahosts HOST` |
+| Which interface and next hop will it use? | `ip route get IP` |
+| Can it establish a TCP connection? | `nc -vz -w 3 IP PORT` |
+| Does TLS and HTTP work? | `curl -v --connect-timeout 5 https://HOST/` |
+| Is the server actually listening? | `sudo ss -lntp` (on the server) |
+| What packets are visible? | `sudo tcpdump -ni any 'host IP and tcp port PORT'` |
 
-These ranges aren't globally routed across the public internet. Different homes and VPCs can reuse them. A **public IP** is globally routable in principle, but its presence does not guarantee the machine is reachable: routes, firewalls, and listeners still matter. `127.0.0.1` is loopback, while `169.254.0.0/16` is IPv4 link-local; neither is an RFC 1918 private range.
+A successful check narrows the problem. It does not establish that the next check will succeed. If DNS returns multiple addresses, test the one the application actually uses. If the request goes through a proxy or runs in a container, investigate from that context.
 
-### NAT changes addresses, not the destination service
+## Addresses and subnets
 
-**Network Address Translation (NAT)** rewrites packet addresses and sometimes ports. Two particularly useful terms:
+An IP address identifies an interface or logical endpoint at the IP layer. A machine can have several: Ethernet, Wi-Fi, VPN, loopback and virtual interfaces. An address does not tell you whether a service is reachable.
 
-- **SNAT** changes a source address, often allowing a private VM to make an outbound connection using a public egress IP.
-- **DNAT** changes a destination address, often forwarding traffic from a public address to a private service.
+IPv4 has 32 bits; IPv6 has 128. The examples here use IPv4. IPv6 has similar routing principles but different neighbor discovery, address types and fragmentation rules.
 
-```mermaid
-flowchart TB
-    accTitle: Outbound source NAT
-    accDescr: A private VM sends traffic through a NAT gateway, which uses a public source IP for its outbound connection.
-    VM["Private VM 10.20.2.15"] --> NAT["NAT gateway"]
-    NAT -->|"Source becomes public egress IP"| Internet["Internet service"]
-    Internet -->|"Reply to public IP"| NAT
-    NAT -->|"Return to original VM"| VM
-```
+### CIDR without memorizing a table
 
-A NAT gateway normally permits the private VM to *initiate* outbound connections, not strangers on the internet to initiate connections to that VM. NAT is not a substitute for firewall policy. Also, a **cloud NAT gateway** is a managed provider resource; you usually won't see it in the guest Linux routing table.
-
-## DNS, ports, and protocols
-
-**DNS** maps names such as `api.example.com` to records. An `A` record carries an IPv4 address; `AAAA` carries IPv6. DNS may answer with several addresses, and applications may prefer different ones. A successful `dig` query does not show that TCP or HTTP works.
-
-A useful distinction:
-
-```bash
-dig api.example.com        # Direct DNS query path
-getent hosts api.example.com  # System name-resolution path
-```
-
-`getent` can take account of `/etc/hosts`, resolver configuration, and VPN-specific behavior that a direct `dig` invocation might not reproduce. Cloud private DNS names may resolve differently inside and outside a VPC.
-
-An **IP address** gets a packet toward a network endpoint. A **port** identifies a service endpoint there. A client connection might look like:
+Take `192.168.14.123/22`. The prefix length tells us how many bits belong to the network. The remaining bits identify addresses within that network.
 
 ```text
-TCP 10.20.2.15:53144 -> 10.20.3.20:5432
+Address:       192.168.14.123
+Prefix:        /22
+Host bits:     32 - 22 = 10
+Address count: 2^10 = 1024
+Subnet mask:   255.255.252.0
 ```
 
-`53144` is the client's temporary (ephemeral) port; `5432` is the PostgreSQL server port. TCP performs a handshake and provides reliable ordered bytes. UDP sends datagrams without a TCP-style handshake; QUIC implements reliability and encryption over UDP. HTTPS usually uses TLS over TCP port 443, though HTTP/3 uses QUIC over UDP 443.
-
-A socket that listens on `127.0.0.1:8080` is not remotely reachable merely because the cloud firewall allows port 8080. It is bound to loopback. Check with `ss -lntp` and then check the cloud and host firewalls.
-
-## Cloud networking without the marketing names
-
-Cloud networking applies the same ideas with provider-managed infrastructure. You still need address ranges, subnets, routes, filtering, and service endpoints. The difference is that the cloud provider controls most of the underlying switches and routers.
-
-| Concept | AWS | Azure | Google Cloud |
-|---|---|---|---|
-| Isolated virtual network | VPC | VNet | VPC network |
-| Address range | VPC CIDR | VNet address space | VPC subnets' IP ranges |
-| Subnet | Subnet (one AZ) | Subnet (regional) | Subnet (regional) |
-| Virtual machine | EC2 | VM | Compute Engine |
-| VM traffic firewall | Security Group | NSG | VPC firewall rule |
-| Routing | VPC route tables | System routes and UDRs | VPC routes |
-| Outbound managed NAT | NAT Gateway | NAT Gateway | Cloud NAT |
-| Private service path | VPC endpoint / PrivateLink | Private Endpoint | Private Service Connect |
-
-An AWS VPC and Azure VNet belong to a region; a Google Cloud VPC is global but its subnets are regional. These names describe similar problems, **not identical feature behavior**.
-
-### Three VMs in one VPC
-
-Consider a small web system. We want one entry point from the internet, an app server that isn't directly public, and a database that accepts traffic only from the app.
+The first two octets account for 16 bits. The third contains six network bits and two host bits. The fourth contains eight host bits. So networks begin every `2^2 = 4` in the third octet.
 
 ```text
-VPC:                10.20.0.0/16
-Public subnet:      10.20.1.0/24
-Private app subnet: 10.20.2.0/24
-Private DB subnet:  10.20.3.0/24
+Third octet:   0–3    4–7    8–11   12–15   16–19  ...
+                                      ^
+                                     14
 
-Web VM:  10.20.1.10  (public IP mapped by the cloud)
-App VM:  10.20.2.15  (private only)
-DB VM:   10.20.3.20  (private only)
+floor(14 / 4) * 4 = 12
+
+Network:       192.168.12.0/22
+Last address:  192.168.15.255
 ```
 
-```mermaid
-flowchart TB
-    accTitle: Three-tier VPC with public and private subnets
-    accDescr: Internet traffic reaches the public web VM, which reaches a private app VM, which reaches the private database. The app VM can use a NAT gateway for outbound access.
-    Client["Internet client"]
-    subgraph VPC["VPC 10.20.0.0/16"]
-      direction TB
-      IGW["Internet Gateway"]
-      subgraph Public["Public subnet 10.20.1.0/24"]
-        Web["Web VM 10.20.1.10"]
-        NAT["Public NAT gateway"]
-      end
-      subgraph AppSubnet["Private app subnet 10.20.2.0/24"]
-        App["App VM 10.20.2.15"]
-      end
-      subgraph Data["Private DB subnet 10.20.3.0/24"]
-        DB["DB VM 10.20.3.20"]
-      end
-    end
-    Client --> IGW
-    IGW -->|"HTTPS 443"| Web
-    Web -->|"App port 8080"| App
-    App -->|"DB port 5432"| DB
-    App -.->|"Outbound updates"| NAT
-    NAT -.-> IGW
-```
+The mask for the changing octet is `256 - 4 = 252`. The same method works for `172.16.77.123/19`: the third-octet block size is `2^5 = 32`, so `floor(77 / 32) * 32 = 64`. The network is `172.16.64.0/19`, and the mask is `255.255.224.0`.
 
-This is deliberately a **single-AZ teaching example**, not a production high-availability blueprint. Production applications generally spread services and NAT capacity across more than one Availability Zone; internet-facing load balancers are typically preferable to a lone public web VM.
+Or, more generally, the network address is the bitwise AND of the IP address and its subnet mask.
 
-### Public and private are routing properties
+| Prefix | Mask | Total IPv4 addresses |
+|---|---|---:|
+| `/16` | `255.255.0.0` | 65,536 |
+| `/22` | `255.255.252.0` | 1,024 |
+| `/24` | `255.255.255.0` | 256 |
+| `/26` | `255.255.255.192` | 64 |
+| `/28` | `255.255.255.240` | 16 |
+| `/31` | `255.255.255.254` | 2 |
+| `/32` | `255.255.255.255` | 1 |
 
-In AWS, a subnet is commonly called *public* when its route table has an internet-bound route through an Internet Gateway. A *private* subnet does not have that route; it may have a default route to a public NAT gateway for outbound IPv4 access.
+Total addresses are not necessarily assignable host addresses. In a conventional IPv4 broadcast subnet, the first and last addresses are reserved for network and broadcast. `/31` point-to-point links and `/32` host routes are special cases. Standard AWS and Azure IPv4 subnets typically reserve five addresses, not two.
 
-| AWS subnet | Route for `10.20.0.0/16` | Route for `0.0.0.0/0` |
-|---|---|---|
-| Public | `local` | Internet Gateway |
-| Private app | `local` | NAT Gateway (optional) |
-| Private DB | `local` | None, unless explicitly needed |
+### Special address ranges
 
-A route through an Internet Gateway does **not** assign a public IP to a VM. Likewise, an open security group does **not** create a route. Reachability requires the address, route, security policy, listener, and sometimes NAT mapping to align.
+| Range | Meaning |
+|---|---|
+| `10.0.0.0/8` | RFC 1918 private |
+| `172.16.0.0/12` | RFC 1918 private |
+| `192.168.0.0/16` | RFC 1918 private |
+| `127.0.0.0/8` | IPv4 loopback |
+| `169.254.0.0/16` | IPv4 link-local |
+| `100.64.0.0/10` | Shared address space, commonly carrier-grade NAT |
+| `0.0.0.0/0` | All IPv4 destinations; often a default route |
 
-Important: the VPC route table is controlled in the cloud API. `ip route` inside a VM shows the **guest's** routing decisions, not the entire provider VPC route table. Both can matter for one packet.
+A public IP may be globally routable, but that does not guarantee a route, an open port or a healthy service. Private addresses can be routed between private networks. Reusing the same private ranges becomes a problem when those networks need to communicate.
 
-### Security groups, NACLs, and the host firewall
-
-For the example above, a good starting policy is:
-
-| Destination | Allow inbound | From |
-|---|---|---|
-| Web VM | TCP 443 | Internet, if publicly intended |
-| App VM | TCP 8080 | Web VM's security group |
-| DB VM | TCP 5432 | App VM's security group |
-
-AWS **security groups are stateful**: return packets for allowed connections are handled automatically. AWS **network ACLs are stateless**: they need rules permitting the relevant traffic in both directions, including return traffic to ephemeral client ports. The Linux host firewall is a separate layer. Azure NSGs are stateful too, but they are not the same product as AWS security groups.
-
-In a cloud, a packet may be dropped **before it ever reaches the guest OS**. Therefore, no SYN observed by `tcpdump` on the destination doesn't automatically mean the client never sent one. Check the cloud controls as well.
-
-### Other cloud terms worth understanding
-
-- **Load balancer:** accepts connections at one front-end address and distributes traffic to healthy backends. An L7 load balancer can make HTTP routing decisions; an L4 load balancer primarily handles connections and ports.
-- **Peering:** connects network address spaces using provider routes and policy. Overlapping CIDRs are commonly a blocker; peering is not automatically transitive.
-- **VPN:** encrypted network connection across another network, often connecting an office or data center to a cloud VPC.
-- **Transit hub:** central routing between many VPCs/networks (for example AWS Transit Gateway or Azure Virtual WAN).
-- **Private endpoint:** lets a service be reached through private network addresses without requiring a public internet path; DNS configuration often determines whether you actually use it.
-- **Availability Zone:** a fault-isolation boundary. It affects subnet placement and how you design resilient traffic paths.
-
-Don't try to memorize the cloud console. Recognize the underlying question: *who owns this destination prefix, which next hop handles it, and which policy accepts the connection?*
-
-## Three cloud incidents, traced from the VM
-
-### The app VM cannot reach the database
-
-On the app VM:
-
-```bash
-ip -br addr
-ip route get 10.20.3.20
-nc -vz -w 5 10.20.3.20 5432
-```
-
-On the database VM:
-
-```bash
-sudo ss -lntp | grep 5432
-sudo tcpdump -ni any 'tcp port 5432'
-```
-
-A timeout could involve cloud security policy, the destination subnet's NACL, a guest firewall, a missing route, or a failed VM. A refusal usually means a host or intermediate device actively rejected the connection. If TCP connects, troubleshoot PostgreSQL credentials, TLS, or the database itself.
-
-For AWS, use the console or CLI to inspect the infrastructure the guest cannot see:
-
-```bash
-aws ec2 describe-route-tables --filters 'Name=vpc-id,Values=vpc-REPLACE_ME'
-aws ec2 describe-security-groups --group-ids sg-REPLACE_ME
-aws ec2 describe-network-acls --filters 'Name=vpc-id,Values=vpc-REPLACE_ME'
-```
-
-### A private VM can reach internal servers but not the internet
-
-First rule out name resolution by testing a known IP and a real TCP endpoint, rather than relying only on `ping`. Then check the **private subnet's** route table: does `0.0.0.0/0` point to the intended public NAT gateway? Is the NAT gateway in a public subnet with an Internet Gateway route and an attached public address? Are egress rules and return paths permitted? A valid Linux default route alone cannot answer these questions.
-
-Also check whether the destination can be reached privately through a VPC endpoint. Not every cloud service needs a NAT gateway.
-
-### DNS resolves, but HTTPS still fails
-
-```bash
-getent hosts api.example.com
-nc -vz -w 5 api.example.com 443
-curl -v --connect-timeout 5 https://api.example.com/
-```
-
-Keep DNS, TCP, TLS, and HTTP failures separate. A public DNS answer for a service you expected to reach through a private endpoint is a different issue from a security group blocking port 443.
-
-```mermaid
-flowchart TD
-    accTitle: Troubleshoot a failed remote request
-    accDescr: Separate DNS failures from routing, TCP, TLS, and HTTP failures instead of calling everything a network outage.
-    A["Request fails"] --> B{"Using a hostname?"}
-    B -->|Yes| C{"Does it resolve?"}
-    C -->|No| D["Fix DNS or resolver path"]
-    C -->|Yes| E["Check selected route"]
-    B -->|No| E
-    E --> F{"TCP connects?"}
-    F -->|No| G["Check target, routes, cloud rules, firewalls, listener"]
-    F -->|Yes| H{"TLS succeeds?"}
-    H -->|No| I["Check certificate, SNI, time, protocol"]
-    H -->|Yes| J["Inspect HTTP status and application"]
-```
-
-The second half of this guide is a command reference. Use it to locate the **last boundary that worked** rather than treating 'the network' as one black box.
-
-## Diagnose a connection from the failing machine
-
-A useful troubleshooting test asks one question. Don't start by changing security rules or rebooting servers. Start where the failure happens, then compare what the client and the server see.
-
-Suppose the client cannot reach `https://api.example.com/health`. This is the order I normally use on Linux:
-
-```bash
-ip -br addr                              # Which addresses do I have?
-getent ahosts api.example.com           # How does this host resolve the name?
-ip route get 203.0.113.10                # Which route would an IPv4 packet take?
-nc -vz -w 3 api.example.com 443          # Can TCP connect?
-curl -v --connect-timeout 5 https://api.example.com/health
-```
-
-Replace `203.0.113.10` with an address actually returned by DNS; `203.0.113.0/24` is a documentation range, not a real public service. If DNS returns several addresses, check the one your application actually tries. For IPv6, use `ip -6 route get ADDRESS`.
-
-The order is a **diagnostic order**, not a diagram of packet flow. Even a DNS request needs working networking, and an IP-based request may not need DNS.
-
-### Step 1 — Is the local interface usable?
+Inspect addresses and interfaces on Linux:
 
 ```bash
 ip -br addr
@@ -402,16 +121,116 @@ ip link
 ip -s link
 ```
 
-A typical summary looks like this:
+An interface marked `UP` is administratively enabled. That alone does not establish a working link, an appropriate address or a usable route. DHCP can provide an address, prefix, gateway and DNS configuration; those values can also be configured independently.
+
+## Routing and local delivery
+
+A route tells the kernel where to send traffic for a destination prefix. Look at this simplified routing table:
 
 ```text
-lo       UNKNOWN  127.0.0.1/8 ::1/128
-eth0     UP       10.20.2.15/24
+default via 192.168.1.1 dev eth0
+10.20.0.0/16 via 192.168.1.2 dev eth0
+10.20.2.0/24 via 192.168.1.3 dev eth0
 ```
 
-`lo` is the loopback interface. `127.0.0.1` refers to this machine, not another VM. An interface reporting `UP` is configured as enabled; that alone does not prove it has link, a valid address, or a working route. On physical interfaces, `ethtool eth0` can show link status and speed. A VM usually has a virtual interface, so those details may not map to a cable.
+All three routes match `10.20.2.15`. The `/24` is the most specific, so it wins in this table.
 
-### Step 2 — Is the name resolving correctly?
+```text
+Destination: 10.20.2.15
+
+0.0.0.0/0     matches
+10.20.0.0/16  matches
+10.20.2.0/24  matches  <-- longest prefix
+```
+
+Use the kernel to find out what it would actually do:
+
+```bash
+ip route
+ip route get 10.20.2.15
+ip rule
+ip route show table all
+```
+
+```text
+10.20.2.15 via 192.168.1.3 dev eth0 src 192.168.1.20
+```
+
+Read that as: send to the next hop `192.168.1.3` through `eth0`, normally using source address `192.168.1.20`. Policy routing can select a different table; metrics and multipath routing can affect the choice among otherwise applicable routes. A route lookup is not a reachability test.
+
+### MAC addresses and ARP
+
+Once the kernel has selected a route, it needs to deliver the packet to the next hop. On an Ethernet-like IPv4 link, ARP resolves that next hop's IP to a MAC address.
+
+```mermaid
+sequenceDiagram
+    accTitle: Resolving a gateway before sending an off-link packet
+    accDescr: The client resolves the local gateway MAC, then sends an Ethernet frame whose IP destination is still the remote server.
+    participant C as Client 192.168.1.20
+    participant G as Gateway 192.168.1.1
+    participant S as Remote server
+    Note over C,G: ARP cache miss on the local link
+    C->>G: Broadcast - who has 192.168.1.1?
+    G-->>C: 192.168.1.1 is at gateway MAC
+    C->>G: Frame to gateway MAC, IP to remote server
+    G->>S: Forward IP packet toward destination
+```
+
+The ARP request is a local broadcast; the diagram shows the gateway as the relevant recipient. The gateway does not need to know the MAC of the final server unless that server is on a link directly connected to it.
+
+```text
+                        On-link             Off-link
+Destination IP          Local server        Remote server
+Ethernet destination    Server MAC          Gateway MAC
+ARP target              Server IP           Gateway IP
+```
+
+That distinction matters. IP addresses guide routing. Link-layer addresses deliver frames on a particular link. Each routed hop normally creates a new link-layer frame. The IP destination generally stays the same unless a device performs address translation or a similar transformation.
+
+```bash
+ip neigh
+sudo tcpdump -eni eth0 arp
+```
+
+A neighbor entry marked `INCOMPLETE` or `FAILED` suggests unresolved local delivery. A cached `STALE` entry is not necessarily a problem; it may still be usable. IPv6 uses Neighbor Discovery instead of ARP.
+
+Cloud networking virtualizes much of this behavior. A guest's neighbor table is not a map of the provider's physical switches.
+
+### The return path
+
+Getting a packet to the destination is only half the job. The destination must also have a way to send a reply.
+
+```text
+Client  ----------->  Router A  ----------->  Server
+Client  <-----------  Router B  <-----------  Server
+```
+
+Asymmetric routing is not inherently wrong. It becomes a problem when stateful firewalls, NAT devices or reverse-path filtering require traffic to follow particular paths or interfaces.
+
+Check routes on both ends. If the server receives SYN packets but the client never receives the SYN-ACK, capture at both endpoints before deciding which device is at fault.
+
+## DNS: finding the address
+
+DNS resolves names to records. `A` records contain IPv4 addresses; `AAAA` records contain IPv6 addresses. A `CNAME` aliases another name. The resolver can return multiple addresses, and the application may select one you did not expect.
+
+```mermaid
+sequenceDiagram
+    accTitle: DNS lookup with a recursive resolver
+    accDescr: A client asks a resolver, which can return a cached answer or obtain a fresh answer from DNS servers.
+    participant C as Client
+    participant R as Recursive resolver
+    participant D as DNS hierarchy
+    C->>R: A api.example.com?
+    alt Valid cached answer
+        R-->>C: Cached address and remaining TTL
+    else Cache miss or expired entry
+        R->>D: Resolve using DNS hierarchy
+        D-->>R: Answer and TTL
+        R-->>C: Address
+    end
+```
+
+The DNS hierarchy is collapsed here. A recursive resolver may use root, TLD and authoritative servers, cached delegations, or an upstream forwarder. The operating system and application can also cache answers or use other name-resolution mechanisms.
 
 ```bash
 getent ahosts api.example.com
@@ -420,136 +239,193 @@ dig api.example.com AAAA
 resolvectl status
 ```
 
-`getent` follows the machine's name-service configuration. `dig` queries DNS directly. They can disagree because of `/etc/hosts`, search domains, VPN split DNS, caching, or different resolvers.
+`getent` follows the system's configured name-service rules. `dig` queries DNS. They can disagree because of `/etc/hosts`, search domains, caches, VPN split DNS or resolver selection. `resolvectl` is useful on systems using systemd-resolved.
 
-Compare specific resolvers when needed:
-
-```bash
-dig @1.1.1.1 api.example.com
-dig @10.20.0.2 api.internal.example
-```
-
-Only query your corporate/private resolver for names it is authorized to answer. A public resolver will not know private zone records.
-
-| DNS result | First interpretation |
+| Result | What it means |
 |---|---|
-| `NXDOMAIN` | Name does not exist in the resolver's view |
-| `SERVFAIL` | Resolver could not complete the lookup |
-| Correct A/AAAA response | DNS lookup worked; connection may still fail |
-| Private name resolves to public address | Check split DNS, VPN, and private endpoint configuration |
+| `NXDOMAIN` | The name does not exist in this resolver's view |
+| `NOERROR` with no requested record | The name may exist but lack that record type |
+| `SERVFAIL` | The resolver could not complete the lookup |
+| An answer with a TTL | A record was returned; connectivity remains untested |
 
-### Step 3 — Where will the packet go?
+TTL controls how long a DNS answer can normally be cached. Changing a record does not immediately invalidate every previous answer. Negative answers can be cached too.
+
+To compare resolvers:
 
 ```bash
-ip route
-ip route get 10.20.3.20
-ip rule
-ip route show table all
+dig @10.20.0.2 api.internal.example
+dig @1.1.1.1 api.example.com
 ```
 
-Example:
+Use only authorized resolvers for private names. A public resolver cannot normally answer a private zone, and sending internal names to one may disclose information.
+
+## Ports, sockets and TCP
+
+The destination IP gets traffic toward an endpoint. The transport protocol and port identify where to deliver it there. For example:
 
 ```text
-10.20.3.20 via 10.20.2.1 dev eth0 src 10.20.2.15
+TCP 10.20.2.15:53144 -> 10.20.3.20:5432
 ```
 
-Linux would send traffic out `eth0`, use `10.20.2.15` as its source, and deliver the frame to next hop `10.20.2.1`. This does **not** prove the gateway can forward traffic or that a firewall permits it.
+`53144` is the client-side ephemeral port. `5432` is the server-side PostgreSQL port. Together with the protocol and addresses, these ports distinguish this flow from other connections.
 
-The most specific matching route normally wins. A route to `10.20.3.0/24` takes precedence over `10.20.0.0/16`, which takes precedence over `0.0.0.0/0`. Policy routing (`ip rule`) can change which table is consulted.
+TCP provides an ordered, reliable byte stream. UDP sends independent datagrams without a TCP-style handshake; applications can implement their own reliability. QUIC is an example, and HTTP/3 uses QUIC over UDP rather than TCP.
 
-### Step 4 — Does the actual port accept a connection?
+### Read the handshake
+
+```mermaid
+sequenceDiagram
+    accTitle: Three common TCP connection outcomes
+    accDescr: A healthy handshake exchanges SYN, SYN-ACK and ACK; an active rejection returns a reset; a missing response leads to retries and eventually a timeout.
+    participant C as Client
+    participant S as Server
+    alt Connection accepted
+        C->>S: SYN
+        S-->>C: SYN-ACK
+        C->>S: ACK
+    else Connection rejected
+        C->>S: SYN
+        S-->>C: RST-ACK
+    else No response observed
+        C->>S: SYN
+        Note over C: Wait for response
+        C->>S: SYN retransmission
+        Note over C: Further retries, then timeout
+    end
+```
+
+Test the port directly, then look at packets if necessary:
 
 ```bash
-nc -vz -w 3 api.example.com 443
+nc -vz -w 3 10.20.3.20 5432
+sudo tcpdump -ni any 'host 10.20.3.20 and tcp port 5432'
 ```
 
-A successful TCP connection proves only the TCP handshake. It does not prove TLS, login, application health, or the HTTP endpoint.
+A successful handshake might look like this (abbreviated `tcpdump` output):
 
-| Result | What it suggests | What to inspect |
-|---|---|---|
-| Connection succeeded | TCP connection was accepted | TLS and application |
-| Connection refused | A TCP reject/RST was returned | Listener, wrong port, reject rule |
-| Connection timed out | No usable connection response arrived | Routing, filtering, destination, return path |
-| Network unreachable | The kernel cannot find a usable path | Local routes and interface |
-
-A timeout is **not proof** of a firewall problem. A silent drop, failed route, unavailable host, or broken return path can look the same.
-
-For UDP, `nc -u` does not provide a comparable handshake test. Use a protocol-specific query, such as `dig` for DNS, or packet capture.
-
-### Step 5 — Does TLS work?
-
-```bash
-openssl s_client \
-  -connect api.example.com:443 \
-  -servername api.example.com \
-  -verify_return_error </dev/null
+```text
+10.20.2.15.53144 > 10.20.3.20.5432: Flags [S]
+10.20.3.20.5432 > 10.20.2.15.53144: Flags [S.]
+10.20.2.15.53144 > 10.20.3.20.5432: Flags [.]
 ```
 
-Check the certificate hostname and dates, chain verification, negotiated protocol, and SNI (`-servername`). TCP can succeed while TLS fails because of a wrong certificate, a corporate inspection proxy, an outdated client, or an incorrect system clock.
+`[S]` is SYN, `[S.]` is SYN-ACK, `[.]` is ACK. At this point, TCP is established. We have not tested database authentication or whether a query will succeed.
 
-To inspect dates:
+An active rejection might look like:
 
-```bash
-openssl s_client -connect api.example.com:443 \
-  -servername api.example.com </dev/null 2>/dev/null |
-  openssl x509 -noout -dates -subject -issuer
+```text
+10.20.2.15.53144 > 10.20.3.20.5432: Flags [S]
+10.20.3.20.5432 > 10.20.2.15.53144: Flags [R.]
 ```
 
-### Step 6 — What did HTTP and the application return?
+A reset can come from a host without a listener or a device actively rejecting the connection. Check the port, listener and reject rules.
 
-```bash
-curl -v https://api.example.com/health
-curl -i https://api.example.com/health
+Now compare a timeout:
+
+```text
+10.20.2.15.53144 > 10.20.3.20.5432: Flags [S]
+10.20.2.15.53144 > 10.20.3.20.5432: Flags [S]
+10.20.2.15.53144 > 10.20.3.20.5432: Flags [S]
 ```
 
-A response with a `4xx` or `5xx` status tells you that some HTTP endpoint responded. It does not necessarily prove the intended backend is healthy.
+Here we know the client capture saw outbound SYN packets, but no response. We do not know if the server received them. A timeout is not proof of a firewall problem; a failed route, unavailable host or broken return path may look identical.
 
-| HTTP status | Typical first check |
-|---|---|
-| `401` / `403` | Authentication, authorization, proxy policy |
-| `404` | Wrong path, host routing, or missing resource |
-| `429` | Rate limit or overload policy |
-| `500` | Application failure and server logs |
-| `502` | Load balancer/proxy received an invalid upstream response |
-| `503` | Backend unavailable or service deliberately unavailable |
-| `504` | Proxy/load balancer timed out waiting for upstream |
+### Is the service listening?
 
-To see where time was spent, `curl` can report cumulative phase times:
-
-```bash
-curl -sS -o /dev/null \
-  -w 'dns=%{time_namelookup} tcp=%{time_connect} tls=%{time_appconnect} first_byte=%{time_starttransfer} total=%{time_total}\n' \
-  https://api.example.com/health
-```
-
-For a direct HTTPS/TCP request, the gaps between those values are useful clues. Proxy connections and connection reuse can change their interpretation.
-
-## See what the server is actually doing
-
-If you can log into the destination server, check whether the application is listening and what address it bound to:
+On the destination machine:
 
 ```bash
 sudo ss -lntp
 sudo ss -ntp
-sudo lsof -nP -iTCP:8080
 ```
-
-A service listening on `127.0.0.1:8080` accepts only local IPv4 loopback connections. `0.0.0.0:8080` listens on all local IPv4 interfaces, subject to firewall rules. A specific address such as `10.20.2.15:8080` listens only on that address.
-
-These are different conditions:
 
 ```text
-process exists  !=  port is listening
-port listens    !=  remote clients can connect
-TCP connects    !=  TLS works
-TLS works       !=  application is healthy
+State  Recv-Q Send-Q Local Address:Port Peer Address:Port
+LISTEN 0      128    127.0.0.1:8080    0.0.0.0:*
 ```
 
-If the listener is missing, check the service and its logs. If it is listening but clients time out, inspect both the host firewall and the cloud network controls.
+This service is bound to IPv4 loopback. Opening port 8080 in a cloud security group will not make it reachable on the machine's private address.
 
-### Host firewalls and cloud rules
+| Bind address | Meaning |
+|---|---|
+| `127.0.0.1:8080` | Local IPv4 loopback only |
+| `10.20.2.15:8080` | A specific local IPv4 address |
+| `0.0.0.0:8080` | All local IPv4 addresses |
+| `[::]:8080` | IPv6 wildcard; IPv4 behavior depends on socket/OS settings |
 
-On Linux, one of these tools may manage the host firewall:
+A listening socket is not proof that remote access is allowed. And a successful TCP handshake is not proof that the application works.
+
+For UDP, use a protocol-specific request (for example `dig` for DNS) or capture traffic. `nc -u` cannot verify a TCP-like handshake because there isn't one.
+
+## NAT: what changes along the way
+
+Network Address Translation rewrites addresses and sometimes ports. Source NAT (SNAT) changes the source; destination NAT (DNAT) changes the destination. Port forwarding is a common use of DNAT.
+
+Consider a private client connecting to a public HTTPS server through an outbound NAT gateway. The gateway rewrites the source address and may select a different source port.
+
+```mermaid
+sequenceDiagram
+    accTitle: Outbound NAT and reverse translation
+    accDescr: NAT replaces the client's private source tuple with a public tuple, then reverses the translation on return traffic.
+    participant C as Client
+    participant N as NAT gateway
+    participant S as Server
+    C->>N: SYN from 10.20.2.15:53144
+    Note over N: Create mapping to 203.0.113.5:62001
+    N->>S: SYN from 203.0.113.5:62001
+    S-->>N: SYN-ACK to 203.0.113.5:62001
+    Note over N: Find mapping, reverse translation
+    N-->>C: SYN-ACK to 10.20.2.15:53144
+```
+
+The server is `198.51.100.8:443` in this example. Look at the same flow from each side of the translator:
+
+| Observation point | Source | Destination |
+|---|---|---|
+| Outbound, before NAT | `10.20.2.15:53144` | `198.51.100.8:443` |
+| Outbound, after NAT | `203.0.113.5:62001` | `198.51.100.8:443` |
+| Reply, before reverse NAT | `198.51.100.8:443` | `203.0.113.5:62001` |
+| Reply, after reverse NAT | `198.51.100.8:443` | `10.20.2.15:53144` |
+
+For this stateful translation, the gateway tracks the flow and uses the mapping when replies arrive. Many clients can share one public address because translations distinguish their flows. Mappings have finite capacity and lifetimes; exhausting ports or connection-tracking resources can cause new connections to fail.
+
+On a Linux gateway that actually performs NAT, these may help:
+
+```bash
+sudo nft list ruleset
+sudo conntrack -L -p tcp
+```
+
+`conntrack` is an optional tool and requires privileges. Running it inside a cloud VM does not reveal the provider's managed NAT state.
+
+NAT is not a firewall. Outbound managed NAT generally permits initiated flows and their replies rather than arbitrary new inbound connections. Inbound policy, forwarding rules and routing are separate concerns.
+
+## Firewalls: allowing the conversation
+
+A route answers where traffic should go. A firewall answers whether it is allowed to pass. These are independent decisions.
+
+A stateful firewall tracks connections and can allow associated return traffic automatically. A stateless filter evaluates packets independently, so rules must account for both directions.
+
+```mermaid
+sequenceDiagram
+    accTitle: Stateful and stateless filtering
+    accDescr: An outbound request to port 443 may need a separate inbound rule for the ephemeral client port when filtering is stateless.
+    participant C as Client port 53144
+    participant F as Firewall
+    participant S as Server port 443
+    C->>F: SYN to port 443
+    F->>S: Outbound allowed
+    S-->>F: SYN-ACK to port 53144
+    alt Stateful - matching allowed connection
+        F-->>C: Return traffic allowed
+    else Stateless - return rule missing
+        Note over F: Packet dropped
+    end
+```
+
+This is a simplified policy example. A stateless filter with an appropriate return rule can allow the SYN-ACK too. A stateful firewall still needs a policy that permits the initial flow, and its connection tracking must be able to associate the reply with that flow.
+
+On Linux, check the firewall tool that actually manages the system:
 
 ```bash
 sudo nft list ruleset
@@ -558,34 +434,224 @@ sudo ufw status verbose
 sudo firewall-cmd --list-all
 ```
 
-Do not assume all four tools are active. Some Linux distributions expose an iptables compatibility layer backed by nftables.
+These are alternatives, not four independent firewalls that every Linux host runs. Some distributions use iptables compatibility tooling backed by nftables. Also check where rules apply: input, output and forwarded traffic are not the same.
 
-For AWS, trace the **source and destination security groups**, relevant network ACLs, and route tables. AWS security groups are stateful; network ACLs are stateless. On Azure, inspect NSGs, custom routes, and whether the VM/NIС has the expected address. On Google Cloud, inspect VPC firewall rules, effective routes, and service endpoint configuration. Don't open broad inbound access merely to make a test pass.
+A packet may encounter several filtering layers before it reaches a listening socket: cloud policy, virtual networking, a host firewall and sometimes a container-level rule. Opening one does not open the others.
 
-### Observe the packets
+## Cloud networking without the marketing names
 
-When commands give conflicting clues, packet capture often decides where to look next:
+Cloud providers manage the underlying network infrastructure. The useful concepts remain the same: addresses, subnets, routes, filters, and service endpoints.
 
-```bash
-sudo tcpdump -ni any 'host 10.20.3.20 and tcp port 5432'
+| Concept | AWS | Azure | Google Cloud |
+|---|---|---|---|
+| Virtual network | VPC | VNet | VPC network |
+| Subnet | Subnet (one AZ) | Regional subnet | Regional subnet |
+| VM | EC2 | VM | Compute Engine |
+| Traffic policy | Security group | NSG | VPC firewall rules |
+| Routing | Route tables | System routes / UDRs | VPC routes |
+| Managed outbound NAT | NAT Gateway | NAT Gateway | Cloud NAT |
+| Private service access | VPC endpoint / PrivateLink | Private Endpoint | Private Service Connect |
+
+An AWS VPC and Azure VNet are regional; a Google Cloud VPC network is global with regional subnets. These are analogous concepts, not identical implementations.
+
+### A three-tier network
+
+Suppose we have a web service, an application server and a database. Only the web service needs to receive traffic from the internet.
+
+```mermaid
+flowchart TB
+    accTitle: Three-tier AWS VPC example
+    accDescr: Internet clients connect to a public web VM through an Internet Gateway. The web VM talks to a private app VM, which reaches a private database. The app can initiate internet access through a public NAT gateway.
+    Client["Internet client"]
+    Internet["Internet services"]
+    subgraph VPC["VPC 10.20.0.0/16"]
+        IGW["Internet Gateway"]
+        subgraph Public["Public subnet 10.20.1.0/24"]
+            Web["Web 10.20.1.10"]
+            NAT["Public NAT gateway"]
+        end
+        subgraph AppNet["Private app subnet 10.20.2.0/24"]
+            App["App 10.20.2.15"]
+        end
+        subgraph DataNet["Private DB subnet 10.20.3.0/24"]
+            DB["DB 10.20.3.20"]
+        end
+    end
+    Client --> IGW
+    IGW -->|TCP 443| Web
+    Web -->|TCP 8080| App
+    App -->|TCP 5432| DB
+    App -.->|Outbound updates| NAT
+    NAT -.-> IGW
+    IGW -.-> Internet
 ```
 
-For TCP, look for a SYN from the client, a SYN-ACK from the server, and an ACK from the client. Repeated SYNs with no reply suggest a missing response; an RST suggests a rejection. Capture on both endpoints if possible. A client-side trace cannot tell you precisely which middlebox discarded a packet.
+The arrows show connection initiation or logical outbound paths, not every reply or forwarding hop. This is a single-AZ teaching example. The web VM needs a public IPv4 mapping for the depicted direct internet access, and the public NAT gateway needs an associated public address. In production, an internet-facing load balancer and multiple availability zones would usually be preferable to a lone public web VM.
 
-Save a capture for later:
+In AWS, the subnet's route table determines whether there is an Internet Gateway route. A public subnet has that route. A private subnet may instead use NAT for outbound IPv4 traffic.
+
+| Subnet | VPC traffic | Other IPv4 destinations |
+|---|---|---|
+| Public | `10.20.0.0/16 -> local` | `0.0.0.0/0 -> Internet Gateway` |
+| Private app | `10.20.0.0/16 -> local` | `0.0.0.0/0 -> NAT Gateway` (if needed) |
+| Private DB | `10.20.0.0/16 -> local` | No default route in this example |
+
+The route does not assign a public IP, and a public IP does not open a security group. The guest OS usually has a simpler routing table pointing to its virtual gateway. `ip route` does not display the cloud provider's route table.
+
+### Which traffic should be allowed?
+
+A minimal inbound policy for the example:
+
+| Destination | Protocol / port | Source |
+|---|---|---|
+| Web VM | TCP 443 | Internet, if publicly intended |
+| App VM | TCP 8080 | Web VM's security group |
+| DB VM | TCP 5432 | App VM's security group |
+
+The corresponding outbound policies must allow the initiated connections. AWS security groups are stateful, while AWS network ACLs are stateless subnet-level filters. With restrictive NACLs, check both directions, including the return traffic to ephemeral ports. Azure NSGs are stateful as well, though their configuration and semantics differ.
+
+Inspect the provider's route tables, security policy and actual resource associations. For example, in AWS:
 
 ```bash
-sudo tcpdump -ni eth0 -w network-incident.pcap \
-  'host 10.20.3.20 and tcp port 5432'
+aws ec2 describe-route-tables --filters 'Name=vpc-id,Values=vpc-REPLACE_ME'
+aws ec2 describe-security-groups --group-ids sg-REPLACE_ME
+aws ec2 describe-network-acls --filters 'Name=vpc-id,Values=vpc-REPLACE_ME'
 ```
 
-A packet capture may contain sensitive addresses, names, tokens, or unencrypted payloads. Store and share it carefully.
+Use the appropriate AWS region, account, permissions and actual identifiers. A packet dropped by the provider's network policy may never appear in a capture inside the destination VM. Provider flow logs and reachability-analysis tools can be useful, but have their own scope and limitations.
 
-## Proxies, containers, and VPNs
+### Other useful cloud terms
 
-A request might not go directly to the destination. A proxy, VPN, container network namespace, or Kubernetes Service can add another hop.
+- **Load balancer:** accepts traffic at a front-end address and distributes it to backends. Layer 4 primarily deals with connections and ports; Layer 7 can make application-level decisions, such as HTTP routing.
+- **Peering:** connects networks through provider-managed routing. Address overlap is often a blocker; peering is not automatically transitive.
+- **VPN:** carries traffic through an encrypted tunnel across another network.
+- **Transit hub:** centralizes connectivity between multiple networks, such as AWS Transit Gateway or Azure Virtual WAN.
+- **Private endpoint:** offers a private network path to a service. Check the DNS answer to see whether the client actually uses that path.
+- **Availability Zone:** a fault-isolation boundary that influences subnet placement, routing and resilience.
 
-### Check for a proxy before blaming DNS
+Whenever a new cloud networking term appears, ask which network owns the destination, how traffic reaches it, and which policy applies.
+
+## TLS and HTTP: after the handshake
+
+An HTTPS request involves more than getting a TCP connection. For an ordinary direct HTTPS connection using TCP, the dependencies look like this:
+
+```mermaid
+sequenceDiagram
+    accTitle: From hostname to HTTP response
+    accDescr: A client resolves the name if needed, establishes TCP, negotiates TLS, then exchanges HTTP messages.
+    participant C as Client
+    participant D as Resolver
+    participant S as HTTPS server
+    C->>D: Resolve api.example.com
+    D-->>C: Destination address
+    C->>S: TCP connection
+    S-->>C: Connection established
+    C->>S: TLS handshake with server name
+    S-->>C: TLS handshake completed
+    C->>S: GET /health
+    S-->>C: HTTP response
+```
+
+This collapses the individual TCP and TLS messages. DNS may be cached, connections may be reused, and HTTP/3 follows a different transport path. A proxy can also change which host the client connects to directly.
+
+Use `curl` to see the failure as the application experiences it:
+
+```bash
+curl -v --connect-timeout 5 https://api.example.com/health
+```
+
+If the TCP connection succeeds but TLS fails, inspect the server name, certificate chain, certificate hostname, dates, system clock, protocol compatibility and possible inspection proxies.
+
+```bash
+openssl s_client \
+  -connect api.example.com:443 \
+  -servername api.example.com \
+  -verify_hostname api.example.com \
+  -verify_return_error </dev/null
+```
+
+`-servername` supplies SNI. `-verify_hostname` checks that the certificate matches the expected name. Those are different operations. The options above assume a modern OpenSSL installation and the appropriate trusted CA store.
+
+A particularly useful test is to bypass normal DNS resolution while preserving the HTTP hostname, TLS SNI and certificate hostname verification:
+
+```bash
+curl -v --noproxy '*' \
+  --resolve api.example.com:443:10.20.1.10 \
+  https://api.example.com/health
+```
+
+This tests a specific backend address for the original HTTPS name. Use it only where direct access is permitted. Connecting to `https://10.20.1.10/` instead is not equivalent: hostname-based routing and certificate checks may behave differently.
+
+Once you receive an HTTP response, there is no point treating every failure as a network timeout.
+
+| HTTP status | First place to investigate |
+|---|---|
+| `401` / `403` | Authentication, authorization, access policy |
+| `404` | URL path, hostname routing, resource |
+| `429` | Rate limit or overload policy |
+| `500` | Application logs |
+| `502` | Proxy or gateway received an invalid upstream response |
+| `503` | Service unavailable, possibly unhealthy backends |
+| `504` | Gateway timeout waiting for an upstream response |
+
+An HTTP response may be generated by a proxy or load balancer rather than the intended backend. A `200` from one health endpoint does not establish that every application operation works either.
+
+For timing, `curl` can report cumulative phases:
+
+```bash
+curl -sS -o /dev/null \
+  -w 'dns=%{time_namelookup} tcp=%{time_connect} tls=%{time_appconnect} first_byte=%{time_starttransfer} total=%{time_total}\n' \
+  https://api.example.com/health
+```
+
+For a fresh direct HTTPS/TCP connection, subtract adjacent values to estimate time spent in each phase. Proxies, redirects, DNS caching and reused connections change how to interpret these measurements.
+
+## The network you are actually using
+
+The host you logged into may not be the context from which the failing application sends traffic. Containers, VPNs and proxies are common reasons two programs on the same machine see different results.
+
+### Containers and virtual networks
+
+A Linux container with its own network namespace can have separate interfaces, addresses, routes, sockets and neighbor tables. A common bridge-network setup looks roughly like this:
+
+```text
+Container A (eth0) --- veth ---+
+                               | Linux bridge --- host routing --- uplink
+Container B (eth0) --- veth ---+
+```
+
+The diagram describes a typical Linux bridge setup, not every container network mode. Host networking, overlays, CNI plugins and Windows container networks differ. Windows HNS, for example, manages virtual networks and endpoints rather than using the Linux veth mechanism.
+
+Inspect the container's view, not just the host's:
+
+```bash
+docker inspect CONTAINER
+docker network inspect NETWORK
+docker exec CONTAINER ip route
+docker exec CONTAINER cat /etc/resolv.conf
+```
+
+The commands inside the container require those utilities and Linux-style paths. Minimal images may not include them. For a Kubernetes workload:
+
+```bash
+kubectl get pod -o wide
+kubectl get svc
+kubectl get networkpolicy
+kubectl exec POD -- ip route
+```
+
+Kubernetes DNS, Services, NetworkPolicies, ingress and container networking are different parts of the path. A healthy host route does not prove that the pod can connect. Also distinguish the container's listening port from the host's published port.
+
+### VPNs and proxies
+
+A VPN can change the route and resolver used for selected destination prefixes without changing the public internet path. This is split tunneling. When troubleshooting, ask whether the route and resolver for the specific target are correct, not merely whether the VPN icon says connected.
+
+```bash
+ip route get 10.40.0.12
+resolvectl status
+```
+
+A proxy may resolve the destination name on behalf of the client. `curl -v` can reveal proxy use and a CONNECT tunnel for HTTPS.
 
 ```bash
 env | grep -iE '^(http|https|all|no)_proxy='
@@ -593,34 +659,11 @@ curl -v https://api.example.com/
 curl -v --noproxy '*' https://api.example.com/
 ```
 
-If direct access works and proxied access fails, inspect proxy reachability, authentication, the `NO_PROXY` list, and proxy-side DNS. If proxied access works but direct access fails, that may be intentional network policy; don't bypass it in production.
+Only compare with direct access if policy permits it. If proxied traffic works but direct access fails, that may be intentional. Check the proxy address, authentication, proxy-side DNS and `NO_PROXY` exclusions. Avoid sharing output containing credentials or sensitive headers.
 
-### A container has its own view of the network
+## Packet size and the path
 
-A container may have different DNS, routes, and bind addresses from its host.
-
-```bash
-docker exec -it CONTAINER sh
-docker inspect CONTAINER
-kubectl get pod -o wide
-kubectl get svc
-kubectl exec -it POD -- sh
-```
-
-Once inside the container or pod, check `ip route`, `/etc/resolv.conf`, and the actual application port where those tools are available. Kubernetes DNS, Services, NetworkPolicies, and ingress/load-balancer rules are distinct parts of the path.
-
-### VPN and private DNS
-
-The important question is not just **is the VPN connected?** It is whether the expected subnet route and DNS resolver are active. A split-tunnel VPN may route only corporate prefixes through the tunnel, while public traffic uses the normal gateway.
-
-```bash
-ip route get 10.40.0.12
-resolvectl status
-```
-
-On macOS, use `route -n get 10.40.0.12` and `scutil --dns` instead.
-
-## Read paths and hops with care
+`ping`, `traceroute` and `mtr` are useful tools, but they do not directly answer whether a particular service works.
 
 ```bash
 ping -c 3 10.20.3.20
@@ -630,95 +673,139 @@ sudo traceroute -T -p 443 api.example.com
 mtr -rw api.example.com
 ```
 
-`ping` tests ICMP Echo replies, not a particular application port. A failed ping may be normal if ICMP is blocked. A `* * *` hop in traceroute might mean that a router does not answer probes; it does not necessarily mean forwarded traffic is lost. In `mtr`, don't conclude there is packet loss at one hop if later hops show normal replies.
+A failed ping may simply mean ICMP Echo is blocked. A `* * *` hop may be a router that forwards packets but does not answer the probe. Apparent loss at an intermediate `mtr` hop does not necessarily mean forwarded traffic is being lost if later hops respond normally. A TCP traceroute is closer to a TCP service test, but it still does not establish application health.
 
-### MTU: when small requests work but large ones fail
+The MTU is the largest IP packet a link can carry without IP fragmentation. A tunnel adds headers, reducing the space available for the original packet. The path MTU is limited by the smallest effective MTU along the path.
 
-The **maximum transmission unit (MTU)** is the largest packet size a link can carry at the IP layer without fragmentation or a different path mechanism. VPNs and tunnels add headers and reduce the available space. A broken path-MTU discovery setup can cause a TCP connection to establish while larger transfers stall.
+```text
+Original IP packet: 1500 bytes
+Tunnel overhead:      60 bytes  (illustrative)
+Outer IP packet:    1560 bytes
+Underlying MTU:     1500 bytes
+
+Effective inner MTU: 1440 bytes in this example
+```
+
+The exact overhead depends on the encapsulation. With IPv4, an oversized packet may be fragmented or dropped depending on the Don't Fragment flag and path behavior. IPv6 routers do not fragment forwarded packets. Path MTU Discovery relies on feedback such as ICMP Fragmentation Needed (IPv4) or Packet Too Big (IPv6), or transport-specific probing.
+
+If TCP connects but larger transfers hang, consider a path-MTU black hole. Check interface MTUs and the relevant ICMP feedback before changing settings:
 
 ```bash
 ip link show
 tracepath api.example.com
+ping -4 -M do -s 1472 10.20.3.20
 ```
 
-Check interface MTUs, tunnels, intermediate network devices, and ICMP errors required for path-MTU discovery. Don't blindly set a low MTU everywhere.
+The last command is a Linux iputils example: 1472 bytes of payload plus ordinary 20-byte IPv4 and 8-byte ICMP headers makes a 1500-byte IP packet. Failure is not proof of an MTU issue if Echo traffic is filtered. TCP MSS and IP MTU are related but are not the same measurement.
 
-## macOS quick equivalents
+## Putting it together: investigate, don't guess
 
-The troubleshooting ideas are the same; the commands differ. A Mac doesn't ship with Linux `ip`, `ss`, `resolvectl`, or `systemctl` commands.
+This is the order I would normally follow for a direct HTTPS/TCP request. It is a diagnostic order, not the literal sequence of network operations. DNS itself needs connectivity, and IP-based connections may not need DNS at all.
 
-| Question | Linux | macOS |
-|---|---|---|
-| Addresses | `ip -br addr` | `ifconfig` |
-| Route to destination | `ip route get 8.8.8.8` | `route -n get 8.8.8.8` |
-| Route table | `ip route` | `netstat -rn` |
-| DNS configuration | `resolvectl status` | `scutil --dns` |
-| Name lookup with system rules | `getent hosts example.com` | `dscacheutil -q host -a name example.com` |
-| Listening sockets | `sudo ss -lntp` | `sudo lsof -nP -iTCP -sTCP:LISTEN` |
-| Neighbors | `ip neigh` | `arp -a` / `ndp -a` |
-| Packet capture | `sudo tcpdump -ni eth0` | `sudo tcpdump -ni en0` (check interface first) |
+```mermaid
+flowchart TD
+    accTitle: Investigating a failed connection
+    accDescr: Check the actual target and context, name resolution when needed, local routing, TCP, TLS and finally the application. A TCP failure requires checking both ends and the infrastructure between them.
+    A["Identify target and failing client"] --> B{"Hostname needed?"}
+    B -->|Yes| C{"Correct address resolved?"}
+    C -->|No| D["Inspect resolver and DNS"]
+    C -->|Yes| E{"Usable local route?"}
+    B -->|No| E
+    E -->|No| F["Inspect interface, routes and policy"]
+    E -->|Yes| G{"TCP connects?"}
+    G -->|No| H["Check listener, filters and return path"]
+    G -->|Yes| I{"TLS required?"}
+    I -->|Yes| J{"TLS succeeds?"}
+    J -->|No| K["Inspect SNI, trust and protocol"]
+    J -->|Yes| L["Inspect application response"]
+    I -->|No| L
+```
 
-On macOS, `networksetup -listallhardwareports` identifies interface names; don't assume Wi-Fi is `en0`. Common cross-platform tools include `dig`, `nc`, `curl`, `openssl`, `ping`, and `tcpdump`.
+### The app VM cannot reach the database
 
-## Common incidents: short paths to an answer
-
-### DNS answers, but the connection times out
-
-1. Confirm the IP your application selected with `getent ahosts` or its logs.
-2. Inspect `ip route get IP` and any VPN route.
-3. Test `nc -vz -w 3 HOST PORT` against the actual service.
-4. On the server, inspect `ss -lntp` and firewall rules.
-5. In a cloud VPC, check both sides' effective routes and allowed traffic.
-
-Don't conclude that DNS is broken because the application cannot connect. Name resolution and connectivity are different tests.
-
-### The service works locally, but not from another VM
-
-On the server, compare `curl http://127.0.0.1:8080/health` with `curl http://SERVER_PRIVATE_IP:8080/health`. Then inspect the listener with `ss -lntp`, host firewall, and cloud rules. Binding only to localhost is a common cause.
-
-### A private VM cannot download packages
-
-Check the selected default route, whether the subnet has an outbound NAT path or an intentionally configured proxy, and whether DNS can resolve the repository host. A private subnet doesn't automatically have internet egress. For managed services, a private endpoint may eliminate the need for general internet access.
-
-### IPv4 works but IPv6 fails
+On the app VM from the cloud example:
 
 ```bash
-curl -4 -v https://api.example.com/
-curl -6 -v https://api.example.com/
-ip -4 route
-ip -6 route
+ip route get 10.20.3.20
+nc -vz -w 3 10.20.3.20 5432
+sudo tcpdump -ni any 'host 10.20.3.20 and tcp port 5432'
 ```
 
-IPv4 and IPv6 may use different DNS answers, routes, firewalls, and load balancers. Check them separately.
+On the database VM:
 
-### TCP succeeds, but HTTPS fails
+```bash
+sudo ss -lntp
+ip route get 10.20.2.15
+sudo tcpdump -ni any 'host 10.20.2.15 and tcp port 5432'
+```
 
-Now focus on SNI, certificates, cipher/protocol compatibility, proxies, and the clock. `openssl s_client -servername HOST` and `curl -v` are more useful than another ping.
+Compare captures from the same test. Assuming the correct interfaces and filters are selected:
 
-## Fast command reference
+| Client capture | Server capture | Next investigation |
+|---|---|---|
+| SYN sent | No SYN observed | Forward path, cloud rules, intermediate devices |
+| SYN sent | SYN received, no reply observed | Server listener, host policy, local routing |
+| SYN sent, no reply | SYN-ACK sent | Return path, filtering, asymmetric routing |
+| RST received | RST sent | Listener, port or active rejection |
+| Handshake completed | Handshake completed | Database protocol, TLS, credentials and service logs |
 
-| What you need | Command |
+In a NAT or proxy path, the tuples at the two capture points may differ. Account for that when choosing capture filters. Absence of a packet in a capture is evidence only about that observation point and filter, not proof of where it was dropped.
+
+### Other common incidents
+
+| Symptom | Useful next step |
 |---|---|
-| Interfaces and IPs | `ip -br addr` |
-| Route chosen for an IP | `ip route get IP` |
-| All routes and policy rules | `ip route`; `ip rule` |
-| Local neighbors | `ip neigh` |
-| System hostname lookup | `getent ahosts HOST` |
-| Direct DNS query | `dig HOST A`; `dig HOST AAAA` |
-| Resolver configuration | `resolvectl status` |
-| TCP port test | `nc -vz -w 3 HOST PORT` |
-| Listening ports | `sudo ss -lntp` |
-| Connections | `ss -ntp` |
-| HTTPS trace | `curl -v https://HOST/PATH` |
-| TLS handshake | `openssl s_client -connect HOST:443 -servername HOST` |
-| Proxy variables | `env \| grep -i proxy` |
-| ICMP reachability | `ping -c 3 HOST` |
-| TCP traceroute | `sudo traceroute -T -p 443 HOST` |
-| Packet capture | `sudo tcpdump -ni any host IP` |
-| Firewall rules | `sudo nft list ruleset` |
+| Service works on localhost, not remotely | Check bind address and compare local/private-IP requests; inspect filters |
+| Private VM reaches internal services but not internet | Check DNS, proxy, NAT and provider subnet routes; consider private endpoints |
+| Name resolves to an unexpected public address | Check private DNS, split DNS and endpoint configuration |
+| IPv4 works but IPv6 fails | Compare `curl -4` and `curl -6`, DNS answers, routes and policy |
+| TCP works but HTTPS fails | Check TLS with the actual hostname; use `curl --resolve` if appropriate |
+| Small requests work but large requests stall | Check MTU, tunnels, ICMP feedback and retransmissions |
 
-Some commands need extra packages or elevated privileges. Replace `HOST`, `IP`, `PORT`, and `PATH` with actual values; they are placeholders, not commands to type literally.
+When you need to save a capture for later analysis:
+
+```bash
+sudo tcpdump -ni eth0 -w network-incident.pcap \
+  'host 10.20.3.20 and tcp port 5432'
+```
+
+Stop the capture when the test ends. Choose the actual interface. Captures may contain sensitive addresses, names, tokens or unencrypted payloads. Collect only what is needed, and store and share them carefully.
+
+## Linux, macOS and Windows command reference
+
+The questions remain the same across operating systems. On Windows, the commands below use PowerShell and built-in Windows networking cmdlets where available. Run packet capture and firewall inspection with the required privileges.
+
+| Question | Linux | macOS | Windows / PowerShell |
+|---|---|---|---|
+| Addresses | `ip -br addr` | `ifconfig` | `Get-NetIPAddress` |
+| Interface details | `ip link` | `ifconfig` | `Get-NetAdapter` |
+| Route table | `ip route` | `netstat -rn` | `Get-NetRoute` |
+| Selected route | `ip route get IP` | `route -n get IP` | `Find-NetRoute -RemoteIPAddress IP` |
+| Neighbor cache | `ip neigh` | `arp -a` / `ndp -a` | `Get-NetNeighbor` |
+| System name lookup | `getent ahosts HOST` | `dscacheutil -q host -a name HOST` | `[System.Net.Dns]::GetHostAddresses('HOST')` |
+| DNS query | `dig HOST A` | `dig HOST A` | `Resolve-DnsName HOST -Type A` |
+| DNS configuration | `resolvectl status` | `scutil --dns` | `Get-DnsClientServerAddress` |
+| TCP port test | `nc -vz -w 3 HOST PORT` | `nc -vz -G 3 HOST PORT` | `Test-NetConnection HOST -Port PORT` |
+| Listening sockets | `sudo ss -lntp` | `sudo lsof -nP -iTCP -sTCP:LISTEN` | `Get-NetTCPConnection -State Listen` |
+| TCP connections | `ss -ntp` | `netstat -an -p tcp` | `Get-NetTCPConnection` |
+| ICMP Echo | `ping -c 3 HOST` | `ping -c 3 HOST` | `ping.exe -n 3 HOST` |
+| Trace route | `traceroute -n HOST` | `traceroute -n HOST` | `tracert.exe -d HOST` |
+| Packet capture | `sudo tcpdump -ni any` | `sudo tcpdump -ni en0` | `pktmon.exe` |
+| Firewall inspection | `sudo nft list ruleset` | `sudo pfctl -sr` | `Get-NetFirewallRule -PolicyStore ActiveStore` |
+| HTTPS trace | `curl -v https://HOST/` | `curl -v https://HOST/` | `curl.exe -v https://HOST/` |
+
+On macOS, `networksetup -listallhardwareports` helps identify the correct interface rather than assuming Wi-Fi is `en0`. On Windows, `Get-NetFirewallRule` lists rules; inspect their associated port and address filters when needed. `pktmon.exe help` shows the capture workflow supported by the installed version. Use `curl.exe` on Windows to avoid the `curl` alias in older Windows PowerShell.
+
+Some tools need additional packages, elevated privileges or a specific OS version. The command outputs and flags may differ between implementations. `HOST`, `IP`, `PORT`, `CONTAINER`, `NETWORK` and `POD` are placeholders.
 
 ---
 
-The useful question is rarely 'is the network broken?' It is **which boundary was the last one that worked?** Check that boundary, and test the next one.
+```text
+Name resolves       !=  destination is reachable
+Route exists        !=  packet arrives
+Packet arrives      !=  service is listening
+TCP connects        !=  TLS works
+TLS works           !=  application is healthy
+```
+
+The useful question is rarely whether the network is broken. It is which boundary was the last one that worked, and what evidence we have for the next one.
