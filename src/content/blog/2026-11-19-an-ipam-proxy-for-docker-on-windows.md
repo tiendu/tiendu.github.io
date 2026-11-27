@@ -20,7 +20,7 @@ urlSlug: "an-ipam-proxy-for-docker-on-windows"
 pinned: false
 ---
 
-I spent time figuring out how to build an IP allocator around Docker. Then I found that Windows already had one. When I started working with multiple address blocks, I brought the allocator back. Eventually, I found two flags that could do the job instead.
+I spent time figuring out how to build an IP allocator around Docker. Then I found that Windows already had one. When I started working with multiple address blocks, I brought the allocator back. Eventually, two flags were enough: HNS could avoid the problematic addresses and automatically allocate from the next block without the proxy.
 
 The problem was simple enough. I wanted to run several Windows containers, give each one an IP address from an allowed private range, and let another machine reach each service directly. I didn't want to publish a different host port for every container, and I didn't want the application creating a container to choose its IP address manually.
 
@@ -237,14 +237,25 @@ This worked as a way to avoid the problematic IPs. But I was back to maintaining
 
 ## Two flags
 
-The [HCN schema](https://learn.microsoft.com/en-us/virtualization/api/hcn/hns_schema#ipsubnetflags) defines `IPSubnetFlags`, available from schema version 2.5. The two relevant values in the HNS helper enum are:
+The [HCN schema](https://learn.microsoft.com/en-us/virtualization/api/hcn/hns_schema#ipsubnetflags) defines `IPSubnetFlags`, available from schema version 2.5. These are the four combinations of the two documented bits:
 
-| Flag | Value |
-| --- | ---: |
-| `EnableBroadcast` | `1` |
-| `ReserveNetworkAddress` | `2` |
+| Value | Binary | Flag | Meaning |
+| ---: | :---: | --- | --- |
+| `0` | `00` | `None` | No optional boundary reservations requested. |
+| `1` | `01` | `EnableBroadcast` | Enable broadcast semantics for the block. |
+| `2` | `10` | `ReserveNetworkAddress` | Reserve the first address of the block. |
+| `3` | `11` | Both flags | Apply both behaviors. |
 
-They are bit flags, so they can be combined:
+They are bit flags, so `3` is not a separate flag. It is the result of a bitwise OR:
+
+```text
+0000 0001    EnableBroadcast
+0000 0010    ReserveNetworkAddress
+---------    OR
+0000 0011    Both flags (3)
+```
+
+In PowerShell:
 
 ```powershell
 $flags = 1 -bor 2  # 3
@@ -257,16 +268,28 @@ $flags = [int][IPSubnetFlags]::EnableBroadcast -bor
          [int][IPSubnetFlags]::ReserveNetworkAddress
 ```
 
-The first flag enables the block's broadcast semantics; the second reserves its network address. In my tested setup, the combination made HNS avoid the two problematic boundary addresses during ordinary allocation. I no longer needed the proxy to enforce that exclusion.
+### What changes when the flags change?
 
-```mermaid
-flowchart TB
-    accTitle: Allocation block with boundary reservations
-    accDescr: The tested configuration reserves the first and last addresses and leaves the fourteen interior addresses as allocation candidates.
-    Block["172.30.40.64/28: Flags = 3"] --> First[".64: network address"]
-    Block --> Middle[".65–.78: allocation candidates"]
-    Block --> Last[".79: broadcast address"]
+Take `172.30.40.64/28`, a block of sixteen addresses from `.64` to `.79`. Each character below represents one address, in ascending order.
+
+```text
+Prefix: 172.30.40.64/28
+
+            .64                           .79
+             |                             |
+Flags = 0   [· · · · · · · · · · · · · · · ·]  16
+Flags = 1   [· · · · · · · · · · · · · · · B]  15
+Flags = 2   [N · · · · · · · · · · · · · · ·]  15
+Flags = 3   [N · · · · · · · · · · · · · · B]  14
+
+·  Allocation candidate
+N  Reserved network address
+B  Broadcast address
 ```
+
+The number at the end of each row is the theoretical number of allocation candidates before any other reservations. The individual flag rows illustrate the expected boundary semantics; they are not four independently measured results. I tested the problematic boundary addresses and verified that the combined flags avoided them in my environment.
+
+Setting `EnableBroadcast` controls HNS's interpretation of the block. It does not make the underlying cloud network support broadcast traffic. In my tested setup, `Flags = 3` made HNS avoid both problematic boundary addresses during ordinary allocation. I no longer needed the proxy to enforce that exclusion.
 
 There is a subtle point here. A delegated prefix is not necessarily a separate conventional IPv4 subnet. In a routed allocation model, the boundary addresses can be ordinary workload addresses. Microsoft even discusses that use case in its Calico documentation. AWS prefix delegation itself is not imposing a general 14-address limit on every `/28`.
 
@@ -381,11 +404,12 @@ These commands inspect the network and recent errors; they don't change anything
 
 ## What is solved, and what isn't
 
-The flags worked in my tests. They removed the need for the proxy to skip the problematic addresses. That is the result I can attribute to the configuration change.
+The flags worked in my tests. They removed the need for the proxy to skip the problematic addresses. I then tested allocation beyond the first block without the proxy. Docker continued creating containers, and addresses were automatically assigned from the next delegated prefix. No client-side IP selection was needed.
+
+That answered the remaining question about native multi-prefix allocation in this configuration. Docker did not need to expose every nested allocation block in its own network inspection output for automatic allocation to work.
 
 There are still separate questions worth testing:
 
-- Does automatic allocation continue into the next block when the first block is exhausted, with no proxy involved?
 - Do repeated create/remove cycles release the expected endpoints and addresses?
 - Do parallel starts remain reliable at the intended container density?
 - Can remote clients reach containers in every configured block?
@@ -396,7 +420,7 @@ For future tests, I would compare a network with the reservation flags against o
 
 ## Do I still need the proxy?
 
-For this address-exclusion problem, no. HNS already provides the policy I was trying to implement. If native allocation also crosses the block boundary reliably under the intended load, there is no reason to keep a transparent Engine API proxy for this use case.
+For this use case, no. HNS already provides the address reservation policy I was trying to implement, and automatic allocation across multiple delegated blocks worked in my tests. There is no reason to keep a transparent Engine API proxy merely to select an address from these pools. Reliability at the intended workload density still needs to be measured.
 
 A separate allocator or controller could still make sense for permanent service IPs, tenant-specific pools or policies the native network configuration cannot express. But those are different requirements.
 
