@@ -1,8 +1,8 @@
 ---
 title: "Bash, But Only the Useful Stuff"
 date: 2025-11-20
-updatedDate: 2026-11-16
-description: "Understand how Bash interprets commands, work faster in the terminal, avoid cross-platform quoting and encoding traps, and write reliable automation with practical examples."
+updatedDate: 2026-11-27
+description: "Learn Bash itself: quoting, parameter expansion, arrays, pattern matching, file descriptors, subshells, exit statuses, and reliable scripting with native shell features."
 topic: "Systems & Reliability"
 keywords:
   - "Bash"
@@ -13,1033 +13,1219 @@ keywords:
   - "quoting"
   - "history"
   - "debugging"
+  - "parameter expansion"
+  - "file descriptors"
 urlSlug: "bash-useful-stuff"
 pinned: true
 ---
-Bash is great glue. It can connect a handful of programs into something useful in a few lines. It can also interpret a perfectly reasonable-looking line in a way you never intended.
+Getting better at Bash is not quite the same as getting better at `sed`, `awk`, `grep`, and the rest of the Unix toolbox. Those are good tools, but they are not Bash. Bash has a language of its own, and many small operations that seem to require a pipeline of external programs can be done with a few shell expressions.
 
-The trick is not memorizing hundreds of commands. It is understanding **what Bash reads, what it expands, what it executes, and what happens when a command fails**. Once that makes sense, the shortcuts are safer, the scripts are shorter, and the strange failures become easier to explain.
+This is a guide to that language. Not every feature, and not an attempt to rewrite Unix in Bash. The useful parts are the ones that help us preserve arguments, manipulate values, control execution, move data between processes, and understand what happened when something fails.
 
-This is a practical Bash guide, not a catalog of every feature. Commands assume Bash on a Unix-like system. Where macOS, POSIX `sh`, or GNU tools behave differently, we'll say so.
+The examples assume Bash, not POSIX `sh` or Zsh. Most of the fundamentals work on Bash 3.2, still commonly shipped with macOS. Some examples need Bash 4 or 5; the differences are noted near the relevant features. Check the interpreter with `printf '%s\n' "$BASH_VERSION"` or `bash --version`.
 
-## Start here: quick lookup
+## Start here
 
-Use the first line that matches what you are doing. For obscure failures, check the **actual characters**, **interpreter**, and **environment** before changing the program logic.
+| I need to... | Reach for... |
+|---|---|
+| Remove a filename suffix | `${file%.tar.gz}` |
+| Extract the last path component | `${path##*/}` |
+| Supply a default | `${value:-default}` |
+| Require a variable | `${value:?message}` |
+| Replace all matches of a pattern | `${value//old/new}` |
+| Preserve a list of arguments | `"${args[@]}"` or `"$@"` |
+| Match a string | `[[ $value == pattern ]]` |
+| Match a regular expression | `[[ $value =~ $regex ]]` |
+| Format a value without a subprocess | `printf -v result FORMAT ...` |
+| Read a file a line at a time | `IFS= read -r line` |
+| Read a file into an array | `mapfile -t lines < file` |
+| Inspect individual pipeline statuses | `"${PIPESTATUS[@]}"` |
+| Wait for a background process | `wait "$pid"` |
+| Debug a script | `bash -n script.sh`; `bash -x script.sh` |
 
-| Need or symptom | First useful action | Why |
-|---|---|---|
-| Recall a command | `Ctrl-R` or `history 20` | Search instead of retyping |
-| Replay history entry 123 | `!123:p`, then `!123` | Preview before executing |
-| Reuse previous last argument | `Alt-.` or `!$` | Preserve a path you just typed |
-| A variable with spaces breaks a command | Quote it: `"$value"` | Keep one argument as one argument |
-| `bad substitution` | `bash --version`; inspect `${...}` | Wrong syntax or running `sh` instead of Bash |
-| Script shows `^M` or `bash\r` | `file script.sh`; `sed -n '1,5l' script.sh` | Likely Windows CRLF endings |
-| Script looks right but fails | `LC_ALL=C sed -n '1,20l' script.sh` | Smart quotes, hidden spaces, or escapes |
-| Unexpected exit | `bash -x script.sh` | Trace commands and statuses; beware secrets |
-| Syntax error | `bash -n script.sh` | Parse without executing |
-| Pipeline hides a failure | `set -o pipefail` | Propagate a non-final command's failure |
-| Command works by hand, not in CI | `pwd`; `env`; `type -a COMMAND` | Different environment, shell, or path |
+There is a recurring theme here: Bash deals in words, arguments, streams, and statuses. Understanding those four things is more useful than memorizing a hundred commands.
 
-These are starting points, not guaranteed fixes. Never replay a destructive history entry without checking it first.
+## What Bash actually does
 
----
-
-## Bash Is Not the Terminal
-
-The terminal displays text and sends keyboard input. Bash is the shell that interprets commands. `grep`, `awk`, `find`, `curl`, and `git` are separate programs, whereas `cd`, `read`, and `export` are Bash builtins.
-
-Consider:
+A terminal displays text and passes keyboard input. Bash interprets shell language. An external program performs whatever work it was written to do. Bash also has builtins that run without launching an external executable.
 
 ```bash
-grep -i 'connection refused' app.log | sort | uniq -c
+name='quarterly report.txt'
+printf '<%s>\n' "$name"
+
+type -a printf
+type -a cd
+command -v bash
 ```
 
-Bash recognizes the pipeline, prepares the arguments and file descriptors, starts the commands, and waits for them. It does not search or sort the log itself.
+`type` tells you whether a name resolves to an alias, function, builtin, or executable. Some names, such as `printf`, exist both as builtins and external programs. `builtin printf` explicitly selects the builtin; `command name` bypasses shell functions (and may still select a builtin).
+
+A normal command receives a list of arguments, not an undifferentiated string. Bash handles the syntax, prepares the arguments and redirections, and runs the command. If you understand where the argument boundaries are, much of the shell starts making sense.
 
 ```mermaid
-flowchart LR
-    A["Bash parses the command"] --> B["Expands arguments"]
-    B --> C["Connects pipes and redirects"]
-    C --> D["Runs builtins or programs"]
-    D --> E["Collects exit statuses"]
+flowchart TD
+    accTitle: How Bash evaluates ordinary command words
+    accDescr: The shell parses syntax, expands words in stages, prepares redirections, and executes the resulting command with its arguments.
+    A["Parse shell syntax"] --> B["Brace expansion"]
+    B --> C["Tilde, parameter, arithmetic, command and process substitution"]
+    C --> D["Word splitting"]
+    D --> E["Filename expansion"]
+    E --> F["Quote removal"]
+    F --> G["Prepare redirections and execute"]
 ```
 
-The phrase `'connection refused'` is **one argument**, despite containing a space. After removing the quotes, Bash passes the text to `grep` without the quote characters. In normal shell argument notation, the beginning of the command looks like this:
-
-```text
-argv[0] = grep
-argv[1] = -i
-argv[2] = connection refused
-argv[3] = app.log
-```
-
-Arguments are not a single string. They are separate values. Much of Bash safety comes down to preserving those boundaries.
-
-An **exit status** is a number from a completed command: `0` usually means success and nonzero means something else. The meaning of nonzero depends on the program; for `grep`, status `1` normally means *no match*, not an operational failure.
+This is a mental model for ordinary command words, not a complete grammar. Assignment words, `[[ ... ]]`, arithmetic contexts, redirection operands and here-documents have their own rules. Process substitution is available on systems that support it. Tilde, parameter, arithmetic and command substitutions are performed together in the expansion stage; don't interpret the diagram as an independent pass for each type.
 
 ```bash
-if grep -q 'ERROR' app.log; then
-  printf 'Found an error\n'
-else
-  printf 'No matching error line (or grep failed)\n'
-fi
+value='two words'
+printf '<%s>\n' $value
+# <two>
+# <words>
+printf '<%s>\n' "$value"
+# <two words>
 ```
 
-If you need to distinguish no match from an actual `grep` error, inspect its status explicitly. Bash conditionals test whether commands succeed; they are not restricted to Boolean expressions.
-
-**Bash versus `sh` versus Zsh.** `#!/usr/bin/env bash` asks for Bash. `#!/bin/sh` asks for the system's `sh`, which might be `dash`, Bash in a different compatibility mode, or another shell. Bash features such as `[[ ... ]]`, arrays, and process substitution are not portable `sh` syntax. Zsh has its own expansion and globbing rules. Use the shell you actually wrote the script for.
-
-Check what you are running:
+The unquoted expansion can undergo splitting and filename expansion. The quoted expansion preserves the value as one argument. Quotes belong to shell syntax; Bash removes them before passing the argument. Quote characters stored inside a variable do not become shell syntax again.
 
 ```bash
-printf 'Bash version: %s\n' "$BASH_VERSION"
-bash --version | head -n 1
-type -a bash
+value='"two words"'
+printf '<%s>\n' $value
+# <"two>
+# <words">
 ```
 
-macOS typically ships Bash 3.2 by default. Some useful modern features, including `mapfile` and associative arrays, are absent there. Homebrew Bash is a separate installation.
+This is why trying to construct a command by concatenating quoted strings is usually a mistake. Use an array for the arguments, and avoid `eval` unless you actually intend to execute trusted shell source.
 
----
+### Quoting and the different kinds of expansion
 
-## Work Faster at the Prompt
-
-These are **interactive** tricks. They are for typing commands into Bash, not for putting history expansion in scripts.
-
-### Recall a command instead of retyping it
-
-```bash
-history 20          # Show recent entries
-!123                # Execute history entry 123
-!-3                 # Execute the entry three commands back
-!!                  # Repeat the previous command
-!git                # Last command starting with 'git'
-!?docker?           # Last command containing 'docker'
-```
-
-For example:
-
-```text
-$ history 3
-  121  ls -lah
-  122  git status
-  123  docker ps -a
-
-$ !123
-docker ps -a
-```
-
-Other history expansions operate on *arguments*:
-
-```bash
-mkdir -p /tmp/demo-project
-cd !$                # Last argument: /tmp/demo-project
-```
-
-`!^` is the first argument of the previous command; `!$` is the last. `sudo !!` repeats the previous command with `sudo`, but don't use it without checking the command first.
-
-**Preview dangerous expansions:** `!123:p` and `!!:p` print the expanded command instead of running it. History entries may have changed because other commands ran, and history expansion can surprise you around quotes. The interactive history feature is usually enabled by default in Bash but off in noninteractive scripts; `set +H` disables it.
-
-The quick typo correction is worth remembering:
-
-```text
-$ systemctl stats nginx
-$ ^stats^status
-systemctl status nginx
-```
-
-That substitutes the first matching text in the previous command and executes the result. Use `fc` or the history-preview modifier if you would rather inspect it first.
-
-### Keyboard shortcuts that pay for themselves
-
-These are Bash's usual Emacs-mode Readline bindings; terminal software and custom keybindings can change them.
-
-| Keys | Action |
+| Form | Meaning |
 |---|---|
-| `Ctrl-R` | Search backward through command history; repeat to go further back |
-| `Ctrl-A` / `Ctrl-E` | Beginning / end of command line |
-| `Ctrl-U` / `Ctrl-K` | Cut from cursor to start / end of line |
-| `Ctrl-W` | Cut the previous word |
-| `Ctrl-Y` | Paste the last cut text |
-| `Alt-.` | Insert the previous command's last argument; repeat to cycle older ones |
-| `Ctrl-L` | Clear the terminal view |
-| `Ctrl-X` then `Ctrl-E` | Edit the command in `$EDITOR`/`$VISUAL` using Readline's editor command |
-| `Ctrl-C` | Interrupt the foreground command |
-| `Ctrl-Z` | Suspend the foreground job |
-| `Ctrl-D` | Send EOF; an empty interactive prompt normally exits |
-
-`Ctrl-S` may appear to freeze terminal output on terminals with software flow control enabled; `Ctrl-Q` resumes it. The shell may be fine.
-
-### Short navigation tricks
-
-```bash
-cd -                       # Previous working directory
-pushd /var/log             # Enter and remember previous directory
-popd                       # Return using directory stack
-mkdir -p app/{src,tests,docs}
-cp config.yaml{,.bak}      # Expands to config.yaml config.yaml.bak
-```
-
-`type -a python` shows aliases, builtins, functions, and executable matches. `command -v jq` is a practical way to check whether a command can be resolved.
-
-### Suspend versus detach
-
-```bash
-long_command &
-pid=$!
-jobs
-wait "$pid"
-```
-
-`&` starts a background job in the current shell; `$!` records its process ID. `fg %1` brings job 1 into the foreground; `bg %1` resumes a suspended job in the background.
-
-`Ctrl-Z` does **not** mean safe background execution across logout. Use `tmux`, a job scheduler, or systemd for jobs that must survive disconnects.
-
----
-
-## The Script Looks Fine. The Bytes Disagree.
-
-Before debugging logic, inspect the actual characters. This is especially important for scripts copied from chats, documents, Windows editors, CI configuration, and web pages.
-
-### Straight quotes versus smart quotes
-
-Bash recognizes ASCII `'` and `"` as quote delimiters. The visually similar `‘`, `’`, `“`, and `”` are different Unicode characters. They are **not** Bash quoting syntax.
-
-```bash
-name='two words'
-printf '%s\n' "$name"       # One value: two words
-printf '%s\n' “$name”       # Curly quotes do NOT protect the space
-```
-
-The second command undergoes word splitting. The curly quotes become literal characters rather than protecting the variable. It may print a plausible-looking result, making the bug harder to notice.
-
-Other lookalikes cause similar trouble:
-
-| Character | Problem |
-|---|---|
-| ASCII `-` versus `–` or `—` | A typographic dash is not an option prefix |
-| Regular space versus nonbreaking space (U+00A0) | Bash does not treat it like normal shell whitespace |
-| Zero-width space (U+200B) | Can silently become part of a name or argument |
-| ASCII `$` versus fullwidth `＄` | Only the ASCII dollar sign starts expansion |
-| ASCII `\` versus a typographic slash | Only a real backslash escapes characters |
-
-Don't globally delete all non-ASCII text; UTF-8 filenames, comments, and string contents can be legitimate. Look for suspicious characters **in syntax**.
-
-### Four dollar-sign forms, four different jobs
-
-| Form | What it means | Example |
-|---|---|---|
-| `$name` | Expand a variable | `"$HOME"` |
-| `${name}` | Expand with an explicit boundary | `"${HOME}/bin"` |
-| `$(command)` | Run command and substitute its stdout | `"$(date +%F)"` |
-| `$((expression))` | Calculate an integer | `$((2 + 3))` |
+| `'text $HOME'` | Literal text |
+| `"text $HOME"` | Expand values while preserving the word |
+| `$'one\ntwo'` | ANSI-C quoting; interprets escape sequences |
+| `${name}` | Parameter expansion with explicit boundaries |
+| `$(command)` | Capture stdout, removing trailing newlines |
+| `$((expression))` | Integer arithmetic expansion |
+| `file{1,2}.txt` | Brace expansion, independent of existing files |
+| `~/bin` | Tilde expansion; quote the resulting variable if stored |
 
 ```bash
 name=backup
-printf '%s\n' "$name_file"     # Looks for a DIFFERENT variable: name_file
 printf '%s\n' "${name}_file"   # backup_file
-printf '%s\n' '${name}'       # Literal characters, no expansion
-printf '%s\n' "\$HOME"        # Literal $HOME
+printf '%s\n' '$HOME'          # literal $HOME
+printf '%s\n' "$HOME"          # home directory
+printf '%s\n' $'first\nsecond'
 ```
 
-`${}` is invalid: there is no parameter name or valid expansion inside the braces. The braces are useful when the variable name meets adjacent text, or when using parameter operations like `${name:-default}`. They are not required around every simple variable.
+`$name_file` refers to a different variable named `name_file`. The braces are an explicit boundary, not decorative punctuation. As a default, quote expansions unless splitting or globbing is what you actually want.
 
-`$(command)` captures stdout and removes trailing newline characters. It does not capture stderr unless you redirect it. `(( expression ))` is a command with a success/failure status, not the same thing as `$(( expression ))`, which substitutes a result.
+Brace expansion occurs before parameter expansion. `file{1..3}` generates three words; `file{1..$n}` is not a dynamic range. Use an arithmetic loop for a variable upper bound.
 
-### CRLF, BOM, and shebang failures
+## Parameter expansion
 
-Unix scripts conventionally use LF line endings (`0A`). Windows tools often write CRLF (`0D 0A`). With a CRLF shebang, Linux may see `bash\r` instead of `bash`:
+This is the part of Bash worth learning properly. A parameter is a named variable, a positional parameter such as `$1`, or a special parameter such as `$?`. Expansion substitutes its value, optionally performing an operation on it.
+
+### Remove a prefix or suffix
+
+```bash
+path='/var/log/nginx/access.log.gz'
+printf '%s\n' "${path#*/}"     # var/log/nginx/access.log.gz
+printf '%s\n' "${path##*/}"    # access.log.gz
+printf '%s\n' "${path%/*}"     # /var/log/nginx
+printf '%s\n' "${path%%/*}"    # empty: the longest suffix is the whole path
+printf '%s\n' "${path%.*}"     # /var/log/nginx/access.log
+printf '%s\n' "${path%%.*}"    # /var/log/nginx/access
+```
+
+Think of the operators as two directions and two match lengths:
 
 ```text
-/usr/bin/env: 'bash\r': No such file or directory
+                         value
+          +--------------------------------+
+          | /var/log/nginx/access.log.gz   |
+          +--------------------------------+
+            ^                            ^
+         #  shortest prefix       %  shortest suffix
+        ##  longest prefix        %%  longest suffix
 ```
 
-A UTF-8 byte-order mark (BOM, `EF BB BF`) before `#!` can prevent the kernel from recognizing the interpreter line at all.
-
-| First bytes | Meaning |
+| Operator | Meaning |
 |---|---|
-| `23 21` | `#!` starts at byte zero (normal shebang) |
-| `EF BB BF 23 21` | BOM appears before the shebang |
-| `0D 0A` at line endings | Windows CRLF |
-| `0A` at line endings | Unix LF |
+| `${v#pattern}` | Remove shortest matching prefix |
+| `${v##pattern}` | Remove longest matching prefix |
+| `${v%pattern}` | Remove shortest matching suffix |
+| `${v%%pattern}` | Remove longest matching suffix |
 
-Inspect bytes rather than guessing:
+The match is anchored at the indicated end of the value. If nothing matches, the original value is returned. The patterns are shell globs, not regular expressions. In parameter expansion, `*` can match slashes, unlike ordinary filename globbing where a wildcard does not cross path components.
+
+Some everyday uses:
 
 ```bash
-file script.sh
-LC_ALL=C sed -n '1,30l' script.sh
-od -An -tx1 -N 64 script.sh
-bash -n script.sh
+url='https://example.com/api/'
+without_scheme=${url#https://}
+without_slash=${url%/}
+
+file='sample_01.fastq.gz'
+sample=${file%.fastq.gz}
 ```
 
-For a known CRLF file, use `dos2unix script.sh`. If you do not have that command, a Python conversion can remove **only** CRLF line endings:
+`${url%/}` removes **one** trailing slash. It is not general path normalization. `${path##*/}` and `${path%/*}` are convenient for known path shapes, not exact replacements for `basename` and `dirname`: a trailing slash, `/`, or a name containing no slash behaves differently.
+
+For files with multiple dots, the shortest suffix is usually what you want. `%%.*` removes everything from the earliest matching dot, which can even be in a directory component. Extract the filename first if that is the intended input.
+
+### Replace or delete a pattern
 
 ```bash
-python3 - <<'PY'
-from pathlib import Path
-p = Path('script.sh')
-data = p.read_bytes()
-p.write_bytes(data.replace(b'\r\n', b'\n'))
-PY
+s='foo-bar-foo'
+printf '%s\n' "${s/foo/baz}"    # baz-bar-foo
+printf '%s\n' "${s//foo/baz}"   # baz-bar-baz
+printf '%s\n' "${s/#foo/baz}"   # baz-bar-foo (start only)
+printf '%s\n' "${s/%foo/baz}"   # foo-bar-baz (end only)
+printf '%s\n' "${s//-/}"        # foobarfoo
+printf '%s\n' "${s//-/_}"       # foo_bar_foo
 ```
 
-Only run conversion on files you trust and intended to modify. A script should normally be saved as **UTF-8 without BOM, with LF endings**. Git attributes such as `*.sh text eol=lf` can help keep that consistent across Windows and Linux checkouts.
+`/` replaces the first match; `//` replaces all matches. The `#` and `%` immediately after the replacement operator anchor the match to the beginning or end. An empty replacement deletes the matched part.
 
-### The invisible space after a backslash
+If the pattern comes from a variable and you want it treated literally, quote that expansion:
 
 ```bash
-curl \
-  --connect-timeout 5 \
-  https://example.com
+s='a*b*c'
+needle='*'
+printf '%s\n' "${s//"$needle"/}"  # abc
 ```
 
-A backslash followed immediately by a newline continues the command. A backslash followed by a **space**, then a newline, does not. The space is escaped, and the next physical line becomes a different command. `sed -n 'l'` or `cat -v` can expose that trailing whitespace.
+In Bash versions/configurations with `patsub_replacement` enabled, an unquoted `&` in the replacement represents the matched text. Quote a replacement variable when its contents should be literal. Don't confuse these operations with regex substitutions or a general-purpose text-processing engine.
 
-### When the editor or operating system is the real difference
+### Unset, empty, and nonempty are different states
 
-`bash script.sh` invokes Bash directly, so it can run a script without the execute bit and bypasses shebang selection. `./script.sh` asks the operating system to execute the file, so it needs suitable permissions, a valid interpreter line, and an executable filesystem mount.
+A variable can be unset, set to an empty string, or set to a nonempty value. The colon in the following operators means that an empty value is treated like an unset one.
 
-On macOS, the default Bash is often 3.2. Tools such as `sed -i`, `date -d`, and `readlink -f` differ between GNU and BSD versions; this is separate from Bash syntax. A script can parse correctly and still fail because the external tool behaves differently.
-
-When scripts cross machines, inspect **bytes, interpreter, tool versions, and execution environment** in that order.
-
----
-## How Bash Expands a Command
-
-A command line goes through several stages. The exact expansion rules depend on its syntactic context, but the practical sequence for ordinary words includes brace expansion, tilde expansion, parameter/command/arithmetic expansion, word splitting, pathname expansion (globbing), and quote removal.
-
-This explains why an innocent-looking variable can turn into multiple arguments, and why unquoted variables can accidentally match filenames.
-
-### Quoting is about preserving arguments
+| Expression | Unset | Empty | Nonempty |
+|---|---|---|---|
+| `${v:-fallback}` | fallback | fallback | value |
+| `${v-fallback}` | fallback | empty | value |
+| `${v:+yes}` | empty | empty | yes |
+| `${v+yes}` | empty | yes | yes |
+| `${v:=fallback}` | assign fallback | assign fallback | value |
+| `${v=fallback}` | assign fallback | empty | value |
+| `${v:?message}` | error | error | value |
+| `${v?message}` | error | empty | value |
 
 ```bash
-filename='quarterly report.txt'
-
-cat $filename             # Two arguments: quarterly and report.txt
-cat "$filename"           # One argument: quarterly report.txt
+port=${PORT:-8080}
+output=${1:-output.txt}
+: "${CACHE_DIR:=$HOME/.cache/my-tool}"
 ```
 
-Single quotes keep text literal. Double quotes allow `$variable`, `$(command)`, and certain escapes while suppressing most word splitting and filename expansion.
+`:-` returns a default without changing the original parameter. `:=` assigns the default to an assignable variable as well as expanding to it. `:` is a builtin that does nothing after expanding its arguments; it is useful for triggering assignments or validating variables.
+
+At the top of a noninteractive script, require a value with:
 
 ```bash
-printf '%s\n' '$HOME'     # Literal $HOME
-printf '%s\n' "$HOME"     # Expanded home directory
-printf '%s\n' "$(pwd)"    # Capture output from pwd
+: "${API_KEY:?API_KEY is required}"
 ```
 
-**Default rule:** quote expansions unless you specifically want splitting or globbing. In Bash's `[[ ... ]]` tests and arithmetic expressions, some splitting rules differ, but quoting for clarity is still useful.
+If the variable is unset or empty, Bash prints an error and exits the noninteractive shell. This is an expansion error, not an ordinary return from `:`. Use the form without the colon if an intentionally empty value is acceptable. Assignment forms cannot assign to positional or special parameters.
 
-### Positional parameters, arrays, and the argument boundary
+To distinguish unset from empty without relying on newer Bash features:
 
 ```bash
-printf 'script=%s args=%s\n' "$0" "$#"
-printf '<%s>\n' "$@"
+if [[ ${CONFIG+x} ]]; then
+    printf 'CONFIG is set\n'
+fi
 ```
 
-`"$@"` expands to a **separate, quoted argument for each original argument**. `"$*"` instead joins the arguments into one string, usually separated by the first character of `IFS`. Unquoted `$*` or `$@` can trigger word splitting and filename expansion.
+Bash 4.2+ also supports `[[ -v CONFIG ]]` for a variable that has been assigned a value, including an empty value. Be careful with dynamic array subscripts and untrusted names; a simple scalar name is the intended use here.
 
-Arrays exist because a list of filenames should not be smuggled through a whitespace-delimited string:
+### Length, slicing, and case conversion
 
 ```bash
-files=('a b.txt' 'c.txt' '-strange.txt')
+s='Hello World'
+printf '%s\n' "${#s}"      # 11
+printf '%s\n' "${s:0:5}"   # Hello
+printf '%s\n' "${s:6}"     # World
+printf '%s\n' "${s: -5}"   # World
+printf '%s\n' "${s:1:-1}"  # ello Worl (Bash 4.2+)
+printf '%s\n' "${s,}"      # hello World (Bash 4+)
+printf '%s\n' "${s,,}"     # hello world
+printf '%s\n' "${s^^}"     # HELLO WORLD
+```
 
-for file in "${files[@]}"; do
-  printf 'file: %q\n' "$file"
+A negative offset needs a space or parentheses so that it is not parsed as `:-`. A negative substring length (where supported) specifies an end position relative to the end of the string. String length and case conversion are locale-sensitive; `${#s}` is not necessarily the byte length of UTF-8 data.
+
+Bash 4.4+ also has useful transformation operators such as `${s@Q}` for a shell-quoted representation. `printf '%q' "$s"` is an older, convenient alternative for inspecting a value. These are Bash representations, not JSON escaping or a security boundary for other languages.
+
+### Indirect expansion
+
+```bash
+host='localhost'
+name=host
+printf '%s\n' "${!name}"   # localhost
+```
+
+`${!name}` treats the value of `name` as the name of another parameter. This is useful when a known variable name is selected at runtime. For a collection of arbitrary keys, an associative array is usually clearer. Do not turn untrusted text into a variable name or arithmetic subscript.
+
+### A small practical example
+
+```bash
+for file in *.fastq.gz; do
+    [[ -f $file ]] || continue
+    sample=${file%.fastq.gz}
+    printf 'sample=%s input=%q\n' "$sample" "$file"
 done
 ```
 
-`%q` produces a Bash-readable escaped representation of one argument. It is particularly useful when you suspect invisible characters.
+No `basename`, `sed`, `cut`, or command substitution. The shell already knows how to match the filenames and remove the suffix. This is a good use of native Bash: small operations on values that are already in the shell.
 
-Some parameter expansions worth memorizing:
+## Patterns, globs, and regular expressions
 
-| Expression | Meaning |
-|---|---|
-| `${v:-default}` | Use default if unset or empty |
-| `${v-default}` | Use default only if unset |
-| `${v:=default}` | Assign default if unset or empty |
-| `${v:?message}` | Fail with a message if unset or empty |
-| `${v:+alternate}` | Use alternate if set and nonempty |
-| `${#v}` | String length |
-| `${path##*/}` | Remove longest matching prefix, often directory path |
-| `${path%.*}` | Remove shortest matching suffix, often an extension |
-| `${v//old/new}` | Replace all matching substrings/patterns |
+Three things that look similar are often confused:
 
-The operators have different behavior for *unset* versus *empty*. Under `set -u`, `${v:-default}` is normally safer than casually expanding an unset variable.
+| Syntax | Example | What it does |
+|---|---|---|
+| Brace expansion | `file{1,2}.txt` | Generates words without checking files |
+| Glob pattern | `*.log` | Matches filenames or strings in a pattern context |
+| Regular expression | `^[0-9]+$` | Matches strings with regex syntax |
 
-### Globs are not regular expressions
+A shell glob uses `*`, `?`, and bracket expressions such as `[0-9]`. A regex has different meanings for `*`, `.`, `+`, grouping, and anchors. Quoting determines whether pattern characters are active.
 
 ```bash
-*.log               # Any name ending in .log
-file?.txt           # Exactly one character after 'file'
-report[12].csv      # report1.csv or report2.csv
+file='server.log'
+pattern='*.log'
+[[ $file == $pattern ]]      # pattern match
+[[ $file == "$pattern" ]]    # literal comparison with *.log
 ```
 
-Bash expands globs against filenames before calling a program. Brace expansion is different: `file{1,2}.txt` generates two words regardless of which files exist.
-
-If `*.log` matches nothing, Bash normally leaves the literal pattern unchanged. A safe loop guards that case:
+`case` is especially good for dispatching on several patterns:
 
 ```bash
-for file in *.log; do
-  [[ -e "$file" || -L "$file" ]] || continue
-  printf '%s\n' "$file"
-done
+case $file in
+    *.tar.gz) printf 'compressed archive\n' ;;
+    *.log)    printf 'log file\n' ;;
+    *)        printf 'other\n' ;;
+esac
 ```
 
-Or explicitly enable `nullglob` in a scope where the changed behavior is intended:
+For more structured matches, Bash has a POSIX extended regular expression operator and a capture array:
+
+```bash
+version='v1.24.3'
+regex='^v([0-9]+)\.([0-9]+)\.([0-9]+)$'
+if [[ $version =~ $regex ]]; then
+    major=${BASH_REMATCH[1]}
+    minor=${BASH_REMATCH[2]}
+    patch=${BASH_REMATCH[3]}
+    printf '%s.%s.%s\n' "$major" "$minor" "$patch"
+fi
+```
+
+`BASH_REMATCH[0]` is the entire match; subsequent entries are capture groups. Save the values you need before another regex match changes the array. Quoting the entire right-hand expansion of `=~` makes it literal on modern Bash; store the regex in a variable and leave that expansion unquoted. There is no word splitting or pathname expansion in `[[ ... ]]`.
+
+### Filename expansion and shell options
+
+By default, a glob with no matching filename remains a literal word. This can be awkward in loops and arrays. `nullglob` removes unmatched patterns; `failglob` instead reports an expansion error. `dotglob` includes most leading-dot names, and `globstar` (Bash 4+) allows `**` to match directory trees.
 
 ```bash
 (
-  shopt -s nullglob
-  logs=( *.log )
-  printf '%s\n' "${logs[@]}"
+    shopt -s nullglob
+    logs=( *.log )
+    printf 'found %d logs\n' "${#logs[@]}"
+    for log in "${logs[@]}"; do
+        printf '%q\n' "$log"
+    done
 )
 ```
 
-`shopt -s failglob` instead turns an unmatched glob into an error. Both options can be useful, but don't flip shell behavior globally without understanding who else uses the shell.
-
-### Reading lines without corrupting them
+The subshell keeps the option change local to this operation. For recursive globbing on Bash 4+:
 
 ```bash
-while IFS= read -r line || [[ -n "$line" ]]; do
-  printf '%s\n' "$line"
-done < file.txt
+(
+    shopt -s globstar nullglob
+    for file in **/*.sh; do
+        [[ -f $file ]] || continue
+        printf '%q\n' "$file"
+    done
+)
 ```
 
-`IFS=` avoids leading/trailing whitespace trimming, `-r` keeps backslashes literal, and the extra test handles a final line that lacks a newline character.
+`**` is not a replacement for every use of `find` (metadata predicates, symlink policy and huge trees are good reasons to use `find`). Extended glob patterns such as `@(jpg|png)` and `!(pattern)` can express alternatives and negation. Enable `extglob` before parsing code that uses its special syntax, including function definitions containing such patterns. The right-hand pattern of `[[ ... == ... ]]` already uses extended matching rules.
 
-Bash's `mapfile -t lines < file.txt` is convenient on Bash 4+, but unavailable in the default Bash 3.2 on macOS. Even `mapfile` is line-based, not appropriate for arbitrary filenames containing newlines.
+## Arrays and arguments
 
----
+A scalar is not a list. Use an array when individual values matter, particularly filenames and command arguments.
 
-## Pipelines, File Descriptors, and Subshells
+```bash
+files=('a b.txt' 'c.txt' '-strange.txt')
+files+=('another file.txt')
+printf 'count=%d\n' "${#files[@]}"
+for file in "${files[@]}"; do
+    printf 'file=%q\n' "$file"
+done
+```
 
-Every ordinary Unix process starts with three familiar streams:
+| Expansion | Meaning |
+|---|---|
+| `${files[0]}` | Element at index 0 |
+| `"${files[@]}"` | Each element as a separate argument |
+| `"${files[*]}"` | All elements joined into one word using first character of IFS |
+| `${#files[@]}` | Number of assigned elements |
+| `"${!files[@]}"` | Assigned indices |
+| `"${files[@]:1:2}"` | Slice of two elements starting at index 1 (dense array example) |
 
-| Descriptor | Name | Default |
+Indexed arrays can be sparse. After `unset 'files[1]'`, index 2 still exists; the array has fewer elements, but the remaining indices do not shift. Rebuild with `files=("${files[@]}")` if you actually want a dense array. Quote the operand to `unset` so that the bracket syntax isn't interpreted as a filename pattern.
+
+Use the same model with script arguments:
+
+```bash
+printf 'script=%s argc=%s\n' "$0" "$#"
+for arg in "$@"; do
+    printf '<%s>\n' "$arg"
+done
+```
+
+`"$@"` preserves argument boundaries, including empty arguments. `"$*"` joins them. The difference matters when forwarding arguments. Positional parameters beyond nine need braces (`${10}`). `shift` removes positional arguments from the current function or script.
+
+### Build a command as arguments, not a string
+
+```bash
+path='quarterly report.txt'
+args=(printf '%s\n' "$path")
+"${args[@]}"
+```
+
+Here is the same idea for a real external command:
+
+```bash
+url='https://example.com/'
+args=(curl --fail --silent --show-error --connect-timeout 5)
+if [[ ${VERBOSE:-0} == 1 ]]; then
+    args+=(--verbose)
+fi
+args+=(-- "$url")
+"${args[@]}"
+```
+
+The array contains the executable name and separate arguments. Shell operators such as `|`, `>` and `&&` do not become syntax when they come from an array; put those operators in the shell program itself. There is no need to pass the command through `eval`.
+
+### Associative arrays (Bash 4+)
+
+Associative arrays map strings to values instead of integer indices.
+
+```bash
+declare -A ports=([http]=80 [https]=443 [ssh]=22)
+printf '%s\n' "${ports[https]}"
+for service in "${!ports[@]}"; do
+    printf '%s=%s\n' "$service" "${ports[$service]}"
+done
+```
+
+For a small in-memory count:
+
+```bash
+declare -A counts=()
+for word in apple banana apple orange banana apple; do
+    counts["$word"]=$(( ${counts[$word]:-0} + 1 ))
+done
+for word in "${!counts[@]}"; do
+    printf '%s: %d\n' "$word" "${counts[$word]}"
+done
+```
+
+Associative array iteration order is unspecified. An empty string is not a valid associative key. The example uses fixed, trusted keys and numeric counts; older Bash versions have pitfalls involving repeated evaluation of dynamic array subscripts in arithmetic or other contexts. For arbitrary external records, validate inputs and consider a dedicated tool. `awk` is still an excellent choice for processing large streams of records.
+
+## Conditions, arithmetic, and loops
+
+Bash conditionals test exit statuses. A status of zero means success; nonzero means something else, depending on the command. A test that returns false is not necessarily an error.
+
+```bash
+if [[ -r input.txt ]]; then
+    printf 'Readable\n'
+elif [[ -e input.txt ]]; then
+    printf 'Exists but is not readable\n'
+else
+    printf 'Missing or inaccessible\n'
+fi
+```
+
+`[` is a command (also available as a Bash builtin). `[[ ... ]]` is Bash syntax, with its own rules for patterns, comparisons and quoting. Prefer the latter in Bash scripts. Use `-eq`, `-lt` and friends for numeric tests, or use `(( ... ))` for integer arithmetic.
+
+| Test | Meaning |
+|---|---|
+| `[[ -z $s ]]` | Empty string |
+| `[[ -n $s ]]` | Nonempty string |
+| `[[ $a == "$b" ]]` | Literal string equality |
+| `[[ $a == *.log ]]` | Pattern match |
+| `[[ -f $path ]]` | Regular file |
+| `[[ -d $path ]]` | Directory |
+| `[[ -L $path ]]` | Symbolic link, including dangling links |
+| `[[ -r $path ]]` | Readable by the current process |
+| `[[ $a -nt $b ]]` | File a is newer (or a exists and b does not) |
+| `(( n > 0 ))` | Integer comparison |
+
+Combine tests using `&&`, `||` and `!` inside `[[ ... ]]`, or combine whole commands using those operators outside. `cmd1 && cmd2 || cmd3` is not quite an if/else: `cmd3` also runs if `cmd2` fails.
+
+### Arithmetic is integer arithmetic
+
+```bash
+n=7
+printf '%s\n' "$((n / 2))"   # 3
+printf '%s\n' "$((n % 2))"   # 1
+printf '%s\n' "$((2 ** 8))"  # 256
+((n += 3))
+```
+
+`$(( ... ))` expands to a number. `(( ... ))` is a command whose exit status is zero if the expression evaluates to a nonzero number. This matters when `set -e` is enabled:
+
+```bash
+n=0
+((n++))   # expression value is 0, so exit status is 1
+```
+
+When incrementing a counter for its side effect alone, `n=$((n + 1))` avoids the arithmetic-command status trap. `((++n))` evaluates to the new value but can still return status 1 if that value is zero.
+
+Leading zeroes are interpreted as octal in arithmetic expressions. If the input must be a nonnegative decimal integer, validate its form before using it:
+
+```bash
+input='08'
+if [[ $input =~ ^[0-9]{1,9}$ ]]; then
+    n=$((10#$input))
+    printf '%d\n' "$n"    # 8
+fi
+```
+
+The length limit is deliberate in this example. Bash arithmetic uses fixed-width integers without overflow checking. Do not put arbitrary user-supplied expressions in arithmetic contexts; Bash can evaluate more than plain numbers there. Bash is also not a floating-point calculator.
+
+### Loops
+
+```bash
+for ((i=0; i<5; i++)); do
+    printf '%02d\n' "$i"
+done
+
+for arg in "$@"; do
+    printf '%q\n' "$arg"
+done
+```
+
+Use `while` when the loop should continue as long as a command succeeds. `until` is the opposite. `break` exits a loop and `continue` skips to its next iteration; both accept a nesting count when needed.
+
+## Read, write, and format
+
+Bash has a few builtins that are easy to overlook because we are used to reaching for external tools.
+
+### Read without losing information
+
+```bash
+while IFS= read -r line || [[ -n $line ]]; do
+    printf '<%s>\n' "$line"
+done < input.txt
+```
+
+`IFS=` prevents the normal whitespace trimming and field splitting of `read`. `-r` disables backslash processing. The extra condition handles a last line with no newline. Redirect the file into the loop rather than piping into it if the loop needs to modify variables in the current shell.
+
+For simple delimited records, explicitly choose a separator:
+
+```bash
+address='192.168.1.20:8080'
+IFS=: read -r host port <<< "$address"
+printf 'host=%s port=%s\n' "$host" "$port"
+```
+
+This is a here-string: it supplies the expanded string plus a newline as standard input. The example assumes an IPv4 address or hostname with one port separator, not an IPv6 literal. `IFS` splitting is not a CSV parser, does not understand quoted delimiters, and has special rules for whitespace.
+
+| Option | Use |
+|---|---|
+| `read -r` | Preserve backslashes |
+| `read -a fields` | Split one record into an indexed array |
+| `read -d ''` | Read through a NUL delimiter |
+| `read -u "$fd"` | Read from a specific file descriptor |
+| `read -t 5` | Time out after five seconds (where applicable) |
+| `read -s` | Suppress terminal echo |
+| `read -p 'Prompt: '` | Display a prompt when reading from a terminal |
+
+Bash variables cannot store a NUL byte. They can, however, hold filenames containing spaces, tabs, and newlines. For arbitrary Unix filenames, use a NUL-delimited stream:
+
+```bash
+while IFS= read -r -d '' file; do
+    printf '%q\n' "$file"
+done < <(find . -type f -print0)
+```
+
+Here `find` is the right tool to traverse a directory tree. Bash takes care of reading the result without splitting a filename. Process substitution does not automatically propagate the producer's exit status; see the section on execution environments below.
+
+For modest line-oriented files, Bash 4+ can load them into an array in one operation:
+
+```bash
+mapfile -t lines < input.txt
+printf 'lines=%d\n' "${#lines[@]}"
+```
+
+`-t` removes the record delimiter from each element. This keeps empty lines and does not require word splitting. `readarray` is another name for `mapfile`. Don't load an unbounded file into memory without a reason.
+
+### Format values using printf
+
+```bash
+printf '%s\n' 'hello'
+printf '%04d\n' 42       # 0042
+printf '%-12s %5d\n' worker 7
+printf '%q\n' 'two words'
+
+printf -v filename 'backup-%04d.tar.gz' 42
+printf '%s\n' "$filename"
+```
+
+`printf -v` writes directly into a shell variable. There is no need for `result=$(printf ...)`, which normally uses a subshell and removes trailing newlines. Always use a fixed format string, such as `printf '%s\n' "$value"`, rather than passing uncontrolled data as the format.
+
+Bash 4.2+ supports time formatting without launching `date`:
+
+```bash
+printf -v timestamp '%(%Y-%m-%d %H:%M:%S)T' -1
+printf '%s\n' "$timestamp"
+```
+
+`-1` represents the current time; the format follows the system's `strftime` conventions. On Bash 3.2, use `date` instead. `%q` is great for inspecting arguments, but it produces Bash-escaped text, not a generic serialization format.
+
+### Read a small file into a scalar
+
+```bash
+content=$(<input.txt)
+printf '%s\n' "$content"
+```
+
+`$(<file)` is a Bash shortcut for reading a file through command substitution without invoking `cat`. Like other command substitutions, it strips trailing newline characters and cannot preserve NUL bytes. Use redirection into a program when the bytes themselves matter.
+
+## Functions, scope, and references
+
+A function runs in the current shell unless its invocation is placed in a separate execution environment, such as a subshell or most pipeline stages. It can access the caller's variables, change the working directory, open descriptors, and modify shell options.
+
+```bash
+log() {
+    printf '[%s] %s\n' "$1" "$2" >&2
+}
+
+log INFO 'Starting work'
+```
+
+Use `local` for variables that should not escape the function. Bash has dynamic scope: a function called from another function can see its caller's local variables. That is useful to know, but relying on it for implicit data flow makes a script harder to reason about.
+
+```bash
+format_name() {
+    local prefix=$1
+    local number=$2
+    printf '%s-%04d\n' "$prefix" "$number"
+}
+
+name=$(format_name worker 7)
+printf '%s\n' "$name"
+```
+
+Functions return an exit status, not a string. Output data through stdout, send diagnostics to stderr, and let `return` communicate success or failure.
+
+A common bug is combining declaration and command substitution:
+
+```bash
+fetch_value() {
+    local value
+    value=$(false) || return
+    printf '%s\n' "$value"
+}
+```
+
+Writing `local value=$(false)` would test the status of `local`, not reliably the status of the substitution. Declare the local first, then make the assignment a separate command. The same issue applies to commands such as `export` and `declare`.
+
+### Attributes and namerefs
+
+`declare` is more than another way to assign variables. It can declare an array, mark a variable read-only, give it an integer attribute, print its definition, or (Bash 4.3+) create a nameref.
+
+```bash
+readonly app_name='my-tool'
+declare -a hosts=(web app db)
+declare -p hosts
+```
+
+`declare -i` makes assignments use arithmetic evaluation; it is not an input validator. `export` makes a variable available in the environment of subsequently launched programs; it does not export a Bash array as an array.
+
+A nameref is useful for returning data without capturing stdout:
+
+```bash
+split_name() {
+    local -n result_ref=$1
+    local input=$2
+    result_ref=${input%.tar.gz}
+}
+
+filename=''
+split_name filename 'backup.tar.gz'
+printf '%s\n' "$filename"    # backup
+```
+
+The first argument is the name of a trusted destination variable. Use an internal reference name that doesn't collide with the target. A nameref is not a safe way to access an arbitrary untrusted variable name. For a simple function that returns text, stdout is often enough.
+
+## Streams and file descriptors
+
+A Unix process normally starts with three file descriptors. A descriptor is a number referring to an open resource, not the resource itself.
+
+| Descriptor | Name | Typical use |
 |---|---|---|
-| `0` | stdin | Input from terminal or previous pipeline stage |
-| `1` | stdout | Normal output |
-| `2` | stderr | Diagnostics and error messages |
-
-A pipe connects one command's stdout to another's stdin. It does not automatically carry stderr.
+| 0 | stdin | Input |
+| 1 | stdout | Normal data |
+| 2 | stderr | Diagnostics |
 
 ```mermaid
 flowchart LR
-    A["grep ERROR app.log"] -->|"stdout through pipe"| B["sort"]
-    B -->|"stdout through pipe"| C["uniq -c"]
-    A -.->|"stderr"| D["Terminal or error log"]
+    accTitle: Standard streams in a pipeline
+    accDescr: The first command sends standard output through a pipe to the second command; standard error is separate unless explicitly redirected.
+    I["stdin"] -->|"fd 0"| A["Command A"]
+    A -->|"fd 1"| P["Pipe"]
+    P -->|"fd 0"| B["Command B"]
+    B -->|"fd 1"| O["stdout"]
+    A -->|"fd 2"| E["stderr"]
+    B -->|"fd 2"| E
 ```
+
+The shell sets up the pipe and redirections. The programs themselves don't need to know which shell connected them.
 
 ### Redirection order matters
 
 ```bash
-command > out.log 2> err.log     # Keep outputs separate
-command > all.log 2>&1          # Send both to all.log
-command 2>&1 > out.log          # stderr still goes to original stdout
-command >> append.log          # Append normal output
-command < input.txt            # Read stdin from file
-command |& tee combined.log    # Bash shorthand: stdout and stderr to pipe
+some_command > output.log 2>&1
+some_command 2>&1 > output.log
 ```
 
-File descriptors are redirected **from left to right**. In `command 2>&1 > out.log`, stderr gets a copy of the original stdout destination before stdout is redirected to the file.
+They look almost identical. They are not. Bash processes redirections from left to right. `2>&1` duplicates the current destination of descriptor 1 into descriptor 2; it does not create a permanent link between the two descriptors.
 
-Here-documents can expand variables, or preserve their text literally:
+```mermaid
+flowchart TD
+    accTitle: Why redirection order matters
+    accDescr: Redirecting stdout before duplicating it sends both streams to the file; duplicating first leaves stderr at the original stdout destination.
+    subgraph A["Redirect stdout first"]
+        direction TB
+        A1["stdout (1)"] --> AF["file"]
+        A2["stderr (2)"] --> AF
+    end
+    subgraph B["Duplicate stdout first"]
+        direction TB
+        B1["stdout (1)"] --> BF["file"]
+        B2["stderr (2)"] --> BT["Original stdout"]
+    end
+```
+
+| Syntax | Effect |
+|---|---|
+| `> file` | Create or truncate file and redirect stdout |
+| `>> file` | Append stdout |
+| `< file` | Read stdin from file |
+| `2> file` | Redirect stderr |
+| `2>&1` | Duplicate current stdout onto stderr |
+| `&> file` | Bash shorthand for `> file 2>&1` |
+| `<<'EOF'` | Literal here-document |
+| `<<< "$value"` | Here-string (adds a newline) |
+| `> /dev/null` | Discard stdout |
+
+A here-document is handy for multiline literal text. Quote the delimiter if the contents should not be expanded:
 
 ```bash
-name=world
-cat <<EOF
-Hello, $name
-EOF
-
-cat <<'EOF'
-Literal $name and $(whoami)
-EOF
+while IFS= read -r line; do
+    printf '%s\n' "$line"
+done <<'TEXT'
+$HOME remains literal here.
+So does $(some_command).
+TEXT
 ```
 
-The quoted delimiter in `<<'EOF'` disables parameter and command expansion inside the body. This matters when generating configuration or scripts containing dollar signs.
+An unquoted delimiter allows parameter, command and arithmetic expansion in the body. `<<-` strips leading tabs (not spaces), useful for indentation. Redirections can create or truncate a file even if the command subsequently fails, so don't redirect a file into itself while reading it.
+
+### Open your own file descriptors
+
+```bash
+exec 3< input.txt
+IFS= read -r -u 3 first_line
+exec 3<&-
+printf '%s\n' "$first_line"
+```
+
+`exec` without a command applies redirections to the current shell. `exec` with a command replaces the shell process with that program (on success). Bash 4.1+ can allocate an unused descriptor automatically:
+
+```bash
+exec {fd}< input.txt
+IFS= read -r -u "$fd" first_line
+exec {fd}<&-
+```
+
+Close descriptors when finished. They may otherwise stay open or be inherited by children. Dynamic descriptor syntax is useful when functions need their own resources and should not collide over descriptor 3.
+
+## Execution environments: groups, subshells, and pipelines
+
+Much of Bash's surprising behavior comes from not knowing which execution environment a command is running in.
+
+```mermaid
+flowchart TD
+    accTitle: Where shell state changes persist
+    accDescr: Functions and brace groups run in the current shell by default, while subshells, command substitutions, external programs and most pipeline stages use separate execution environments.
+    S["Current shell"] --> G["Brace group or function"]
+    S --> U["Subshell or command substitution"]
+    S --> P["External program or background job"]
+    S --> L["Pipeline stage (normally)"]
+    G --> K["State changes persist in caller"]
+    U --> N["Changes do not update caller"]
+    P --> N
+    L --> N
+```
+
+This assumes ordinary foreground invocations; a function or group placed in a pipeline or run in the background normally has a separate environment too. Bash's `lastpipe` option can change where the final foreground pipeline stage executes when job control is inactive.
+
+```bash
+value=before
+{ value=after; }
+printf '%s\n' "$value"       # after
+
+(value=inside)
+printf '%s\n' "$value"       # after
+```
+
+A brace group uses the current shell. The braces need surrounding token boundaries and a semicolon or newline before `}`. Parentheses create a subshell environment. This is a convenient way to contain a directory change or shell-option change:
+
+```bash
+(
+    cd /tmp || exit
+    printf 'inside: %s\n' "$PWD"
+)
+printf 'outside: %s\n' "$PWD"
+```
+
+`$$` is not always the PID you expect in a subshell: it expands to the invoking shell's PID even inside a parenthesized subshell. Bash 4+ provides `$BASHPID` for the current Bash process, and `$BASH_SUBSHELL` indicates the nesting level of subshell environments.
 
 ### Command substitution and process substitution
 
 ```bash
-today="$(date +%F)"
-diff <(sort a.txt) <(sort b.txt)
+value=$(printf 'first\nsecond\n\n')
+printf '%q\n' "$value"
 ```
 
-`$(...)` substitutes output as a string (with trailing newlines removed). `<(...)` is **process substitution**: Bash supplies a path-like reference to a command's stream, useful when another program expects filenames. It's Bash-specific and may depend on platform facilities such as `/dev/fd`.
+Command substitution runs a command in a subshell environment and captures stdout. All trailing newline characters are removed; internal newlines survive. Stderr is not captured unless you redirect it.
 
-Do not assume failure inside command substitution always propagates cleanly, especially when wrapped in `local`, `export`, or `readonly` declarations. For example, avoid:
+Process substitution instead presents a stream as a file-like path, often under `/dev/fd/`:
 
 ```bash
-local result="$(might_fail)"   # Declaration's status can mask the command's status
+diff <(printf '%s\n' alpha beta) <(printf '%s\n' alpha gamma)
 ```
 
-Prefer two statements inside a function:
-
-```bash
-local result
-result="$(might_fail)" || return
-```
+The external `diff` reads two streams without needing us to create two temporary files. `>(command)` goes the other way: it presents a writable path that feeds the command's stdin. Availability depends on OS support. The producer is asynchronous, and a consumer's successful status does not automatically establish that every process substitution succeeded. For critical producer output, arrange explicit status collection or stage and validate the output first.
 
 ### The pipeline subshell surprise
 
 ```bash
 count=0
 printf '%s\n' a b c | while IFS= read -r line; do
-  ((count += 1))
+    count=$((count + 1))
 done
-printf '%s\n' "$count"    # Usually 0
+printf '%s\n' "$count"   # normally 0
 ```
 
-In normal Bash behavior, the loop on the right of the pipeline executes in a subshell. Changes made to `count` do not return to the parent shell. Bash has an optional `lastpipe` setting in certain circumstances, but relying on that makes scripts less predictable.
+By default, the loop executes in a separate environment. Its counter is not the parent's counter. If you need the count afterward, put the loop in the current shell:
 
 ```bash
 count=0
 while IFS= read -r line; do
-  ((count += 1))
-done < input.txt
-printf '%s\n' "$count"
+    count=$((count + 1))
+done < <(printf '%s\n' a b c)
+printf '%s\n' "$count"   # 3
 ```
 
-Or feed the loop via process substitution:
+For a real file, a simple `< input.txt` is even better. Bash 4.2+ has `shopt -s lastpipe`, which can run the last foreground pipeline stage in the current shell when job control is disabled. I prefer the explicit redirection because it makes the intended execution environment obvious.
 
-```bash
-while IFS= read -r line; do
-  printf '%s\n' "$line"
-done < <(generate_lines)
-```
+## Exit statuses and error handling
 
-Caution: process-substitution producers run asynchronously, and their failure statuses are not automatically handled like an ordinary simple command. For critical pipelines, explicit temporary files or other status checks may be clearer.
-
----
-
-## Variables, Conditions, Functions, and Loops
-
-A shell variable stays in the current shell unless it is exported to child processes:
-
-```bash
-mode=production
-export mode
-python3 worker.py
-```
-
-The child receives `mode`, but it cannot directly change the parent's variable. `local` creates function-local Bash variables; `readonly` prevents later assignments.
-
-Useful special parameters:
+These are the special parameters I use most:
 
 | Parameter | Meaning |
 |---|---|
-| `$0` | Script name or shell invocation name |
-| `$1`, `$2` | Positional arguments |
-| `$#` | Number of arguments |
-| `"$@"` | All arguments, boundaries preserved |
-| `$?` | Status of the most recently completed foreground pipeline |
-| `$$` | Shell's PID (not always the current subshell PID) |
-| `$BASHPID` | PID of the current Bash process |
-| `$!` | PID of last asynchronously started job |
-| `$LINENO` | Current source line number |
-| `${BASH_SOURCE[0]}` | Bash source file path |
+| `$?` | Status of the most recent command or pipeline |
+| `$!` | PID of the most recently started asynchronous pipeline |
+| `$$` | Invoking shell's PID |
+| `$#` | Number of positional arguments |
+| `"$@"` | All positional arguments, separately quoted |
+| `"${PIPESTATUS[@]}"` | Individual statuses of the most recent foreground pipeline |
+| `$-` | Active single-letter shell options |
 
-`$?` changes whenever another command runs. Capture it immediately if you need it later.
-
-### Conditions test commands
+Capture a status before another command overwrites it. For example:
 
 ```bash
-if [[ -f "$input" ]]; then
-  printf 'Input exists\n'
-elif [[ -d "$input" ]]; then
-  printf 'Input is a directory\n'
+if false; then
+    printf 'success\n'
 else
-  printf 'Input is missing or another file type\n'
+    status=$?
+    printf 'failed: %d\n' "$status" >&2
 fi
 ```
 
-Common tests include `-e` (exists), `-f` (regular file), `-d` (directory), `-s` (nonempty file), `-r`/`-w`/`-x` (access), `-n` (nonempty string), and `-z` (empty string). Test expressions are not permission guarantees; an operation can still fail afterward.
+Exit status 127 usually means command not found, 126 means the command was found but could not be executed, and Bash commonly reports `128 + signal_number` for a command terminated by a signal. A program can also deliberately return such a number. Don't infer more than the status actually tells you.
 
-Bash `[[ ... ]]` avoids unwanted splitting and globbing of variables in the test expression. Use `(( ... ))` for arithmetic conditions and `case` for command-line options:
-
-```bash
-case "${1:-}" in
-  start) printf 'Starting\n' ;;
-  stop)  printf 'Stopping\n' ;;
-  *)     printf 'Usage: %s start|stop\n' "$0" >&2; exit 2 ;;
-esac
-```
-
-`[[ $name == *.txt ]]` uses a pattern; `[[ $value =~ ^[0-9]+$ ]]` uses Bash regular-expression matching, with distinct quoting rules for the regex. Neither is quite the same as POSIX `[`.
-
-### Functions return statuses, not strings
+### Pipelines and pipefail
 
 ```bash
-get_name() {
-  printf '%s\n' 'Ada'
-}
-
-name="$(get_name)"
+false | true
+statuses=("${PIPESTATUS[@]}")
+printf '%s\n' "${statuses[@]}"   # 1, then 0
 ```
 
-A function's `return` command takes an integer status, conventionally 0–255, not a text value. Use stdout to produce textual data, and stderr for logging.
-
-### Loops and the arithmetic-status trap
+Without `pipefail`, the pipeline's status is the final command's status. With `pipefail`, the pipeline status is the rightmost nonzero status, or zero if all stages succeeded.
 
 ```bash
-for file in *.txt; do
-  [[ -e "$file" ]] || continue
-  printf '%s\n' "$file"
-done
-
-while some_condition; do
-  do_work
-done
+(
+    set -o pipefail
+    if false | true; then
+        printf 'success\n'
+    else
+        printf 'pipeline failed\n' >&2
+    fi
+)
 ```
 
-Here's a surprisingly common failure under `set -e`:
+Capture `PIPESTATUS` immediately if you want every component's result. Even an assignment to save `$?` changes `PIPESTATUS`; if both are needed, capture them in a single assignment or command expansion. Also remember that a producer can receive SIGPIPE if a downstream command exits early on purpose. Not every nonzero pipeline status means data was corrupted.
 
-```bash
-set -e
-count=0
-((count++))       # Arithmetic value was 0; command exits with status 1
-printf 'Never reached\n'
-```
-
-`(( expression ))` returns status **1 when the expression evaluates to zero**. The post-increment expression evaluates to the *old* value. Use `((count += 1))`, `((++count))`, or `count=$((count + 1))` when the increment is not intended as a condition.
-
-Use `break` and `continue` to control loops. For command arguments, a `while [[ $# -gt 0 ]]` loop with `case` and `shift` is usually simpler than elaborate parsing machinery.
-
----
-
-## Files, Filenames, and Everyday Text Tools
-
-Linux filenames can contain spaces, tabs, newlines, quotes, wildcard characters, and even leading hyphens. Unix filenames cannot contain NUL bytes, so **NUL-separated paths** are a dependable interchange format.
-
-Bad:
-
-```bash
-for file in $(find . -name '*.log'); do
-  printf '%s\n' "$file"
-done
-```
-
-That mixes command substitution, word splitting, and pathname expansion. It loses filename boundaries.
-
-Better:
-
-```bash
-while IFS= read -r -d '' file; do
-  printf 'Found: %q\n' "$file"
-done < <(find . -type f -name '*.log' -print0)
-```
-
-For an external command that accepts many path arguments:
-
-```bash
-find . -type f -name '*.log' -exec wc -l -- {} +
-```
-
-Or with parallel execution (GNU and common BSD `xargs` versions):
-
-```bash
-find . -type f -name '*.log' -print0 |
-  xargs -0 -P4 -n1 wc -l --
-```
-
-Some `xargs` implementations invoke the command even with no input; GNU `xargs -r` suppresses that but is not universal. `find ... -exec ... +` is often simpler and portable.
-
-### The ordinary tools worth knowing
-
-| Tool | Good for | Example |
-|---|---|---|
-| `grep` | Find matching lines | `grep -n 'ERROR' app.log` |
-| `sed` | Simple substitutions and line editing | `sed 's/old/new/g' file` |
-| `awk` | Field-based text and small reports | `awk -F '\t' '{print $1}' data.tsv` |
-| `cut` | Select delimited columns | `cut -f1,3 data.tsv` |
-| `sort` | Sort records | `sort names.txt` |
-| `uniq -c` | Count adjacent equal records | `sort names.txt \| uniq -c` |
-| `head` / `tail` | Inspect ends of files | `tail -f app.log` |
-| `column` | Align simple tables | `column -t -s $'\t' data.tsv` |
-
-Use `printf` rather than `echo` when you need predictable formatting, arguments that start with `-`, or backslash escapes. `echo` behavior varies between shells and environments.
-
-### Hard links and symbolic links
-
-```bash
-ln original.txt hardlink.txt
-ln -s original.txt symlink.txt
-ls -li original.txt hardlink.txt symlink.txt
-readlink symlink.txt
-```
-
-A hard link is another directory entry referring to the same underlying file inode and generally cannot cross filesystems. A symbolic link stores a pathname and can point across filesystems or become dangling. This distinction becomes important when deleting, deploying, and backing up files.
-
-`readlink -f` is available on many Linux systems but not reliably on the default macOS userland; don't assume a GNU option works everywhere.
-
-### Inspect archives; do not promise an undo
-
-```bash
-tar -tzf archive.tar.gz | less
-mkdir -p extracted
-tar -xzf archive.tar.gz -C extracted
-```
-
-Extract into a dedicated directory whenever possible. `tar` does **not** have a reliable undo operation. If an archive overwrites existing files, listing the archive afterward does not identify which files originally existed or restore overwritten contents. Avoid scripts that 'undo' extraction by blindly deleting every archive member.
-
-```bash
-rsync -av --dry-run source/ destination/  # Inspect intended transfers
-rsync -av source/ destination/
-```
-
-Trailing slashes matter in `rsync`; `source/` refers to the contents of the directory. Use `--delete` only after checking exactly what would be removed.
-
-### HTTP and time without drama
-
-```bash
-curl -fsSL 'https://example.com/data.json' -o data.json
-date +%F
-stamp="$(date +%Y%m%d_%H%M%S)"
-time some_command
-```
-
-`curl -f` makes many HTTP error statuses fail, but it is not a substitute for checking the returned data. Avoid `curl ... | bash` unless you have explicitly verified and trust what will be executed. For cross-platform date arithmetic, GNU `date -d` and BSD/macOS `date` require different syntax.
-
----
-## Write Scripts That Fail Predictably
-
-A script is reliable when it checks its assumptions, keeps argument boundaries intact, reports useful errors, and cleans up after itself. No one-line option can replace that.
-
-### Strict mode helps, but it isn't exception handling
+### Strict mode is not exception handling
 
 ```bash
 set -euo pipefail
 ```
 
-| Setting | What it does |
-|---|---|
-| `-e` | Exits on many unhandled nonzero command statuses |
-| `-u` | Reports use of many unset variables as errors |
-| `-o pipefail` | Gives a failed pipeline a nonzero status even when a later stage succeeds |
+This is a useful starting policy for many scripts, not a guarantee of correctness.
 
-`set -e` has exceptions in `if`, `while`, `&&`, `||`, `!`, and certain functions and substitutions. It can also exit on *expected* nonzero statuses, such as `grep` finding no match. Treat it as a backstop, not as control flow.
+- `-e` exits on certain unhandled nonzero statuses, with important exceptions (conditional tests, non-final commands in AND/OR lists, pipeline contexts and more).
+- `-u` reports an expansion of an unset parameter as an error, with specific exceptions. Use `${value:-}` or `${value-}` if absence is expected.
+- `pipefail` exposes otherwise hidden failures in pipelines.
 
-Without `pipefail`:
+If a function is called as an `if` test or on the left of `||`, `errexit` may be suppressed throughout its body. Command substitution also normally clears `errexit` unless POSIX mode or `inherit_errexit` (Bash 4.4+) is enabled. `ERR` traps share many of the same exceptions as `-e`; `set -E` extends their inheritance but does not turn them into exceptions.
 
-```bash
-false | true
-printf '%s\n' "$?"     # 0: last pipeline stage succeeded
-```
-
-With `pipefail`, the same pipeline returns nonzero. Bash also has `PIPESTATUS`, which holds the exit status of **each** stage, but it must be captured immediately because the next command overwrites it:
+Use explicit checks for important operations, especially inside functions used as conditions:
 
 ```bash
-set +e
-false | true
-statuses=( "${PIPESTATUS[@]}" )
-printf 'first=%s second=%s\n' "${statuses[0]}" "${statuses[1]}"
-```
+prepare() {
+    mkdir -p -- "$1" || return
+    cd -- "$1" || return
+    printf 'ready: %s\n' "$PWD"
+}
 
-For normal conditional logic, explicit tests are clearer than relying on `-e`:
-
-```bash
-if grep -q 'READY' status.txt; then
-  printf 'Ready\n'
+if prepare /tmp/my-tool; then
+    printf 'prepared\n'
 else
-  status=$?
-  if (( status == 1 )); then
-    printf 'Not ready yet\n'
-  else
-    printf 'Could not read status.txt (grep exit %d)\n' "$status" >&2
-    exit "$status"
-  fi
+    printf 'could not prepare directory\n' >&2
 fi
 ```
 
-### Log to stderr; reserve stdout for data
+The function changes the caller's directory on success. If that is not wanted, put the function body in a subshell. The point is to make failure and scope intentional, rather than relying on one global flag.
+
+## Background work, signals, and cleanup
+
+A trailing `&` starts an asynchronous command. Save `$!` immediately and use `wait` to collect its status. Starting a command successfully does not mean the background work succeeded.
 
 ```bash
-log() {
-  printf '[%s] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*" >&2
-}
+pids=()
+for item in alpha beta gamma; do
+    (
+        printf 'processing %s\n' "$item"
+        # Do the actual work here.
+    ) &
+    pids+=("$!")
+done
 
-die() {
-  printf 'ERROR: %s\n' "$*" >&2
-  exit 1
-}
+failed=0
+for pid in "${pids[@]}"; do
+    if wait "$pid"; then
+        printf 'worker %s finished\n' "$pid"
+    else
+        status=$?
+        printf 'worker %s failed: %d\n' "$pid" "$status" >&2
+        failed=1
+    fi
+done
 ```
 
-If your script produces data meant for a pipeline, logging to stdout can corrupt that data. Think of stdout as a program's result and stderr as its diagnostic channel. Avoid logging secrets, tokens, or passwords.
+This waits for every child even if one fails. A plain `wait` with no arguments waits for all active children but does not report each child's failure. Bash 4.3+ adds `wait -n` to wait for the next eligible child to complete; Bash 5.1+ adds `wait -p var` to identify the completed job when using `-n`. These are useful when writing a bounded worker pool, but a loop over saved PIDs is often enough.
 
-### Cleanup needs an exit trap and careful paths
+Parallel jobs may interleave their output. For jobs that must survive a logout or an SSH disconnection, use a supervisor, scheduler, or terminal multiplexer. `&` is not a guarantee of survival.
 
-Temporary files should have unpredictable names, not hardcoded `/tmp/myfile.txt` paths shared between concurrent runs.
+### Traps and temporary resources
+
+A trap tells Bash what to do when it receives a signal or reaches a special event such as `EXIT`. The code below is intended to be a standalone script, not something to source into your interactive shell:
 
 ```bash
-tmpdir="$(mktemp -d)" || exit 1
+#!/usr/bin/env bash
+set -euo pipefail
+
+workdir=$(mktemp -d) || exit 1
+
 cleanup() {
-  if [[ -n "${tmpdir:-}" && -d "$tmpdir" ]]; then
-    rm -rf -- "$tmpdir"
-  fi
+    local status=$?
+    trap - EXIT
+    if [[ -n $workdir && -d $workdir ]]; then
+        rm -rf -- "$workdir" || printf 'cleanup failed: %q\n' "$workdir" >&2
+    fi
+    exit "$status"
 }
+
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+printf '%s\n' 'example data' > "$workdir/result.txt"
+printf 'work completed\n'
 ```
 
-Here the deletion target comes from a freshly created temporary directory, not an unchecked user-controlled variable. In long-lived scripts, also consider whether signals can interrupt cleanup, whether the temporary location has enough space, and how secrets are stored there.
+`mktemp` and `rm` are external tools; Bash does not need to reinvent temporary directory creation or file removal. The cleanup path comes from a successful `mktemp`, not a loosely constructed user path. The `EXIT` trap preserves the script's status. Signals `INT` and `TERM` are handled explicitly so normal cleanup can run when Bash processes them. This is not a promise that cleanup always happens: `SIGKILL`, abrupt system failures, and process replacement with `exec` are among the exceptions. A trap may also be deferred while Bash waits for a foreground command.
 
-An `ERR` trap (`trap '...' ERR`) can help report failures, but inherits many of `set -e`'s exceptions and can surprise you inside functions. Do not confuse it with a universal `try/catch` mechanism.
+## A small script that puts it together
 
-### A small production-style example
-
-This script counts matching log lines and writes the result to a named file. It uses a temporary file in the **destination directory**, then renames it only after the processing command succeeds.
+Suppose we want a tool that summarizes `.fastq.gz` filenames by their sample names, with an optional input directory and a dry-run mode. It does not read or rename any sequencing files. Here is a complete script for Bash 5.2 or newer:
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
 usage() {
-  printf 'Usage: %s INPUT_LOG OUTPUT_REPORT\n' "$0" >&2
-  exit 2
+    printf 'Usage: %s [-n] [-d directory]\n' "${0##*/}"
 }
-
-log() {
-  printf '%s\n' "$*" >&2
-}
-
-# The trap runs when the script exits, including after most failures.
-tmpfile=''
-cleanup() {
-  if [[ -n "$tmpfile" && -e "$tmpfile" ]]; then
-    rm -f -- "$tmpfile"
-  fi
-}
-trap cleanup EXIT
 
 main() {
-  [[ $# -eq 2 ]] || usage
+    local directory=. dry_run=0 option
+    local OPTIND=1 OPTARG
+    local file base sample count
+    local -a files=()
+    local -A counts=()
 
-  local input=$1 output=$2
-  local output_dir
-  output_dir="$(dirname -- "$output")"
+    while getopts ':nd:h' option; do
+        case $option in
+            n) dry_run=1 ;;
+            d) directory=$OPTARG ;;
+            h) usage; return 0 ;;
+            :) printf 'Missing argument for -%s\n' "$OPTARG" >&2; return 2 ;;
+            \?) printf 'Unknown option: -%s\n' "$OPTARG" >&2; return 2 ;;
+        esac
+    done
+    shift "$((OPTIND - 1))"
+    if (( $# != 0 )); then
+        usage >&2
+        return 2
+    fi
+    if [[ ! -d $directory || ! -r $directory || ! -x $directory ]]; then
+        printf 'Directory is not accessible: %q\n' "$directory" >&2
+        return 1
+    fi
 
-  [[ -f "$input" && -r "$input" ]] || {
-    log "Cannot read input: $input"
-    return 1
-  }
-  [[ -d "$output_dir" && -w "$output_dir" ]] || {
-    log "Cannot write to directory: $output_dir"
-    return 1
-  }
+    shopt -s nullglob
+    files=("$directory"/*.fastq.gz)
+    for file in "${files[@]}"; do
+        [[ -f $file ]] || continue
+        base=${file##*/}
+        sample=${base%.fastq.gz}
+        # Strip common paired-end suffixes; leave other sample names alone.
+        case $sample in
+            *_R1|*_R2) sample=${sample%_R?} ;;
+        esac
+        [[ -n $sample ]] || continue
+        count=${counts[$sample]:-0}
+        counts["$sample"]=$((count + 1))
+        if (( dry_run )); then
+            printf '%q -> %q\n' "$file" "$sample" >&2
+        fi
+    done
 
-  # The caller chooses the output path; an existing report is replaced.
-  tmpfile="$(mktemp "${output}.tmp.XXXXXX")"
-  awk '/ERROR/ { count++ } END { print count+0 }' "$input" > "$tmpfile"
-  mv -f -- "$tmpfile" "$output"
-  tmpfile=''
-  log "Wrote report to $output"
+    for sample in "${!counts[@]}"; do
+        printf '%q\t%d\n' "$sample" "${counts[$sample]}"
+    done
 }
 
 main "$@"
 ```
 
-This demonstrates validation, quoting, clear errors, cleanup, and a final rename on the same filesystem. The rename is normally atomic when source and destination are on the same filesystem, but it does not make the entire workflow transactional. A caller still needs to decide whether overwriting an existing report is acceptable.
+`getopts` handles short options, including options with arguments. The leading colon requests silent error handling, letting the script print its own diagnostics. Long options such as `--directory` need a separate parser, usually a small `while`/`case` loop. The script demonstrates argument parsing, parameter expansion, globbing, arrays, explicit validation, arithmetic and stream separation. `%q` keeps odd sample names printable; the result is a Bash-readable report, not a TSV interchange format for arbitrary data. The associative array does not promise sorted output. The `nullglob` setting is acceptable here because this is a standalone script.
 
-For bigger workflows, write focused functions and test them rather than growing one enormous Bash script.
+This example targets Bash 5.2 or newer to avoid relying on older associative-subscript behavior with dynamic keys. Bash 4.3 and older also have differences in empty-array expansion under `set -u`. As with all directory scans, a changing directory or an inaccessible file can affect what is observed.
 
-### Argument parsing without a framework
+## Shell options and the interactive shell
 
-```bash
-input=''
-verbose=false
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -i|--input)
-      [[ $# -ge 2 ]] || { printf 'Missing value for %s\n' "$1" >&2; exit 2; }
-      input=$2
-      shift 2
-      ;;
-    -v|--verbose)
-      verbose=true
-      shift
-      ;;
-    --)
-      shift
-      break
-      ;;
-    -h|--help)
-      printf 'Usage: %s -i FILE [-v]\n' "$0"
-      exit 0
-      ;;
-    *)
-      printf 'Unknown argument: %s\n' "$1" >&2
-      exit 2
-      ;;
-  esac
-done
-
-[[ -n "$input" ]] || { printf 'Missing --input\n' >&2; exit 2; }
-```
-
-This is enough for many small scripts. Supporting `--` matters if callers may pass filenames starting with a hyphen. For complicated argument grammar, an ordinary programming language may be a better choice.
-
-### Parallel jobs: capture failures from *all* children
+`set` changes shell options and positional parameters. `shopt` controls Bash-specific behavior. Inspect them before changing them:
 
 ```bash
-job_one & pid1=$!
-job_two & pid2=$!
-
-failed=0
-if wait "$pid1"; then :; else failed=1; fi
-if wait "$pid2"; then :; else failed=1; fi
-
-(( failed == 0 )) || { printf 'At least one job failed\n' >&2; exit 1; }
+set -o
+shopt
+help read
+help printf
+help set
 ```
 
-`wait` returns a child's exit status. With `set -e`, a bare failed `wait` can terminate the script before it inspects other jobs. Using `wait` inside `if` makes the intended handling explicit. For more complex scheduling, consider GNU Parallel, a job runner, or a real scheduler rather than inventing your own concurrency system in Bash.
+| Setting | Why it matters |
+|---|---|
+| `set -o pipefail` | Pipeline status reflects non-final failures |
+| `set -u` | Detect unexpected unset variables |
+| `set -x` | Trace expanded commands; may reveal secrets |
+| `shopt -s nullglob` | Unmatched globs produce no words |
+| `shopt -s dotglob` | Include leading-dot names in ordinary globs |
+| `shopt -s globstar` | Recursive `**` globbing (Bash 4+) |
+| `shopt -s extglob` | Extended patterns; enable before parsing |
+| `shopt -s lastpipe` | Final foreground pipeline stage can use current shell (Bash 4.2+) |
 
-### A good script lifecycle
+To avoid leaking option changes or directory changes, contain a small task in `( ... )`. For interactive configuration, put intentional settings in `~/.bashrc`; login shells may read different startup files. Do not assume your interactive aliases, functions or settings exist in a CI job.
 
-```mermaid
-flowchart TD
-    A["Validate inputs and environment"] --> B["Create safe workspace"]
-    B --> C["Run work and inspect status"]
-    C --> D{"Succeeded?"}
-    D -->|"Yes"| E["Publish output and verify"]
-    D -->|"No"| F["Report actionable error"]
-    E --> G["Cleanup"]
-    F --> G
-```
+### A few prompt habits worth keeping
 
----
+These are interactive Bash/Readline facilities, not a recommended way to write scripts:
 
-## Debug the Actual Failure
+| Action | Useful command or key |
+|---|---|
+| Search command history | `Ctrl-R` (usual Emacs bindings) |
+| View recent history | `history 20` |
+| Preview history entry before replay | `!123:p` |
+| Insert previous command's last argument | `Alt-.` (usual Emacs bindings) |
+| Go back to previous directory | `cd -` |
+| Remember a directory | `pushd DIR`; `popd` |
+| Use vi-style editing | `set -o vi` |
+| Inspect suspended or background jobs | `jobs` |
+| Resume a job | `fg %1` or `bg %1` |
+| Interrupt or suspend foreground work | `Ctrl-C` or `Ctrl-Z` |
 
-These are the first commands I'd reach for when a script looks correct but behaves strangely:
+History expansion can execute unexpectedly, so prefer inserting or previewing a command before running it. `Ctrl-Z` suspends rather than detaches. On terminals with software flow control, `Ctrl-S` can pause output and `Ctrl-Q` can resume it. Readline shortcuts depend on editing mode and terminal keybindings.
+
+## Debug the actual failure
+
+Start with the actual interpreter and environment, then inspect the expanded arguments. A surprising number of problems are not bugs in the algorithm.
 
 ```bash
-bash -n script.sh                         # Syntax only, no execution
-shellcheck script.sh                     # Static checks (if installed)
-bash -x script.sh                        # Trace execution: potentially sensitive
-file script.sh                           # Encoding and line-ending hints
-LC_ALL=C sed -n '1,30l' script.sh       # Escaped/non-printable characters
-od -An -tx1 -N 128 script.sh            # Exact bytes
+bash -n script.sh
+bash -x script.sh
 ```
 
-`bash -x` prints expanded commands and can disclose secrets. Use it only where logs and terminal history are appropriately protected. `set -x` turns tracing on within a script; `set +x` turns it off. A `BASH_XTRACEFD` destination can keep traces separate from ordinary stderr on Bash versions supporting it.
+`-n` checks syntax without executing commands; it cannot prove runtime correctness. `-x` prints command traces after expansions and may expose tokens, passwords, or arguments. Only trace a script in an appropriate environment.
 
-For an interactive shell, `printf '%q\n' "$value"` reveals how Bash would escape a suspicious argument. `declare -p variable` reveals Bash's representation of variables and arrays.
-
-### When it works locally but not in CI or systemd
-
-Inspect the **actual execution context**:
+For a more useful trace:
 
 ```bash
-pwd
-id
-printf 'PATH=%s\n' "$PATH"
-printf 'SHELL=%s\n' "${SHELL:-unset}"
-command -v python3 || true
-umask
+PS4='+ ${BASH_SOURCE[0]:-?}:${LINENO}:${FUNCNAME[0]:-main}: ' bash -x script.sh
 ```
 
-The interactive shell may have loaded `.bashrc`, aliases, functions, or a custom `PATH` that the service does not have. Cron, systemd, containers, and CI steps can also use different users, shells, working directories, permissions, and exported variables.
-
-Use absolute paths when appropriate, provide required environment explicitly, and test the script in an environment that resembles the one that will run it.
-
-### Common failures and their first useful checks
-
-| Symptom | Likely area | First check |
-|---|---|---|
-| `bash\r: No such file or directory` | CRLF shebang | `od -An -tx1 -N 64 script.sh` |
-| `command not found` for an apparently valid name | Smart quotes, NBSP, BOM, `PATH` | `sed -n 'l'`, `type -a` |
-| `bad substitution` | Wrong shell or malformed `${...}` | Shebang, `bash -n` |
-| Script exits after `((count++))` | Arithmetic status under `set -e` | Check expression's value |
-| Script succeeds despite a failed pipeline stage | Missing `pipefail` | `PIPESTATUS` immediately after pipeline |
-| Variable changes in a `while` loop disappear | Pipeline subshell | Feed loop with redirection |
-| Works at prompt, fails via systemd/cron | Environment/working directory | `pwd`, `id`, `PATH`, service config |
-| `Permission denied` for `./script.sh` | Execute permission or filesystem mount | `ls -l`, `findmnt` |
-| Filenames with spaces or newlines break a loop | Word splitting | Quote arrays, use `-print0` |
-| A 'safe' deletion removes the wrong thing | Unchecked variable/path expansion | Inspect resolved target; dry-run |
-
-### Dry runs for destructive operations
+Or send xtrace to a separate descriptor from inside a Bash 4.1+ script:
 
 ```bash
-file='old-report.txt'  # Illustrative target; inspect it before changing anything
-dry_run=true
-run() {
-  if "$dry_run"; then
-    printf 'DRY RUN:' >&2
-    printf ' %q' "$@" >&2
-    printf '\n' >&2
-  else
-    "$@"
-  fi
-}
-
-run rm -- "$file"
+exec {trace_fd}> trace.log
+BASH_XTRACEFD=$trace_fd
+PS4='+ ${BASH_SOURCE[0]:-?}:${LINENO}: '
+set -x
+printf '%s\n' 'example'
+set +x
+unset BASH_XTRACEFD
 ```
 
-This preserves argument boundaries in the printed preview, but it is not a guarantee that a destructive command is safe. Validate the intended paths, run with least privilege, and have backups for things you cannot recreate. Never make a generic `rm -rf "$dir"` helper your default solution to cleanup.
+Unsetting `BASH_XTRACEFD` closes the associated descriptor. Do not set it to descriptor 2 and then unset it unless you actually intend to close stderr. Use a trace file with appropriate permissions. `declare -p variable`, `printf '%q\n' "$variable"`, and `type -a name` are also useful native inspection tools.
 
-### Know when not to use Bash
+### The script looks right, but the bytes disagree
 
-Bash is excellent for orchestration, process launching, short transformations, and gluing established tools together. It is much less pleasant for complex structures, elaborate data parsing, concurrency, robust cross-platform application logic, or long-lived services.
+Smart quotes (`“ ” ‘ ’`) are not shell quotes. A nonbreaking space is not a normal shell separator. A typographic dash is not the ASCII option prefix. A backslash followed by a space and then a newline does not continue a command; the backslash must be immediately followed by the newline.
 
-If a 20-line script grows into a 500-line program with nested quoting and state, Python, Go, or another suitable language is likely to make it easier to test and maintain. The point is not to write the cleverest shell one-liner. It is to solve the problem clearly.
-
----
-
-## Fast command reference
-
-**At the prompt**
+A script with Windows CRLF line endings may yield an error such as:
 
 ```text
-Ctrl-R        Search command history
-Ctrl-A/E      Start/end of line
-Ctrl-U/K      Cut to start/end of line
-Alt-.         Insert prior final argument
-!!            Previous command
-!123          History entry 123
-!123:p        Preview entry 123
-!$            Prior final argument
-^old^new      Fix typo in previous command
-cd -          Previous directory
+/usr/bin/env: 'bash\r': No such file or directory
 ```
 
-**Check your interpreter and bytes**
+A UTF-8 byte order mark before `#!` may also prevent the kernel from recognizing the shebang. For those problems, inspect the bytes rather than trying to fix them with parameter expansion:
 
 ```bash
-bash --version
-bash -n script.sh
-shellcheck script.sh
 file script.sh
-LC_ALL=C sed -n '1,30l' script.sh
 od -An -tx1 -N 64 script.sh
 ```
 
-**Variables and filenames**
+Use UTF-8 without a BOM and LF line endings for ordinary shell scripts. In a cross-platform repository, `.gitattributes` can contain `*.sh text eol=lf`. Bash itself has no reason to replace proper file-format inspection or conversion tools.
+
+### The environment is part of the program
 
 ```bash
-printf '%s\n' "$value"
-printf '%q\n' "$value"
-printf '<%s>\n' "$@"
-for file in "${files[@]}"; do printf '%s\n' "$file"; done
-find . -type f -name '*.log' -exec wc -l -- {} +
+printf 'Bash=%s\nPWD=%q\nPATH=%q\n' "$BASH_VERSION" "$PWD" "$PATH"
+type -a bash
+command -v curl
 ```
 
-**Pipes, errors, and logs**
+`bash script.sh` selects Bash directly and reads the file, whereas `./script.sh` asks the OS to execute it with its shebang and needs appropriate permissions. `sh script.sh` selects a different language. A shell launched by cron, systemd, CI, or SSH may have a different working directory, PATH, locale, environment, terminal state and startup files. Check those before blaming the script.
 
-```bash
-command > stdout.log 2> stderr.log
-command > combined.log 2>&1
-set -o pipefail
-journalctl -u my-service -n 100
-```
+| Failure | First thing to inspect |
+|---|---|
+| `bad substitution` | Actual shell and Bash version |
+| `unbound variable` | Unset value under `set -u` |
+| `command not found` | `type -a name`, PATH and execution environment |
+| `Permission denied` | File permissions, interpreter and mount options |
+| Values disappear after a loop | Pipeline/subshell boundaries |
+| A glob becomes a literal filename | Unmatched pattern and `nullglob` |
+| A script exits at an increment | Arithmetic command status under `set -e` |
+| A captured value is missing newlines | Command substitution removes trailing newlines |
+| Pipeline failure goes unnoticed | `pipefail` and `PIPESTATUS` |
 
-**Reliable execution**
+### A note on Bash versions
 
-```bash
-set -euo pipefail
-command -v jq >/dev/null || { printf 'jq missing\n' >&2; exit 1; }
-tmpdir="$(mktemp -d)"
-trap 'rm -rf -- "$tmpdir"' EXIT
-```
+Check the version of Bash that actually runs the script, rather than the version of the terminal or OS.
 
-The small rule that ties everything together:
+| Feature | Minimum Bash version (common usage) |
+|---|---|
+| Indexed arrays, parameter removal/replacement, `[[ ... ]]`, `=~`, `printf -v` | 3.2 or earlier |
+| Associative arrays, `mapfile`, case conversion, `globstar`, `BASHPID` | 4.0 |
+| Dynamic file descriptors, `BASH_XTRACEFD` | 4.1 |
+| `[[ -v name ]]`, time-formatting `printf`, `lastpipe`, negative substring length | 4.2 |
+| Namerefs, `wait -n` | 4.3 |
+| `${value@Q}`, `inherit_errexit`, improved empty-array handling with `nounset` | 4.4 |
+| `wait -p` | 5.1 |
 
-> Bash does not understand what you meant. It parses characters, expands words, and runs commands. Preserve argument boundaries, inspect the bytes, and handle failures deliberately.
+Some features have additional changes in patch releases or compatibility modes. Modern Bash installed alongside the system shell is not automatically the interpreter selected by every script. POSIX `sh` compatibility is a separate question; if the script needs Bash, say so in the shebang and documentation.
+
+## When not to use Bash
+
+The goal is not a script with zero external programs. The goal is to use the appropriate layer for the work.
+
+| Task | Good choice |
+|---|---|
+| Trim a suffix, replace a small pattern, join arguments | Parameter expansion and arrays |
+| Validate a small string | `[[ ... ]]`, `case`, or `=~` |
+| Format a scalar or read a small text file | `printf`, `read`, `mapfile` |
+| Search across thousands of files | `grep` or `rg` |
+| Filter, join, or aggregate large text streams | `awk`, `sort`, or a suitable language |
+| Parse JSON or real CSV | `jq` or a proper parser |
+| Traverse files with detailed metadata predicates | `find` |
+| Copy, move, archive, or download files | Dedicated utilities |
+| Handle binary data, complex state, or large numeric computations | A language suited to the task |
+
+Spawning a subprocess to remove a known suffix inside a loop is unnecessary. Reimplementing a mature streaming tool in a Bash loop to avoid one dependency is often worse. Bash variables cannot represent arbitrary binary data, shell arithmetic has a limited integer range, and complex nested data is not a natural fit for the language.
+
+## Keep this close
+
+| Need | Bash expression or command |
+|---|---|
+| Default only when unset | `${v-default}` |
+| Default when unset or empty | `${v:-default}` |
+| Assign a default | `${v:=default}` |
+| Require a value | `${v:?message}` |
+| Prefix, shortest / longest | `${v#pattern}` / `${v##pattern}` |
+| Suffix, shortest / longest | `${v%pattern}` / `${v%%pattern}` |
+| Replace first / all | `${v/pattern/repl}` / `${v//pattern/repl}` |
+| Replace at start / end | `${v/#pattern/repl}` / `${v/%pattern/repl}` |
+| Length / substring | `${#v}` / `${v:offset:length}` |
+| Lowercase / uppercase | `${v,,}` / `${v^^}` |
+| Indirection | `${!name}` |
+| Preserve arguments | `"$@"`, `"${array[@]}"` |
+| Array keys / count | `"${!array[@]}"`, `${#array[@]}` |
+| Format into a variable | `printf -v name FORMAT ...` |
+| Read literal line | `IFS= read -r line` |
+| Read a file into an array | `mapfile -t lines < file` |
+| Test a glob / regex | `[[ $v == pattern ]]` / `[[ $v =~ $regex ]]` |
+| Group without changing scope | `{ command; }` |
+| Contain side effects | `( command )` |
+| Capture stdout | `$(command)` |
+| Present a stream as a file | `<(command)` |
+| Save background PID | `pid=$!` |
+| Collect status | `wait "$pid"`, `status=$?` |
+| Inspect pipeline | `"${PIPESTATUS[@]}"` |
+| Inspect shell features | `help`, `type -a`, `declare -p`, `shopt` |
+
+For the details behind these rules, the [GNU Bash Reference Manual](https://www.gnu.org/software/bash/manual/bash.html) is worth bookmarking. In particular, its sections on shell expansions, conditional expressions, builtins, arrays, and execution environments explain the exceptions that short examples cannot cover.
+
+---
+
+The useful part of learning Bash is not discovering that everything can be done with it. It is discovering which work the shell has already done for you, which work belongs to another program, and how to connect the two without losing information along the way.
