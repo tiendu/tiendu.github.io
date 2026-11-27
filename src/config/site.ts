@@ -4,11 +4,9 @@ export const SITE = {
   description:
     "Engineering notes, small projects, games, and occasional thoughts on life.",
   author: "Tien Du",
-  role: "Platform Operations Engineer",
   url: "https://tiendu.github.io",
   email: "mailto:tiendu107@gmail.com",
   github: "https://github.com/tiendu",
-  linkedin: "https://www.linkedin.com/in/tienhdu",
   language: "en",
 } as const;
 
@@ -23,7 +21,6 @@ export type NavigationKey = (typeof PRIMARY_NAVIGATION)[number]["key"];
 export const CONTACT_LINKS = [
   { href: SITE.email, label: "EMAIL", external: false },
   { href: SITE.github, label: "GITHUB", external: true },
-  { href: SITE.linkedin, label: "LINKEDIN", external: true },
 ] as const;
 
 export function getSystemRevision(date = new Date()): string {

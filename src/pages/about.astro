@@ -6,91 +6,69 @@ import SystemPageLayout from "../layouts/SystemPageLayout.astro";
 <SystemPageLayout
   title="About"
   moduleCode=""
-  description="Background, interests, and the route that led me toward systems engineering."
+  active="about"
+  description="A little about me and this corner of the internet."
   showDescription={false}
 >
-  <div class="operator-record">
-    <aside class="operator-panel" aria-label="Profile summary">
-      <div class="operator-identity">
-        <h2>TIEN DU</h2>
-        <p>Vietnam · Platform / Systems Engineering</p>
-      </div>
-      <p class="operator-focus">Linux · Cloud · Reliability · Automation</p>
-      <nav class="operator-links" aria-label="Profile and contact links">
-        {
-          CONTACT_LINKS.map(({ href, label, external }) => (
-            <a
-              href={href}
-              target={external ? "_blank" : undefined}
-              rel={external ? "noopener noreferrer" : undefined}
-            >
-              <span>{label}</span>
-              <span class="operator-link-mark" aria-hidden="true">&#x2197;&#xFE0E;</span>
-            </a>
-          ))
-        }
-      </nav>
-    </aside>
+  <div class="about-copy">
+    <p class="about-intro">I'm Tien, from Vietnam.</p>
 
-    <div class="about-copy">
-      <section aria-labelledby="route-heading">
-        <p class="system-section-code">01 / ROUTE</p>
-        <h2 id="route-heading">Biotechnology → Bioinformatics → Systems</h2>
+    <p>
+      I studied biotechnology, wandered into bioinformatics, and somehow ended
+      up working with computers. I still find it amusing how life takes us to
+      places we never planned to go.
+    </p>
 
-        <div class="timeline" aria-label="Education and career timeline">
-          <div class="timeline-row">
-            <span>2017</span>
-            <p>BSc Biotechnology · Singapore</p>
-          </div>
-          <div class="timeline-row">
-            <span>2019</span>
-            <p>MSc Bioinformatics &amp; Computational Biology · Ireland</p>
-          </div>
-          <div class="timeline-row">
-            <span>2023</span>
-            <p>Left academia</p>
-          </div>
-          <div class="timeline-row">
-            <span>NOW</span>
-            <p>Systems · reliability · tooling</p>
-          </div>
-        </div>
+    <p>
+      I like coffee, photography, old cars, mechanical watches, and quiet roads
+      at night. I enjoy reading memoirs and autobiographies. There is something
+      fascinating about seeing the world through someone else's lifetime.
+    </p>
 
-        <p>
-          I started with biological data and computational workflows, but became
-          more interested in the systems underneath them: why things fail, how
-          they recover, and how to make them easier to operate.
-        </p>
-      </section>
+    <p>
+      I love the sea and jellyfish. I also particularly love <em>komorebi</em> (<span lang="ja">木漏れ日
+</span>) — sunlight filtering
+      through the leaves of trees. Some things are beautiful without needing
+      much explanation.
+    </p>
 
-      <section aria-labelledby="work-heading">
-        <p class="system-section-code">02 / WORK</p>
-        <h2 id="work-heading">The questions underneath the system</h2>
+    <p>
+      I enjoy building things, taking them apart, and figuring out how they
+      work. Not everything needs to be useful. Sometimes curiosity is reason
+      enough.
+    </p>
 
-        <ul class="question-list">
-          <li><span aria-hidden="true">—</span> Why did this job fail after two days?</li>
-          <li><span aria-hidden="true">—</span> Where did the storage go?</li>
-          <li><span aria-hidden="true">—</span> Why is this still retrying?</li>
-        </ul>
+    <p>
+      This website is a little corner of the internet I keep for myself. A
+      collection of technical notes, experiments, small games, wandering
+      thoughts, and whatever else interests me along the way.
+    </p>
 
-        <p class="about-stack">
-          Linux · Cloud · Distributed systems · Automation · Observability · Reliability
-        </p>
-        <p class="about-principle">
-          Reliability doesn't mean nothing fails. Failures should be visible,
-          understandable, and recoverable.
-        </p>
-      </section>
+    <p>
+      I may forget things. I may relearn them. I may change my mind about
+      something I once believed. I think that's a perfectly fine way to go
+      through life.
+    </p>
 
-      <section aria-labelledby="outside-heading">
-        <p class="system-section-code">03 / OUTSIDE</p>
-        <h2 id="outside-heading">Outside work</h2>
+    <p>Like a jellyfish drifting with the current, I don't always know where I'm going.</p>
 
-        <p>Coffee. Photography. Cars. Watches. Mechanical things. Quiet places.</p>
-        <p>
-          I particularly like <em>komorebi</em> — sunlight passing through leaves.
-        </p>
-      </section>
-    </div>
+    <p>And that's fine, too.</p>
+
+    <p>Thanks for stopping by.</p>
+
+    <nav class="about-links" aria-label="Contact links">
+      {
+        CONTACT_LINKS.map(({ href, label, external }) => (
+          <a
+            href={href}
+            target={external ? "_blank" : undefined}
+            rel={external ? "noopener noreferrer" : undefined}
+          >
+            {label}
+            {external && <span aria-hidden="true">&#x2197;&#xFE0E;</span>}
+          </a>
+        ))
+      }
+    </nav>
   </div>
 </SystemPageLayout>
